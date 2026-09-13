@@ -28,6 +28,10 @@ function argumentsFrom(argv) {
     goldCandidate: path.resolve(values.goldCandidate),
     oracle: path.resolve(values.oracle),
     output: path.resolve(values.output),
+    selection:
+      values.selection === "all"
+        ? "ALL_283_V1"
+        : values.selection || "REPRESENTATIVE_30_V1",
     maximumPerComponent: Number(values.maximumPerComponent || 4),
     maximumQuoteCharacters: Number(values.maximumQuoteCharacters || 1_200),
   };
@@ -56,6 +60,7 @@ function run() {
   const packet = buildLfKnownFixtureSourceReviewPacket({
     goldCandidate: readJson(args.goldCandidate, "Gold-Kandidat"),
     oracle: readJson(args.oracle, "Oracle"),
+    selection: args.selection,
     maximumPerComponent: args.maximumPerComponent,
     maximumQuoteCharacters: args.maximumQuoteCharacters,
   });

@@ -16,7 +16,7 @@ function fixture() {
     role: index ? "TERMS" : "MAIN_POLICY",
     documentStatus: index ? "FRAMEWORK_TERMS" : "PROPOSAL",
   }));
-  const benchmarkCandidates = Array.from({ length: 30 }, (_, index) => ({
+  const benchmarkCandidates = Array.from({ length: 283 }, (_, index) => ({
     candidateId: `candidate-${index}`,
     componentId: `component-${index}`,
     rank: 1,
@@ -31,7 +31,7 @@ function fixture() {
       exactQuoteSha256: digest("a"),
     },
   }));
-  const rows = Array.from({ length: 30 }, (_, index) => ({
+  const rows = Array.from({ length: 283 }, (_, index) => ({
     analysisRowId: `row-${index}`,
     requirementId: `requirement-${index}`,
     point: `Gegenstand ${index}`,
@@ -53,7 +53,7 @@ function fixture() {
       status: "SOURCE_REVIEW_REQUIRED",
       candidateSha256: digest("b"),
       bindings: { oracleSha256: digest("c") },
-      representativeReview: rows.map((row, index) => ({
+      representativeReview: rows.slice(0, 30).map((row, index) => ({
         analysisRowId: row.analysisRowId,
         requirementId: row.requirementId,
         relation: index
@@ -99,6 +99,20 @@ describe("LF known fixture source review", () => {
     expect(packet.rows[0].components[0].contextOnly).toBe(true);
     expect(packet.rows[0].globalClaudeRebind.length).toBeGreaterThan(0);
     expect(packet.rows[0].components[1].candidates).toHaveLength(1);
+  });
+
+  it("can materialize the complete known 283-row review scope", () => {
+    const packet = buildLfKnownFixtureSourceReviewPacket({
+      ...fixture(),
+      selection: "ALL_283_V1",
+      createdAt: "2026-09-13T00:00:00.000Z",
+    });
+    expect(packet.selection.sample).toBe("ALL_283_V1");
+    expect(packet.summary.rows).toBe(283);
+    expect(packet.summary.actualComponents).toBe(283);
+    expect(packet.summary.semanticChecks).toBe(566);
+    expect(packet.summary.searchedDocumentsPerRow).toBe(9);
+    expect(packet.summary.absenceCertifiedRows).toBe(0);
   });
 
   it("turns long navigation spans into hash-bound exact excerpts", () => {

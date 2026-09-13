@@ -392,6 +392,7 @@ function globalClaudeRebindCandidates({
 function buildLfKnownFixtureSourceReviewPacket({
   goldCandidate,
   oracle,
+  selection = "REPRESENTATIVE_30_V1",
   maximumPerComponent = 4,
   maximumQuoteCharacters = 1_200,
   createdAt = new Date().toISOString(),
@@ -401,6 +402,8 @@ function buildLfKnownFixtureSourceReviewPacket({
     goldCandidate?.status !== "SOURCE_REVIEW_REQUIRED" ||
     !Array.isArray(goldCandidate.representativeReview) ||
     goldCandidate.representativeReview.length !== 30 ||
+    !Array.isArray(goldCandidate.rows) ||
+    goldCandidate.rows.length !== 283 ||
     oracle?.contractId !== "LF_COUNTERPART_GOLD_ORACLE_V1" ||
     !Array.isArray(oracle.benchmarkCandidates) ||
     !Array.isArray(oracle.documents) ||
@@ -410,6 +413,8 @@ function buildLfKnownFixtureSourceReviewPacket({
     maximumQuoteCharacters < 200
   )
     throw reviewError("LF_SOURCE_REVIEW_INPUT_INVALID");
+  if (!new Set(["REPRESENTATIVE_30_V1", "ALL_283_V1"]).has(selection))
+    throw reviewError("LF_SOURCE_REVIEW_SELECTION_INVALID", selection);
   const rowsByRequirement = new Map(
     goldCandidate.rows.map((row) => [row.requirementId, row])
   );
@@ -432,7 +437,15 @@ function buildLfKnownFixtureSourceReviewPacket({
     candidate,
     sourceTokens: tokens(candidate.range.exactQuote),
   }));
-  const rows = goldCandidate.representativeReview.map(
+  const selectedReview =
+    selection === "ALL_283_V1"
+      ? goldCandidate.rows.map(({ analysisRowId, requirementId, relation }) => ({
+          analysisRowId,
+          requirementId,
+          relation,
+        }))
+      : goldCandidate.representativeReview;
+  const rows = selectedReview.map(
     ({ requirementId, relation }, reviewIndex) => {
       const row = rowsByRequirement.get(requirementId);
       const oracleRow = oracleRows.get(requirementId);
@@ -564,7 +577,7 @@ function buildLfKnownFixtureSourceReviewPacket({
       oracleId: oracle.oracleId,
     },
     selection: {
-      sample: "REPRESENTATIVE_30_V1",
+      sample: selection,
       maximumPerComponent,
       maximumQuoteCharacters,
       candidatePolicy:
