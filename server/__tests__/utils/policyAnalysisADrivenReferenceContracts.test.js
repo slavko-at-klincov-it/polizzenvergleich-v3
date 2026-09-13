@@ -3172,6 +3172,202 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("canonicalizes an inverted aggregated-event definition with its local coverage governor", () => {
+    const blocks = [
+      {
+        blockId: "aggregate-relation",
+        exactText:
+          "• Weiters  gelten  als  ein  Versicherungsfall  mehrere  auf  derselben  Ursache  beruhende ",
+      },
+      {
+        blockId: "aggregate-members",
+        exactText:
+          "Schadenereignisse  sowie  Schadenereignisse  die  auf  gleichartigen  Ursachen  beruhen,  wenn ",
+      },
+      {
+        blockId: "aggregate-condition",
+        exactText:
+          "zwischen  diesen  Ursachen  ein  rechtlicher,  wirtschaftlicher  oder  technischer  Zusammenhang ",
+      },
+      { blockId: "aggregate-end", exactText: "besteht. " },
+    ];
+    const source = blocks.map(({ exactText }) => exactText).join("\n");
+    const unit = {
+      unitId: "inverted-aggregate-definition",
+      unitKind: "LIST",
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        combinedText: source,
+        blocks,
+      },
+      governingContext: {
+        blockIds: ["coverage-governor"],
+        combinedText: "8.1. Versichert sind  ",
+        blocks: [
+          {
+            blockId: "coverage-governor",
+            exactText: "8.1. Versichert sind  ",
+          },
+        ],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: source,
+                  sourceBlockIds: unit.source.blockIds,
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "gelten als ein Versicherungsfall",
+                  sourceBlockIds: ["aggregate-relation"],
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    const response = normalized.responses[0];
+    expect(response.primaryClass).toBe("DEFINITION");
+    expect(response.semanticClasses).toEqual([
+      "DEFINITION",
+      "CONDITION",
+      "OPERATIVE_COVERAGE_STATEMENT",
+    ]);
+    expect(
+      response.requirements[0].components.map(({ type }) => type)
+    ).toEqual(["FACT_ROLE", "CONDITION", "CONDITION", "COVERAGE_EFFECT"]);
+    expect(response.requirements[0].components[0]).toMatchObject({
+      type: "FACT_ROLE",
+      label: "gelten  als  ein  Versicherungsfall",
+      sourceBlockIds: ["aggregate-relation"],
+    });
+    expect(response.requirements[0].components.at(-1)).toEqual({
+      type: "COVERAGE_EFFECT",
+      label: "Versichert sind",
+      sourceBlockIds: ["coverage-governor"],
+      coverageEffect: "INCLUDED",
+    });
+    expect(
+      new Set(
+        response.requirements[0].components.flatMap(
+          ({ sourceBlockIds }) => sourceBlockIds
+        )
+      )
+    ).toEqual(new Set([...unit.source.blockIds, "coverage-governor"]));
+    expect(normalized.repairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      action: "CANONICALIZE_AGGREGATED_EVENT_DEFINITION",
+      memberConditions: 2,
+    });
+  });
+
+  test("canonicalizes a subject-first aggregated-event definition without inventing coverage", () => {
+    const source =
+      "Mehrere Schäden aus derselben Ursache gelten als ein Schadenereignis.";
+    const unit = {
+      unitId: "subject-first-aggregate-definition",
+      source: {
+        blockIds: ["aggregate"],
+        combinedText: source,
+        blocks: [{ blockId: "aggregate", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: source,
+                  sourceBlockIds: ["aggregate"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "DEFINITION",
+      semanticClasses: ["DEFINITION", "CONDITION"],
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label }) => [type, label]
+      )
+    ).toEqual([
+      ["FACT_ROLE", "gelten als ein Schadenereignis"],
+      ["CONDITION", "Mehrere Schäden aus derselben Ursache"],
+    ]);
+    expect(
+      normalized.responses[0].requirements[0].components.some(
+        ({ type }) => type === "COVERAGE_EFFECT"
+      )
+    ).toBe(false);
+  });
+
+  test.each([
+    "Mehrere Gebäude gelten als versicherte Sachen.",
+    "Mehrere Schäden gelten nicht als ein Versicherungsfall.",
+    "Ein Versicherungsfall gilt als eingetreten, wenn der Schaden angezeigt wurde.",
+    "Die bessere Deckung gilt als vereinbart.",
+  ])("does not reinterpret a non-aggregate relation: %s", (source) => {
+    const unit = {
+      unitId: "non-aggregate-relation",
+      source: {
+        blockIds: ["block"],
+        combinedText: source,
+        blocks: [{ blockId: "block", exactText: source }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: source,
+          components: [
+            { type: "OBJECT", label: source, sourceBlockIds: ["block"] },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0]).toEqual(response);
+    expect(normalized.repairs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "CANONICALIZE_AGGREGATED_EVENT_DEFINITION",
+        }),
+      ])
+    );
+  });
+
   test("types list items governed by insured damages as causes or damages", () => {
     const source = "Verrußung\ndie Energie des elektrischen Stromes";
     const unit = {
@@ -5509,7 +5705,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V44");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V45");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );

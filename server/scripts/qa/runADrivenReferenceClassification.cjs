@@ -30,7 +30,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V44";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V45";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -64,6 +64,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V41",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V42",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V43",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V44",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1860,6 +1861,72 @@ function normalizeConditionalEquivalenceDefinition(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function normalizeAggregatedEventDefinition(requirements, unit) {
+  if (requirements.length !== 1) return { requirements, repairs: [] };
+  const sourceText = String(unit?.source?.combinedText || "");
+  const relation =
+    /\b(?:gilt|gelten)\s+als\s+(?:ein(?:e|en|em|er|es)?\s+)?(?:einheitlich(?:e|en|em|er|es)?\s+)?(?:Versicherungs|Schaden)(?:fall|ereignis)\b/iu.exec(
+      sourceText
+    );
+  if (!relation || !/\b(?:mehrere|sämtliche|alle)\b/iu.test(sourceText))
+    return { requirements, repairs: [] };
+  const stripLeadIn = (value) =>
+    value
+      .replace(/^\s*[•-]\s*/u, "")
+      .replace(/^\s*(?:Weiters|Außerdem)\s+/iu, "")
+      .trim();
+  const before = stripLeadIn(sourceText.slice(0, relation.index));
+  const after = stripLeadIn(sourceText.slice(relation.index + relation[0].length));
+  const members = /\b(?:mehrere|sämtliche|alle)\b/iu.test(before)
+    ? before
+    : /\b(?:mehrere|sämtliche|alle)\b/iu.test(after)
+      ? after
+      : "";
+  if (!members || /\b(?:nicht|kein(?:e[snmr]?)?)\b/iu.test(relation[0]))
+    return { requirements, repairs: [] };
+  const memberParts = members
+    .split(/\s+sowie\s+/iu)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const relationSourceBlockIds = sourceBlockIdsForExactSpan(unit, relation[0]);
+  const memberSourceBlockIds = memberParts.map((part) =>
+    sourceBlockIdsForExactSpan(unit, part)
+  );
+  if (
+    relationSourceBlockIds.length === 0 ||
+    memberParts.length === 0 ||
+    memberSourceBlockIds.some((blockIds) => blockIds.length === 0)
+  )
+    return { requirements, repairs: [] };
+  return {
+    requirements: [
+      {
+        ...requirements[0],
+        displayLabel: sourceText,
+        components: [
+          {
+            type: "FACT_ROLE",
+            label: relation[0],
+            sourceBlockIds: relationSourceBlockIds,
+          },
+          ...memberParts.map((label, index) => ({
+            type: "CONDITION",
+            label,
+            sourceBlockIds: memberSourceBlockIds[index],
+          })),
+        ],
+      },
+    ],
+    repairs: [
+      {
+        requirementIndex: 0,
+        action: "CANONICALIZE_AGGREGATED_EVENT_DEFINITION",
+        memberConditions: memberParts.length,
+      },
+    ],
+  };
+}
+
 function normalizeTieredLimitBasisComponents(requirements, unit) {
   const repairs = [];
   let addedScope = false;
@@ -2210,6 +2277,19 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         }),
       };
     }
+    const aggregatedEventDefinition = normalizeAggregatedEventDefinition(
+      requirements,
+      unit
+    );
+    requirements = aggregatedEventDefinition.requirements;
+    for (const repair of aggregatedEventDefinition.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (aggregatedEventDefinition.repairs.length > 0)
+      response = {
+        ...response,
+        primaryClass: "DEFINITION",
+        semanticClasses: ["DEFINITION", "CONDITION"],
+      };
     const inheritedCoverageEffect = materializeInheritedCoverageEffect(
       requirements,
       unit
