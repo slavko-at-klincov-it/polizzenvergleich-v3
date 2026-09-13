@@ -150,7 +150,12 @@
           "routeId": "policyholder-weg",
           "maximumNormalizedSpan": 6000,
           "groups": [
-            { "alternatives": ["Wohnungseigentümergemeinschaft", "WEG"] },
+            {
+              "alternatives": [
+                "Wohnungseigentümergemeinschaft",
+                "Firma WEG"
+              ]
+            },
             {
               "alternatives": [
                 "Versicherungsnehmer",
