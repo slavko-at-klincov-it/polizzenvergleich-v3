@@ -231,29 +231,58 @@ describe("LF known fixture source review", () => {
       outcome: "NO_COUNTERPART_ESTABLISHED",
       customerFound: false,
     });
+    const differingRow = {
+      ...row,
+      components: row.components.map((component, index) =>
+        index ? { ...component, dimension: "LIMIT_BASIS" } : component
+      ),
+    };
     const differingCounterpart = {
       ...response,
-      componentFindings: response.componentFindings.map((finding) => ({
+      componentFindings: response.componentFindings.map((finding, index) => ({
         ...finding,
+        dimension: index ? "LIMIT_BASIS" : finding.dimension,
         outcome: "COUNTERPART_WITH_DIFFERENCE",
       })),
-      unmodeledDifferences: response.componentFindings.map((finding) => ({
-        dimension: finding.dimension,
-        description: "B enthält dasselbe Vergleichselement mit anderem Wert.",
-        candidateIds: finding.candidateIds,
-      })),
+      unmodeledDifferences: response.componentFindings.map(
+        (finding, index) => ({
+          dimension: index ? "LIMIT_BASIS" : finding.dimension,
+          description: "B enthält dasselbe Vergleichselement mit anderem Wert.",
+          candidateIds: finding.candidateIds,
+        })
+      ),
     };
-    expect(validateSourceReviewResponse(row, differingCounterpart)).toEqual({
+    expect(
+      validateSourceReviewResponse(differingRow, differingCounterpart)
+    ).toEqual({
       ...differingCounterpart,
       outcome: "PARTIAL_COUNTERPART",
       customerFound: true,
     });
     expect(() =>
-      validateSourceReviewResponse(row, {
+      validateSourceReviewResponse(differingRow, {
         ...differingCounterpart,
         unmodeledDifferences: [],
       })
     ).toThrow("LF_SOURCE_REVIEW_DIFFERENCE_EVIDENCE_MISSING");
+    expect(() =>
+      validateSourceReviewResponse(row, {
+        ...response,
+        componentFindings: response.componentFindings.map(
+          (finding, index) =>
+            index
+              ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
+              : finding
+        ),
+        unmodeledDifferences: [
+          {
+            dimension: "OBJECT",
+            description: "Ein anderes Objekt ist kein Gegenstück.",
+            candidateIds: response.componentFindings[1].candidateIds,
+          },
+        ],
+      })
+    ).toThrow("LF_SOURCE_REVIEW_DIFFERENCE_DIMENSION_INVALID");
     const implicitRestriction = {
       ...response,
       unmodeledDifferences: [

@@ -2,7 +2,7 @@ const crypto = require("crypto");
 
 const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V6";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
-  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V7";
+  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V8";
 const REVIEW_OUTCOMES = new Set([
   "FULL_COUNTERPART",
   "PARTIAL_COUNTERPART",
@@ -15,6 +15,14 @@ const COMPONENT_OUTCOMES = new Set([
   "OPPOSITE",
   "RELATED_ONLY",
   "NOT_ESTABLISHED",
+]);
+const DIFFERING_COUNTERPART_DIMENSIONS = new Set([
+  "SCOPE",
+  "CONDITION",
+  "VALUE_AND_UNIT",
+  "LIMIT_BASIS",
+  "DEDUCTIBLE",
+  "TEMPORAL_VALIDITY",
 ]);
 const REVIEW_DIMENSIONS = new Set([
   "OBJECT",
@@ -812,6 +820,11 @@ function validateSourceReviewResponse(row, response) {
       throw reviewError("LF_SOURCE_REVIEW_UNMODELED_DIFFERENCE_INVALID");
   }
   for (const finding of response.componentFindings) {
+    if (
+      finding.outcome === "COUNTERPART_WITH_DIFFERENCE" &&
+      !DIFFERING_COUNTERPART_DIMENSIONS.has(finding.dimension)
+    )
+      throw reviewError("LF_SOURCE_REVIEW_DIFFERENCE_DIMENSION_INVALID");
     if (
       finding.outcome === "COUNTERPART_WITH_DIFFERENCE" &&
       !response.unmodeledDifferences.some((difference) =>
