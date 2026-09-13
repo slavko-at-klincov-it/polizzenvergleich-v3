@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V4";
+const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V5";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
   "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V4";
 const REVIEW_OUTCOMES = new Set([
@@ -327,6 +327,68 @@ function clippedText(value, maximumCharacters) {
   return `${text.slice(0, maximumCharacters).trim()} […]`;
 }
 
+function globalClaudeRebindCandidates({
+  candidateIndex,
+  existingCandidates,
+  row,
+  documentsByUuid,
+  maximumQuoteCharacters,
+  maximumCandidates = 3,
+}) {
+  if (row.claude?.foundStatus === "Nein") return [];
+  const query = tokens(row.claude?.sourceQuote);
+  if (!query.size) return [];
+  const existingRanges = new Set(
+    existingCandidates.map(
+      ({ documentFingerprint, physicalPageNumber, oracleExactQuoteSha256 }) =>
+        `${documentFingerprint}:${physicalPageNumber}:${oracleExactQuoteSha256}`
+    )
+  );
+  const seenRanges = new Set();
+  const scored = [];
+  for (const { candidate, sourceTokens } of candidateIndex) {
+    const rangeKey = `${candidate.range.documentFingerprint}:${candidate.range.physicalPageNumber}:${candidate.range.exactQuoteSha256}`;
+    if (existingRanges.has(rangeKey) || seenRanges.has(rangeKey)) continue;
+    const overlap = overlapRatio(query, sourceTokens);
+    if (overlap <= 0) continue;
+    seenRanges.add(rangeKey);
+    scored.push({ candidate, overlap });
+  }
+  return scored
+    .sort(
+      (left, right) =>
+        right.overlap - left.overlap ||
+        left.candidate.range.exactQuote.length -
+          right.candidate.range.exactQuote.length ||
+        left.candidate.rank - right.candidate.rank ||
+        left.candidate.candidateId.localeCompare(right.candidate.candidateId)
+    )
+    .slice(0, maximumCandidates)
+    .map(({ candidate }) => {
+      const document = documentsByUuid.get(candidate.range.documentUuid);
+      if (!document)
+        throw reviewError(
+          "LF_SOURCE_REVIEW_CANDIDATE_DOCUMENT_MISSING",
+          candidate.candidateId
+        );
+      return {
+        ...compactCandidate(
+          candidate,
+          document,
+          {
+            componentId: `__global_claude_rebind__:${row.requirementId}`,
+            label: row.claude.sourceQuote,
+          },
+          row,
+          maximumQuoteCharacters
+        ),
+        evidenceOrigin: "GLOBAL_CLAUDE_QUOTE_REBIND",
+        originalTargetRequirementId: candidate.requirementId,
+        originalTargetComponentId: candidate.componentId,
+      };
+    });
+}
+
 function buildLfKnownFixtureSourceReviewPacket({
   goldCandidate,
   oracle,
@@ -366,6 +428,10 @@ function buildLfKnownFixtureSourceReviewPacket({
   const documentsByUuid = new Map(
     bDocuments.map((document) => [document.uuid, document])
   );
+  const globalCandidateIndex = oracle.benchmarkCandidates.map((candidate) => ({
+    candidate,
+    sourceTokens: tokens(candidate.range.exactQuote),
+  }));
   const rows = goldCandidate.representativeReview.map(
     ({ requirementId, relation }, reviewIndex) => {
       const row = rowsByRequirement.get(requirementId);
@@ -420,6 +486,16 @@ function buildLfKnownFixtureSourceReviewPacket({
         }),
       };
       const semanticChecks = [rowContext, ...components];
+      const selectedCandidates = semanticChecks.flatMap(
+        ({ candidates }) => candidates
+      );
+      const globalClaudeRebind = globalClaudeRebindCandidates({
+        candidateIndex: globalCandidateIndex,
+        existingCandidates: selectedCandidates,
+        row,
+        documentsByUuid,
+        maximumQuoteCharacters,
+      });
       return {
         reviewIndex,
         analysisRowId: row.analysisRowId,
@@ -467,6 +543,7 @@ function buildLfKnownFixtureSourceReviewPacket({
           negativeMeaning:
             "NO_COUNTERPART_ESTABLISHED means no counterpart in the reviewed exact candidates, not certified global absence.",
         },
+        globalClaudeRebind,
         actualComponents: components.length,
         components: semanticChecks,
       };
@@ -491,7 +568,7 @@ function buildLfKnownFixtureSourceReviewPacket({
       maximumPerComponent,
       maximumQuoteCharacters,
       candidatePolicy:
-        "POSITIVE_CLAUDE_QUOTE_REBIND_THEN_LEXICAL_COMPONENT_RANK_WITH_DOCUMENT_DIVERSITY; NAVIGATION_ONLY",
+        "GLOBAL_POSITIVE_CLAUDE_QUOTE_REBIND_PLUS_LEXICAL_COMPONENT_RANK_WITH_DOCUMENT_DIVERSITY; NAVIGATION_ONLY",
     },
     rows,
     summary: {
@@ -506,7 +583,14 @@ function buildLfKnownFixtureSourceReviewPacket({
         0
       ),
       exactCandidatesSelected: rows.reduce(
-        (sum, row) => sum + row.retrieval.selectedCandidateCount,
+        (sum, row) =>
+          sum +
+          row.retrieval.selectedCandidateCount +
+          row.globalClaudeRebind.length,
+        0
+      ),
+      globalClaudeRebindCandidates: rows.reduce(
+        (sum, row) => sum + row.globalClaudeRebind.length,
         0
       ),
       searchedDocumentsPerRow: bDocuments.length,
@@ -549,9 +633,10 @@ function validateSourceReviewResponse(row, response) {
     )
       throw reviewError("LF_SOURCE_REVIEW_COMPONENT_FINDING_INVALID");
     seen.add(finding.componentId);
-    const allowed = new Set(
-      component.candidates.map(({ candidateId }) => candidateId)
-    );
+    const allowed = new Set([
+      ...component.candidates.map(({ candidateId }) => candidateId),
+      ...(row.globalClaudeRebind || []).map(({ candidateId }) => candidateId),
+    ]);
     if (
       new Set(finding.candidateIds).size !== finding.candidateIds.length ||
       finding.candidateIds.some((candidateId) => !allowed.has(candidateId)) ||
@@ -561,11 +646,15 @@ function validateSourceReviewResponse(row, response) {
     )
       throw reviewError("LF_SOURCE_REVIEW_COMPONENT_EVIDENCE_INVALID");
   }
-  const rowCandidateIds = new Set(
-    row.components.flatMap(({ candidates }) =>
-      candidates.map(({ candidateId }) => candidateId)
-    )
+  const globalCandidateIds = new Set(
+    (row.globalClaudeRebind || []).map(({ candidateId }) => candidateId)
   );
+  const rowCandidateIds = new Set([
+    ...globalCandidateIds,
+    ...row.components.flatMap(({ candidates }) =>
+      candidates.map(({ candidateId }) => candidateId)
+    ),
+  ]);
   for (const difference of response.unmodeledDifferences) {
     if (
       !REVIEW_DIMENSIONS.has(difference?.dimension) ||
