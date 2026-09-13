@@ -28,7 +28,8 @@ function argumentsFrom(argv) {
     goldCandidate: path.resolve(values.goldCandidate),
     oracle: path.resolve(values.oracle),
     output: path.resolve(values.output),
-    maximumPerComponent: Number(values.maximumPerComponent || 6),
+    maximumPerComponent: Number(values.maximumPerComponent || 4),
+    maximumQuoteCharacters: Number(values.maximumQuoteCharacters || 1_200),
   };
 }
 
@@ -56,6 +57,7 @@ function run() {
     goldCandidate: readJson(args.goldCandidate, "Gold-Kandidat"),
     oracle: readJson(args.oracle, "Oracle"),
     maximumPerComponent: args.maximumPerComponent,
+    maximumQuoteCharacters: args.maximumQuoteCharacters,
   });
   writePrivateJson(args.output, packet);
   console.log(

@@ -97,6 +97,21 @@ describe("LF known fixture source review", () => {
     expect(packet.rows[0].components[0].candidates).toHaveLength(1);
   });
 
+  it("turns long navigation spans into hash-bound exact excerpts", () => {
+    const input = fixture();
+    input.oracle.benchmarkCandidates[0].range.exactQuote = `${"Vorlauf ".repeat(
+      80
+    )}Versicherter Gegenstand 0${" Nachlauf".repeat(80)}`;
+    const packet = buildLfKnownFixtureSourceReviewPacket({
+      ...input,
+      maximumQuoteCharacters: 240,
+    });
+    const evidence = packet.rows[0].components[0].candidates[0];
+    expect(evidence.excerpted).toBe(true);
+    expect(evidence.exactQuote.length).toBeLessThanOrEqual(240);
+    expect(evidence.exactQuote).toContain("Gegenstand 0");
+  });
+
   it("accepts only source-bound component findings and derives row truth", () => {
     const packet = buildLfKnownFixtureSourceReviewPacket({ ...fixture() });
     const row = packet.rows[0];

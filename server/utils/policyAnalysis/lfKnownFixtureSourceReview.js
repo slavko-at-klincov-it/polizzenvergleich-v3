@@ -139,7 +139,63 @@ function candidateScore(candidate, component, row) {
   return lexical * 3 + componentBonus + rankBonus - lengthPenalty;
 }
 
-function compactCandidate(candidate, document) {
+function excerptRange(candidate, queryText, maximumQuoteCharacters) {
+  const source = candidate.range.exactQuote;
+  if (source.length <= maximumQuoteCharacters)
+    return {
+      exactQuote: source,
+      exactQuoteSha256: candidate.range.exactQuoteSha256,
+      documentStart: candidate.range.documentStart,
+      documentEnd: candidate.range.documentEnd,
+      excerpted: false,
+    };
+  const lowered = source.toLocaleLowerCase("de-AT");
+  const anchors = [...tokens(queryText)].sort(
+    (left, right) => right.length - left.length || left.localeCompare(right)
+  );
+  const anchorIndex = anchors.reduce((found, anchor) => {
+    if (found >= 0) return found;
+    return lowered.indexOf(anchor.toLocaleLowerCase("de-AT"));
+  }, -1);
+  const center = anchorIndex >= 0 ? anchorIndex : 0;
+  let start = Math.max(0, center - Math.floor(maximumQuoteCharacters / 3));
+  let end = Math.min(source.length, start + maximumQuoteCharacters);
+  if (end === source.length) start = Math.max(0, end - maximumQuoteCharacters);
+  if (start > 0) {
+    const boundary = source.indexOf(" ", start);
+    if (boundary >= 0 && boundary < start + 80) start = boundary + 1;
+  }
+  if (end < source.length) {
+    const boundary = source.lastIndexOf(" ", end);
+    if (boundary > end - 80) end = boundary;
+  }
+  const exactQuote = source.slice(start, end);
+  return {
+    exactQuote,
+    exactQuoteSha256: sha256(exactQuote),
+    documentStart: candidate.range.documentStart + start,
+    documentEnd: candidate.range.documentStart + end,
+    excerpted: true,
+  };
+}
+
+function compactCandidate(
+  candidate,
+  document,
+  component,
+  row,
+  maximumQuoteCharacters
+) {
+  const excerpt = excerptRange(
+    candidate,
+    [
+      row.point,
+      row.system?.aContent,
+      row.claude?.sourceQuote,
+      component.label,
+    ].join(" "),
+    maximumQuoteCharacters
+  );
   return {
     candidateId: candidate.candidateId,
     componentId: candidate.componentId,
@@ -149,10 +205,12 @@ function compactCandidate(candidate, document) {
     documentRole: document.role,
     documentStatus: document.documentStatus,
     physicalPageNumber: candidate.range.physicalPageNumber,
-    documentStart: candidate.range.documentStart,
-    documentEnd: candidate.range.documentEnd,
-    exactQuote: candidate.range.exactQuote,
-    exactQuoteSha256: candidate.range.exactQuoteSha256,
+    documentStart: excerpt.documentStart,
+    documentEnd: excerpt.documentEnd,
+    exactQuote: excerpt.exactQuote,
+    exactQuoteSha256: excerpt.exactQuoteSha256,
+    excerpted: excerpt.excerpted,
+    oracleExactQuoteSha256: candidate.range.exactQuoteSha256,
     rank: candidate.rank,
     score: candidate.score,
   };
@@ -164,6 +222,7 @@ function selectComponentCandidates({
   row,
   documentsByUuid,
   maximumPerComponent,
+  maximumQuoteCharacters,
 }) {
   const seenQuotes = new Set();
   const scored = candidates
@@ -214,14 +273,27 @@ function selectComponentCandidates({
         "LF_SOURCE_REVIEW_CANDIDATE_DOCUMENT_MISSING",
         candidate.candidateId
       );
-    return compactCandidate(candidate, document);
+    return compactCandidate(
+      candidate,
+      document,
+      component,
+      row,
+      maximumQuoteCharacters
+    );
   });
+}
+
+function clippedText(value, maximumCharacters) {
+  const text = String(value || "").trim();
+  if (text.length <= maximumCharacters) return text || null;
+  return `${text.slice(0, maximumCharacters).trim()} […]`;
 }
 
 function buildLfKnownFixtureSourceReviewPacket({
   goldCandidate,
   oracle,
-  maximumPerComponent = 6,
+  maximumPerComponent = 4,
+  maximumQuoteCharacters = 1_200,
   createdAt = new Date().toISOString(),
 } = {}) {
   if (
@@ -233,7 +305,9 @@ function buildLfKnownFixtureSourceReviewPacket({
     !Array.isArray(oracle.benchmarkCandidates) ||
     !Array.isArray(oracle.documents) ||
     !Number.isInteger(maximumPerComponent) ||
-    maximumPerComponent < 1
+    maximumPerComponent < 1 ||
+    !Number.isInteger(maximumQuoteCharacters) ||
+    maximumQuoteCharacters < 200
   )
     throw reviewError("LF_SOURCE_REVIEW_INPUT_INVALID");
   const rowsByRequirement = new Map(
@@ -285,6 +359,7 @@ function buildLfKnownFixtureSourceReviewPacket({
           row,
           documentsByUuid,
           maximumPerComponent,
+          maximumQuoteCharacters,
         }),
       }));
       return {
@@ -300,8 +375,21 @@ function buildLfKnownFixtureSourceReviewPacket({
           values: row.system.aValues,
           source: row.system.aSource,
         },
-        claude: row.claude,
-        system: row.system,
+        claudeClaim: {
+          foundStatus: row.claude.foundStatus,
+          coverageStatus: row.claude.coverageStatus,
+          values: row.claude.values,
+          sourceQuote: clippedText(row.claude.sourceQuote, 3_000),
+          sourceFiles: row.claude.sourceFiles,
+          note: clippedText(row.claude.note, 2_000),
+        },
+        systemClaim: {
+          customerSearchStatus: row.system.customerSearchStatus,
+          bCounterpart: clippedText(row.system.bCounterpart, 3_000),
+          bCoverage: row.system.bCoverage,
+          bValues: row.system.bValues,
+          note: clippedText(row.system.note, 1_000),
+        },
         searchedDocuments: bDocuments.map(
           ({ uuid, fingerprint, originalName, role, documentStatus }) => ({
             uuid,
@@ -342,6 +430,7 @@ function buildLfKnownFixtureSourceReviewPacket({
     selection: {
       sample: "REPRESENTATIVE_30_V1",
       maximumPerComponent,
+      maximumQuoteCharacters,
       candidatePolicy:
         "LEXICAL_COMPONENT_RANK_WITH_DOCUMENT_DIVERSITY; NAVIGATION_ONLY",
     },
