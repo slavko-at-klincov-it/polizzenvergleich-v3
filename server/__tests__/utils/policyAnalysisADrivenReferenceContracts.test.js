@@ -2771,10 +2771,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     expect(normalized.responses[0]).toMatchObject({
       primaryClass: "PERIL_OR_DAMAGE",
-      semanticClasses: [
-        "PERIL_OR_DAMAGE",
-        "OPERATIVE_COVERAGE_STATEMENT",
-      ],
+      semanticClasses: ["PERIL_OR_DAMAGE", "OPERATIVE_COVERAGE_STATEMENT"],
     });
     expect(
       normalized.responses[0].requirements.map(({ components }) =>
@@ -2873,8 +2870,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(
       normalized.responses[0].requirements.every(
         ({ components }) =>
-          components.filter(({ type }) => type === "COVERAGE_EFFECT")
-            .length === 1
+          components.filter(({ type }) => type === "COVERAGE_EFFECT").length ===
+          1
       )
     ).toBe(true);
   });

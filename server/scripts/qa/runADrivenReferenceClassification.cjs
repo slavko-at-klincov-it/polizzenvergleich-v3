@@ -1261,9 +1261,7 @@ function materializeInheritedCoverageEffect(requirements, unit) {
       sourceBlockIds: [blockId],
     };
     const repair = explicitCoverageEffectRepair(unit, component);
-    return repair
-      ? [{ ...component, ...repair }]
-      : [];
+    return repair ? [{ ...component, ...repair }] : [];
   });
   if (candidates.length !== 1) return { requirements, repairs: [] };
   const inheritedComponent = candidates[0];
@@ -2089,8 +2087,10 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         action: "NORMALIZE_CONDITION_MEMBERSHIP_OBJECTS",
         ...repair,
       });
-    const damageCauseGovernorObjects =
-      normalizeDamageCauseGovernorComponents(requirements, unit);
+    const damageCauseGovernorObjects = normalizeDamageCauseGovernorComponents(
+      requirements,
+      unit
+    );
     requirements = damageCauseGovernorObjects.requirements;
     for (const repair of damageCauseGovernorObjects.repairs)
       repairs.push({ unitId: response?.unitId, ...repair });
