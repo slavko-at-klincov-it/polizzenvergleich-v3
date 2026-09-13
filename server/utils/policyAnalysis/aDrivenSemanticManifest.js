@@ -12,8 +12,10 @@ const {
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID_V11 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V11";
-const A_DYNAMIC_MANIFEST_CONTRACT_ID =
+const A_DYNAMIC_MANIFEST_CONTRACT_ID_V12 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V12";
+const A_DYNAMIC_MANIFEST_CONTRACT_ID =
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V13";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V1 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V1";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V2 =
@@ -234,11 +236,21 @@ function comparableText(value) {
     .replace(/[„“”«»]/gu, '"')
     .replace(/\s+/gu, " ")
     .trim()
-    .replace(/(^| )[-–—•▪] (?=\S)/gu, "$1• ");
+    .replace(
+      /(^| )([-–—•▪]) (?=\S)/gu,
+      (matched, prefix, marker, offset, source) => {
+        const precedingText = source.slice(0, offset + prefix.length);
+        if (marker === "-" && /\b(?:und|oder|sowie)\s*$/iu.test(precedingText))
+          return matched;
+        return `${prefix}• `;
+      }
+    );
 }
 
 function layoutComparableText(value) {
-  return comparableText(value).replace(/(\p{L})-\s+(?=\p{L})/gu, "$1-");
+  return comparableText(value)
+    .replace(/(\p{L})-\s+(?=\p{L})/gu, "$1-")
+    .replace(/(^|\s)-\s+(?=\p{L})/gu, "$1-");
 }
 
 function selectedSourceText(sourceBlockIds, blocks) {
@@ -309,7 +321,10 @@ function canonicalExactSourceText(value, sourceBlockIds, blocks) {
   const comparableExact = comparableText(exact);
   const comparableValue = comparableText(value);
   if (comparableExact.includes(comparableValue)) return value;
-  if (layoutComparableText(exact) === layoutComparableText(value)) return exact;
+  const layoutExact = layoutComparableText(exact);
+  const layoutValue = layoutComparableText(value);
+  if (layoutExact === layoutValue) return exact;
+  if (layoutExact.includes(layoutValue)) return value;
   const sourceCorrection = uniqueSingleEditSourceSubstring(
     comparableExact,
     comparableValue
@@ -918,7 +933,7 @@ function sourceContains(
     .filter(({ blockId }) => sourceBlockIds.includes(blockId))
     .map(({ exactText }) => exactText)
     .join("\n");
-  return comparableText(sourceText).includes(comparableText(value));
+  return layoutComparableText(sourceText).includes(layoutComparableText(value));
 }
 
 function minimalSourceRange(
@@ -927,14 +942,14 @@ function minimalSourceRange(
   declaredBlockIds,
   availableBlocks = evidenceBlocks(unit)
 ) {
-  const needle = comparableText(value);
+  const needle = layoutComparableText(value);
   if (!needle) return [];
   const matches = [];
   for (let start = 0; start < availableBlocks.length; start += 1) {
     for (let end = start; end < availableBlocks.length; end += 1) {
       const blocks = availableBlocks.slice(start, end + 1);
       if (
-        comparableText(
+        layoutComparableText(
           blocks.map(({ exactText }) => exactText).join("\n")
         ).includes(needle)
       ) {
@@ -1855,6 +1870,7 @@ module.exports = {
   A_BLOCK_TERMINAL_CONTRACT_ID,
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,

@@ -5,6 +5,7 @@ const {
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -6162,89 +6163,99 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     }
   });
 
-  test("upgrades an older run and prompt by revalidating its responses", async () => {
-    const temporary = fs.mkdtempSync(
-      path.join(os.tmpdir(), "lf-a-classification-v12-upgrade-")
-    );
-    try {
-      const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "1");
-      const plan = deriveClassificationEvidencePlan(
-        buildADrivenSourceUnitPlan({
-          documents: [document("source", 0, source)],
-        })
+  test.each([
+    A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
+    A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
+  ])(
+    "upgrades an older run and prompt with validator %s by revalidating its responses",
+    async (validatorContractId) => {
+      const temporary = fs.mkdtempSync(
+        path.join(os.tmpdir(), "lf-a-classification-v12-upgrade-")
       );
-      const built = buildADrivenClassificationBatches(plan);
-      const batches = { ...built, batches: built.batches.slice(0, 1) };
-      const batch = batches.batches[0];
-      const contextualBatch = {
-        ...batch,
-        units: batch.expectedUnitIds.map((unitId) =>
-          plan.units.find((unit) => unit.unitId === unitId)
-        ),
-      };
-      const args = {
-        output: temporary,
-        model: "qwen/qwen3.6-35b-a3b",
-        modelContext: 42_496,
-        maximumAttempts: 1,
-        requestTimeoutMs: 1_000,
-        abortSettlementTimeoutMs: 10,
-      };
-      const responses = contextualBatch.units.map(validResponse);
-      const seeded = await runBatch({
-        client: {
-          chat: {
-            completions: {
-              create: jest.fn(async () => ({
-                model: args.model,
-                choices: [{ message: { content: JSON.stringify(responses) } }],
-                usage: {},
-              })),
+      try {
+        const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "1");
+        const plan = deriveClassificationEvidencePlan(
+          buildADrivenSourceUnitPlan({
+            documents: [document("source", 0, source)],
+          })
+        );
+        const built = buildADrivenClassificationBatches(plan);
+        const batches = { ...built, batches: built.batches.slice(0, 1) };
+        const batch = batches.batches[0];
+        const contextualBatch = {
+          ...batch,
+          units: batch.expectedUnitIds.map((unitId) =>
+            plan.units.find((unit) => unit.unitId === unitId)
+          ),
+        };
+        const args = {
+          output: temporary,
+          model: "qwen/qwen3.6-35b-a3b",
+          modelContext: 42_496,
+          maximumAttempts: 1,
+          requestTimeoutMs: 1_000,
+          abortSettlementTimeoutMs: 10,
+        };
+        const responses = contextualBatch.units.map(validResponse);
+        const seeded = await runBatch({
+          client: {
+            chat: {
+              completions: {
+                create: jest.fn(async () => ({
+                  model: args.model,
+                  choices: [
+                    { message: { content: JSON.stringify(responses) } },
+                  ],
+                  usage: {},
+                })),
+              },
             },
           },
-        },
-        model: args.model,
-        modelContext: args.modelContext,
-        plan,
-        batch,
-        maximumAttempts: 1,
-      });
-      const predecessor = {
-        ...seeded,
-        contractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
-        promptContractId: "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19",
-        validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
-      };
-      delete predecessor.semanticSignalContractId;
-      const file = batchResultFile(temporary, batch);
-      fs.mkdirSync(path.dirname(file), { recursive: true });
-      fs.writeFileSync(file, `${JSON.stringify(predecessor, null, 2)}\n`, {
-        mode: 0o600,
-      });
-      const client = { chat: { completions: { create: jest.fn() } } };
+          model: args.model,
+          modelContext: args.modelContext,
+          plan,
+          batch,
+          maximumAttempts: 1,
+        });
+        const predecessor = {
+          ...seeded,
+          contractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
+          promptContractId: "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19",
+          validatorContractId,
+        };
+        delete predecessor.semanticSignalContractId;
+        const file = batchResultFile(temporary, batch);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(file, `${JSON.stringify(predecessor, null, 2)}\n`, {
+          mode: 0o600,
+        });
+        const client = { chat: { completions: { create: jest.fn() } } };
 
-      const [upgraded] = await processClassificationBatches({
-        args,
-        plan,
-        batches,
-        client,
-        recoverModelAfterAbort: jest.fn(),
-      });
+        const [upgraded] = await processClassificationBatches({
+          args,
+          plan,
+          batches,
+          client,
+          recoverModelAfterAbort: jest.fn(),
+        });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V47");
-      expect(upgraded.validatorContractId).toBe(A_DYNAMIC_MANIFEST_CONTRACT_ID);
-      expect(upgraded.semanticSignalContractId).toBe(
-        A_SEMANTIC_SIGNAL_CONTRACT_ID
-      );
-      expect(upgraded.responses).toEqual(responses);
-      expect(client.chat.completions.create).not.toHaveBeenCalled();
-      expect(
-        fs.readdirSync(path.join(temporary, "superseded-batches"))
-      ).toHaveLength(1);
-    } finally {
-      fs.rmSync(temporary, { recursive: true, force: true });
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V48");
+        expect(upgraded.validatorContractId).toBe(
+          A_DYNAMIC_MANIFEST_CONTRACT_ID
+        );
+        expect(upgraded.semanticSignalContractId).toBe(
+          A_SEMANTIC_SIGNAL_CONTRACT_ID
+        );
+        expect(upgraded.responses).toEqual(responses);
+        expect(client.chat.completions.create).not.toHaveBeenCalled();
+        expect(
+          fs.readdirSync(path.join(temporary, "superseded-batches"))
+        ).toHaveLength(1);
+      } finally {
+        fs.rmSync(temporary, { recursive: true, force: true });
+      }
     }
-  });
+  );
 
   test("revalidates a bound V13 predecessor after its evidence context changes", async () => {
     const temporary = fs.mkdtempSync(
@@ -8065,7 +8076,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
-  test("canonicalizes only a whole declared source range dehyphenated by layout", () => {
+  test("canonicalizes a whole declared source range dehyphenated by layout", () => {
     const source = artifact(
       ["Seite 1\n- Bundes-\nUmwelthaftungsgesetz.\n"],
       "f"
@@ -8107,6 +8118,122 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(requirement.displayLabel).toBe(unit.source.combinedText.trim());
     expect(requirement.components[0].label).toBe(
       unit.source.combinedText.trim()
+    );
+  });
+
+  test("accepts a source-bound dehyphenated component inside a wider declared range", () => {
+    const source = artifact(
+      [
+        "Seite 1\nVersichert sind Sicherheitsfachkräfte und -\nbeauftragte sowie Hausverwalter.\n",
+      ],
+      "1"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Sicherheitsfachkräfte und -beauftragte",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+                {
+                  type: "OBJECT",
+                  label: "Hausverwalter",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "Versichert",
+                  coverageEffect: "INCLUDED",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const requirement = manifest.requirements.find(({ sourceUnitIds }) =>
+      sourceUnitIds.includes(unit.unitId)
+    );
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+    expect(requirement.components).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "OBJECT",
+          label: "Sicherheitsfachkräfte und -beauftragte",
+          sourceBlockIds: unit.source.blockIds,
+        }),
+      ])
+    );
+  });
+
+  test("does not treat a removed semantic hyphen as layout dehyphenation", () => {
+    const source = artifact(
+      ["Seite 1\nVersichert sind Sicherheitsfachkräfte und -\nbeauftragte.\n"],
+      "2"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Sicherheitsfachkräfte und Beauftragte",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "Versichert",
+                  coverageEffect: "INCLUDED",
+                  sourceBlockIds: unit.source.blockIds,
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(1);
+    expect(manifest.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "COMPONENT_SOURCE_TEXT_INVALID",
+          componentType: "OBJECT",
+          invalidLiteralValues: ["Sicherheitsfachkräfte und Beauftragte"],
+        }),
+      ])
     );
   });
 
