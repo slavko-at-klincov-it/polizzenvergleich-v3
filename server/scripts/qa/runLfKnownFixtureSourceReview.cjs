@@ -107,7 +107,7 @@ function messages(row) {
     {
       role: "system",
       content:
-        "Du führst eine source-bound fachliche Gegenstückprüfung für österreichische Gebäudeversicherung durch. Antworte ausschließlich mit genau einem JSON-Objekt. Verwende nur die vorgelegten candidateId-Werte und deren exakte Originaltexte. Ähnliche Wörter sind kein Beleg, wenn Gegenstand, Gefahr, Wirkung, Rolle, Bedingung, Wert oder Scope abweichen. Beispiel: gemeinschaftlich genutzt ist nicht gewerblich genutzt. Ein Synonym ist nur bei gleicher versicherungsfachlicher Bedeutung ein MATCH. Der synthetische __row_context__-Check ist zwingend: Er prüft, ob Kategorie, Unterkategorie und Prüfpunkt als fachlicher Scope des Gegenstücks gelten; allgemeine Klauseln dürfen einen speziellen Produktbaustein nicht ersetzen. Pro Check ist genau ein Ergebnis auszugeben: MATCH mit mindestens einer belegenden candidateId; MISMATCH mit mindestens einer ausdrücklich widersprechenden candidateId; oder NOT_ESTABLISHED mit candidateIds:[]. FULL_COUNTERPART ist nur bei ausschließlich MATCH erlaubt. PARTIAL_COUNTERPART gilt bei mindestens einem MATCH und mindestens einem NOT_ESTABLISHED oder MISMATCH. CONTRADICTED gilt bei mindestens einem MISMATCH und keinem NOT_ESTABLISHED. Wenn kein MATCH und keine vollständig belegte CONTRADICTED-Konstellation vorliegt, verwende NO_COUNTERPART_ESTABLISHED. NO_COUNTERPART_ESTABLISHED bedeutet nur: in den vorgelegten exakten Kandidaten nicht belegt; es ist kein globaler Abwesenheitsnachweis. Erfinde niemals Fundstellen, IDs oder Inhalte. Das Ausgabeformat ist exakt {contractId,requirementId,outcome,componentFindings:[{componentId,dimension,outcome,candidateIds}],rationale}. contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V2 sein.",
+        "Du führst eine source-bound fachliche Gegenstückprüfung für österreichische Gebäudeversicherung durch. Antworte ausschließlich mit genau einem JSON-Objekt. Verwende nur die vorgelegten candidateId-Werte und deren exakte Originaltexte. Ähnliche Wörter sind kein Beleg, wenn Gegenstand, Gefahr, Wirkung, Rolle, Bedingung, Wert oder Scope abweichen. Beispiel: gemeinschaftlich genutzt ist nicht gewerblich genutzt. Ein Synonym ist nur bei gleicher versicherungsfachlicher Bedeutung ein MATCH. Der synthetische __row_context__-Check ist zwingend: Er prüft, ob Kategorie, Unterkategorie und Prüfpunkt als fachlicher Scope des Gegenstücks gelten; allgemeine Klauseln dürfen einen speziellen Produktbaustein nicht ersetzen. Pro Check ist genau ein Ergebnis auszugeben: MATCH mit mindestens einer belegenden candidateId; MISMATCH mit mindestens einer ausdrücklich widersprechenden candidateId; oder NOT_ESTABLISHED mit candidateIds:[]. Zeilenpriorität ohne Überschneidung: FULL_COUNTERPART nur wenn alle Checks MATCH sind; PARTIAL_COUNTERPART sobald mindestens ein MATCH und mindestens ein anderer Check MISMATCH oder NOT_ESTABLISHED ist; CONTRADICTED nur wenn kein MATCH vorliegt und alle Checks MISMATCH sind; sonst NO_COUNTERPART_ESTABLISHED. NO_COUNTERPART_ESTABLISHED bedeutet nur: in den vorgelegten exakten Kandidaten nicht belegt; es ist kein globaler Abwesenheitsnachweis. Erfinde niemals Fundstellen, IDs oder Inhalte. Das Ausgabeformat ist exakt {contractId,requirementId,outcome,componentFindings:[{componentId,dimension,outcome,candidateIds}],rationale}. contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V2 sein.",
     },
     {
       role: "user",
@@ -128,7 +128,7 @@ function repairMessages(row, rawResponse, error) {
       role: "user",
       content: `Die Antwort ist formal ungültig (${errorClass(
         error
-      )}). Korrigiere dasselbe Objekt, ohne neue Kandidaten zu erfinden. Wichtig: outcome auf Zeilenebene ist ausschließlich FULL_COUNTERPART, PARTIAL_COUNTERPART, NO_COUNTERPART_ESTABLISHED oder CONTRADICTED. outcome innerhalb jedes componentFinding ist ausschließlich MATCH, MISMATCH oder NOT_ESTABLISHED. NOT_ESTABLISHED hat candidateIds exakt []; MATCH und MISMATCH benötigen mindestens eine für genau diese Komponente erlaubte candidateId. requirementId und alle componentId/dimension-Paare müssen unverändert bleiben.`,
+      )}). Korrigiere dasselbe Objekt, ohne neue Kandidaten zu erfinden. Wichtig: outcome auf Zeilenebene ist ausschließlich FULL_COUNTERPART, PARTIAL_COUNTERPART, NO_COUNTERPART_ESTABLISHED oder CONTRADICTED. outcome innerhalb jedes componentFinding ist ausschließlich MATCH, MISMATCH oder NOT_ESTABLISHED. NOT_ESTABLISHED hat candidateIds exakt []; MATCH und MISMATCH benötigen mindestens eine für genau diese Komponente erlaubte candidateId. Bei mindestens einem MATCH plus einem abweichenden oder unbelegten Check ist die Zeile PARTIAL_COUNTERPART. CONTRADICTED ist nur ohne MATCH zulässig. requirementId und alle componentId/dimension-Paare müssen unverändert bleiben.`,
     },
   ];
 }
@@ -179,6 +179,44 @@ function reusableResult(file, { packetSha256, model, modelContext, row }) {
   return result;
 }
 
+function recoverValidatedAttempt(output, packet, row) {
+  const directory = path.join(output, "attempts");
+  if (!fs.existsSync(directory)) return null;
+  const prefix = `${String(row.reviewIndex + 1).padStart(2, "0")}-${row.requirementId}-`;
+  const files = fs
+    .readdirSync(directory)
+    .filter((name) => name.startsWith(prefix) && name.endsWith(".private.json"))
+    .sort();
+  for (const name of files) {
+    const attempt = readJson(
+      path.join(directory, name),
+      "LF_SOURCE_REVIEW_ATTEMPT"
+    );
+    if (
+      attempt.contractId !== RUN_CONTRACT_ID ||
+      attempt.packetSha256 !== packet.packetSha256 ||
+      attempt.requirementId !== row.requirementId ||
+      typeof attempt.rawResponse !== "string" ||
+      !attempt.rawResponse
+    )
+      continue;
+    try {
+      return {
+        attemptFile: name,
+        requestSha256: attempt.requestSha256,
+        rawResponse: attempt.rawResponse,
+        response: validateSourceReviewResponse(
+          row,
+          parseJsonObject(attempt.rawResponse)
+        ),
+      };
+    } catch {
+      // A prior invalid response remains immutable evidence and is skipped.
+    }
+  }
+  return null;
+}
+
 async function runReviewRow({
   client,
   recoverModelAfterAbort,
@@ -194,6 +232,29 @@ async function runReviewRow({
     row,
   });
   if (reusable) return { result: reusable, reused: true };
+  const recovered = recoverValidatedAttempt(args.output, packet, row);
+  if (recovered) {
+    const result = {
+      schemaVersion: 1,
+      contractId: RESULT_CONTRACT_ID,
+      status: "MODEL_SOURCE_REVIEW_VALIDATED_NOT_GOLD",
+      goldAuthority: false,
+      packetSha256: packet.packetSha256,
+      promptContractId: PROMPT_CONTRACT_ID,
+      promptSha256: recovered.requestSha256,
+      model: args.model,
+      modelContext: args.modelContext,
+      requirementId: row.requirementId,
+      analysisRowId: row.analysisRowId,
+      relation: row.relation,
+      response: recovered.response,
+      rawResponseSha256: sha256(recovered.rawResponse),
+      recoveredFromAttemptFile: recovered.attemptFile,
+      completedAt: new Date().toISOString(),
+    };
+    writePrivateJson(file, result);
+    return { result, reused: true };
+  }
   let requestMessages = messages(row);
   let lastError = null;
   for (let attempt = 1; attempt <= args.maximumAttempts; attempt += 1) {
@@ -408,6 +469,7 @@ if (require.main === module)
 module.exports = {
   messages,
   parseJsonObject,
+  recoverValidatedAttempt,
   repairMessages,
   reusableResult,
   runReviewRow,

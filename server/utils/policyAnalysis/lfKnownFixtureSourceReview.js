@@ -526,10 +526,10 @@ function validateSourceReviewResponse(row, response) {
   const outcomes = response.componentFindings.map(({ outcome }) => outcome);
   const expectedOutcome = outcomes.every((outcome) => outcome === "MATCH")
     ? "FULL_COUNTERPART"
-    : outcomes.includes("MISMATCH") && !outcomes.includes("NOT_ESTABLISHED")
-      ? "CONTRADICTED"
-      : outcomes.includes("MATCH")
-        ? "PARTIAL_COUNTERPART"
+    : outcomes.includes("MATCH")
+      ? "PARTIAL_COUNTERPART"
+      : outcomes.every((outcome) => outcome === "MISMATCH")
+        ? "CONTRADICTED"
         : "NO_COUNTERPART_ESTABLISHED";
   if (response.outcome !== expectedOutcome)
     throw reviewError("LF_SOURCE_REVIEW_ROW_OUTCOME_INVALID");

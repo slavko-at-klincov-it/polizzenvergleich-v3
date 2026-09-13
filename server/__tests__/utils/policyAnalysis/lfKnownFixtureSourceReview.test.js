@@ -130,6 +130,14 @@ describe("LF known fixture source review", () => {
       rationale: "Die Originalstelle nennt den Gegenstand ausdrücklich.",
     };
     expect(validateSourceReviewResponse(row, response)).toEqual(response);
+    const partial = {
+      ...response,
+      outcome: "PARTIAL_COUNTERPART",
+      componentFindings: response.componentFindings.map((finding, index) =>
+        index ? { ...finding, outcome: "MISMATCH" } : finding
+      ),
+    };
+    expect(validateSourceReviewResponse(row, partial)).toEqual(partial);
     expect(() =>
       validateSourceReviewResponse(row, {
         ...response,
