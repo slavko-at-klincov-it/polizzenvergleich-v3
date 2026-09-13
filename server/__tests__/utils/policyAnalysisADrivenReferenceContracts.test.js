@@ -252,6 +252,71 @@ describe("A-driven classification evidence recovery", () => {
     ).toBeUndefined();
     expect(recovered.classificationEvidenceContext.recoveredContexts).toBe(5);
   });
+
+  test("carries a list governor across a bounded same-term definition bridge", () => {
+    const source = (combinedText, blockId) => ({
+      documentUuid: "doc",
+      blockIds: [blockId],
+      blocks: [{ blockId, exactText: combinedText }],
+      combinedText,
+    });
+    const plan = {
+      units: [
+        {
+          unitId: "governor",
+          unitKind: "CLAUSE",
+          source: source("Versichert sind Schäden durch", "governor-block"),
+        },
+        {
+          unitId: "explosion",
+          unitKind: "LIST",
+          source: source("• Explosion", "explosion-block"),
+        },
+        {
+          unitId: "explosion-definition",
+          unitKind: "CLAUSE",
+          source: source(
+            "Eine Explosion gilt auch dann als Explosion, wenn der Behälter nicht zerreißt;",
+            "definition-block"
+          ),
+        },
+        {
+          unitId: "resumed-list",
+          unitKind: "LIST",
+          source: source("• Sprengstoffexplosion", "resumed-block"),
+        },
+        {
+          unitId: "unrelated-clause",
+          unitKind: "CLAUSE",
+          source: source("Der Vertrag endet heute.", "unrelated-block"),
+        },
+        {
+          unitId: "unrelated-list",
+          unitKind: "LIST",
+          source: source("• Gartenmöbel", "unrelated-list-block"),
+        },
+      ],
+    };
+
+    const recovered = deriveClassificationEvidencePlan(plan);
+    const byId = new Map(recovered.units.map((unit) => [unit.unitId, unit]));
+
+    expect(byId.get("explosion").governingContext).toMatchObject({
+      relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
+      unitIds: ["governor"],
+      blockIds: ["governor-block"],
+    });
+    expect(byId.get("resumed-list").governingContext).toMatchObject({
+      relationType: "RECOVERS_INTERRUPTED_LIST_GOVERNOR",
+      unitIds: ["governor"],
+      blockIds: ["governor-block"],
+    });
+    expect(byId.get("unrelated-list").governingContext).toBeUndefined();
+    expect(recovered.classificationEvidenceContext).toEqual({
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V2",
+      recoveredContexts: 2,
+    });
+  });
 });
 
 function digest(contractId, payload) {
@@ -2715,6 +2780,74 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toEqual([["DAMAGE_OR_EFFECT"], ["PERIL_OR_CAUSE"]]);
   });
 
+  test("terminalizes a pure governor only after its evidence is attached to consumers", () => {
+    const governor = {
+      unitId: "governor",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["governor-block"],
+        combinedText: "Zusätzlich versichert sind Schäden durch",
+        blocks: [
+          {
+            blockId: "governor-block",
+            exactText: "Zusätzlich versichert sind Schäden durch",
+          },
+        ],
+      },
+    };
+    const consumer = {
+      unitId: "consumer",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["consumer-block"],
+        combinedText: "• Verrußung",
+        blocks: [{ blockId: "consumer-block", exactText: "• Verrußung" }],
+      },
+      governingContext: {
+        unitIds: [governor.unitId],
+        blockIds: ["governor-block"],
+        combinedText: governor.source.combinedText,
+        blocks: governor.source.blocks,
+      },
+    };
+    const response = {
+      unitId: governor.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: governor.source.combinedText,
+          components: [
+            {
+              type: "COVERAGE_EFFECT",
+              label: "versichert",
+              coverageEffect: "INCLUDED",
+              sourceBlockIds: ["governor-block"],
+            },
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Schäden",
+              sourceBlockIds: ["governor-block"],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(
+      normalizeUnambiguousComponentTypes([response], [governor, consumer])
+        .responses[0]
+    ).toEqual({
+      unitId: governor.unitId,
+      primaryClass: "DUPLICATE",
+      semanticClasses: ["DUPLICATE"],
+      requirements: [],
+    });
+    expect(
+      normalizeUnambiguousComponentTypes([response], [governor]).responses[0]
+    ).toEqual(response);
+  });
+
   test("atomizes a named peril definition, explicit extension, and preserved right in one list requirement", () => {
     const source =
       "• Brand \n das ist ein Feuer, das sich bestimmungswidrig ausbreitet; Schäden durch Kaminbrand sind \nmitversichert. Das Regressrecht des Versicherers bleibt davon unberührt; ";
@@ -4416,7 +4549,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V35");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V36");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );

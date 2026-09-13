@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V35";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V36";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -54,6 +54,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V32",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V33",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V34",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V35",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -88,7 +89,7 @@ const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
 const MAXIMUM_ATTEMPTS = 8;
 const TRANSPORT_CONTRACT_ID = "LF_A_CLASSIFICATION_TRANSPORT_V1";
 const CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID =
-  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V1";
+  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V2";
 const execFile = promisify(childProcess.execFile);
 
 function fail(message) {
@@ -1213,7 +1214,7 @@ function normalizeDamageCauseGovernorObjectComponents(requirements, unit) {
   if (!/\bversichert\b[\s\S]{0,80}\bSchäden\s+durch\b/iu.test(governorText))
     return { requirements, repairs: [] };
   const damageLabelPattern =
-    /^\s*(?:[•-]\s*)?(?:Verrußung|Rauchschaden|Rußschaden|Schmorschaden|Kabelschmorschaden|Beschädigung|Zerstörung)(?:\b|en\b)/iu;
+    /^\s*(?:[•-]\s*)?(?:Verrußung|Rauchsch(?:aden|äden)|Rußsch(?:aden|äden)|Schmorsch(?:aden|äden)|Kabelschmorsch(?:aden|äden)|Beschädigung|Zerstörung)(?:\b|en\b)/iu;
   const repairs = [];
   const normalizedRequirements = requirements.map(
     (requirement, requirementIndex) => ({
@@ -1934,6 +1935,9 @@ function normalizeUnambiguousSemanticClassAliases(response) {
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
+  const consumedGovernorUnitIds = new Set(
+    units.flatMap((unit) => unit?.governingContext?.unitIds || [])
+  );
   const normalized = responses.map((response) => {
     const semanticAliasNormalization =
       normalizeUnambiguousSemanticClassAliases(response);
@@ -1946,6 +1950,29 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
       });
     const unit = unitsById.get(response?.unitId);
     const sourceText = String(unit?.source?.combinedText || "");
+    const pureConsumedDamageCauseGovernor =
+      consumedGovernorUnitIds.has(response?.unitId) &&
+      unit?.unitKind === "CLAUSE" &&
+      /^(?:Zusätzlich\s+)?(?:versichert\s+sind|sind\s+(?:mit)?versichert)\s+Schäden\s+durch\s*$/iu.test(
+        sourceText
+      );
+    if (pureConsumedDamageCauseGovernor) {
+      repairs.push({
+        unitId: response?.unitId,
+        action: "TERMINALIZE_CONSUMED_DAMAGE_CAUSE_GOVERNOR",
+        consumerUnitIds: units
+          .filter((candidate) =>
+            candidate?.governingContext?.unitIds?.includes(response?.unitId)
+          )
+          .map(({ unitId }) => unitId),
+      });
+      return {
+        unitId: response?.unitId,
+        primaryClass: "DUPLICATE",
+        semanticClasses: ["DUPLICATE"],
+        requirements: [],
+      };
+    }
     const numberedHeadingWithoutPredicate =
       unit?.unitKind === "LIST" &&
       unit.source?.blocks?.length > 0 &&
@@ -2881,6 +2908,56 @@ function classificationGovernorContext(previous, current) {
   };
 }
 
+function interruptedListGovernorContext(contentUnits, currentIndex) {
+  const current = contentUnits[currentIndex];
+  if (current?.unitKind !== "LIST" || current.governingContext) return null;
+  const bridgeUnits = [];
+  let anchorIndex = currentIndex - 1;
+  while (
+    anchorIndex >= 0 &&
+    bridgeUnits.length < 3 &&
+    contentUnits[anchorIndex]?.unitKind === "CLAUSE"
+  ) {
+    const bridge = contentUnits[anchorIndex];
+    const bridgeText = String(bridge.source?.combinedText || "");
+    if (
+      !/\b(?:gilt\s+(?:auch\s+)?(?:dann\s+)?als|liegt\s+nur\s+vor,\s+wenn|(?:das\s+)?ist\s+(?:ein|eine))\b/iu.test(
+        bridgeText
+      )
+    )
+      break;
+    bridgeUnits.unshift(bridge);
+    anchorIndex -= 1;
+  }
+  const anchor = contentUnits[anchorIndex];
+  if (
+    bridgeUnits.length === 0 ||
+    anchor?.unitKind !== "LIST" ||
+    !anchor.governingContext ||
+    anchor.source?.documentUuid !== current.source?.documentUuid
+  )
+    return null;
+  const anchorTerm = /^\s*[•-]\s*(?<term>[\p{L}][\p{L}-]{1,80})\b/iu.exec(
+    String(anchor.source?.combinedText || "")
+  )?.groups?.term;
+  if (
+    !anchorTerm ||
+    bridgeUnits.some(
+      (bridge) =>
+        !String(bridge.source?.combinedText || "")
+          .toLocaleLowerCase("de-AT")
+          .includes(anchorTerm.toLocaleLowerCase("de-AT"))
+    )
+  )
+    return null;
+  const inherited = anchor.governingContext;
+  return {
+    ...inherited,
+    relationType: "RECOVERS_INTERRUPTED_LIST_GOVERNOR",
+    contractId: CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
+  };
+}
+
 function operativeHeadingGovernorContext(heading, current) {
   const headingText = String(heading?.source?.combinedText || "").trim();
   if (
@@ -2930,6 +3007,14 @@ function deriveClassificationEvidencePlan(plan) {
         contentUnits[index - 1],
         current
       );
+      if (!context) continue;
+      current.governingContext = context;
+      recoveredContexts += 1;
+    }
+  for (const contentUnits of contentUnitsByDocument.values())
+    for (let index = 1; index < contentUnits.length; index += 1) {
+      const current = contentUnits[index];
+      const context = interruptedListGovernorContext(contentUnits, index);
       if (!context) continue;
       current.governingContext = context;
       recoveredContexts += 1;
