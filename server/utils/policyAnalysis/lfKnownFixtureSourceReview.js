@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V2";
+const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V3";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
   "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V4";
 const REVIEW_OUTCOMES = new Set([
@@ -257,6 +257,10 @@ function selectComponentCandidates({
     .map((candidate) => ({
       candidate,
       reviewScore: candidateScore(candidate, component, row),
+      claudeOverlap: overlapRatio(
+        tokens(row.claude?.sourceQuote),
+        tokens(candidate.range.exactQuote)
+      ),
     }))
     .sort(
       (left, right) =>
@@ -269,6 +273,23 @@ function selectComponentCandidates({
   const selected = [];
   const selectedIds = new Set();
   const selectedDocuments = new Set();
+  const claudeRebind = scored
+    .filter(
+      ({ claudeOverlap }) =>
+        row.claude?.foundStatus !== "Nein" && claudeOverlap >= 0.25
+    )
+    .sort(
+      (left, right) =>
+        right.claudeOverlap - left.claudeOverlap ||
+        left.candidate.range.exactQuote.length -
+          right.candidate.range.exactQuote.length ||
+        left.candidate.rank - right.candidate.rank
+    )[0];
+  if (claudeRebind) {
+    selected.push(claudeRebind);
+    selectedIds.add(claudeRebind.candidate.candidateId);
+    selectedDocuments.add(claudeRebind.candidate.range.documentUuid);
+  }
   for (const item of scored) {
     if (selected.length >= maximumPerComponent) break;
     const documentUuid = item.candidate.range.documentUuid;
@@ -470,7 +491,7 @@ function buildLfKnownFixtureSourceReviewPacket({
       maximumPerComponent,
       maximumQuoteCharacters,
       candidatePolicy:
-        "LEXICAL_COMPONENT_RANK_WITH_DOCUMENT_DIVERSITY; NAVIGATION_ONLY",
+        "POSITIVE_CLAUDE_QUOTE_REBIND_THEN_LEXICAL_COMPONENT_RANK_WITH_DOCUMENT_DIVERSITY; NAVIGATION_ONLY",
     },
     rows,
     summary: {
