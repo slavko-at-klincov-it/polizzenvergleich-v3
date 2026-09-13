@@ -2509,6 +2509,142 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toEqual([["FACT_ROLE", source]]);
   });
 
+  test.each([
+    {
+      blocks: [
+        {
+          blockId: "first",
+          exactText:
+            "Eine im Inneren eines Behälters durch chemische Umsetzung hervorgerufene Explosion gilt auch ",
+        },
+        {
+          blockId: "second",
+          exactText:
+            "dann als Explosion, wenn die Wandung des Behälters nicht zerrissen ist; ",
+        },
+      ],
+      domainType: "PERIL_OR_CAUSE",
+      modelLabel: "Explosion",
+      expected: [
+        [
+          "PERIL_OR_CAUSE",
+          "Eine im Inneren eines Behälters durch chemische Umsetzung hervorgerufene Explosion",
+        ],
+        ["FACT_ROLE", "gilt auch \ndann als Explosion"],
+        ["CONDITION", "wenn die Wandung des Behälters nicht zerrissen ist;"],
+      ],
+    },
+    {
+      blocks: [
+        {
+          blockId: "only",
+          exactText:
+            "Eine durch elektrische Entladung hervorgerufene Beschädigung gilt auch dann als Sachschaden, wenn kein Brand entsteht;",
+        },
+      ],
+      domainType: "DAMAGE_OR_EFFECT",
+      modelLabel: "Sachschaden",
+      expected: [
+        [
+          "DAMAGE_OR_EFFECT",
+          "Eine durch elektrische Entladung hervorgerufene Beschädigung",
+        ],
+        ["FACT_ROLE", "gilt auch dann als Sachschaden"],
+        ["CONDITION", "wenn kein Brand entsteht;"],
+      ],
+    },
+  ])(
+    "canonicalizes a conditional equivalence definition: $modelLabel",
+    ({ blocks, domainType, modelLabel, expected }) => {
+      const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+      const unit = {
+        unitId: "conditional-equivalence-definition",
+        unitKind: "CLAUSE",
+        structurePath: [],
+        source: {
+          blockIds: blocks.map(({ blockId }) => blockId),
+          combinedText,
+          blocks,
+        },
+      };
+      const normalized = normalizeUnambiguousComponentTypes(
+        [
+          {
+            unitId: unit.unitId,
+            primaryClass: "PERIL_OR_DAMAGE",
+            semanticClasses: ["PERIL_OR_DAMAGE"],
+            requirements: [
+              {
+                displayLabel: combinedText,
+                components: [
+                  {
+                    type: domainType,
+                    label: modelLabel,
+                    sourceBlockIds: blocks.map(({ blockId }) => blockId),
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        [unit]
+      );
+
+      expect(normalized.responses[0].semanticClasses).toEqual([
+        "PERIL_OR_DAMAGE",
+        "DEFINITION",
+        "CONDITION",
+      ]);
+      expect(
+        normalized.responses[0].requirements[0].components.map(
+          ({ type, label }) => [type, label]
+        )
+      ).toEqual(expected);
+    }
+  );
+
+  test("leaves a non-equivalence peril statement unchanged", () => {
+    const source = "Eine Explosion gilt nicht als Brand;";
+    const unit = {
+      unitId: "non-equivalence-peril",
+      source: {
+        blockIds: ["block"],
+        combinedText: source,
+        blocks: [{ blockId: "block", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "PERIL_OR_DAMAGE",
+          semanticClasses: ["PERIL_OR_DAMAGE"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "PERIL_OR_CAUSE",
+                  label: "Explosion",
+                  sourceBlockIds: ["block"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements[0].components).toEqual([
+      {
+        type: "PERIL_OR_CAUSE",
+        label: "Explosion",
+        sourceBlockIds: ["block"],
+      },
+    ]);
+  });
+
   test("separates a financial-loss role from its insured-object scope", () => {
     const label =
       "Mietverlust für privat und gewerblich genutzte Gebäudeeinheiten und –räume";
@@ -4078,7 +4214,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V32");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V33");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );

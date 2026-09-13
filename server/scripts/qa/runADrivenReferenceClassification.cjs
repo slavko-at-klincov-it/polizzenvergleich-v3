@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V32";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V33";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -51,6 +51,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V29",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V30",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V31",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V32",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1501,6 +1502,82 @@ function normalizeAtomicCostRoleComponents(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function normalizeConditionalEquivalenceDefinition(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const match =
+    /^\s*(?<antecedent>[\s\S]{1,400}?)\s+(?<relation>gilt\s+auch\s+dann\s+als\s+(?<definedTerm>[^,;\n]{1,120})),\s*(?<condition>wenn\s+[\s\S]{1,300}?;?)\s*$/iu.exec(
+      sourceText
+    );
+  if (!match?.groups) return { requirements, repairs: [] };
+  const exactParts = [
+    match.groups.antecedent,
+    match.groups.relation,
+    match.groups.condition,
+  ];
+  const sourceBlockIds = exactParts.map((part) =>
+    sourceBlockIdsForExactSpan(unit, part)
+  );
+  if (sourceBlockIds.some((blockIds) => blockIds.length === 0))
+    return { requirements, repairs: [] };
+  const ownedBlockIds = new Set(unit?.source?.blockIds || []);
+  const normalizedTerm = match.groups.definedTerm.replace(/\s+/gu, " ").trim();
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const components = requirement.components || [];
+      const domainComponentIndex = components.findIndex(
+        (component) =>
+          ["PERIL_OR_CAUSE", "DAMAGE_OR_EFFECT", "OBJECT"].includes(
+            component?.type
+          ) &&
+          String(component.label || "")
+            .replace(/\s+/gu, " ")
+            .trim()
+            .includes(normalizedTerm)
+      );
+      if (domainComponentIndex < 0) return requirement;
+      const domainComponent = components[domainComponentIndex];
+      const inheritedComponents = components.filter(
+        (component, componentIndex) =>
+          componentIndex !== domainComponentIndex &&
+          (component.sourceBlockIds || []).length > 0 &&
+          (component.sourceBlockIds || []).every(
+            (blockId) => !ownedBlockIds.has(blockId)
+          )
+      );
+      repairs.push({
+        requirementIndex,
+        componentIndex: domainComponentIndex,
+        action: "CANONICALIZE_CONDITIONAL_EQUIVALENCE_DEFINITION",
+        replacedOwnedComponents:
+          components.length - inheritedComponents.length - 1,
+      });
+      return {
+        ...requirement,
+        components: [
+          {
+            ...domainComponent,
+            label: match.groups.antecedent,
+            sourceBlockIds: sourceBlockIds[0],
+          },
+          {
+            type: "FACT_ROLE",
+            label: match.groups.relation,
+            sourceBlockIds: sourceBlockIds[1],
+          },
+          {
+            type: "CONDITION",
+            label: match.groups.condition,
+            sourceBlockIds: sourceBlockIds[2],
+          },
+          ...inheritedComponents,
+        ],
+      };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function normalizeTieredLimitBasisComponents(requirements, unit) {
   const repairs = [];
   let addedScope = false;
@@ -1879,6 +1956,24 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ...response,
         semanticClasses: [
           ...new Set([...(response.semanticClasses || []), "DEFINITION"]),
+        ],
+      };
+    const conditionalEquivalence = normalizeConditionalEquivalenceDefinition(
+      requirements,
+      unit
+    );
+    requirements = conditionalEquivalence.requirements;
+    for (const repair of conditionalEquivalence.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (conditionalEquivalence.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []),
+            "DEFINITION",
+            "CONDITION",
+          ]),
         ],
       };
     const tieredLimitBasis = normalizeTieredLimitBasisComponents(
