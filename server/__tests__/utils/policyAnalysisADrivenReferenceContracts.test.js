@@ -878,6 +878,33 @@ describe("requirement-local semantic evidence completeness", () => {
     }
   );
 
+  test("requires an exclusion effect for an explicit negative reimbursement clause", () => {
+    const source =
+      "Die Behandlungskosten für kontaminierte Sachen werden nicht ersetzt.";
+    const diagnostics = requirementRoleEvidenceDiagnostics(
+      evidenceUnit(["b1", source]),
+      [
+        requirement(
+          ["b1"],
+          [component("FACT_ROLE", "b1", { label: "Behandlungskosten" })]
+        ),
+      ]
+    );
+
+    expect(diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "REQUIREMENT_ROLE_EVIDENCE_UNMAPPED",
+          signalId: "EXPLICIT_EXCLUSION",
+          requiredCoverageEffect: "EXCLUDED",
+          matchedEvidence: expect.arrayContaining([
+            expect.objectContaining({ match: "nicht ersetzt" }),
+          ]),
+        }),
+      ])
+    );
+  });
+
   test("does not treat a German word after beträgt as an OCR numeric value", () => {
     const source =
       "Die Versicherungssumme beträgt im Rahmen der Pauschalversicherungssumme.";
@@ -5369,6 +5396,70 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("prefers a negative reimbursement predicate over an insured-object adjective", () => {
+    const source =
+      "Die Kosten für die Behandlung von nicht versicherten Sachen werden nicht ersetzt.";
+    const unit = {
+      unitId: "negative-reimbursement-unit",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["clause"],
+        combinedText: source,
+        blocks: [
+          {
+            blockId: "clause",
+            structuralKind: "PARAGRAPH",
+            exactText: source,
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "COST"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "FACT_ROLE",
+                  label: "Kosten",
+                  sourceBlockIds: ["clause"],
+                },
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "versicherten",
+                  sourceBlockIds: ["clause"],
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements[0].components[1]).toEqual({
+      type: "COVERAGE_EFFECT",
+      label: "nicht ersetzt",
+      sourceBlockIds: ["clause"],
+      coverageEffect: "EXCLUDED",
+    });
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: unit.unitId,
+        action: "RESTORE_EXPLICIT_COVERAGE_EFFECT",
+        fromCoverageEffect: "INCLUDED",
+        toCoverageEffect: "EXCLUDED",
+      })
+    );
+  });
+
   test("hard-times out a hanging request, aborts it and records safe recovery", async () => {
     let lateResolve;
     let abortTriggered = false;
@@ -6388,7 +6479,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V50");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V51");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );

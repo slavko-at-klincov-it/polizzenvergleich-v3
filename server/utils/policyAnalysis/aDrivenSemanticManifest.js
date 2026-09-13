@@ -30,8 +30,10 @@ const A_SEMANTIC_SIGNAL_CONTRACT_ID_V6 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V6";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V7 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V7";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V8 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V8";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V9";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -208,6 +210,20 @@ const REQUIREMENT_ROLE_SIGNALS_V8 = Object.freeze(
       : signal
   )
 );
+const EXPLICIT_EXCLUSION_SIGNAL_V9 = Object.freeze({
+  ...REQUIREMENT_ROLE_SIGNALS_V8.find(
+    ({ signalId }) => signalId === "EXPLICIT_EXCLUSION"
+  ),
+  pattern:
+    /\b(?:ausgenommen|exklusive|ausgeschlossen|nicht\s+(?:mit)?versichert|nicht\s+(?:ersetz(?:t|en|ten)|erstatt(?:et|en))|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz|Entschädigung))\b/giu,
+});
+const REQUIREMENT_ROLE_SIGNALS_V9 = Object.freeze(
+  REQUIREMENT_ROLE_SIGNALS_V8.map((signal) =>
+    signal.signalId === "EXPLICIT_EXCLUSION"
+      ? EXPLICIT_EXCLUSION_SIGNAL_V9
+      : signal
+  )
+);
 const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -216,6 +232,7 @@ const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 
@@ -230,8 +247,10 @@ function requirementRoleSignals(semanticSignalContractId) {
     return REQUIREMENT_ROLE_SIGNALS_V6;
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V7)
     return REQUIREMENT_ROLE_SIGNALS_V7;
-  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V8)
     return REQUIREMENT_ROLE_SIGNALS_V8;
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+    return REQUIREMENT_ROLE_SIGNALS_V9;
   return REQUIREMENT_ROLE_SIGNALS_V2;
 }
 
@@ -1919,6 +1938,7 @@ module.exports = {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,

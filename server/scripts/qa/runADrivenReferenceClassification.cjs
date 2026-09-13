@@ -25,6 +25,7 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
   buildADrivenSemanticManifest,
   hasCoverageEffectEvidence,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
@@ -33,7 +34,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V50";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V51";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -73,6 +74,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V47",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V48",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V49",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V50",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -88,6 +90,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V25";
@@ -656,9 +659,9 @@ function explicitCoverageEffectRepair(unit, component) {
   if (blocks.length !== selectedIds.size) return null;
   const sourceText = blocks.map(({ exactText }) => exactText).join("\n");
   const negativePattern =
-    /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu;
+    /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|nicht\s+(?:ersetz(?:t|en|ten)|erstatt(?:et|en))|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz|Entschädigung)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu;
   const positivePattern =
-    /\b(?:(?:zusätzlich\s+)?(?:mit)?versichert(?:e[snmr]?)?(?:\s+sind)?|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf)\b/iu;
+    /\b(?:(?:zusätzlich\s+)?(?:mit)?versichert(?:\s+sind)?|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf|(?:werden\s+)?(?:ersetzt|erstattet))\b/iu;
   const negative = negativePattern.exec(sourceText);
   const positiveEvidenceText = negative
     ? `${sourceText.slice(0, negative.index)}${" ".repeat(
