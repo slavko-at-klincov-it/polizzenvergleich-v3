@@ -4354,3 +4354,161 @@ berichtet werden.
 nächste Beleg muss aus einer begrenzten source-bound Re-Atomisierung,
 vollständigem Manifest-Rebuild und messbarem Vorher-/Nachhervergleich kommen;
 eine pauschale Regex-Zerlegung wäre nicht zulässig.
+
+## 76. Ein Strukturpfad ist Navigation und kein fachlicher Wirkungsbeleg
+
+Der syntaktisch neu geplante A-Lauf auf Commit `f36bb715` verarbeitete 1.005
+Quellblöcke als 376 Units in 58 Batches. Aus dem validierten V35-Seed konnten
+312 von 345 offenen Units nach aktueller Source- und Validatorprüfung
+wiederverwendet werden. Batch 1 bis 14 bestanden; Batch 15 blieb nach acht
+begrenzten Qwen-Versuchen fail-closed und wurde nicht als PASS gespeichert.
+
+Der problematische Listenpunkt beschrieb eine Gefahr über zwei physische
+Blöcke. Sein alter `structurePath` lautete `Nicht versichert sind:`, der
+unmittelbare servergebundene Governor enthielt aber nur ein Katastrophenlimit
+und die Einleitung `insbesondere Schäden durch`. Qwen erzeugte daraus
+wiederholt eine unbelegte `EXCLUSION` und erfand beziehungsweise missbrauchte
+Wörter als Ausschlusswirkung. Der Validator wies dies korrekt zurück.
+
+Der V58/V26-Vertrag auf Commit `7d7f76e0a325bec0e8ff365319b40f4a8a3fd7c0`
+stellt deshalb allgemein klar: Strukturpfade sind nur Navigation;
+Governor-Evidenz gilt ausschließlich für ihre wörtlich vorhandenen
+Dimensionen. Ohne wörtlichen Deckungswirkungs- oder Ausschlussausdruck werden
+unbelegte Deckungsklassen entfernt. Für einen einzigen syntaktisch
+fortgesetzten geklammerten Listenpunkt darf die verbleibende fachliche
+Komponente alle Blöcke genau dieses Segments binden. Mehrere unabhängige
+Segmente bleiben getrennt, und ein echter wörtlicher Ausschluss bleibt
+erhalten.
+
+Die reale zuvor abgelehnte Antwort wurde unverändert gegen den neuen Code
+replayed. Sie terminiert nun als `PERIL_OR_DAMAGE`, bindet beide Quellblöcke
+und besteht den aktuellen Manifestvalidator; echte Governor-Limits werden
+weiterhin serverseitig materialisiert. Auf dem Mac Studio bestanden 291/291
+fokussierte Tests, der vollständige Server-Lint sowie 190/190 Suites mit
+2.823/2.823 Tests.
+
+**Beweist:** Navigationsstruktur kann nicht länger allein eine
+Deckungswirkung erzeugen; der konkrete Fail-closed-Fall ist durch eine
+allgemeine, eng begrenzte Quellenregel behoben und resumierbar.
+
+**Beweist nicht:** Dass die übrigen 44 A-Batches fehlerfrei terminieren, dass
+alle dynamischen Komponenten fachlich minimal sind, dass B vollständig
+geprüft wurde oder dass ein Kundenexport beziehungsweise Deployment zulässig
+wäre.
+
+## 77. Gegenstück bedeutet gleicher Vergleichskern, nicht identischer Wortlaut oder Wert
+
+Der erste vollständige source-bound 30-Zeilen-Review zeigte, warum technische
+PASS-Zahlen und reine Gleichheitsprüfungen die Kundenqualität verfehlen. Ein
+allgemeines Zeilenkontext-Match kann einen falschen Treffer erzeugen, obwohl
+keine fachliche A-Komponente belegt ist. Umgekehrt ist ein echtes Gegenstück
+weiterhin gefunden, wenn B denselben fachlichen Kern mit anderem Wert, Limit,
+Zeitraum oder einer anderen Bedingung regelt.
+
+Die verbindliche Trennung lautet deshalb:
+
+- anderer fachlicher Kern, anderes Objekt, andere Gefahr, Wirkung oder Rolle:
+  nur `RELATED_ONLY`, kein Treffer;
+- gleicher Kern und gleiche Aussage: `MATCH`;
+- gleicher Kern, abweichender Modifikator:
+  `COUNTERPART_WITH_DIFFERENCE`, Treffer mit sichtbarer Differenz;
+- gleicher Scope, gegenteilige Wirkung: `OPPOSITE`, Fundstelle vorhanden und
+  Widerspruch sichtbar;
+- keine tragfähige Quelle: `NOT_ESTABLISHED`, aber ohne Vollkorpussuche noch
+  kein Abwesenheitsbeweis.
+
+Konkrete Gegenproben waren `VS-25` und `ST-17`: Gemeinschaftlich genutzte
+Nebengebäude sind kein Gegenstück zu gewerblich genutzten Nebengebäuden.
+Eine Hochwasser-Jahreshöchstentschädigung von 20.000 EUR ist dagegen sehr wohl
+eine Vergleichsstelle zu einer HQ30-Hochwassergrenze von 10.000 EUR, nur mit
+anderer Bedingungs- und Limitbasis. Ebenso ist eine allgemeine
+Vertragskündigung kein Beleg für die Kündigung eines eigenständigen
+Ökoschutz-Bausteins.
+
+Der finale Qwen-Review ergab 15 gefundene und 15 nicht belegte Zeilen. Die
+anschließende unabhängige Codex-Originalstellenprüfung entschied 21 Zeilen
+positiv und ließ neun negative Zeilen bis zur Vollkorpussuche offen. Acht
+binäre Entscheidungen wichen von Qwen ab. Gegenüber dem alten Systemstatus
+wurden 15 echte Fundstellenkandidaten ergänzt und sechs falsche Treffer
+verworfen, netto neun bessere Entscheidungen im bekannten 30er-Satz.
+
+**Beweist:** Die bisherige Entscheidungsschicht war sowohl zu streng als auch
+zu großzügig; die korrekte Zielgröße ist der source-bound gleiche
+Vergleichskern mit separat dargestellten Modifikatoren. Die Suche findet
+bereits Quellen, die Qwen anschließend fälschlich ablehnt.
+
+**Beweist nicht:** Die Abwesenheit der neun negativen Punkte, die finale
+fachliche Richtigkeit aller 30 Entscheidungen oder ein 283er-Gold. Vor der
+Skalierung müssen die neun Negativzeilen über alle neun Dokumente und alle
+Suchwege geprüft sowie die 15 reviewpflichtigen Entscheidungen bestätigt
+werden.
+
+## 78. Ein vollständiger PDF-Korpus findet relevante Quellen, die Kandidatenkompaktierung abschneiden kann
+
+Die neun offenen Negativzeilen des 30er-Reviews wurden auf dem Mac Studio
+gegen die neun SHA-gebundenen Original-PDFs und alle 77 physischen Seiten
+geprüft. Der Vollscan fand 15 thematisch relevante Stellen. Zwölf davon waren
+andere versicherungsfachliche Elemente, etwa Zwischenlagerung gefährlicher
+Abfälle statt Gebäudeschaden-Zwischenlagerung, Sprinkleranlagen statt
+Grünflächenbewässerung oder ein Sturm-Verglasungsausschluss statt des
+gesuchten Glas-Feuergefahrenausschlusses.
+
+Eine Stelle änderte dagegen die fachliche Wahrheit: `PR-02` enthält in B auf
+Seite 6 ausdrücklich die Vereinbarung `RV WEVIG/Familienwohnbau` und auf
+Seite 1 den konkreten Versicherungsnehmer `Firma WEG Treustraße 57`. Damit
+existiert ein Gegenstück zum A-Berechtigtenkreis, wenn auch mit engerer und
+nicht vollständig definierter Gruppenzuordnung. Die Goldentscheidung ist
+binär gefunden und fachlich teilweise beziehungsweise abweichend.
+
+Der ursprüngliche globale Kandidat enthielt die Seite-6-Stelle bereits. Seine
+600-Zeichen-Kompaktierung priorisierte jedoch das häufige Wort
+`Versicherungsnehmer` und schnitt den spezifischen Begriff
+`Familienwohnbau` ab. Die allgemeine Ausschnittregel priorisiert deshalb nun
+den Komponentenbegriff vor Prüfpunkt, langem A-Text und Fremdzitat.
+
+Nach der source-bound Entscheidung aller Treffer ist der erste bekannte
+Gold-Slice vollständig: 30/30 Zeilen, 22 gefunden, acht nicht gefunden,
+drei vollständige und 19 teilweise/abweichende Gegenstücke, null unklar. Das
+Artefakt ist Gold nur für diese 30 Zeilen der exakt gebundenen 1+9-Dateien.
+
+**Beweist:** Vollständige PDF-Seitensuche und semantische Quellenprüfung
+verbessern das echte Kundenergebnis; `PR-02` wurde gegenüber System und Qwen
+korrekt wiedergefunden. Für die acht Negativzeilen sind Dokumente, Seiten,
+Suchrouten und verworfene Ähnlichkeitstreffer nachvollziehbar gespeichert.
+
+**Beweist nicht:** Die fachliche Richtigkeit der übrigen 253 Zeilen,
+Generalisierung auf unbekannte Verträge, Produktfreigabe oder 99 Prozent.
+
+## 79. Der Fundstatus beschreibt die Existenz des Gegenstücks, nicht seine Gleichheit
+
+Der Auftraggeber bestätigte die binäre Kundensemantik ausdrücklich:
+`GEFUNDEN` liegt vor, sobald B ein quellengebundenes Gegenstück desselben
+fachlichen Elements enthält. Abweichende Werte, Limits, Bedingungen und
+Umfänge sowie ein ausdrücklicher Ausschluss bleiben gefundene
+Vergleichsstellen; ihre Differenz beziehungsweise gegenteilige Wirkung wird
+separat dargestellt. Eine Keyword-Nennung, allgemeine Überschrift oder nur
+entfernt verwandte Deckung genügt dagegen nicht.
+
+Der aktuelle V10-Quellenvalidator entspricht bereits diesem Vertrag. Er rollt
+eine gegenteilige Wirkung desselben Scopes als `CONTRADICTED` mit
+`customerFound: true` auf. Ein reines Kontext-Match ohne substantielle
+Komponente und `RELATED_ONLY` bleiben `NO_COUNTERPART_ESTABLISHED` mit
+`customerFound: false`. Dadurch musste der laufende 283er-Review nach der
+fachlichen Bestätigung nicht verworfen oder neu begonnen werden.
+
+Beim Laufstart zeigte sich unabhängig davon eine Prozesslücke: Nach einem
+Timeout schlug die sichere LM-Studio-Wiederherstellung wegen eines falschen
+SDK-Pfads fehl, der Runner hätte unter dem bisherigen Schleifenvertrag aber
+weitere Versuche zugelassen. Der Fix `2e15135a5` beendet einen solchen Fall
+nun unmittelbar fail-closed. Die unter dem unsicheren Zustand erzeugte
+PR-05-Antwort wurde mitsamt ihren Versuchen unverändert quarantänisiert und
+nicht wiederverwendet. Auf dem Mac Studio bestand der fokussierte Runner-Test
+mit 7/7 Fällen; der Review wurde mit dem verifizierten SDK ab PR-05
+wiederaufgenommen.
+
+**Beweist:** Fundstatus, Vergleichsdifferenz und Prozesssicherheit sind für den
+aktuellen Quellenreview getrennt und testbar.
+
+**Beweist nicht:** Dass Qwen allein Gold erzeugt, dass die übrigen 253 Zeilen
+fachlich entschieden sind oder dass unbekannte Versichererdokumente die
+Generalisierungsgates bestehen.

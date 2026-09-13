@@ -1109,6 +1109,12 @@ Historische Laufverträge und Ergebnisse bleiben unverändert lesbar.
    erhält Originalinhalt, Werte und Quelle beider Seiten sowie eine leere
    manuelle Bewertung. Teilbeleg, Widerspruch, Vollständigkeit und ungeklärte
    Semantik bleiben zusätzlich im privaten Ergebnis erhalten.
+   `Gefunden` bedeutet dabei ein quellengebundenes Gegenstück desselben
+   fachlichen Kerns. Andere Werte, Limits, Bedingungen, Umfänge oder ein
+   ausdrücklicher Ausschluss bleiben als Differenz beziehungsweise
+   gegenteilige Wirkung sichtbar, ändern diesen Fundstatus aber nicht. Reine
+   Keyword-Nennung, allgemeine Überschrift oder nur entfernt verwandte
+   Deckung zählen nicht als Gegenstück.
 9. Der V3.7.4-Produktpfad bleibt während der Shadow-Entwicklung unangetastet.
    Ein Deployment ist erst nach vollständiger A-Block-Abdeckung,
    283-Crosswalk, dynamischen A- und adversarialen B-Mutationen,
