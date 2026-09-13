@@ -439,11 +439,13 @@ function buildLfKnownFixtureSourceReviewPacket({
   }));
   const selectedReview =
     selection === "ALL_283_V1"
-      ? goldCandidate.rows.map(({ analysisRowId, requirementId, relation }) => ({
-          analysisRowId,
-          requirementId,
-          relation,
-        }))
+      ? goldCandidate.rows.map(
+          ({ analysisRowId, requirementId, relation }) => ({
+            analysisRowId,
+            requirementId,
+            relation,
+          })
+        )
       : goldCandidate.representativeReview;
   const rows = selectedReview.map(
     ({ requirementId, relation }, reviewIndex) => {
