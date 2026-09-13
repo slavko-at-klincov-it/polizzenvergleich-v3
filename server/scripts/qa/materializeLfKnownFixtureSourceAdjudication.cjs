@@ -67,10 +67,8 @@ function run() {
   const input = readJson(args.decisions, "LF_SOURCE_ADJUDICATION_DECISIONS");
   const qwenResponses = packet.rows.map(
     (row) =>
-      readJson(
-        resultFile(args.qwenOutput, row),
-        "LF_SOURCE_REVIEW_RESULT"
-      ).response
+      readJson(resultFile(args.qwenOutput, row), "LF_SOURCE_REVIEW_RESULT")
+        .response
   );
   const artifact = buildLfKnownFixtureSourceAdjudication({
     packet,

@@ -43,10 +43,7 @@ function rowCandidates(row) {
   for (const candidate of candidates) {
     if (!candidate?.candidateId) continue;
     const existing = byId.get(candidate.candidateId);
-    if (
-      existing &&
-      canonicalJson(existing) !== canonicalJson(candidate)
-    )
+    if (existing && canonicalJson(existing) !== canonicalJson(candidate))
       throw adjudicationError(
         "LF_SOURCE_ADJUDICATION_CANDIDATE_CONFLICT",
         candidate.candidateId
@@ -134,8 +131,8 @@ function buildLfKnownFixtureSourceAdjudication({
       !Array.isArray(decision.selectedCandidateIds) ||
       new Set(decision.selectedCandidateIds).size !==
         decision.selectedCandidateIds.length ||
-      decision.selectedCandidateIds.some((candidateId) =>
-        !candidates.has(candidateId)
+      decision.selectedCandidateIds.some(
+        (candidateId) => !candidates.has(candidateId)
       )
     )
       throw adjudicationError(
