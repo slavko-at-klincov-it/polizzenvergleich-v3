@@ -655,9 +655,8 @@ function explicitCoverageEffectRepair(unit, component) {
   const normalizedLabel = String(component.label || "")
     .replace(/\s+/gu, " ")
     .trim();
-  const labelCarriesEffect = (negative
-    ? negativePattern
-    : positivePattern
+  const labelCarriesEffect = (
+    negative ? negativePattern : positivePattern
   ).test(component.label);
   if (
     component.coverageEffect === coverageEffect &&
