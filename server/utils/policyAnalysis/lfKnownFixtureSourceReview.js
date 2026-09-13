@@ -621,6 +621,12 @@ function validateSourceReviewResponse(row, response) {
   const componentById = new Map(
     row.components.map((component) => [component.componentId, component])
   );
+  const rowCandidateIds = new Set([
+    ...(row.globalClaudeRebind || []).map(({ candidateId }) => candidateId),
+    ...row.components.flatMap(({ candidates }) =>
+      candidates.map(({ candidateId }) => candidateId)
+    ),
+  ]);
   const seen = new Set();
   for (const finding of response.componentFindings) {
     const component = componentById.get(finding?.componentId);
@@ -633,28 +639,17 @@ function validateSourceReviewResponse(row, response) {
     )
       throw reviewError("LF_SOURCE_REVIEW_COMPONENT_FINDING_INVALID");
     seen.add(finding.componentId);
-    const allowed = new Set([
-      ...component.candidates.map(({ candidateId }) => candidateId),
-      ...(row.globalClaudeRebind || []).map(({ candidateId }) => candidateId),
-    ]);
     if (
       new Set(finding.candidateIds).size !== finding.candidateIds.length ||
-      finding.candidateIds.some((candidateId) => !allowed.has(candidateId)) ||
+      finding.candidateIds.some(
+        (candidateId) => !rowCandidateIds.has(candidateId)
+      ) ||
       (finding.outcome === "NOT_ESTABLISHED"
         ? finding.candidateIds.length !== 0
         : finding.candidateIds.length === 0)
     )
       throw reviewError("LF_SOURCE_REVIEW_COMPONENT_EVIDENCE_INVALID");
   }
-  const globalCandidateIds = new Set(
-    (row.globalClaudeRebind || []).map(({ candidateId }) => candidateId)
-  );
-  const rowCandidateIds = new Set([
-    ...globalCandidateIds,
-    ...row.components.flatMap(({ candidates }) =>
-      candidates.map(({ candidateId }) => candidateId)
-    ),
-  ]);
   for (const difference of response.unmodeledDifferences) {
     if (
       !REVIEW_DIMENSIONS.has(difference?.dimension) ||
