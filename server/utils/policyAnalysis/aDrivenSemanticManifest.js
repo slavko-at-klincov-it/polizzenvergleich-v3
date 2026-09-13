@@ -466,14 +466,28 @@ function signalApplies(signal, matchedEvidence, unit) {
     [
       /\bhaftung\s+für\s+eine\s+.+pflichtverletzung\b.+\bausgeschlossen\b/iu,
       /\bsoweit\b.+\bkeine\s+deckung\s+finden\b/iu,
-      ...(matchedText.startsWith("ausgenommen")
-        ? [
-            /\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|kein(?:e[snmr]?)?\s+(?:deckung|versicherungsschutz))\b[^.;:]*\bausgenommen\b/iu,
-          ]
-        : []),
     ].some((pattern) => pattern.test(`${governingText}\n${exactText}`))
   )
     return false;
+  if (
+    signal.signalId === "EXPLICIT_EXCLUSION" &&
+    matchedText.startsWith("ausgenommen")
+  ) {
+    const matchIndex = exactText
+      .toLocaleLowerCase("de-AT")
+      .indexOf(matchedText.toLocaleLowerCase("de-AT"));
+    const precedingExactText =
+      matchIndex < 0
+        ? ""
+        : exactText.slice(Math.max(0, matchIndex - 2_000), matchIndex);
+    const negativeGovernorPattern =
+      /\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|kein(?:e[snmr]?)?\s+(?:deckung|versicherungsschutz))\b/iu;
+    if (
+      negativeGovernorPattern.test(governingText) ||
+      negativeGovernorPattern.test(precedingExactText)
+    )
+      return false;
+  }
   return true;
 }
 

@@ -377,8 +377,10 @@ describe("A-driven classification evidence recovery", () => {
     });
     expect(byId.get("unrelated-list").governingContext).toBeUndefined();
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V4",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V5",
       recoveredContexts: 2,
+      refinedListUnits: 0,
+      additionalLogicalSegments: 0,
     });
   });
 
@@ -444,8 +446,10 @@ describe("A-driven classification evidence recovery", () => {
         blockIds: ["governor"],
       });
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V4",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V5",
       recoveredContexts: 3,
+      refinedListUnits: 0,
+      additionalLogicalSegments: 0,
     });
   });
 
@@ -511,8 +515,10 @@ describe("A-driven classification evidence recovery", () => {
       blockIds: ["positive-governor"],
     });
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V4",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V5",
       recoveredContexts: 2,
+      refinedListUnits: 0,
+      additionalLogicalSegments: 0,
     });
   });
 
@@ -1320,6 +1326,51 @@ describe("requirement-local semantic evidence completeness", () => {
         }),
       ])
     );
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
+  test("treats ausgenommen below a colon-terminated negative governor as an exception", () => {
+    const unit = {
+      ...evidenceUnit([
+        "custody-item",
+        "genommen haben (ausgenommen die vorgenannten Sachen der Logiergäste).",
+      ]),
+      governingContext: {
+        blockIds: ["negative-governor"],
+        blocks: [
+          {
+            blockId: "negative-governor",
+            exactText:
+              "8.4. Nicht versichert im Rahmen der Gebäude- und Grundstückshaftpflichtversicherung sind:",
+          },
+        ],
+      },
+    };
+    const exclusion = component("COVERAGE_EFFECT", "negative-governor", {
+      label: "Nicht versichert",
+      coverageEffect: "EXCLUDED",
+    });
+    const requirements = [
+      requirement(
+        ["custody-item"],
+        [
+          component("OBJECT", "custody-item", { label: "Sachen" }),
+          component("SCOPE", "custody-item", {
+            label: "ausgenommen die vorgenannten Sachen der Logiergäste",
+          }),
+          exclusion,
+        ]
+      ),
+    ];
+    const result = materializeSharedSignalComponents(unit, requirements);
+
+    expect(
+      result.requirements[0].components.filter(
+        ({ type }) => type === "COVERAGE_EFFECT"
+      )
+    ).toEqual([exclusion]);
     expect(
       requirementRoleEvidenceDiagnostics(unit, result.requirements)
     ).toEqual([]);
@@ -6337,7 +6388,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V49");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V50");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -7673,6 +7724,75 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         sourceUnitIds.includes(unit.unitId)
       )
     ).toHaveLength(2);
+  });
+
+  test("refines embedded lowercase lettered clauses into independent list segments", () => {
+    const source = artifact(
+      [
+        "Seite 1\nAUSSCHLÜSSE\n- jenen Teilen von unbeweglichen Sachen, die Gegenstand einer Bearbeitung,\nBenützung oder Tätigkeit sind.\nd) Schäden an Sachen, die entliehen oder gemietet wurden,\nsofern sie in Verwahrung genommen wurden.\ne) Ansprüche aus Gewährleistung für Mängel.\n",
+      ],
+      "4"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const baseUnit = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("jenen Teilen")
+    );
+
+    expect(baseUnit.logicalSourceSegments).toHaveLength(1);
+    const recovered = deriveClassificationEvidencePlan(plan);
+    const refined = recovered.units.find(
+      ({ unitId }) => unitId === baseUnit.unitId
+    );
+
+    expect(refined.logicalSourceSegments).toHaveLength(3);
+    expect(
+      refined.logicalSourceSegments.map(({ combinedText }) => combinedText)
+    ).toEqual([
+      expect.stringContaining("jenen Teilen"),
+      expect.stringContaining("d) Schäden an Sachen"),
+      expect.stringContaining("e) Ansprüche aus Gewährleistung"),
+    ]);
+    expect(refined.logicalSourceSegments[1].combinedText).toContain(
+      "sofern sie in Verwahrung genommen wurden"
+    );
+    expect(recovered.classificationEvidenceContext).toMatchObject({
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V5",
+      refinedListUnits: 1,
+      additionalLogicalSegments: 2,
+    });
+    expect(plan.units.find(({ unitId }) => unitId === baseUnit.unitId)).toBe(
+      baseUnit
+    );
+  });
+
+  test("does not split an inline parenthetical letter marker", () => {
+    const source = artifact(
+      [
+        "Seite 1\nDECKUNG\n- Sachen (ausgenommen a) besonders bezeichnete Gegenstände),\ndie im Gebäude verwahrt werden.\n",
+      ],
+      "6"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const baseUnit = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("besonders bezeichnete")
+    );
+    const recovered = deriveClassificationEvidencePlan(plan);
+    const refined = recovered.units.find(
+      ({ unitId }) => unitId === baseUnit.unitId
+    );
+
+    expect(baseUnit.logicalSourceSegments).toHaveLength(1);
+    expect(refined.logicalSourceSegments).toEqual(
+      baseUnit.logicalSourceSegments
+    );
+    expect(recovered.classificationEvidenceContext).toMatchObject({
+      refinedListUnits: 0,
+      additionalLogicalSegments: 0,
+    });
   });
 
   test("keeps a cross-page list clause together while page furniture stays independently owned", () => {

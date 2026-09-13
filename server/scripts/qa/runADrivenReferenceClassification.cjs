@@ -33,7 +33,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V49";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V50";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -72,6 +72,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V46",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V47",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V48",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V49",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -114,7 +115,7 @@ const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
 const MAXIMUM_ATTEMPTS = 8;
 const TRANSPORT_CONTRACT_ID = "LF_A_CLASSIFICATION_TRANSPORT_V1";
 const CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID =
-  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V4";
+  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V5";
 const execFile = promisify(childProcess.execFile);
 
 function fail(message) {
@@ -3699,8 +3700,64 @@ function operativeHeadingGovernorContext(heading, current) {
   };
 }
 
+function refineEmbeddedLetteredListSegments(unit) {
+  if (
+    unit?.unitKind !== "LIST" ||
+    !Array.isArray(unit.logicalSourceSegments) ||
+    unit.logicalSourceSegments.length === 0
+  )
+    return { segments: unit?.logicalSourceSegments || [], addedSegments: 0 };
+  const blocksById = new Map(
+    (unit.source?.blocks || []).map((block) => [block.blockId, block])
+  );
+  const segments = [];
+  let addedSegments = 0;
+  for (const segment of unit.logicalSourceSegments) {
+    const groups = [];
+    for (const blockId of segment.blockIds || []) {
+      const block = blocksById.get(blockId);
+      if (!block)
+        return { segments: unit.logicalSourceSegments, addedSegments: 0 };
+      if (
+        groups.length > 0 &&
+        /^\s*[a-z]\)\s+\S/iu.test(String(block.exactText || ""))
+      )
+        groups.push([]);
+      if (groups.length === 0) groups.push([]);
+      groups.at(-1).push(block);
+    }
+    if (groups.length === 1) {
+      segments.push(segment);
+      continue;
+    }
+    addedSegments += groups.length - 1;
+    for (const group of groups) {
+      const blockIds = group.map(({ blockId }) => blockId);
+      const combinedText = group.map(({ exactText }) => exactText).join("\n");
+      segments.push({
+        segmentId: `ALS-${sha256(
+          `${CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID}:EMBEDDED_LETTERED_LIST:${blockIds.join(":")}`
+        ).slice(0, 24)}`,
+        type: "LIST_ITEM_WITH_CONTINUATIONS",
+        blockIds,
+        combinedText,
+        combinedTextSha256: sha256(combinedText),
+      });
+    }
+  }
+  return { segments, addedSegments };
+}
+
 function deriveClassificationEvidencePlan(plan) {
-  const units = plan.units.map((unit) => ({ ...unit }));
+  let refinedListUnits = 0;
+  let additionalLogicalSegments = 0;
+  const units = plan.units.map((unit) => {
+    const refinement = refineEmbeddedLetteredListSegments(unit);
+    if (refinement.addedSegments === 0) return { ...unit };
+    refinedListUnits += 1;
+    additionalLogicalSegments += refinement.addedSegments;
+    return { ...unit, logicalSourceSegments: refinement.segments };
+  });
   const contentUnitsByDocument = new Map();
   for (const unit of units) {
     if (unit.unitKind === "METADATA") continue;
@@ -3756,6 +3813,8 @@ function deriveClassificationEvidencePlan(plan) {
     classificationEvidenceContext: {
       contractId: CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
       recoveredContexts,
+      refinedListUnits,
+      additionalLogicalSegments,
     },
   };
 }
