@@ -454,8 +454,7 @@ describe("A-driven classification evidence recovery", () => {
     const recovered = deriveClassificationEvidencePlan(plan);
 
     expect(
-      recovered.units.find(({ unitId }) => unitId === "target")
-        .governingContext
+      recovered.units.find(({ unitId }) => unitId === "target").governingContext
     ).toBeUndefined();
   });
 });
