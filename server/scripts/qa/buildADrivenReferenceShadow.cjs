@@ -179,7 +179,7 @@ try {
       legacyCrosswalkDraft?.summary.coveredComponents ?? null,
     acceptanceReady: false,
     proofLimit:
-      "Shadow-Artefakt. Ohne validierte bounded Modellantworten, doppelt geprüften 283/631-Crosswalk, Mutations- und Holdout-Gates keine Produkt- oder Vollständigkeitsfreigabe.",
+      "Shadow-Artefakt. Ohne validierte bounded Modellantworten, getrennte A-Block-, Segmentierungs- und Atomizitätsgates, vollständige B-Suche und Gegenstückprüfung, Mutations-, symmetrische Nichtregressions- und Holdout-Gates keine Produkt- oder Vollständigkeitsfreigabe. Der 283/631-Crosswalk ist ausschließlich Regressionsevidenz.",
   };
   writePrivateJson(path.join(args.output, "summary.private.json"), summary);
   console.log(

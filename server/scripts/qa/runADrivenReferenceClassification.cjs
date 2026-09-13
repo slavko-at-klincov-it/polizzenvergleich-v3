@@ -12,6 +12,7 @@ const { jsonrepair } = require("jsonrepair");
 const { OpenAI } = require("openai");
 const {
   A_CLASSIFICATION_CONTRACT_ID,
+  buildADrivenClassificationBatches,
 } = require("../../utils/policyAnalysis/aDrivenClassificationContract");
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
@@ -35,7 +36,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V56";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V57";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -81,6 +82,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V53",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V54",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V55",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V56",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -159,6 +161,7 @@ function argumentsFrom(argv) {
     "modelRecoveryTimeoutMs",
     "lmStudioSdk",
     "qwenModelKey",
+    "seedShadowRoot",
   ]);
   const unknown = Object.keys(values).filter((key) => !allowed.has(key));
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
@@ -204,6 +207,9 @@ function argumentsFrom(argv) {
     modelRecoveryTimeoutMs,
     lmStudioSdk: path.resolve(values.lmStudioSdk),
     qwenModelKey: values.qwenModelKey,
+    seedShadowRoot: values.seedShadowRoot
+      ? path.resolve(values.seedShadowRoot)
+      : null,
   };
 }
 
@@ -4459,6 +4465,192 @@ function currentlyValidResponses(plan, batch, responses) {
     .map((unitId) => accepted.get(unitId));
 }
 
+function sourceUnitReuseIdentity(unit) {
+  return stableStringify({
+    unitId: unit?.unitId,
+    unitKind: unit?.unitKind,
+    structurePath: unit?.structurePath,
+    initialDisposition: unit?.initialDisposition,
+    source: {
+      documentSha256: unit?.source?.documentSha256,
+      documentPosition: unit?.source?.documentPosition,
+      documentRole: unit?.source?.documentRole,
+      documentStatus: unit?.source?.documentStatus,
+      blockIds: unit?.source?.blockIds,
+      blocks: (unit?.source?.blocks || []).map(
+        ({ blockId, exactTextSha256, structuralKind, physicalPageNumber }) => ({
+          blockId,
+          exactTextSha256,
+          structuralKind,
+          physicalPageNumber,
+        })
+      ),
+    },
+    logicalSourceSegments: unit?.logicalSourceSegments,
+    governingContext: unit?.governingContext
+      ? {
+          relationType: unit.governingContext.relationType,
+          unitIds: unit.governingContext.unitIds,
+          blockIds: unit.governingContext.blockIds,
+          blocks: (unit.governingContext.blocks || []).map(
+            ({
+              blockId,
+              exactTextSha256,
+              structuralKind,
+              physicalPageNumber,
+            }) => ({
+              blockId,
+              exactTextSha256,
+              structuralKind,
+              physicalPageNumber,
+            })
+          ),
+        }
+      : null,
+  });
+}
+
+function compatibleSeedResponses({ seedShadowRoot, plan }) {
+  if (!seedShadowRoot)
+    return {
+      responses: [],
+      sourceUnitPlanSha256: null,
+      responsesSha256: null,
+      runContractId: null,
+      promptContractId: null,
+      validatorContractId: null,
+      semanticSignalContractId: null,
+      modelId: null,
+      modelContext: null,
+      compatibleUnits: 0,
+      suppliedResponses: 0,
+    };
+  const seedPlan = readJson(
+    path.join(seedShadowRoot, "source-unit-plan.private.json"),
+    "LF_A_CLASSIFICATION_SEED_SOURCE_PLAN"
+  );
+  const seedResponses = readJson(
+    path.join(seedShadowRoot, "responses.private.json"),
+    "LF_A_CLASSIFICATION_SEED_RESPONSES"
+  );
+  const seedBatches = readJson(
+    path.join(seedShadowRoot, "classification-batches.private.json"),
+    "LF_A_CLASSIFICATION_SEED_BATCHES"
+  );
+  const seedSummary = readJson(
+    path.join(seedShadowRoot, "summary.private.json"),
+    "LF_A_CLASSIFICATION_SEED_SUMMARY"
+  );
+  if (
+    seedPlan?.contractId !== A_SOURCE_UNIT_PLAN_CONTRACT_ID ||
+    !Array.isArray(seedPlan.units) ||
+    !Array.isArray(seedResponses)
+  )
+    throw new Error("LF_A_CLASSIFICATION_SEED_INVALID");
+  const { planSha256: storedPlanSha256, ...seedPlanPayload } = seedPlan;
+  if (
+    storedPlanSha256 !==
+    sha256(
+      `${A_SOURCE_UNIT_PLAN_CONTRACT_ID}\u0000${stableStringify(seedPlanPayload)}`
+    )
+  )
+    throw new Error("LF_A_CLASSIFICATION_SEED_PLAN_INTEGRITY_INVALID");
+  const seedUnitIds = seedPlan.units.map(({ unitId }) => unitId);
+  if (new Set(seedUnitIds).size !== seedUnitIds.length)
+    throw new Error("LF_A_CLASSIFICATION_SEED_UNIT_IDS_DUPLICATE");
+  const duplicateResponseIds = seedResponses
+    .map(({ unitId }) => unitId)
+    .filter((unitId, index, unitIds) => unitIds.indexOf(unitId) !== index);
+  if (duplicateResponseIds.length > 0)
+    throw new Error("LF_A_CLASSIFICATION_SEED_RESPONSES_DUPLICATE_ID");
+  const seedUnitIdSet = new Set(seedUnitIds);
+  if (seedResponses.some(({ unitId }) => !seedUnitIdSet.has(unitId)))
+    throw new Error("LF_A_CLASSIFICATION_SEED_RESPONSE_ID_UNKNOWN");
+  const rebuiltSeedBatches = buildADrivenClassificationBatches(seedPlan);
+  if (stableStringify(seedBatches) !== stableStringify(rebuiltSeedBatches))
+    throw new Error("LF_A_CLASSIFICATION_SEED_BATCH_PLAN_INTEGRITY_INVALID");
+  if (
+    !RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS.has(seedSummary?.contractId) ||
+    seedSummary.sourceUnitPlanSha256 !== seedPlan.planSha256 ||
+    !RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS.has(
+      seedSummary.promptContractId
+    ) ||
+    !RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS.has(
+      seedSummary.validatorContractId
+    ) ||
+    !RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS.has(
+      seedSummary.semanticSignalContractId
+    ) ||
+    seedSummary.classificationBatchesSha256 !==
+      sha256(JSON.stringify(seedBatches)) ||
+    typeof seedSummary.model?.id !== "string" ||
+    !Number.isInteger(seedSummary.model?.loadedContextLength) ||
+    seedSummary.batches !== seedBatches.batches.length ||
+    seedSummary.validBatches !== seedBatches.batches.length ||
+    seedSummary.unresolvedBatches !== 0 ||
+    seedSummary.unresolvedUnits !== 0 ||
+    seedSummary.reviewRequiredBlocks !== 0 ||
+    seedSummary.allBlocksTerminal !== true ||
+    seedSummary.responseIntegrityStatus !== "VALID"
+  )
+    throw new Error("LF_A_CLASSIFICATION_SEED_RUN_INCOMPLETE_OR_INVALID");
+  const boundResponses = [];
+  for (const batch of seedBatches.batches) {
+    const result = readJson(
+      batchResultFile(seedShadowRoot, batch),
+      "LF_A_CLASSIFICATION_SEED_BATCH_RESULT"
+    );
+    if (
+      result?.contractId !== seedSummary.contractId ||
+      result.sourceUnitPlanSha256 !== seedPlan.planSha256 ||
+      result.batchId !== batch.batchId ||
+      result.batchIndex !== batch.batchIndex ||
+      result.promptContractId !== seedSummary.promptContractId ||
+      result.validatorContractId !== seedSummary.validatorContractId ||
+      result.semanticSignalContractId !==
+        seedSummary.semanticSignalContractId ||
+      result.requestedModel !== seedSummary.model.id ||
+      result.modelContext !== seedSummary.model.loadedContextLength ||
+      stableStringify(result.expectedUnitIds) !==
+        stableStringify(batch.expectedUnitIds) ||
+      !Array.isArray(result.responses) ||
+      result.validation?.passed !== true ||
+      typeof result.rawResponse !== "string" ||
+      result.rawResponseSha256 !== sha256(result.rawResponse)
+    )
+      throw new Error("LF_A_CLASSIFICATION_SEED_BATCH_RESULT_INVALID");
+    boundResponses.push(...result.responses);
+  }
+  if (stableStringify(boundResponses) !== stableStringify(seedResponses))
+    throw new Error("LF_A_CLASSIFICATION_SEED_RESPONSES_BINDING_INVALID");
+  const currentIdentities = new Map(
+    plan.units.map((unit) => [unit.unitId, sourceUnitReuseIdentity(unit)])
+  );
+  const compatibleUnitIds = new Set(
+    seedPlan.units
+      .filter(
+        (unit) =>
+          currentIdentities.get(unit.unitId) === sourceUnitReuseIdentity(unit)
+      )
+      .map(({ unitId }) => unitId)
+  );
+  return {
+    responses: seedResponses.filter(({ unitId }) =>
+      compatibleUnitIds.has(unitId)
+    ),
+    sourceUnitPlanSha256: seedPlan.planSha256,
+    responsesSha256: sha256(stableStringify(seedResponses)),
+    runContractId: seedSummary.contractId,
+    promptContractId: seedSummary.promptContractId,
+    validatorContractId: seedSummary.validatorContractId,
+    semanticSignalContractId: seedSummary.semanticSignalContractId,
+    modelId: seedSummary.model.id,
+    modelContext: seedSummary.model.loadedContextLength,
+    compatibleUnits: compatibleUnitIds.size,
+    suppliedResponses: seedResponses.length,
+  };
+}
+
 function archiveSupersededBatchResult(file, output, batch, reason) {
   const raw = fs.readFileSync(file, "utf8");
   const directory = path.join(output, "superseded-batches");
@@ -4945,6 +5137,7 @@ async function processClassificationBatches({
   batches,
   client,
   recoverModelAfterAbort,
+  seed,
 }) {
   const batchResults = [];
   for (const batch of batches.batches) {
@@ -4990,7 +5183,13 @@ async function processClassificationBatches({
         batch,
         args,
       });
+      const seedAcceptedResponses = currentlyValidResponses(
+        plan,
+        contextualBatch,
+        seed?.responses || []
+      );
       const acceptedResponses = currentlyValidResponses(plan, contextualBatch, [
+        ...seedAcceptedResponses,
         ...supersededResponses,
         ...archivedResponses,
         ...journalResponses,
@@ -5015,6 +5214,11 @@ async function processClassificationBatches({
       });
       result.classificationEvidenceContextContractId =
         CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID;
+      result.seedSourceUnitPlanSha256 =
+        seedAcceptedResponses.length > 0 ? seed.sourceUnitPlanSha256 : null;
+      result.seedResponsesSha256 =
+        seedAcceptedResponses.length > 0 ? seed.responsesSha256 : null;
+      result.seededAcceptedUnits = seedAcceptedResponses.length;
       if (!result.validation.passed) {
         const failure = new Error(
           `LF_A_CLASSIFICATION_BATCH_FAILED_CLOSED:${batch.batchIndex}:${batch.batchId}`
@@ -5049,6 +5253,10 @@ async function run() {
   )
     throw new Error("LF_A_CLASSIFICATION_INPUT_BINDING_INVALID");
   const plan = deriveClassificationEvidencePlan(sourcePlan);
+  const seed = compatibleSeedResponses({
+    seedShadowRoot: args.seedShadowRoot,
+    plan: sourcePlan,
+  });
   if (fs.existsSync(path.join(args.output, "summary.private.json"))) {
     const summary = validateCompletedRun({
       args,
@@ -5095,6 +5303,7 @@ async function run() {
     batches,
     client,
     recoverModelAfterAbort,
+    seed,
   });
   const responses = batchResults.flatMap(({ responses: items }) => items);
   const manifest = buildADrivenSemanticManifest({
@@ -5133,6 +5342,22 @@ async function run() {
       (sum, { attempts }) => sum + attempts.length,
       0
     ),
+    seed: {
+      sourceUnitPlanSha256: seed.sourceUnitPlanSha256,
+      responsesSha256: seed.responsesSha256,
+      runContractId: seed.runContractId,
+      promptContractId: seed.promptContractId,
+      validatorContractId: seed.validatorContractId,
+      semanticSignalContractId: seed.semanticSignalContractId,
+      modelId: seed.modelId,
+      modelContext: seed.modelContext,
+      suppliedResponses: seed.suppliedResponses,
+      compatibleUnits: seed.compatibleUnits,
+      acceptedUnits: batchResults.reduce(
+        (sum, { seededAcceptedUnits = 0 }) => sum + seededAcceptedUnits,
+        0
+      ),
+    },
     semanticRequirements: manifest.summary.semanticRequirements,
     semanticComponents: manifest.summary.semanticComponents,
     unresolvedUnits: manifest.summary.unresolvedUnits,
@@ -5163,6 +5388,7 @@ module.exports = {
   attachTopLevelRequirementFragments,
   batchResultFile,
   classificationBatch,
+  compatibleSeedResponses,
   createLmStudioRecovery,
   createAttemptRecorder,
   deriveClassificationEvidencePlan,

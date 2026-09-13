@@ -47,6 +47,7 @@ const {
 const {
   attachTopLevelRequirementFragments,
   batchResultFile,
+  compatibleSeedResponses,
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
   normalizeStandaloneListGovernorRequirements,
@@ -839,6 +840,87 @@ function validResponse(unit) {
       },
     ],
   };
+}
+
+async function writeCompletedClassificationSeed({ directory, plan }) {
+  const batches = buildADrivenClassificationBatches(plan);
+  const args = {
+    model: "qwen/qwen3.6-35b-a3b",
+    modelContext: 42_496,
+  };
+  const results = [];
+  for (const batch of batches.batches) {
+    const contextualBatch = {
+      ...batch,
+      units: batch.expectedUnitIds.map((unitId) =>
+        plan.units.find((unit) => unit.unitId === unitId)
+      ),
+    };
+    const responses = contextualBatch.units.map(validResponse);
+    const result = await runBatch({
+      client: {
+        chat: {
+          completions: {
+            create: jest.fn(async () => ({
+              model: args.model,
+              choices: [{ message: { content: JSON.stringify(responses) } }],
+              usage: {},
+            })),
+          },
+        },
+      },
+      model: args.model,
+      modelContext: args.modelContext,
+      plan,
+      batch: contextualBatch,
+      maximumAttempts: 1,
+    });
+    const file = batchResultFile(directory, batch);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
+    results.push(result);
+  }
+  const responses = results.flatMap(({ responses: items }) => items);
+  const firstResult = results[0];
+  const summary = {
+    contractId: firstResult.contractId,
+    sourceUnitPlanSha256: plan.planSha256,
+    promptContractId: firstResult.promptContractId,
+    validatorContractId: firstResult.validatorContractId,
+    semanticSignalContractId: firstResult.semanticSignalContractId,
+    classificationBatchesSha256: crypto
+      .createHash("sha256")
+      .update(JSON.stringify(batches))
+      .digest("hex"),
+    model: {
+      id: args.model,
+      loadedContextLength: args.modelContext,
+    },
+    batches: batches.batches.length,
+    validBatches: batches.batches.length,
+    unresolvedBatches: 0,
+    unresolvedUnits: 0,
+    reviewRequiredBlocks: 0,
+    allBlocksTerminal: true,
+    responseIntegrityStatus: "VALID",
+  };
+  fs.writeFileSync(
+    path.join(directory, "source-unit-plan.private.json"),
+    `${JSON.stringify(plan, null, 2)}\n`
+  );
+  fs.writeFileSync(
+    path.join(directory, "classification-batches.private.json"),
+    `${JSON.stringify(batches, null, 2)}\n`
+  );
+  fs.writeFileSync(
+    path.join(directory, "responses.private.json"),
+    `${JSON.stringify(responses, null, 2)}\n`
+  );
+  fs.writeFileSync(
+    path.join(directory, "summary.private.json"),
+    `${JSON.stringify(summary, null, 2)}\n`
+  );
+  return { batches, responses, summary };
 }
 
 function searchEligibleManifest() {
@@ -6965,6 +7047,218 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("reuses only source-identical responses from a complete integrity-bound seed run", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-classification-seed-")
+    );
+    try {
+      const source = artifact(
+        [
+          "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Nebengebäude.\n",
+        ],
+        "e"
+      );
+      const plan = buildADrivenSourceUnitPlan({
+        documents: [document("seed-source", 0, source)],
+      });
+      const pendingUnits = plan.units.filter(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      );
+      const { batches, responses, summary } =
+        await writeCompletedClassificationSeed({
+          directory: temporary,
+          plan,
+        });
+      const planFile = path.join(temporary, "source-unit-plan.private.json");
+      const responsesFile = path.join(temporary, "responses.private.json");
+      const summaryFile = path.join(temporary, "summary.private.json");
+
+      const completeSeed = compatibleSeedResponses({
+        seedShadowRoot: temporary,
+        plan,
+      });
+      expect(completeSeed.responses).toEqual(responses);
+      expect(completeSeed.sourceUnitPlanSha256).toBe(plan.planSha256);
+      expect(completeSeed.responsesSha256).toBe(
+        crypto
+          .createHash("sha256")
+          .update(stableStringify(responses))
+          .digest("hex")
+      );
+      expect(completeSeed.runContractId).toBe(summary.contractId);
+      expect(completeSeed.compatibleUnits).toBe(plan.units.length);
+      expect(completeSeed.suppliedResponses).toBe(responses.length);
+
+      const changedPlan = structuredClone(plan);
+      const changedUnit = changedPlan.units.find(
+        ({ unitId }) => unitId === pendingUnits[0].unitId
+      );
+      changedUnit.source.blocks[0].exactTextSha256 = "0".repeat(64);
+      const { planSha256: _oldPlanSha256, ...changedPayload } = changedPlan;
+      changedPlan.planSha256 = digest(changedPlan.contractId, changedPayload);
+
+      const partialSeed = compatibleSeedResponses({
+        seedShadowRoot: temporary,
+        plan: changedPlan,
+      });
+      expect(partialSeed.compatibleUnits).toBe(plan.units.length - 1);
+      expect(partialSeed.responses.map(({ unitId }) => unitId)).not.toContain(
+        pendingUnits[0].unitId
+      );
+
+      const invalidSeedPlan = structuredClone(plan);
+      invalidSeedPlan.planSha256 = "f".repeat(64);
+      fs.writeFileSync(
+        planFile,
+        `${JSON.stringify(invalidSeedPlan, null, 2)}\n`
+      );
+      expect(() =>
+        compatibleSeedResponses({ seedShadowRoot: temporary, plan })
+      ).toThrow("LF_A_CLASSIFICATION_SEED_PLAN_INTEGRITY_INVALID");
+
+      fs.writeFileSync(planFile, `${JSON.stringify(plan, null, 2)}\n`);
+      fs.writeFileSync(
+        responsesFile,
+        `${JSON.stringify([...responses, responses[0]], null, 2)}\n`
+      );
+      expect(() =>
+        compatibleSeedResponses({ seedShadowRoot: temporary, plan })
+      ).toThrow("LF_A_CLASSIFICATION_SEED_RESPONSES_DUPLICATE_ID");
+
+      fs.writeFileSync(
+        responsesFile,
+        `${JSON.stringify(
+          [...responses, { ...responses[0], unitId: "AU-unknown" }],
+          null,
+          2
+        )}\n`
+      );
+      expect(() =>
+        compatibleSeedResponses({ seedShadowRoot: temporary, plan })
+      ).toThrow("LF_A_CLASSIFICATION_SEED_RESPONSE_ID_UNKNOWN");
+
+      fs.writeFileSync(
+        responsesFile,
+        `${JSON.stringify(responses, null, 2)}\n`
+      );
+      fs.writeFileSync(
+        summaryFile,
+        `${JSON.stringify(
+          { ...summary, validBatches: summary.validBatches - 1 },
+          null,
+          2
+        )}\n`
+      );
+      expect(() =>
+        compatibleSeedResponses({ seedShadowRoot: temporary, plan })
+      ).toThrow("LF_A_CLASSIFICATION_SEED_RUN_INCOMPLETE_OR_INVALID");
+
+      fs.writeFileSync(summaryFile, `${JSON.stringify(summary, null, 2)}\n`);
+      const firstBatchFile = batchResultFile(temporary, batches.batches[0]);
+      const firstBatch = JSON.parse(fs.readFileSync(firstBatchFile, "utf8"));
+      firstBatch.rawResponseSha256 = "a".repeat(64);
+      fs.writeFileSync(
+        firstBatchFile,
+        `${JSON.stringify(firstBatch, null, 2)}\n`
+      );
+      expect(() =>
+        compatibleSeedResponses({ seedShadowRoot: temporary, plan })
+      ).toThrow("LF_A_CLASSIFICATION_SEED_BATCH_RESULT_INVALID");
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
+  test("materializes complete seed batches without a model call or duplicate artifact", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-classification-seed-batches-")
+    );
+    try {
+      const source = artifact(
+        [
+          "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Nebengebäude.\n",
+        ],
+        "d"
+      );
+      const sourcePlan = buildADrivenSourceUnitPlan({
+        documents: [document("seed-source", 0, source)],
+      });
+      const plan = deriveClassificationEvidencePlan(sourcePlan);
+      const batches = buildADrivenClassificationBatches(sourcePlan, {
+        maximumUnits: 1,
+        maximumCharacters: 12_000,
+      });
+      const responses = sourcePlan.units
+        .filter(
+          ({ initialDisposition }) =>
+            initialDisposition === "PENDING_CLASSIFICATION"
+        )
+        .map(({ unitId }) =>
+          validResponse(plan.units.find((unit) => unit.unitId === unitId))
+        );
+      const args = {
+        output: temporary,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+      const client = { chat: { completions: { create: jest.fn() } } };
+
+      const results = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client,
+        recoverModelAfterAbort: jest.fn(),
+        seed: {
+          responses,
+          sourceUnitPlanSha256: sourcePlan.planSha256,
+          compatibleUnits: sourcePlan.units.length,
+          suppliedResponses: responses.length,
+        },
+      });
+
+      expect(client.chat.completions.create).not.toHaveBeenCalled();
+      expect(results.every(({ validation }) => validation.passed)).toBe(true);
+      expect(results.flatMap(({ attempts }) => attempts)).toEqual([]);
+      expect(
+        results.reduce(
+          (sum, { seededAcceptedUnits }) => sum + seededAcceptedUnits,
+          0
+        )
+      ).toBe(responses.length);
+      expect(fs.readdirSync(path.join(temporary, "batches"))).toHaveLength(
+        batches.batches.length
+      );
+
+      const secondClient = {
+        chat: { completions: { create: jest.fn() } },
+      };
+      await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client: secondClient,
+        recoverModelAfterAbort: jest.fn(),
+        seed: {
+          responses,
+          sourceUnitPlanSha256: sourcePlan.planSha256,
+          compatibleUnits: sourcePlan.units.length,
+          suppliedResponses: responses.length,
+        },
+      });
+      expect(secondClient.chat.completions.create).not.toHaveBeenCalled();
+      expect(fs.readdirSync(path.join(temporary, "batches"))).toHaveLength(
+        batches.batches.length
+      );
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
   test("reuses PASS batches, resumes at the first incomplete batch and creates no duplicate result", async () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-classification-resume-")
@@ -7254,7 +7548,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V56");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V57");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
