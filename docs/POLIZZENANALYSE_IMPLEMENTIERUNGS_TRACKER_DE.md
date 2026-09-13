@@ -8802,3 +8802,70 @@ anderen unabhängigen Ergebnisse adjudiziert.
 Status: `BINÄRE GEGENSTÜCKSEMANTIK VERBINDLICH; 283ER REVIEW SICHER
 WIEDERAUFGENOMMEN; QWEN BLEIBT NOT_GOLD; KEINE KUNDEN-XLSX UND KEIN
 DEPLOYMENT`.
+
+### 133.37 Qwen aus dem kritischen Goldpfad genommen und Sol-Blindpilot gestoppt
+
+Auf Auftrag des Auftraggebers ist Qwen keine blockierende Voraussetzung für
+die Gold-Erstellung mehr. Der V10-Lauf blieb unverändert erhalten und stoppte
+nach 98/283 gültigen Zeilen an der vollständigen Zeilengrenze ST-20
+fail-closed. Drei Antworten verletzten nacheinander
+`LF_SOURCE_REVIEW_DIFFERENCE_EVIDENCE_MISSING`; es wurde keine ungültige
+99. Zeile gespeichert. Alle 98 gültigen Zeilen sowie die drei
+Versuchsartefakte bleiben resumierbarer, unabhängiger Benchmark.
+
+Der bisherige Quellenreview-Paketvertrag war nicht blind nutzbar: Claude war
+nicht nur als sichtbares Label enthalten, sondern konnte über
+`globalClaudeRebind` und die komponentenweise Rangfolge die Kandidatenauswahl
+beeinflussen. Commit `f345a24a655b374f17472535ce1365f3227ae0c9`
+materialisiert deshalb einen getrennten
+`LF_1PLUS9_BLIND_SOURCE_REVIEW_PACKET_V1`. Dessen Reviewzeilen enthalten nur
+A-Referenz, A-Komponenten, Dokumentmetadaten und exakte B-Quellenkandidaten;
+Kandidatenranking und Ausschnittwahl sind A-only. Qwen-, Claude-, System-B-,
+Relation- und bisherige Goldentscheidungen sind ausgeschlossen. Auf dem Mac
+Studio bestanden Syntax, Prettier und 8/8 fokussierte Vertragstests.
+
+Das vollständige Blindpaket umfasst 283 Zeilen, 631 Komponenten, 914 Checks,
+42.429 verfügbare und 6.394 ausgewählte exakte Kandidaten über neun
+B-Dokumente. Interner Pakethash:
+`02aae693a1b1872963aecd1832ef170ffa20367dfb42e6cd7f407a78eda74293`;
+Dateihash:
+`48f7219514b115879465442b5fc1ce307d5207ae4a6e8048a822a967e62c0231`.
+
+Der isolierte erste Blindpilot lief mit `gpt-5.6-sol`, Reasoning `high`, für
+PR-01 bis PR-10 in 158 Sekunden beziehungsweise 15,8 Sekunden pro Zeile.
+10/10 Antworten und 24/24 Komponentenfindings bestanden anschließend auf dem
+Mac Studio den bestehenden Quellen- und Candidate-ID-Validator. Der
+deterministische Rollup ergab einmal `FULL_COUNTERPART`, dreimal
+`PARTIAL_COUNTERPART` und sechsmal `NO_COUNTERPART_ESTABLISHED`.
+
+Die nach dem Blindpass zulässige Kontrolle gegen das eingefrorene Gold-30
+zeigte jedoch ein fachliches Stoppsignal: Vier der zehn Zeilen besitzen
+bereits eine finale Goldentscheidung, und Sol wich bei allen vier binären
+Fundstati ab. PR-01, PR-02 und PR-08 wurden fälschlich nicht gefunden; PR-09
+wurde fälschlich gefunden. Bei PR-01 und PR-02 lag die jeweilige richtige
+Gold-Fundstelle bereits im blinden Kandidateninput; bei PR-08 lag eine von
+zwei Gold-Fundstellen vor. PR-09 verwechselte eine Regel zur
+Mehrfachversicherung mit der gesuchten Nichtaddition paralleler
+Exklusivschutz-Summen. Damit ist die Hauptursache nicht bloß fehlendes
+Retrieval, sondern der Zehn-Zeilen-Sammelkontext beziehungsweise die
+fachliche Modellentscheidung.
+
+Der Sol-Pass ist zwar gegenüber den ersten zehn Qwen-Zeilen um Faktor 2,76
+schneller (Qwen 436,069 Sekunden beziehungsweise 43,607 Sekunden pro Zeile),
+darf in dieser Form aber nicht auf 283 Zeilen skaliert werden. Seine lineare
+Zeitprojektion läge bei rund 74,5 Minuten; Geschwindigkeit allein erfüllt den
+Goldvertrag nicht. Vor einer Fortsetzung müssen zeilenisolierte frische
+Kontexte gegen die vier bekannten Kalibrierzeilen geprüft werden. Danach
+werden echte Abweichungen und Hochrisikofälle wie vereinbart mit
+`gpt-6-astra`, Reasoning `xhigh`, anhand der Originalquellen adjudiziert.
+
+Private Artefakte auf dem Mac Studio:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-1PLUS9-SOL-BLIND-V1-20260913-F345A24A/blind-review-packet.private.json
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-1PLUS9-SOL-BLIND-V1-20260913-F345A24A/sol-blind-first10.raw.private.json
+```
+
+Status: `QWEN 98/283 RESUMIERBAR UND NICHTBLOCKIEREND; SOL-BLINDPILOT 10/10
+TECHNISCH GÜLTIG, ABER QUALITÄTSGATE 0/4 GEGEN BEKANNTES GOLD; SOL NICHT AUF
+283 SKALIERT; KEINE KUNDEN-XLSX UND KEIN DEPLOYMENT`.
