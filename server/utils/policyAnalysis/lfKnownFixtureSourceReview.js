@@ -116,6 +116,25 @@ function overlapRatio(query, candidate) {
   return common / query.size;
 }
 
+function compoundOverlapRatio(query, candidate) {
+  if (!query.size) return 0;
+  let common = 0;
+  for (const queryToken of query) {
+    if (
+      [...candidate].some(
+        (candidateToken) =>
+          queryToken === candidateToken ||
+          (queryToken.length >= 5 &&
+            candidateToken.length >= 5 &&
+            (queryToken.includes(candidateToken) ||
+              candidateToken.includes(queryToken)))
+      )
+    )
+      common += 1;
+  }
+  return common / query.size;
+}
+
 function factRoleDimension(factRole) {
   const dimensions = {
     CONDITION: "CONDITION",
@@ -419,8 +438,11 @@ function globalReferenceARebindCandidates({
         seenRanges.has(rangeKey)
       )
         continue;
-      const focusedOverlap = overlapRatio(focusedQuery, sourceTokens);
-      const referenceOverlap = overlapRatio(referenceQuery, sourceTokens);
+      const focusedOverlap = compoundOverlapRatio(focusedQuery, sourceTokens);
+      const referenceOverlap = compoundOverlapRatio(
+        referenceQuery,
+        sourceTokens
+      );
       if (focusedOverlap <= 0 && referenceOverlap <= 0) continue;
       seenRanges.add(rangeKey);
       scored.push({ candidate, focusedOverlap, referenceOverlap, rangeKey });
@@ -799,6 +821,7 @@ module.exports = {
   SOURCE_REVIEW_PACKET_CONTRACT_ID,
   SOURCE_REVIEW_RESPONSE_CONTRACT_ID,
   buildLfKnownFixtureSourceReviewPacket,
+  compoundOverlapRatio,
   factRoleDimension,
   normalizedText,
   sha256,

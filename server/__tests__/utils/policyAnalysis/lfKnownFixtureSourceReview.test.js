@@ -1,6 +1,7 @@
 const {
   SOURCE_REVIEW_RESPONSE_CONTRACT_ID,
   buildLfKnownFixtureSourceReviewPacket,
+  compoundOverlapRatio,
   factRoleDimension,
   validateSourceReviewResponse,
 } = require("../../../utils/policyAnalysis/lfKnownFixtureSourceReview");
@@ -83,6 +84,46 @@ describe("LF known fixture source review", () => {
     expect(() => factRoleDimension("UNKNOWN")).toThrow(
       "LF_SOURCE_REVIEW_FACT_ROLE_UNKNOWN"
     );
+  });
+
+  it("recovers German compound-word variants for global source navigation", () => {
+    expect(
+      compoundOverlapRatio(
+        new Set(["einbruch", "raub"]),
+        new Set(["einbruchdiebstahl", "beraubung"])
+      )
+    ).toBe(0.5);
+
+    const input = fixture();
+    input.goldCandidate.rows[0].point =
+      "Raub- und Einbruchzusammenhang ausgeschlossen";
+    input.goldCandidate.rows[0].system.aContent =
+      "Schäden durch Einbruch und Raub sind in diesem Baustein ausgeschlossen.";
+    input.goldCandidate.rows[0].components[0].label =
+      "Raub, Einbruch und einbruchbezogener Vandalismus";
+    input.oracle.benchmarkCandidates.push({
+      candidateId: "global-burglary-clause",
+      requirementId: "requirement-1",
+      componentId: "component-1",
+      rank: 1,
+      score: 1,
+      range: {
+        documentUuid: input.oracle.documents[0].uuid,
+        documentFingerprint: input.oracle.documents[0].fingerprint,
+        physicalPageNumber: 12,
+        documentStart: 9_000,
+        documentEnd: 9_180,
+        exactQuote:
+          "Versichert gelten Gebäudeteile, die im Zuge eines Einbruchdiebstahls beschädigt werden. Raub ist die Ausübung tätlicher Gewalt.",
+        exactQuoteSha256: digest("d"),
+      },
+    });
+    const packet = buildLfKnownFixtureSourceReviewPacket(input);
+    expect(
+      packet.rows[0].globalReferenceARebind.map(
+        ({ candidateId }) => candidateId
+      )
+    ).toContain("global-burglary-clause");
   });
 
   it("materializes all thirty review rows without certifying absence", () => {
