@@ -102,7 +102,8 @@ function fixture() {
         outcome:
           index === 0 ? "PARTIAL_COUNTERPART" : "NO_COUNTERPART_ESTABLISHED",
         rationale: `Vollkorpusentscheidung ${index}`,
-        selectedPacketCandidateIds: index === 0 ? [`candidate-${index + 21}`] : [],
+        selectedPacketCandidateIds:
+          index === 0 ? [`candidate-${index + 21}`] : [],
         selectedFullCorpusMatches:
           index === 0
             ? [

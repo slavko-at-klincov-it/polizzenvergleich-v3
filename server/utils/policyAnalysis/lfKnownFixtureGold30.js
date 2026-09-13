@@ -109,7 +109,12 @@ function selectedFullCorpusMatches(row, selectors) {
   });
 }
 
-function validateBindings({ packet, adjudication, fullCorpusAudit, decisions }) {
+function validateBindings({
+  packet,
+  adjudication,
+  fullCorpusAudit,
+  decisions,
+}) {
   if (
     packet?.contractId !== "LF_1PLUS9_SOURCE_REVIEW_PACKET_V6" ||
     packet?.status !== "READY_FOR_SOURCE_REVIEW" ||
@@ -125,10 +130,12 @@ function validateBindings({ packet, adjudication, fullCorpusAudit, decisions }) 
     !Array.isArray(decisions.rows)
   )
     throw goldError("LF_GOLD_30_INPUT_INVALID");
-  const packetRequirements = packet.rows.map(({ requirementId }) => requirementId);
+  const packetRequirements = packet.rows.map(
+    ({ requirementId }) => requirementId
+  );
   if (
     stableStringify(packetRequirements) !==
-      stableStringify(adjudication.rows.map(({ requirementId }) => requirementId))
+    stableStringify(adjudication.rows.map(({ requirementId }) => requirementId))
   )
     throw goldError("LF_GOLD_30_ROW_BINDING_INVALID");
   const pending = adjudication.rows
@@ -223,8 +230,7 @@ function buildLfKnownFixtureGold30({
     );
     const customerFound = override.outcome !== "NO_COUNTERPART_ESTABLISHED";
     if (
-      customerFound !==
-        (selectedPacket.length + selectedCorpus.length > 0) ||
+      customerFound !== selectedPacket.length + selectedCorpus.length > 0 ||
       (!customerFound &&
         (override.selectedPacketCandidateIds.length > 0 ||
           override.selectedFullCorpusMatches.length > 0))
@@ -283,8 +289,9 @@ function buildLfKnownFixtureGold30({
     sourceDocuments: fullCorpusAudit.documents,
     summary: {
       rows: rows.length,
-      customerFound: rows.filter(({ goldDecision }) => goldDecision.customerFound)
-        .length,
+      customerFound: rows.filter(
+        ({ goldDecision }) => goldDecision.customerFound
+      ).length,
       customerNotFound: rows.filter(
         ({ goldDecision }) => !goldDecision.customerFound
       ).length,
