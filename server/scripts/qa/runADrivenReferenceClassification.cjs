@@ -3257,11 +3257,7 @@ function operativeHeadingGovernorContext(heading, current) {
   const nearestPolarity =
     explicitCoveragePolarity(existing?.combinedText) ||
     explicitCoveragePolarity(current.source?.combinedText);
-  if (
-    headingPolarity &&
-    nearestPolarity &&
-    headingPolarity !== nearestPolarity
-  )
+  if (headingPolarity && nearestPolarity && headingPolarity !== nearestPolarity)
     return null;
   const blocks = [...heading.source.blocks, ...(existing?.blocks || [])].filter(
     ({ blockId }, index, entries) =>
