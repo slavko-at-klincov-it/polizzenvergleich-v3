@@ -29,7 +29,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V34";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V35";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -53,6 +53,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V31",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V32",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V33",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V34",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -1265,7 +1266,6 @@ function normalizeNamedPerilDefinitionRequirements(requirements, unit) {
     const definitionComponents = [
       component("PERIL_OR_CAUSE", copularWithCoverage.groups.term.trim()),
       component("FACT_ROLE", copularWithCoverage.groups.definition),
-      ...inheritedComponents,
     ];
     const coverageComponents = [
       component("DAMAGE_OR_EFFECT", copularWithCoverage.groups.damage),
@@ -1287,22 +1287,19 @@ function normalizeNamedPerilDefinitionRequirements(requirements, unit) {
       return {
         requirements: [
           {
-            displayLabel: copularWithCoverage.groups.definitionStatement,
-            components: definitionComponents,
-          },
-          {
-            displayLabel: copularWithCoverage.groups.coverageStatement,
-            components: coverageComponents,
-          },
-          {
-            displayLabel: copularWithCoverage.groups.precedenceStatement,
-            components: precedenceComponents,
+            displayLabel: sourceText,
+            components: [
+              ...definitionComponents,
+              ...coverageComponents,
+              ...precedenceComponents,
+              ...inheritedComponents,
+            ],
           },
         ],
         repairs: [
           {
-            action: "SPLIT_NAMED_PERIL_DEFINITION_AND_FOLLOW_UPS",
-            requirements: 3,
+            action: "ATOMIZE_NAMED_PERIL_DEFINITION_AND_FOLLOW_UPS",
+            requirements: 1,
           },
         ],
       };
@@ -1315,7 +1312,6 @@ function normalizeNamedPerilDefinitionRequirements(requirements, unit) {
     const definitionComponents = [
       component("PERIL_OR_CAUSE", definitionWithCondition.groups.term.trim()),
       component("FACT_ROLE", definitionWithCondition.groups.definition),
-      ...inheritedComponents,
     ];
     const conditionComponents = [
       component(
@@ -1332,18 +1328,18 @@ function normalizeNamedPerilDefinitionRequirements(requirements, unit) {
       return {
         requirements: [
           {
-            displayLabel: definitionWithCondition.groups.definitionStatement,
-            components: definitionComponents,
-          },
-          {
-            displayLabel: definitionWithCondition.groups.conditionStatement,
-            components: conditionComponents,
+            displayLabel: sourceText,
+            components: [
+              ...definitionComponents,
+              ...conditionComponents,
+              ...inheritedComponents,
+            ],
           },
         ],
         repairs: [
           {
-            action: "SPLIT_NAMED_PERIL_DEFINITION_AND_CONDITION",
-            requirements: 2,
+            action: "ATOMIZE_NAMED_PERIL_DEFINITION_AND_CONDITION",
+            requirements: 1,
           },
         ],
       };
@@ -2041,7 +2037,8 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
       repairs.push({ unitId: response?.unitId, ...repair });
     if (namedPerilDefinitions.repairs.length > 0) {
       const splitFollowUps = namedPerilDefinitions.repairs.some(
-        ({ action }) => action === "SPLIT_NAMED_PERIL_DEFINITION_AND_FOLLOW_UPS"
+        ({ action }) =>
+          action === "ATOMIZE_NAMED_PERIL_DEFINITION_AND_FOLLOW_UPS"
       );
       response = {
         ...response,

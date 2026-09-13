@@ -2715,7 +2715,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toEqual([["DAMAGE_OR_EFFECT"], ["PERIL_OR_CAUSE"]]);
   });
 
-  test("splits a named peril definition, explicit extension, and preserved right", () => {
+  test("atomizes a named peril definition, explicit extension, and preserved right in one list requirement", () => {
     const source =
       "• Brand \n das ist ein Feuer, das sich bestimmungswidrig ausbreitet; Schäden durch Kaminbrand sind \nmitversichert. Das Regressrecht des Versicherers bleibt davon unberührt; ";
     const blocks = [
@@ -2781,13 +2781,17 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         components.map(({ type }) => type)
       )
     ).toEqual([
-      ["PERIL_OR_CAUSE", "FACT_ROLE"],
-      ["DAMAGE_OR_EFFECT", "COVERAGE_EFFECT"],
-      ["PRECEDENCE_OR_REPLACEMENT"],
+      [
+        "PERIL_OR_CAUSE",
+        "FACT_ROLE",
+        "DAMAGE_OR_EFFECT",
+        "COVERAGE_EFFECT",
+        "PRECEDENCE_OR_REPLACEMENT",
+      ],
     ]);
   });
 
-  test("splits a named peril definition from its scoped occurrence condition", () => {
+  test("atomizes a named peril definition and scoped condition in one list requirement", () => {
     const source =
       "• Explosion \n ist eine auf Gasen beruhende Kraftäußerung. Eine Explosion (Zerbersten) eines Behälters (Kessel, Rohrleitungen) liegt nur vor, wenn seine Wandung zerrissen wird.";
     const unit = {
@@ -2836,8 +2840,6 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       [
         ["PERIL_OR_CAUSE", "Explosion"],
         ["FACT_ROLE", "ist eine auf Gasen beruhende Kraftäußerung."],
-      ],
-      [
         ["PERIL_OR_CAUSE", "Eine Explosion (Zerbersten)"],
         ["SCOPE", "eines Behälters (Kessel, Rohrleitungen)"],
         ["CONDITION", "liegt nur vor, wenn seine Wandung zerrissen wird."],
@@ -4414,7 +4416,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V34");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V35");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
