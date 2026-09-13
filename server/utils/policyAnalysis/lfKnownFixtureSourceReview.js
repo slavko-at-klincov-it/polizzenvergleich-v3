@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V3";
+const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V4";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
   "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V4";
 const REVIEW_OUTCOMES = new Set([
@@ -276,7 +276,7 @@ function selectComponentCandidates({
   const claudeRebind = scored
     .filter(
       ({ claudeOverlap }) =>
-        row.claude?.foundStatus !== "Nein" && claudeOverlap >= 0.25
+        row.claude?.foundStatus !== "Nein" && claudeOverlap > 0
     )
     .sort(
       (left, right) =>
