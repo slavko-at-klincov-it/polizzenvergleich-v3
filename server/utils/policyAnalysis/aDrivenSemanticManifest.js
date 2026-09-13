@@ -22,8 +22,10 @@ const A_SEMANTIC_SIGNAL_CONTRACT_ID_V4 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V4";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V5 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V5";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V6 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V6";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V7";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -176,12 +178,23 @@ const REQUIREMENT_ROLE_SIGNALS_V6 = Object.freeze([
   ...REQUIREMENT_ROLE_SIGNALS_V1,
   EXPLICIT_CONTRACTUAL_BENEFIT_SIGNAL_V6,
 ]);
+const EXPLICIT_INTENTIONAL_DAMAGE_SIGNAL_V7 = Object.freeze({
+  signalId: "EXPLICIT_INTENTIONAL_DAMAGE",
+  pattern:
+    /\b(?:böswillige|vorsätzliche|mutwillige)\s+(?:Beschädigung(?:en)?|Beschädigen|Zerstörung)(?:\s+und\s+(?:Unbrauchbarmachen|Beschädigung(?:en)?|Zerstörung))?(?:\s*\([^.;:()\n]{1,160}\))?(?=\s+von\b)/giu,
+  requiredComponentTypes: Object.freeze(["PERIL_OR_CAUSE"]),
+});
+const REQUIREMENT_ROLE_SIGNALS_V7 = Object.freeze([
+  ...REQUIREMENT_ROLE_SIGNALS_V6,
+  EXPLICIT_INTENTIONAL_DAMAGE_SIGNAL_V7,
+]);
 const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 
@@ -192,8 +205,10 @@ function requirementRoleSignals(semanticSignalContractId) {
     return REQUIREMENT_ROLE_SIGNALS_V4;
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V5)
     return REQUIREMENT_ROLE_SIGNALS_V5;
-  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V6)
     return REQUIREMENT_ROLE_SIGNALS_V6;
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+    return REQUIREMENT_ROLE_SIGNALS_V7;
   return REQUIREMENT_ROLE_SIGNALS_V2;
 }
 
@@ -666,6 +681,7 @@ function materializeSharedSignalComponents(
             "EXPLICIT_NON_NUMERIC_LIMIT",
             "EXPLICIT_DEDUCTIBLE",
             "EXPLICIT_CONTRACTUAL_BENEFIT",
+            "EXPLICIT_INTENTIONAL_DAMAGE",
           ].includes(signal.signalId)
         )
           continue;
@@ -715,6 +731,9 @@ function materializeSharedSignalComponents(
         const authoritativeQuantifiedEvidence =
           signal.signalId === "EXPLICIT_QUANTIFIED_VALUE" &&
           semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
+        const authoritativeLimitBasisEvidence =
+          signal.signalId === "EXPLICIT_LIMIT_BASIS" &&
+          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
         const inheritedConditionEvidence =
           signal.signalId === "EXPLICIT_CONDITION"
             ? governingConditionEvidence(unit, evidence)
@@ -722,6 +741,7 @@ function materializeSharedSignalComponents(
         const authoritativeExactEvidence =
           authoritativeBenefitEvidence ||
           authoritativeQuantifiedEvidence ||
+          authoritativeLimitBasisEvidence ||
           Boolean(inheritedConditionEvidence);
         const localText = exactEvidenceBinding
           ? evidence.match
@@ -742,12 +762,16 @@ function materializeSharedSignalComponents(
               "EXPLICIT_COPULAR_DEFINITION",
               "EXPLICIT_PERIL_OR_CAUSE",
               "EXPLICIT_QUANTIFIED_VALUE",
+              "EXPLICIT_LIMIT_BASIS",
               "EXPLICIT_CONTRACTUAL_BENEFIT",
+              "EXPLICIT_INTENTIONAL_DAMAGE",
             ].includes(signal.signalId))
         )
           continue;
         const matchIndex =
-          signal.signalId === "EXPLICIT_PERIL_OR_CAUSE"
+          ["EXPLICIT_PERIL_OR_CAUSE", "EXPLICIT_INTENTIONAL_DAMAGE"].includes(
+            signal.signalId
+          )
             ? 0
             : localText
                 .toLocaleLowerCase("de-AT")
@@ -761,6 +785,12 @@ function materializeSharedSignalComponents(
                   /(?:^|\s)durch\s+(.+)$/isu.exec(evidence.match)?.[1] ||
                   localMatches[0]
                 ).trim()
+              : signal.signalId === "EXPLICIT_INTENTIONAL_DAMAGE"
+                ? localMatches[0].trim()
+                : signal.signalId === "EXPLICIT_LIMIT_BASIS"
+                  ? /(?:der\s+)?(?<basis>(?:Gebäude(?:gesamt)?versicherungssumme|Versicherungssumme|Erstes\s+Risiko))\b/iu.exec(
+                      localMatches[0]
+                    )?.groups?.basis || ""
               : signal.signalId === "EXPLICIT_COST_ROLE"
                 ? localText
                 : localMatches[0];
@@ -775,6 +805,12 @@ function materializeSharedSignalComponents(
             ].includes(semanticSignalContractId));
         const sourceBlockIds = inheritedConditionEvidence
           ? inheritedConditionEvidence.sourceBlockIds
+          : authoritativeLimitBasisEvidence
+            ? minimalSourceRange(
+                unit,
+                label,
+                matchedEvidenceBlockIds(evidence)
+              )
           : authoritativeSourceEvidence
             ? [...matchedEvidenceBlockIds(evidence)]
             : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
@@ -801,7 +837,10 @@ function materializeSharedSignalComponents(
                           "EXPLICIT_COPULAR_DEFINITION",
                         ].includes(signal.signalId)
                       ? "FACT_ROLE"
-                      : signal.signalId === "EXPLICIT_PERIL_OR_CAUSE"
+                      : [
+                            "EXPLICIT_PERIL_OR_CAUSE",
+                            "EXPLICIT_INTENTIONAL_DAMAGE",
+                          ].includes(signal.signalId)
                         ? "PERIL_OR_CAUSE"
                         : signal.signalId === "EXPLICIT_COST_ROLE"
                           ? "FACT_ROLE"
@@ -1813,6 +1852,7 @@ module.exports = {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V4,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V5,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,

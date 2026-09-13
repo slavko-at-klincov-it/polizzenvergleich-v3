@@ -624,6 +624,113 @@ describe("requirement-local semantic evidence completeness", () => {
     ]);
   });
 
+  test("materializes an inherited percentage limit basis from its exact source block", () => {
+    const unit = {
+      ...evidenceUnit(["item", "Gebäudebestandteile"]),
+      governingContext: {
+        blockIds: ["limit-value", "limit-basis"],
+        blocks: [
+          {
+            blockId: "limit-value",
+            exactText: "Zusätzlich versichert bis zu 1%der ",
+          },
+          {
+            blockId: "limit-basis",
+            exactText: "Gebäudeversicherungssumme maximal EUR 10.000,-",
+          },
+        ],
+      },
+    };
+    const result = materializeSharedSignalComponents(unit, [
+      requirement(
+        ["item"],
+        [
+          component("OBJECT", "item", { label: "Gebäudebestandteile" }),
+          component("VALUE_AND_UNIT", "limit-value", {
+            label: "1%",
+            rawValue: "1",
+            unit: "%",
+          }),
+        ]
+      ),
+    ]);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "LIMIT_BASIS",
+      label: "Gebäudeversicherungssumme",
+      sourceBlockIds: ["limit-basis"],
+    });
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
+        signalId: "EXPLICIT_LIMIT_BASIS",
+        componentType: "LIMIT_BASIS",
+        sourceBlockIds: ["limit-basis"],
+      })
+    );
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
+  test("materializes an intentional-damage peril without absorbing its object", () => {
+    const source =
+      "Böswillige Beschädigung und Unbrauchbarmachen (erweiterter Vandalismus) von Gebäudebestandteilen";
+    const unit = evidenceUnit(["item", source]);
+    const result = materializeSharedSignalComponents(unit, [
+      {
+        ...requirement(
+          ["item"],
+          [
+            component("OBJECT", "item", {
+              label: "Gebäudebestandteilen",
+            }),
+          ]
+        ),
+        displayLabel: source,
+      },
+    ]);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "PERIL_OR_CAUSE",
+      label:
+        "Böswillige Beschädigung und Unbrauchbarmachen (erweiterter Vandalismus)",
+      sourceBlockIds: ["item"],
+    });
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
+        signalId: "EXPLICIT_INTENTIONAL_DAMAGE",
+      })
+    );
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
+  test("does not infer a peril from an unqualified damage-to-object phrase", () => {
+    const source = "Beschädigung von Gebäudebestandteilen";
+    const unit = evidenceUnit(["item", source]);
+    const input = [
+      {
+        ...requirement(
+          ["item"],
+          [
+            component("OBJECT", "item", {
+              label: "Gebäudebestandteilen",
+            }),
+          ]
+        ),
+        displayLabel: source,
+      },
+    ];
+
+    expect(materializeSharedSignalComponents(unit, input)).toEqual({
+      requirements: input,
+      diagnostics: [],
+    });
+  });
+
   test("ignores a signal that only spills into the same physical source block", () => {
     const unit = evidenceUnit([
       "shared-line",
@@ -5109,7 +5216,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V40");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V41");
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
