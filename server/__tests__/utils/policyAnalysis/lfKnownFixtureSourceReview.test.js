@@ -116,7 +116,7 @@ describe("LF known fixture source review", () => {
         requiredReasoningEffort: "high",
       })
     );
-    const serialized = JSON.stringify(first);
+    const serialized = JSON.stringify(first.rows);
     for (const forbidden of [
       "claudeClaim",
       "systemClaim",

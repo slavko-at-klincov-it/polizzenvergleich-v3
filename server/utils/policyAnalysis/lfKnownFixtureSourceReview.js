@@ -794,9 +794,14 @@ function buildLfKnownFixtureSourceReviewPacket({
           row.globalReferenceARebind.length,
         0
       ),
-      globalClaudeRebindCandidates: blind
-        ? 0
-        : rows.reduce((sum, row) => sum + row.globalClaudeRebind.length, 0),
+      ...(blind
+        ? {}
+        : {
+            globalClaudeRebindCandidates: rows.reduce(
+              (sum, row) => sum + row.globalClaudeRebind.length,
+              0
+            ),
+          }),
       globalReferenceARebindCandidates: rows.reduce(
         (sum, row) => sum + row.globalReferenceARebind.length,
         0
