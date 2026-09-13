@@ -10,6 +10,7 @@ const {
 // Side effects: none. Failures are explicit contract errors.
 const A_DRIVEN_RUN_CONTRACT_ID = "LF_REFERENCE_A_DRIVEN_V2";
 const A_SOURCE_UNIT_PLAN_CONTRACT_ID = "LF_A_SOURCE_UNIT_PLAN_V6";
+const MAXIMUM_SOURCE_UNIT_CHARACTERS = 12_000;
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -70,6 +71,17 @@ function isContinuation(previous, current) {
   return true;
 }
 
+function assertBoundedSyntacticUnit(blocks) {
+  const characters = blocks
+    .map(({ exactText }) => String(exactText || ""))
+    .join("\n").length;
+  if (characters > MAXIMUM_SOURCE_UNIT_CHARACTERS)
+    throw contractError(
+      "LF_A_SOURCE_SYNTACTIC_UNIT_TOO_LARGE",
+      String(characters)
+    );
+}
+
 function mergeCrossPageContentGroups(groups) {
   const merged = groups.map((blocks) => [...blocks]);
   for (let index = 0; index < merged.length; index += 1) {
@@ -81,9 +93,10 @@ function mergeCrossPageContentGroups(groups) {
     const previous = merged[previousIndex];
     const current = merged[index];
     if (
-      previous.length + current.length <= 12 &&
-      isContinuation(previous.at(-1), current[0])
+      isContinuation(previous.at(-1), current[0]) &&
+      !isListLike(current[0].exactText, current[0].structuralKind)
     ) {
+      assertBoundedSyntacticUnit([...previous, ...current]);
       previous.push(...current);
       merged.splice(index, 1);
       index -= 1;
@@ -180,19 +193,22 @@ function shouldJoin(previous, current, artifact, currentBlocks) {
     const adjacentIncompleteSentence =
       previous.structuralKind !== "HEADING_CANDIDATE" &&
       previous.physicalPageNumber === current.physicalPageNumber &&
-      !/\n\s*\n/u.test(gap) &&
       !/[.;!?][”"')\]]?$/u.test(previousText) &&
-      currentBlocks.length < 12;
+      (!/\n\s*\n/u.test(gap) ||
+        /^\p{Ll}/u.test(normalizeLine(current.exactText)));
+    if (adjacentIncompleteSentence)
+      assertBoundedSyntacticUnit([...currentBlocks, current]);
     return adjacentIncompleteSentence;
   }
   if (previous.structuralKind === "HEADING_CANDIDATE") return false;
   const previousList = isListLike(previous.exactText, previous.structuralKind);
   const currentList = isListLike(current.exactText, current.structuralKind);
-  if (currentBlocks.length >= 12) return false;
   if (previousList || currentList) {
-    if (previousList && currentList) return true;
+    if (previousList && currentList) return currentBlocks.length < 12;
     if (previousList && !currentList) {
-      return !/[.;!?][”"')\]]?$/u.test(previousText);
+      const joins = !/[.;!?][”"')\]]?$/u.test(previousText);
+      if (joins) assertBoundedSyntacticUnit([...currentBlocks, current]);
+      return joins;
     }
     return false;
   }
@@ -205,10 +221,14 @@ function shouldJoin(previous, current, artifact, currentBlocks) {
     /^[\p{Lu}\d„“"'(]/u.test(currentText)
   )
     return false;
-  if (previous.physicalPageNumber !== current.physicalPageNumber)
-    return isContinuation(previous, current);
-  if (/\n\s*\n/u.test(gap)) return false;
-  return true;
+  const joins =
+    previous.physicalPageNumber !== current.physicalPageNumber
+      ? isContinuation(previous, current)
+      : !/\n\s*\n/u.test(gap) ||
+        (!/[.!?][”"')\]]?$/u.test(previousText) &&
+          /^\p{Ll}/u.test(currentText));
+  if (joins) assertBoundedSyntacticUnit([...currentBlocks, current]);
+  return joins;
 }
 
 function planDocumentUnits({ document, artifact, ledger }) {

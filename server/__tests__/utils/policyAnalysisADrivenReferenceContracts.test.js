@@ -8796,6 +8796,82 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toContain("LIST_SOURCE_SEGMENTS_MERGED");
   });
 
+  test("keeps an unfinished clause intact beyond twelve source blocks", () => {
+    const clauseLines = [
+      "Eine lange Klausel beginnt",
+      ...Array.from(
+        { length: 11 },
+        (_, index) => `mit einem weiteren fachlichen Satzteil ${index + 1}`
+      ),
+      "und endet erst in diesem dreizehnten Quellblock.",
+    ];
+    const source = artifact(
+      [`Seite 1\nDECKUNG\n${clauseLines.join("\n")}\n`],
+      "a"
+    );
+
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const clause = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Eine lange Klausel beginnt")
+    );
+
+    expect(clause.source.blocks.length).toBeGreaterThan(12);
+    expect(clause.source.combinedText).toContain(
+      "und endet erst in diesem dreizehnten Quellblock."
+    );
+    expect(
+      plan.units.some(
+        ({ source: unitSource }) =>
+          unitSource.combinedText.trim() ===
+          "und endet erst in diesem dreizehnten Quellblock."
+      )
+    ).toBe(false);
+  });
+
+  test("joins a lowercase sentence continuation across an extraction paragraph gap", () => {
+    const source = artifact(
+      [
+        "Seite 1\nDECKUNG\nDer Versicherungsnehmer muss Gefahrenerhöhungen unverzüglich\n\nanzeigen. Danach gilt eine weitere Regel.\n",
+      ],
+      "b"
+    );
+
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const clause = plan.units.find(({ source: unitSource }) =>
+      unitSource.combinedText.includes("Gefahrenerhöhungen")
+    );
+
+    expect(clause.source.combinedText).toContain(
+      "Gefahrenerhöhungen unverzüglich\nanzeigen."
+    );
+    expect(
+      plan.units.some(({ source: unitSource }) =>
+        unitSource.combinedText.trim().startsWith("anzeigen.")
+      )
+    ).toBe(false);
+  });
+
+  test("fails closed instead of splitting an oversized unfinished clause", () => {
+    const clauseLines = Array.from(
+      { length: 13 },
+      (_, index) => `fortsetzung ${index + 1} ${"x".repeat(990)}`
+    );
+    const source = artifact(
+      [`Seite 1\nDECKUNG\n${clauseLines.join("\n")}\n`],
+      "c"
+    );
+
+    expect(() =>
+      buildADrivenSourceUnitPlan({
+        documents: [document("source", 0, source)],
+      })
+    ).toThrow(/LF_A_SOURCE_SYNTACTIC_UNIT_TOO_LARGE/u);
+  });
+
   test("does not report an unpunctuated page footer as a heading continuation", () => {
     const source = artifact(
       [
