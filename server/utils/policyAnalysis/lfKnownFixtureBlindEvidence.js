@@ -210,6 +210,7 @@ function navigationAnchors({
   groupsByDocument,
   query,
   maximumNavigationAnchors,
+  maximumEvidenceGroupsPerAnchor,
 }) {
   const candidates = oracleRow.benchmarkCandidateIds
     .map((candidateId) => candidatesById.get(candidateId))
@@ -231,18 +232,26 @@ function navigationAnchors({
   });
   return ranked.map(({ candidate, candidateId, matchedTokens }) => {
     const range = candidate.range;
-    const evidenceGroupIds = (groupsByDocument.get(range.documentUuid) || [])
-      .filter((group) =>
-        rangesOverlap(range, {
-          documentStart: Math.min(
-            ...group.sourceSpans.map(({ documentStart }) => documentStart)
-          ),
-          documentEnd: Math.max(
-            ...group.sourceSpans.map(({ documentEnd }) => documentEnd)
-          ),
-        })
-      )
-      .map(({ evidenceGroupId }) => evidenceGroupId);
+    const overlappingGroups = (
+      groupsByDocument.get(range.documentUuid) || []
+    ).filter((group) =>
+      rangesOverlap(range, {
+        documentStart: Math.min(
+          ...group.sourceSpans.map(({ documentStart }) => documentStart)
+        ),
+        documentEnd: Math.max(
+          ...group.sourceSpans.map(({ documentEnd }) => documentEnd)
+        ),
+      })
+    );
+    const overlappingCandidates = overlappingGroups.map(groupCandidate);
+    const evidenceGroupIds = rankLexicalCandidates({
+      target: query,
+      candidates: overlappingCandidates,
+      index: bm25Index(overlappingCandidates),
+      topK: maximumEvidenceGroupsPerAnchor,
+      structural: true,
+    }).map(({ evidenceGroupId }) => evidenceGroupId);
     return {
       navigationAnchorId: candidateId,
       documentUuid: range.documentUuid,
@@ -268,6 +277,7 @@ function retrieveEvidence({
   groupsByDocument,
   maximumEvidenceGroupsPerCheck,
   maximumNavigationAnchors,
+  maximumEvidenceGroupsPerAnchor,
 }) {
   const query = queryFor(requirement, component);
   const lexical = rankLexicalCandidates({
@@ -283,6 +293,7 @@ function retrieveEvidence({
     groupsByDocument,
     query,
     maximumNavigationAnchors,
+    maximumEvidenceGroupsPerAnchor,
   });
   const ids = [];
   const seen = new Set();
@@ -335,6 +346,7 @@ function buildLfKnownFixtureBlindEvidencePacket({
   bDocuments,
   maximumEvidenceGroupsPerCheck = 12,
   maximumNavigationAnchors = 6,
+  maximumEvidenceGroupsPerAnchor = 3,
   maximumEvidenceGroupCharacters = 12_000,
   createdAt = new Date().toISOString(),
 } = {}) {
@@ -350,7 +362,9 @@ function buildLfKnownFixtureBlindEvidencePacket({
     !Number.isInteger(maximumEvidenceGroupsPerCheck) ||
     maximumEvidenceGroupsPerCheck < 1 ||
     !Number.isInteger(maximumNavigationAnchors) ||
-    maximumNavigationAnchors < 0
+    maximumNavigationAnchors < 0 ||
+    !Number.isInteger(maximumEvidenceGroupsPerAnchor) ||
+    maximumEvidenceGroupsPerAnchor < 1
   )
     blindError("LF_BLIND_EVIDENCE_INPUT_INVALID");
   const oracleBDocuments = oracle.documents.filter(({ side }) => side === "B");
@@ -431,6 +445,7 @@ function buildLfKnownFixtureBlindEvidencePacket({
       groupsByDocument,
       maximumEvidenceGroupsPerCheck,
       maximumNavigationAnchors,
+      maximumEvidenceGroupsPerAnchor,
     });
     const components = requirement.components.map((component) => ({
       ...component,
@@ -445,6 +460,7 @@ function buildLfKnownFixtureBlindEvidencePacket({
         groupsByDocument,
         maximumEvidenceGroupsPerCheck,
         maximumNavigationAnchors,
+        maximumEvidenceGroupsPerAnchor,
       }),
     }));
     const evidenceReadiness = [

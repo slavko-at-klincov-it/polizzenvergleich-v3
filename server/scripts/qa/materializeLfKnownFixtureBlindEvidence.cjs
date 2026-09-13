@@ -50,6 +50,9 @@ function argumentsFrom(argv) {
       values.maximumEvidenceGroupsPerCheck || 12
     ),
     maximumNavigationAnchors: Number(values.maximumNavigationAnchors || 6),
+    maximumEvidenceGroupsPerAnchor: Number(
+      values.maximumEvidenceGroupsPerAnchor || 3
+    ),
     maximumEvidenceGroupCharacters: Number(
       values.maximumEvidenceGroupCharacters || 12_000
     ),
@@ -148,6 +151,7 @@ function run() {
     bDocuments: documentInputs(oracle, args.documentCatalogDirectory),
     maximumEvidenceGroupsPerCheck: args.maximumEvidenceGroupsPerCheck,
     maximumNavigationAnchors: args.maximumNavigationAnchors,
+    maximumEvidenceGroupsPerAnchor: args.maximumEvidenceGroupsPerAnchor,
     maximumEvidenceGroupCharacters: args.maximumEvidenceGroupCharacters,
   });
   writePrivateJson(args.output, packet);

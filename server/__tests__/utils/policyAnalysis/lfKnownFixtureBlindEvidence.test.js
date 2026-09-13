@@ -201,6 +201,13 @@ describe("LF blind evidence V2", () => {
       "RV WEVIG/Familienwohnbau gilt für Neu- und Konvertierungsanträge.",
     ].join("\n\n");
     const input = fixture(source);
+    input.semanticManifest.requirements[0].components[0].label =
+      "Familienwohnbau und Tochtergesellschaften";
+    input.semanticManifest.requirements[0].components[0].aliases = [
+      "Familienwohnbau",
+      "Versicherungsnehmer",
+      "RV WEVIG",
+    ];
     const packet = buildLfKnownFixtureBlindEvidencePacket({
       ...input,
       maximumEvidenceGroupsPerCheck: 12,
@@ -219,6 +226,7 @@ describe("LF blind evidence V2", () => {
     expect(packet.rows[0].components[0].evidence.combinationPolicy).toContain(
       "MULTI_SOURCE_ALLOWED"
     );
+    expect(ids.length).toBeLessThanOrEqual(30);
   });
 
   it("is independent of prior decision labels and gold-candidate input", () => {
