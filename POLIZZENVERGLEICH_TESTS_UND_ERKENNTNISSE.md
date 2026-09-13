@@ -4590,3 +4590,43 @@ nachgelagerten Gold-30-Gate muss zuerst die blinde Evidenzbereitstellung
 vollständig werden und der Problem-4-Test erneut bestehen. Auch 4/4 gibt
 keine 283er-Freigabe; erst Gold-30 entscheidet zwischen Sol und Astra als
 primärem Goldpass.
+
+## 82. Goldkonsolidierung braucht Artefaktbindung statt erinnerter Modellstimmen
+
+Am 13. September wurde die laufende Evidenzarbeit auf Auftrag an einer
+vollständigen Artefaktgrenze gestoppt. Qwen bleibt mit 98 gültigen Zeilen
+resumierbar; Sol-Gold-30 und neun frische Astra-Streitprüfungen sind als
+getrennte, unveränderliche Zusammenfassungen auf dem Mac Studio gesichert.
+Gold-30-V1/V2 blieb bytegenau unverändert. Drei durch Sol und Astra gestützte
+Abweichungen stehen nur in einem versionierten `PROPOSAL_NOT_GOLD`.
+
+Eine modellfreie 283-Zeilen-Matrix bindet derzeit Fable/Claude 283,
+Altsystem 283, Qwen 98, Sol 30, Astra 9 und Frozen Gold 30. Das angekündigte
+separate blinde Astra-283-Abschlussartefakt konnte im QA-Baum, Repository und
+den verfügbaren Anhängen nicht als Datei mit Pfad und Hash gefunden werden.
+Die Matrix steht deshalb ausdrücklich auf
+`INCOMPLETE_MISSING_ASTRA283_ARTIFACT_NOT_GOLD`. Es wurde weder ein neuer
+Vollreview gestartet noch eine fehlende Stimme aus Erinnerung rekonstruiert.
+
+Die breite Matrix enthält 143 Zeilen mit mindestens zwei widersprechenden
+binären Stimmen und 156 Zeilen, für die mindestens eine Stimme einen Nullfund
+behauptet. Weil Fable, Qwen, Sol und das Altsystem teils nur Kandidaten oder
+Regressionsevidenz sind, sind diese Werte Triage und keine Fehler- oder
+Arbeitsaufwandsmetrik. Automatische Goldübernahme ist nur mit gültiger
+Originalquelle und demselben fachlichen Kern erlaubt; danach werden nur
+verbleibende Widersprüche, Nullfunde und Hochrisikofälle source-bound
+entschieden.
+
+Der genaue Freeze-, Matrix- und Restweg ist kanonisch in
+`polizzenvergleich-v3/docs/LF_1PLUS9_KONSOLIDIERUNG_2026-09-13_DE.md`
+dokumentiert. Erst nach einem vollständigen, hashgebundenen 283/283-Gold darf
+der dynamische `LF_REFERENCE_A_DRIVEN_V2`-Produktlauf fortgesetzt und gegen
+dieses bekannte Fixture gemessen werden.
+
+**Beweist:** Fertige Reviews können verlustfrei getrennt, verglichen und als
+Kandidaten erhalten werden, ohne bestehendes Gold zu mutieren oder Modelle
+erneut aufzurufen.
+
+**Beweist nicht:** Dass Gold-283 bereits vollständig ist, dass eine
+Modellmehrheit fachliche Wahrheit darstellt oder dass das bekannte 1+9-Set
+Generalisierung beziehungsweise 99 Prozent belegt.
