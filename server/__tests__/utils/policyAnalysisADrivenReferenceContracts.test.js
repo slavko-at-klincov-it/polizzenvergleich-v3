@@ -4,6 +4,7 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -103,6 +104,10 @@ describe("A-driven classification evidence recovery", () => {
     expect(systemText).toContain(
       "Eigentümer, Mieter oder Pächter und Handlungen wie Wiederbeschaffung/Wiederherstellung"
     );
+    expect(systemText).toContain(
+      "eine einleitende Formulierung „aus der/dem …“"
+    );
+    expect(systemText).toContain("Die Versicherung erstreckt sich auf …");
   });
 
   test("recovers only adjacent, source-bound list governors without changing ownership", () => {
@@ -252,6 +257,62 @@ describe("A-driven classification evidence recovery", () => {
         .governingContext
     ).toBeUndefined();
     expect(recovered.classificationEvidenceContext.recoveredContexts).toBe(5);
+  });
+
+  test("recovers a positive coverage heading expressed as Versicherung erstreckt sich auf", () => {
+    const source = (combinedText, blockId) => ({
+      documentUuid: "doc",
+      blockIds: [blockId],
+      blocks: [{ blockId, exactText: combinedText }],
+      combinedText,
+    });
+    const headingText =
+      "8.2. Die Versicherung erstreckt sich auf Schadenersatzverpflichtungen";
+    const plan = {
+      units: [
+        {
+          unitId: "coverage-heading",
+          unitKind: "HEADING",
+          structurePath: [headingText],
+          source: source(headingText, "coverage-heading-block"),
+        },
+        {
+          unitId: "covered-item",
+          unitKind: "LIST",
+          structurePath: [headingText],
+          source: source(
+            "• aus der Wartung und Pflege des Gebäudes",
+            "covered-item-block"
+          ),
+        },
+        {
+          unitId: "duration-heading",
+          unitKind: "HEADING",
+          structurePath: ["Die Frist erstreckt sich auf zwölf Monate"],
+          source: source(
+            "Die Frist erstreckt sich auf zwölf Monate",
+            "duration-heading-block"
+          ),
+        },
+        {
+          unitId: "duration-item",
+          unitKind: "CLAUSE",
+          structurePath: ["Die Frist erstreckt sich auf zwölf Monate"],
+          source: source("Wiederaufbau", "duration-item-block"),
+        },
+      ],
+    };
+
+    const recovered = deriveClassificationEvidencePlan(plan);
+    const byId = new Map(recovered.units.map((unit) => [unit.unitId, unit]));
+
+    expect(byId.get("covered-item").governingContext).toMatchObject({
+      relationType: "RECOVERS_OPERATIVE_HEADING_GOVERNOR",
+      unitIds: ["coverage-heading"],
+      blockIds: ["coverage-heading-block"],
+    });
+    expect(byId.get("duration-item").governingContext).toBeUndefined();
+    expect(recovered.classificationEvidenceContext.recoveredContexts).toBe(1);
   });
 
   test("carries a list governor across a bounded same-term definition bridge", () => {
@@ -3554,6 +3615,284 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("atomizes a continued liability activity enumeration and preserves the positive heading governor", () => {
+    const blocks = [
+      {
+        blockId: "activities-one",
+        exactText:
+          "• aus der Innehabung, Verwaltung, Beaufsichtigung, Versorgung, Reinhaltung, Beleuchtung, ",
+      },
+      {
+        blockId: "activities-two",
+        exactText:
+          "Betrieb und Pflege der versicherten Liegenschaft einschließlich der darauf befindlichen ",
+      },
+      {
+        blockId: "objects-one",
+        exactText:
+          "Gebäude, Nebengebäude und Einrichtungen wie z.B. Aufzüge, Heizungs- und Klimaanlagen, ",
+      },
+      {
+        blockId: "objects-two",
+        exactText: "Schwimmbecken, Kinderspielplätze und Gartenanlagen.",
+      },
+    ];
+    const source = blocks.map(({ exactText }) => exactText).join("\n");
+    const unit = {
+      unitId: "continued-liability-activities",
+      unitKind: "LIST",
+      structurePath: [
+        "Die Versicherung erstreckt sich auf Schadenersatzverpflichtungen",
+      ],
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        combinedText: source,
+        blocks,
+      },
+      governingContext: {
+        unitIds: ["coverage-heading"],
+        blockIds: ["coverage-heading-block"],
+        combinedText:
+          "Die Versicherung erstreckt sich auf Schadenersatzverpflichtungen",
+        blocks: [
+          {
+            blockId: "coverage-heading-block",
+            exactText:
+              "Die Versicherung erstreckt sich auf Schadenersatzverpflichtungen",
+          },
+        ],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "versicherten Liegenschaft",
+                  sourceBlockIds: ["activities-two"],
+                },
+                {
+                  type: "OBJECT",
+                  label:
+                    "Gebäude, Nebengebäude und Einrichtungen wie z.B. Aufzüge, Heizungs- und Klimaanlagen, \nSchwimmbecken, Kinderspielplätze und Gartenanlagen",
+                  sourceBlockIds: ["objects-one", "objects-two"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    const response = normalized.responses[0];
+    expect(response.primaryClass).toBe("INSURED_OBJECT");
+    expect(response.semanticClasses).toEqual([
+      "INSURED_OBJECT",
+      "PERIL_OR_DAMAGE",
+      "OPERATIVE_COVERAGE_STATEMENT",
+    ]);
+    expect(
+      response.requirements[0].components
+        .filter(({ type }) => type === "PERIL_OR_CAUSE")
+        .map(({ label }) => label)
+    ).toEqual([
+      "Innehabung",
+      "Verwaltung",
+      "Beaufsichtigung",
+      "Versorgung",
+      "Reinhaltung",
+      "Beleuchtung",
+      "Betrieb",
+      "Pflege",
+    ]);
+    expect(
+      response.requirements[0].components
+        .filter(({ type }) => type === "OBJECT")
+        .map(({ label }) => label)
+    ).toEqual([
+      "versicherten Liegenschaft",
+      "Gebäude",
+      "Nebengebäude",
+      "Einrichtungen",
+      "Aufzüge",
+      "Heizungs- und Klimaanlagen",
+      "Schwimmbecken",
+      "Kinderspielplätze",
+      "Gartenanlagen",
+    ]);
+    expect(response.requirements[0].components.at(-1)).toEqual({
+      type: "COVERAGE_EFFECT",
+      label: "Die Versicherung erstreckt sich auf",
+      sourceBlockIds: ["coverage-heading-block"],
+      coverageEffect: "INCLUDED",
+    });
+    expect(
+      new Set(
+        response.requirements[0].components.flatMap(
+          ({ sourceBlockIds }) => sourceBlockIds
+        )
+      )
+    ).toEqual(
+      new Set([...unit.source.blockIds, ...unit.governingContext.blockIds])
+    );
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      action: "ATOMIZE_LIABILITY_ACTIVITY_ENUMERATION",
+      activityComponents: 8,
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      componentIndex: 9,
+      action: "ATOMIZE_COORDINATED_OBJECT_ENUMERATION",
+      objectComponents: 8,
+    });
+  });
+
+  test("atomizes a wording variant of a liability activity enumeration", () => {
+    const source =
+      "• aus dem Besitz, der Wartung und der Benützung des Gebäudes.";
+    const unit = {
+      unitId: "liability-activity-wording-variant",
+      structurePath: ["Haftpflichtversicherung"],
+      source: {
+        blockIds: ["statement"],
+        combinedText: source,
+        blocks: [{ blockId: "statement", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "OBJECT",
+                  label: "Gebäudes",
+                  sourceBlockIds: ["statement"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label }) => [type, label]
+      )
+    ).toEqual([
+      ["PERIL_OR_CAUSE", "Besitz"],
+      ["PERIL_OR_CAUSE", "Wartung"],
+      ["PERIL_OR_CAUSE", "Benützung"],
+      ["OBJECT", "Gebäudes"],
+    ]);
+  });
+
+  test.each([
+    {
+      name: "outside liability context",
+      source: "• aus der Wartung und Pflege des Gebäudes.",
+      structurePath: ["Sachversicherung"],
+    },
+    {
+      name: "single cause",
+      source: "• aus der Beschädigung des Gebäudes.",
+      structurePath: ["Haftpflichtversicherung"],
+    },
+    {
+      name: "alternative rather than coordinated list",
+      source: "• aus der Wartung oder Pflege des Gebäudes.",
+      structurePath: ["Haftpflichtversicherung"],
+    },
+    {
+      name: "not a leading causal scope",
+      source: "Kosten aus der Wartung und Pflege des Gebäudes.",
+      structurePath: ["Haftpflichtversicherung"],
+    },
+  ])("does not invent a liability activity enumeration: $name", (fixture) => {
+    const unit = {
+      unitId: "non-liability-activity-enumeration",
+      structurePath: fixture.structurePath,
+      source: {
+        blockIds: ["statement"],
+        combinedText: fixture.source,
+        blocks: [{ blockId: "statement", exactText: fixture.source }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: fixture.source,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Gebäudes",
+              sourceBlockIds: ["statement"],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
+  test.each([
+    "Heizungs- und Klimaanlagen",
+    "Sach-, Haftpflicht- und Rechtsschutzversicherung",
+  ])("does not split a coupled compound object label: %s", (label) => {
+    const source = `${label} sind versichert.`;
+    const unit = {
+      unitId: "coupled-compound-object",
+      source: {
+        blockIds: ["statement"],
+        combinedText: source,
+        blocks: [{ blockId: "statement", exactText: source }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: source,
+          components: [
+            { type: "OBJECT", label, sourceBlockIds: ["statement"] },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
   test("types list items governed by insured damages as causes or damages", () => {
     const source = "Verrußung\ndie Energie des elektrischen Stromes";
     const unit = {
@@ -5874,6 +6213,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         ...seeded,
         contractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
         promptContractId: "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19",
+        validatorContractId: A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
       };
       delete predecessor.semanticSignalContractId;
       const file = batchResultFile(temporary, batch);
@@ -5891,7 +6231,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         recoverModelAfterAbort: jest.fn(),
       });
 
-      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V46");
+      expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V47");
+      expect(upgraded.validatorContractId).toBe(A_DYNAMIC_MANIFEST_CONTRACT_ID);
       expect(upgraded.semanticSignalContractId).toBe(
         A_SEMANTIC_SIGNAL_CONTRACT_ID
       );
@@ -9416,9 +9757,28 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       ],
     };
 
-    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
-      responses: [response],
-      componentRepairs: [],
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "INSURED_OBJECT"],
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label }) => [type, label]
+      )
+    ).toEqual([
+      ["OBJECT", "Gebäude"],
+      ["OBJECT", "Nebengebäude"],
+      ["SCOPE", "In der Sparte Gebäude gilt die Variante Premium"],
+      ["COVERAGE_EFFECT", "Versichert"],
+    ]);
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      componentIndex: 0,
+      action: "ATOMIZE_COORDINATED_OBJECT_ENUMERATION",
+      objectComponents: 2,
     });
   });
 

@@ -10,8 +10,10 @@ const {
 // Output: a source-bound manifest plus terminal status for every A block/unit.
 // Side effects: none. Invalid/missing/duplicate IDs become visible UNRESOLVED.
 const A_BLOCK_TERMINAL_CONTRACT_ID = "LF_A_SOURCE_BLOCK_TERMINAL_V1";
-const A_DYNAMIC_MANIFEST_CONTRACT_ID =
+const A_DYNAMIC_MANIFEST_CONTRACT_ID_V11 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V11";
+const A_DYNAMIC_MANIFEST_CONTRACT_ID =
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V12";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V1 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V1";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V2 =
@@ -76,7 +78,7 @@ const COVERAGE_EFFECTS = new Set([
   "UNKNOWN",
 ]);
 const COVERAGE_EFFECT_TEXT_PATTERN =
-  /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en|ten)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Anspruch\s+auf\s+(?:Zahlung|Leistung)|zur\s+Leistung\s+verpflichtet|verzichtet\s+der\s+Versicherer\s+auf\s+(?:den\s+)?Einwand|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
+  /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en|ten)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Anspruch\s+auf\s+(?:Zahlung|Leistung)|zur\s+Leistung\s+verpflichtet|verzichtet\s+der\s+Versicherer\s+auf\s+(?:den\s+)?Einwand|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
 const REQUIREMENT_ROLE_SIGNALS_V1 = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_EXCLUSION",
@@ -1852,6 +1854,7 @@ function validateADrivenSemanticManifest(manifest) {
 module.exports = {
   A_BLOCK_TERMINAL_CONTRACT_ID,
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,

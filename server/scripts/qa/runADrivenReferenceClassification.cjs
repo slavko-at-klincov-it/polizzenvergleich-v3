@@ -15,6 +15,7 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenClassificationContract");
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -30,7 +31,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V46";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V47";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -66,7 +67,12 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V43",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V44",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V45",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V46",
   RUN_CONTRACT_ID,
+]);
+const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
@@ -77,7 +83,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V24";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V25";
 const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V12",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V13",
@@ -91,6 +97,7 @@ const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V21",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V22",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V23",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V24",
   PROMPT_CONTRACT_ID,
 ]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -644,7 +651,7 @@ function explicitCoverageEffectRepair(unit, component) {
   const negativePattern =
     /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu;
   const positivePattern =
-    /\b(?:zusätzlich\s+)?(?:mit)?versichert(?:e[snmr]?)?(?:\s+sind)?\b/iu;
+    /\b(?:(?:zusätzlich\s+)?(?:mit)?versichert(?:e[snmr]?)?(?:\s+sind)?|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf)\b/iu;
   const negative = negativePattern.exec(sourceText);
   const positiveEvidenceText = negative
     ? `${sourceText.slice(0, negative.index)}${" ".repeat(
@@ -1332,6 +1339,193 @@ function normalizeDamageCauseGovernorComponents(requirements, unit) {
             toType,
           });
           return { ...component, type: toType };
+        }
+      ),
+    })
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
+function coordinatedLiabilityActivityLabels(value) {
+  const labels = [];
+  let start = 0;
+  const separators = /,\s*|\s+und\s+/giu;
+  for (const separator of value.matchAll(separators)) {
+    labels.push(value.slice(start, separator.index));
+    start = separator.index + separator[0].length;
+  }
+  labels.push(value.slice(start));
+  const normalized = labels
+    .map((label) =>
+      label
+        .trim()
+        .replace(/^(?:der|die|das|dem|den|des)\s+/iu, "")
+        .trim()
+    )
+    .filter(Boolean);
+  if (
+    normalized.length < 2 ||
+    normalized.length > 12 ||
+    normalized.some(
+      (label) =>
+        label.length > 100 ||
+        /[.;:!?()[\]0-9]/u.test(label) ||
+        !/\p{Lu}/u.test(label)
+    )
+  )
+    return [];
+  return normalized;
+}
+
+function normalizeLiabilityActivityEnumerations(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const liabilityContext = [
+    ...(unit?.structurePath || []),
+    String(unit?.governingContext?.combinedText || ""),
+    sourceText,
+  ].join("\n");
+  if (
+    !/\b(?:Haftpflicht|Haftungsrisiko|Schadenersatzverpflichtung)\p{L}*\b/iu.test(
+      liabilityContext
+    )
+  )
+    return { requirements, repairs: [] };
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const components = requirement?.components || [];
+      if (
+        components.length === 0 ||
+        !components.some(({ type }) => type === "OBJECT") ||
+        components.some(({ type }) => type === "PERIL_OR_CAUSE")
+      )
+        return requirement;
+      const displayLabel = String(requirement.displayLabel || "");
+      const firstObjectOffset = components
+        .filter(({ type, label }) => type === "OBJECT" && label)
+        .map(({ label }) => displayLabel.indexOf(label))
+        .filter((offset) => offset >= 0)
+        .sort((left, right) => left - right)[0];
+      if (!Number.isInteger(firstObjectOffset) || firstObjectOffset === 0)
+        return requirement;
+      const activityPrefix = displayLabel.slice(0, firstObjectOffset);
+      const match =
+        /^\s*[•-]?\s*aus\s+(?:der|dem|den)\s+(?<activities>[\s\S]{1,300}?)\s+(?:der|des|dem|den)\s*$/iu.exec(
+          activityPrefix
+        );
+      if (
+        !match ||
+        /\b(?:nicht|kein(?:e[snmr]?)?|ausgeschlossen|ausgenommen)\b/iu.test(
+          match.groups.activities
+        )
+      )
+        return requirement;
+      const labels = coordinatedLiabilityActivityLabels(
+        match.groups.activities
+      );
+      const activityComponents = labels.map((label) => ({
+        type: "PERIL_OR_CAUSE",
+        label,
+        sourceBlockIds: sourceBlockIdsForExactSpan(unit, label),
+      }));
+      if (
+        activityComponents.length === 0 ||
+        activityComponents.some(
+          ({ sourceBlockIds }) => sourceBlockIds.length === 0
+        )
+      )
+        return requirement;
+      repairs.push({
+        requirementIndex,
+        action: "ATOMIZE_LIABILITY_ACTIVITY_ENUMERATION",
+        activityComponents: activityComponents.length,
+      });
+      return {
+        ...requirement,
+        components: [...activityComponents, ...components],
+      };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
+function coordinatedObjectLabels(value) {
+  if (
+    !/,/u.test(value) &&
+    !/\bwie\s+(?:z\.\s*B\.|beispielsweise|etwa)\b/iu.test(value)
+  )
+    return [];
+  if (
+    /\b(?:wenn|sofern|falls|soweit|wobei|obwohl|weil|dass)\b/iu.test(value) ||
+    /\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|leistet|leisten|ersetzt|ersetzen|erstattet|erstatten)\b/iu.test(
+      value
+    )
+  )
+    return [];
+  const groups = value.split(/\s+wie\s+(?:z\.\s*B\.|beispielsweise|etwa)\s+/iu);
+  const labels = groups.flatMap((group) =>
+    group.split(/,\s*/u).flatMap((part) => {
+      const conjunction = /\s+und\s+/iu.exec(part);
+      if (!conjunction || part.slice(0, conjunction.index).trim().endsWith("-"))
+        return [part];
+      return [
+        part.slice(0, conjunction.index),
+        part.slice(conjunction.index + conjunction[0].length),
+      ];
+    })
+  );
+  const normalized = labels
+    .map((label) =>
+      label
+        .trim()
+        .replace(/^(?:der|die|das|dem|den|des)\s+/iu, "")
+        .replace(/[.;:]\s*$/u, "")
+        .trim()
+    )
+    .filter(Boolean);
+  if (
+    normalized.length < 2 ||
+    normalized.length > 24 ||
+    normalized.some(
+      (label) =>
+        label.length > 140 ||
+        label.endsWith("-") ||
+        /[!?()[\]0-9]/u.test(label) ||
+        !/\p{Lu}/u.test(label)
+    )
+  )
+    return [];
+  return normalized;
+}
+
+function normalizeCoordinatedObjectEnumerations(requirements, unit) {
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => ({
+      ...requirement,
+      components: (requirement?.components || []).flatMap(
+        (component, componentIndex) => {
+          if (component?.type !== "OBJECT") return [component];
+          const labels = coordinatedObjectLabels(String(component.label || ""));
+          const objectComponents = labels.map((label) => ({
+            ...component,
+            label,
+            sourceBlockIds: sourceBlockIdsForExactSpan(unit, label),
+          }));
+          if (
+            objectComponents.length === 0 ||
+            objectComponents.some(
+              ({ sourceBlockIds }) => sourceBlockIds.length === 0
+            )
+          )
+            return [component];
+          repairs.push({
+            requirementIndex,
+            componentIndex,
+            action: "ATOMIZE_COORDINATED_OBJECT_ENUMERATION",
+            objectComponents: objectComponents.length,
+          });
+          return objectComponents;
         }
       ),
     })
@@ -2367,6 +2561,38 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         }),
       };
     }
+    const liabilityActivities = normalizeLiabilityActivityEnumerations(
+      requirements,
+      unit
+    );
+    requirements = liabilityActivities.requirements;
+    for (const repair of liabilityActivities.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (liabilityActivities.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []),
+            "INSURED_OBJECT",
+            "PERIL_OR_DAMAGE",
+          ]),
+        ],
+      };
+    const coverageBranchSchedule = normalizeCoverageBranchScheduleComponents(
+      requirements,
+      unit
+    );
+    requirements = coverageBranchSchedule.requirements;
+    for (const repair of coverageBranchSchedule.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    const coordinatedObjects = normalizeCoordinatedObjectEnumerations(
+      requirements,
+      unit
+    );
+    requirements = coordinatedObjects.requirements;
+    for (const repair of coordinatedObjects.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
     const aggregatedEventDefinition = normalizeAggregatedEventDefinition(
       requirements,
       unit
@@ -2653,13 +2879,6 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ),
       };
     }
-    const coverageBranchSchedule = normalizeCoverageBranchScheduleComponents(
-      requirements,
-      unit
-    );
-    requirements = coverageBranchSchedule.requirements;
-    for (const repair of coverageBranchSchedule.repairs)
-      repairs.push({ unitId: response?.unitId, ...repair });
     const productConfigurationDefinition =
       requirements.length > 0 &&
       !hasCoverageEffectEvidence(unit) &&
@@ -3248,7 +3467,7 @@ function explicitCoveragePolarity(textValue) {
       )}${sourceText.slice(negative.index + negative[0].length)}`
     : sourceText;
   const positive =
-    /\b(?:zusätzlich\s+)?(?:mit)?versichert(?:e[snmr]?)?(?:\s+sind)?\b/iu.exec(
+    /\b(?:(?:zusätzlich\s+)?(?:mit)?versichert(?:e[snmr]?)?(?:\s+sind)?|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf)\b/iu.exec(
       positiveEvidenceText
     );
   if (Boolean(negative) === Boolean(positive)) return null;
@@ -3299,7 +3518,7 @@ function classificationGovernorContext(previous, current) {
   const continuesEmbeddedList =
     embeddedListStart > 0 && !endsWithSentence(previousText);
   const opensFollowingList =
-    previous.unitKind !== "LIST" &&
+    !["LIST", "HEADING"].includes(previous.unitKind) &&
     current.unitKind === "LIST" &&
     isOpenCoverageGovernor(previousText);
   const recoversAdjacentAnaphora =
@@ -3444,7 +3663,7 @@ function operativeHeadingGovernorContext(heading, current) {
     current?.unitKind === "HEADING" ||
     heading.source?.documentUuid !== current?.source?.documentUuid ||
     String(current?.structurePath?.at(-1) || "").trim() !== headingText ||
-    !/\b(?:ausgeschlossen|mitversichert|nicht\s+versichert|versichert\s+sind|Versicherungsschutz\s+(?:besteht|gilt))\b/iu.test(
+    !/\b(?:ausgeschlossen|mitversichert|nicht\s+versichert|versichert\s+sind|Versicherungsschutz\s+(?:besteht|gilt)|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf)\b/iu.test(
       headingText
     )
   )
@@ -3564,6 +3783,11 @@ function prompt(batch) {
       role: "system",
       content:
         "Verbindliche Atomisierungspräzisierung: Ein Komponentenlabel ist der kürzeste zusammenhängende wörtliche Quellteil, der genau die eigene semantische Dimension noch eindeutig bezeichnet. Kopiere niemals vorsorglich den ganzen Satz oder Listenpunkt in OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, COVERAGE_EFFECT, FACT_ROLE, VALUE_AND_UNIT oder LIMIT_BASIS, wenn darin eigenständige Inhalte anderer Typen enthalten sind. Das frühere Platzhalterbeispiel <wörtlicher Listenpunkt> bedeutet daher den kürzesten wörtlichen Objektteil innerhalb dieses Listenpunkts, nicht automatisch den vollständigen Listenpunkt. Trenne Deckungswirkung, Objekt, Gefahr/Ursache, Schaden/Wirkung, Bedingung, Rollenbezeichnung, konkrete Zahl samt Einheit und Limitbasis in eigene Komponenten. Ein Komponentenlabel darf das Label einer anders typisierten Schwesterkomponente nur enthalten, wenn kein kürzerer zusammenhängender Quellteil die eigene Dimension eindeutig ausdrückt. Koordinierte Aufzählungen desselben Typs werden in einzelne Komponenten zerlegt, wenn jedes Element fachlich selbstständig in B gesucht und gefunden werden kann; untrennbare zusammengesetzte Begriffe und bloße Synonyme bleiben zusammen. FACT_ROLE bezeichnet die konkrete fachliche Rolle oder Leistungsart und lässt separat typisierte Bedingungen, Werte und Limitbasen weg. VALUE_AND_UNIT.label und rawValue enthalten den konkreten Wertausdruck; LIMIT_BASIS enthält nur die wörtliche Bezugsgröße. Komponenten müssen gemeinsam weiterhin alle operativen ownedSourceBlockIds belegen. Wenn eine fachlich saubere wörtliche Trennung wegen Grammatik oder Quellfragmentierung nicht sicher möglich ist, verwende UNRESOLVED statt eines überbreiten Sammellabels.",
+    },
+    {
+      role: "system",
+      content:
+        "In Haftpflichtaussagen bezeichnet eine einleitende Formulierung „aus der/dem …“ vor dem betroffenen Sachobjekt regelmäßig die versicherte Tätigkeit oder Ursache, nicht das Objekt selbst und nicht bloße Struktur. Gib selbstständig suchbare koordinierte Tätigkeiten als getrennte PERIL_OR_CAUSE-Komponenten aus und das danach genannte Gebäude, Grundstück oder andere Sachobjekt getrennt als OBJECT. Die Formulierung „Die Versicherung erstreckt sich auf …“ ist ein positiver Deckungs-Governor; übernimm ihren exakten Wirkungsausdruck nur über serverseitig bereitgestellten governingContext.",
     },
     {
       role: "system",
@@ -3798,7 +4022,9 @@ function predecessorBatchResponses(file, plan, batch, args) {
     result.batchId !== batch.batchId ||
     result.batchIndex !== batch.batchIndex ||
     !RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS.has(result.promptContractId) ||
-    result.validatorContractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+    !RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS.has(
+      result.validatorContractId
+    ) ||
     result.requestedModel !== args.model ||
     result.modelContext !== args.modelContext ||
     stableStringify(result.expectedUnitIds) !==
@@ -4284,6 +4510,8 @@ async function runBatch({
         " REQUIREMENT_ROLE_EVIDENCE_UNMAPPED bedeutet: In der exakt genannten Requirement fehlt für matchedEvidence eine anforderungsbezogene Rollenkomponente. Ergänze sie in derselben Requirement und zitiere den genannten blockId; leihe keine Komponente aus einer benachbarten Requirement. EXPLICIT_CONDITION benötigt CONDITION. EXPLICIT_DEDUCTIBLE benötigt DEDUCTIBLE. EXPLICIT_QUANTIFIED_VALUE benötigt VALUE_AND_UNIT mit wörtlichem rawValue. EXPLICIT_LIMIT_BASIS benötigt LIMIT_BASIS. EXPLICIT_NON_NUMERIC_LIMIT benötigt LIMIT_BASIS. EXPLICIT_EXCLUSION benötigt eine eigene COVERAGE_EFFECT-Komponente mit coverageEffect EXCLUDED und einem wörtlichen Ausschlussausdruck als label.";
       messages.at(-1).content +=
         " Die Reparaturpflicht zur Zeichen- und Quelltreue hebt die Atomisierungspräzisierung nicht auf: Erfinde keine Kurzbezeichnung und paraphrasiere nicht, aber verkürze ein überbreites Komponentenlabel auf den kürzesten noch eindeutigen, zusammenhängenden und zeichengetreu kopierten Quellsubstring seiner eigenen Dimension. Erhalte bereits gültige Komponenten nur dann unverändert, wenn sie auch diese typed-minimal-Regel erfüllen.";
+      messages.at(-1).content +=
+        " In einem Haftpflichtpunkt ist eine einleitende koordinierte Tätigkeits- oder Ursachenfolge nach „aus der/dem …“ fachlicher Inhalt: Zerlege ihre selbstständig suchbaren Glieder in PERIL_OR_CAUSE-Komponenten und behalte das anschließend genannte Sachobjekt getrennt als OBJECT. Lasse den einleitenden ownedSourceBlock nicht unzitiert. Eine serverseitig als governingContext gelieferte Formulierung „Die Versicherung erstreckt sich auf …“ ist als eigene positive COVERAGE_EFFECT-Komponente zu übernehmen.";
       messages.at(-1).content +=
         " Eine bloße Spartenaufzählung mit Versicherungssumme und gewählter Variante, aber ohne wörtlichen Deckungswirkungsausdruck, bleibt LIMIT/VARIANT statt OPERATIVE_COVERAGE_STATEMENT. Verwende jede komma-getrennte Sparte als eigene SCOPE-Komponente. Das Wort „gilt“ in „in der Sparte ... gilt die Variante“ ist keine Deckungswirkung und darf nicht als COVERAGE_EFFECT ausgegeben werden.";
       messages.at(-1).content +=
