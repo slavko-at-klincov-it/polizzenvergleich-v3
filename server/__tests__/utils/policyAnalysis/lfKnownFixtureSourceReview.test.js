@@ -199,7 +199,7 @@ describe("LF known fixture source review", () => {
     const partial = {
       ...response,
       componentFindings: response.componentFindings.map((finding, index) =>
-          index ? { ...finding, outcome: "RELATED_ONLY" } : finding
+        index ? { ...finding, outcome: "RELATED_ONLY" } : finding
       ),
     };
     expect(validateSourceReviewResponse(row, partial)).toEqual({
