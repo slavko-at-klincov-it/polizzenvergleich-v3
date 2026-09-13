@@ -340,15 +340,14 @@ function componentHasSignalSource(component, matchedEvidence) {
 function quantifiedLiterals(value) {
   return [
     ...String(value || "").matchAll(
-      /(?:€\s*)?[0-9lI]+(?:[.,][0-9lI]+)?\s*(?:%|€|EUR|Euro|Tage?|Monate?|Jahre?)?/giu
+      /(?:€\s*)?[0-9lI]+(?:[.,][0-9lI]+)?\s*(?:%|€|EUR|Euro|Tage?|Monate?|Jahre?)?/gu
     ),
   ]
     .map(
-      ([literal]) =>
-        comparableSignalText(literal).match(/[0-9lI]+(?:[.,][0-9lI]+)?/iu)?.[0]
+      ([literal]) => String(literal).match(/[0-9lI]+(?:[.,][0-9lI]+)?/u)?.[0]
     )
     .filter(Boolean)
-    .filter((literal) => /[0-9lI]/iu.test(literal));
+    .filter((literal) => /[0-9lI]/u.test(literal));
 }
 
 function quantifiedComponent(signalMatch, sourceBlockIds) {
