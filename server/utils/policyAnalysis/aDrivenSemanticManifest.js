@@ -768,14 +768,14 @@ function materializeSharedSignalComponents(
             ].includes(signal.signalId))
         )
           continue;
-        const matchIndex =
-          ["EXPLICIT_PERIL_OR_CAUSE", "EXPLICIT_INTENTIONAL_DAMAGE"].includes(
-            signal.signalId
-          )
-            ? 0
-            : localText
-                .toLocaleLowerCase("de-AT")
-                .indexOf(localMatches[0].toLocaleLowerCase("de-AT"));
+        const matchIndex = [
+          "EXPLICIT_PERIL_OR_CAUSE",
+          "EXPLICIT_INTENTIONAL_DAMAGE",
+        ].includes(signal.signalId)
+          ? 0
+          : localText
+              .toLocaleLowerCase("de-AT")
+              .indexOf(localMatches[0].toLocaleLowerCase("de-AT"));
         if (matchIndex < 0) continue;
         const label =
           signal.signalId === "EXPLICIT_CONDITION"
@@ -791,9 +791,9 @@ function materializeSharedSignalComponents(
                   ? /(?:der\s+)?(?<basis>(?:Gebäude(?:gesamt)?versicherungssumme|Versicherungssumme|Erstes\s+Risiko))\b/iu.exec(
                       localMatches[0]
                     )?.groups?.basis || ""
-              : signal.signalId === "EXPLICIT_COST_ROLE"
-                ? localText
-                : localMatches[0];
+                  : signal.signalId === "EXPLICIT_COST_ROLE"
+                    ? localText
+                    : localMatches[0];
         const authoritativeSourceEvidence =
           authoritativeQuantifiedEvidence ||
           (signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT" &&
@@ -806,15 +806,11 @@ function materializeSharedSignalComponents(
         const sourceBlockIds = inheritedConditionEvidence
           ? inheritedConditionEvidence.sourceBlockIds
           : authoritativeLimitBasisEvidence
-            ? minimalSourceRange(
-                unit,
-                label,
-                matchedEvidenceBlockIds(evidence)
-              )
-          : authoritativeSourceEvidence
-            ? [...matchedEvidenceBlockIds(evidence)]
-            : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
-              (localComponent ? [...localComponent.sourceBlockIds] : null);
+            ? minimalSourceRange(unit, label, matchedEvidenceBlockIds(evidence))
+            : authoritativeSourceEvidence
+              ? [...matchedEvidenceBlockIds(evidence)]
+              : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
+                (localComponent ? [...localComponent.sourceBlockIds] : null);
         const allowedSourceBlockIds = new Set([
           ...requirement.sourceBlockIds,
           ...(unit.governingContext?.blockIds || []),
