@@ -18,9 +18,9 @@ const {
   requestCompletionWithTimeout,
 } = require("./runADrivenReferenceClassification.cjs");
 
-const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V1";
-const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V1";
-const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V1";
+const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V2";
+const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V2";
+const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V2";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -107,7 +107,7 @@ function messages(row) {
     {
       role: "system",
       content:
-        "Du führst eine source-bound fachliche Gegenstückprüfung für österreichische Gebäudeversicherung durch. Antworte ausschließlich mit genau einem JSON-Objekt. Verwende nur die vorgelegten candidateId-Werte und deren exakte Originaltexte. Ähnliche Wörter sind kein Beleg, wenn Gegenstand, Gefahr, Wirkung, Rolle, Bedingung, Wert oder Scope abweichen. Beispiel: gemeinschaftlich genutzt ist nicht gewerblich genutzt. Ein Synonym ist nur bei gleicher versicherungsfachlicher Bedeutung ein MATCH. Pro Komponente ist genau ein Ergebnis auszugeben: MATCH mit mindestens einer belegenden candidateId; MISMATCH mit mindestens einer ausdrücklich widersprechenden candidateId; oder NOT_ESTABLISHED mit candidateIds:[]. FULL_COUNTERPART ist nur bei ausschließlich MATCH erlaubt. PARTIAL_COUNTERPART gilt bei mindestens einem MATCH und mindestens einem NOT_ESTABLISHED oder MISMATCH. CONTRADICTED gilt bei mindestens einem MISMATCH und keinem NOT_ESTABLISHED. Wenn kein MATCH und keine vollständig belegte CONTRADICTED-Konstellation vorliegt, verwende NO_COUNTERPART_ESTABLISHED. NO_COUNTERPART_ESTABLISHED bedeutet nur: in den vorgelegten exakten Kandidaten nicht belegt; es ist kein globaler Abwesenheitsnachweis. Erfinde niemals Fundstellen, IDs oder Inhalte. Das Ausgabeformat ist exakt {contractId,requirementId,outcome,componentFindings:[{componentId,dimension,outcome,candidateIds}],rationale}. contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V1 sein.",
+        "Du führst eine source-bound fachliche Gegenstückprüfung für österreichische Gebäudeversicherung durch. Antworte ausschließlich mit genau einem JSON-Objekt. Verwende nur die vorgelegten candidateId-Werte und deren exakte Originaltexte. Ähnliche Wörter sind kein Beleg, wenn Gegenstand, Gefahr, Wirkung, Rolle, Bedingung, Wert oder Scope abweichen. Beispiel: gemeinschaftlich genutzt ist nicht gewerblich genutzt. Ein Synonym ist nur bei gleicher versicherungsfachlicher Bedeutung ein MATCH. Der synthetische __row_context__-Check ist zwingend: Er prüft, ob Kategorie, Unterkategorie und Prüfpunkt als fachlicher Scope des Gegenstücks gelten; allgemeine Klauseln dürfen einen speziellen Produktbaustein nicht ersetzen. Pro Check ist genau ein Ergebnis auszugeben: MATCH mit mindestens einer belegenden candidateId; MISMATCH mit mindestens einer ausdrücklich widersprechenden candidateId; oder NOT_ESTABLISHED mit candidateIds:[]. FULL_COUNTERPART ist nur bei ausschließlich MATCH erlaubt. PARTIAL_COUNTERPART gilt bei mindestens einem MATCH und mindestens einem NOT_ESTABLISHED oder MISMATCH. CONTRADICTED gilt bei mindestens einem MISMATCH und keinem NOT_ESTABLISHED. Wenn kein MATCH und keine vollständig belegte CONTRADICTED-Konstellation vorliegt, verwende NO_COUNTERPART_ESTABLISHED. NO_COUNTERPART_ESTABLISHED bedeutet nur: in den vorgelegten exakten Kandidaten nicht belegt; es ist kein globaler Abwesenheitsnachweis. Erfinde niemals Fundstellen, IDs oder Inhalte. Das Ausgabeformat ist exakt {contractId,requirementId,outcome,componentFindings:[{componentId,dimension,outcome,candidateIds}],rationale}. contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V2 sein.",
     },
     {
       role: "user",

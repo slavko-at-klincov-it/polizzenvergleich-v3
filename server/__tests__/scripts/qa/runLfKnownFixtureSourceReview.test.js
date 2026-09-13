@@ -13,6 +13,11 @@ const row = {
   point: "Gewerblich genutzte Nebengebäude",
   components: [
     {
+      componentId: "__row_context__:VS-25",
+      dimension: "SCOPE",
+      candidates: [],
+    },
+    {
       componentId: "commercial_outbuilding",
       dimension: "OBJECT",
       candidates: [],
@@ -36,6 +41,7 @@ describe("LF known fixture source review runner", () => {
     expect(system).toContain(
       "gemeinschaftlich genutzt ist nicht gewerblich genutzt"
     );
+    expect(system).toContain("__row_context__-Check ist zwingend");
     expect(system).toContain("kein globaler Abwesenheitsnachweis");
     expect(messages(row)[1].content).toContain('"requirementId":"VS-25"');
   });

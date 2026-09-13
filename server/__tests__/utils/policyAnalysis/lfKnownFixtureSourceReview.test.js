@@ -91,10 +91,12 @@ describe("LF known fixture source review", () => {
       createdAt: "2026-09-13T00:00:00.000Z",
     });
     expect(packet.summary.rows).toBe(30);
-    expect(packet.summary.components).toBe(30);
+    expect(packet.summary.actualComponents).toBe(30);
+    expect(packet.summary.semanticChecks).toBe(60);
     expect(packet.summary.searchedDocumentsPerRow).toBe(9);
     expect(packet.summary.absenceCertifiedRows).toBe(0);
-    expect(packet.rows[0].components[0].candidates).toHaveLength(1);
+    expect(packet.rows[0].components[0].contextOnly).toBe(true);
+    expect(packet.rows[0].components[1].candidates).toHaveLength(1);
   });
 
   it("turns long navigation spans into hash-bound exact excerpts", () => {
@@ -106,7 +108,7 @@ describe("LF known fixture source review", () => {
       ...input,
       maximumQuoteCharacters: 240,
     });
-    const evidence = packet.rows[0].components[0].candidates[0];
+    const evidence = packet.rows[0].components[1].candidates[0];
     expect(evidence.excerpted).toBe(true);
     expect(evidence.exactQuote.length).toBeLessThanOrEqual(240);
     expect(evidence.exactQuote).toContain("Gegenstand 0");
@@ -119,14 +121,12 @@ describe("LF known fixture source review", () => {
       contractId: SOURCE_REVIEW_RESPONSE_CONTRACT_ID,
       requirementId: row.requirementId,
       outcome: "FULL_COUNTERPART",
-      componentFindings: [
-        {
-          componentId: row.components[0].componentId,
-          dimension: "OBJECT",
-          outcome: "MATCH",
-          candidateIds: [row.components[0].candidates[0].candidateId],
-        },
-      ],
+      componentFindings: row.components.map((component) => ({
+        componentId: component.componentId,
+        dimension: component.dimension,
+        outcome: "MATCH",
+        candidateIds: [component.candidates[0].candidateId],
+      })),
       rationale: "Die Originalstelle nennt den Gegenstand ausdrücklich.",
     };
     expect(validateSourceReviewResponse(row, response)).toEqual(response);
@@ -139,12 +139,9 @@ describe("LF known fixture source review", () => {
     expect(() =>
       validateSourceReviewResponse(row, {
         ...response,
-        componentFindings: [
-          {
-            ...response.componentFindings[0],
-            candidateIds: ["invented"],
-          },
-        ],
+        componentFindings: response.componentFindings.map((finding, index) =>
+          index ? finding : { ...finding, candidateIds: ["invented"] }
+        ),
       })
     ).toThrow("LF_SOURCE_REVIEW_COMPONENT_EVIDENCE_INVALID");
   });

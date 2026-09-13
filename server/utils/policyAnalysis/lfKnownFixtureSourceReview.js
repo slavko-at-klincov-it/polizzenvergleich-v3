@@ -1,8 +1,8 @@
 const crypto = require("crypto");
 
-const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V1";
+const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V2";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
-  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V1";
+  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V2";
 const REVIEW_OUTCOMES = new Set([
   "FULL_COUNTERPART",
   "PARTIAL_COUNTERPART",
@@ -223,11 +223,13 @@ function selectComponentCandidates({
   documentsByUuid,
   maximumPerComponent,
   maximumQuoteCharacters,
+  allowAllComponents = false,
 }) {
   const seenQuotes = new Set();
   const scored = candidates
     .filter(
       (candidate) =>
+        allowAllComponents ||
         candidate.componentId === null ||
         candidate.componentId === component.componentId
     )
@@ -362,6 +364,26 @@ function buildLfKnownFixtureSourceReviewPacket({
           maximumQuoteCharacters,
         }),
       }));
+      const rowContext = {
+        componentId: `__row_context__:${requirementId}`,
+        label: [row.category, row.subcategory, row.point].join(" > "),
+        factRole: "ROW_CONTEXT",
+        dimension: "SCOPE",
+        contextOnly: true,
+        candidates: selectComponentCandidates({
+          candidates: rowCandidates,
+          component: {
+            componentId: `__row_context__:${requirementId}`,
+            label: [row.category, row.subcategory, row.point].join(" "),
+          },
+          row,
+          documentsByUuid,
+          maximumPerComponent,
+          maximumQuoteCharacters,
+          allowAllComponents: true,
+        }),
+      };
+      const semanticChecks = [rowContext, ...components];
       return {
         reviewIndex,
         analysisRowId: row.analysisRowId,
@@ -401,7 +423,7 @@ function buildLfKnownFixtureSourceReviewPacket({
         ),
         retrieval: {
           exactCandidateCount: rowCandidates.length,
-          selectedCandidateCount: components.reduce(
+          selectedCandidateCount: semanticChecks.reduce(
             (sum, component) => sum + component.candidates.length,
             0
           ),
@@ -409,7 +431,8 @@ function buildLfKnownFixtureSourceReviewPacket({
           negativeMeaning:
             "NO_COUNTERPART_ESTABLISHED means no counterpart in the reviewed exact candidates, not certified global absence.",
         },
-        components,
+        actualComponents: components.length,
+        components: semanticChecks,
       };
     }
   );
@@ -437,7 +460,11 @@ function buildLfKnownFixtureSourceReviewPacket({
     rows,
     summary: {
       rows: rows.length,
-      components: rows.reduce((sum, row) => sum + row.components.length, 0),
+      actualComponents: rows.reduce(
+        (sum, row) => sum + row.actualComponents,
+        0
+      ),
+      semanticChecks: rows.reduce((sum, row) => sum + row.components.length, 0),
       exactCandidatesAvailable: rows.reduce(
         (sum, row) => sum + row.retrieval.exactCandidateCount,
         0

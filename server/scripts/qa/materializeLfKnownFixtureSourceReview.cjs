@@ -61,7 +61,7 @@ function run() {
   });
   writePrivateJson(args.output, packet);
   console.log(
-    `[lf-source-review-packet] READY: ${packet.summary.rows} Zeilen, ${packet.summary.components} Komponenten, ${packet.summary.exactCandidatesSelected}/${packet.summary.exactCandidatesAvailable} exakte Kandidaten`
+    `[lf-source-review-packet] READY: ${packet.summary.rows} Zeilen, ${packet.summary.actualComponents} Komponenten plus ${packet.summary.rows} Zeilenkontext-Checks, ${packet.summary.exactCandidatesSelected}/${packet.summary.exactCandidatesAvailable} exakte Kandidaten`
   );
   console.log(JSON.stringify(packet.summary));
 }
