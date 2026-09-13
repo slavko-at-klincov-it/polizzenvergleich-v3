@@ -7562,7 +7562,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V58");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V59");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
