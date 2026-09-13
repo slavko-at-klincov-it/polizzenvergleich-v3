@@ -3247,9 +3247,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       "CONDITION",
       "OPERATIVE_COVERAGE_STATEMENT",
     ]);
-    expect(
-      response.requirements[0].components.map(({ type }) => type)
-    ).toEqual(["FACT_ROLE", "CONDITION", "CONDITION", "COVERAGE_EFFECT"]);
+    expect(response.requirements[0].components.map(({ type }) => type)).toEqual(
+      ["FACT_ROLE", "CONDITION", "CONDITION", "COVERAGE_EFFECT"]
+    );
     expect(response.requirements[0].components[0]).toMatchObject({
       type: "FACT_ROLE",
       label: "gelten  als  ein  Versicherungsfall",

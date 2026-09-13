@@ -1876,7 +1876,9 @@ function normalizeAggregatedEventDefinition(requirements, unit) {
       .replace(/^\s*(?:Weiters|Außerdem)\s+/iu, "")
       .trim();
   const before = stripLeadIn(sourceText.slice(0, relation.index));
-  const after = stripLeadIn(sourceText.slice(relation.index + relation[0].length));
+  const after = stripLeadIn(
+    sourceText.slice(relation.index + relation[0].length)
+  );
   const members = /\b(?:mehrere|sämtliche|alle)\b/iu.test(before)
     ? before
     : /\b(?:mehrere|sämtliche|alle)\b/iu.test(after)
