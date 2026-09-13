@@ -18,9 +18,9 @@ const {
   requestCompletionWithTimeout,
 } = require("./runADrivenReferenceClassification.cjs");
 
-const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V2";
-const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V2";
-const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V2";
+const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V3";
+const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V3";
+const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V3";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -107,7 +107,7 @@ function messages(row) {
     {
       role: "system",
       content:
-        "Du führst eine source-bound fachliche Gegenstückprüfung für österreichische Gebäudeversicherung durch. Antworte ausschließlich mit genau einem JSON-Objekt. Verwende nur die vorgelegten candidateId-Werte und deren exakte Originaltexte. Ähnliche Wörter sind kein Beleg, wenn Gegenstand, Gefahr, Wirkung, Rolle, Bedingung, Wert oder Scope abweichen. Beispiel: gemeinschaftlich genutzt ist nicht gewerblich genutzt. Ein Synonym ist nur bei gleicher versicherungsfachlicher Bedeutung ein MATCH. Der synthetische __row_context__-Check ist zwingend: Er prüft, ob Kategorie, Unterkategorie und Prüfpunkt als fachlicher Scope des Gegenstücks gelten; allgemeine Klauseln dürfen einen speziellen Produktbaustein nicht ersetzen. Pro Check ist genau ein Ergebnis auszugeben: MATCH mit mindestens einer belegenden candidateId; MISMATCH mit mindestens einer ausdrücklich widersprechenden candidateId; oder NOT_ESTABLISHED mit candidateIds:[]. Zeilenpriorität ohne Überschneidung: FULL_COUNTERPART nur wenn alle Checks MATCH sind; PARTIAL_COUNTERPART sobald mindestens ein MATCH und mindestens ein anderer Check MISMATCH oder NOT_ESTABLISHED ist; CONTRADICTED nur wenn kein MATCH vorliegt und alle Checks MISMATCH sind; sonst NO_COUNTERPART_ESTABLISHED. NO_COUNTERPART_ESTABLISHED bedeutet nur: in den vorgelegten exakten Kandidaten nicht belegt; es ist kein globaler Abwesenheitsnachweis. Erfinde niemals Fundstellen, IDs oder Inhalte. Das Ausgabeformat ist exakt {contractId,requirementId,outcome,componentFindings:[{componentId,dimension,outcome,candidateIds}],rationale}. contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V2 sein.",
+        "Du führst eine source-bound fachliche Gegenstückprüfung für österreichische Gebäudeversicherung durch. Antworte ausschließlich mit genau einem JSON-Objekt. Verwende nur die vorgelegten candidateId-Werte und deren exakte Originaltexte. Ähnliche Wörter sind kein Beleg, wenn Gegenstand, Gefahr, Wirkung, Rolle, Bedingung, Wert oder Scope abweichen. Beispiel: gemeinschaftlich genutzt ist nicht gewerblich genutzt. Ein Synonym ist nur bei gleicher versicherungsfachlicher Bedeutung ein MATCH. Der synthetische __row_context__-Check ist zwingend: Er prüft, ob Kategorie, Unterkategorie und Prüfpunkt als fachlicher Scope des Gegenstücks gelten; allgemeine Klauseln dürfen einen speziellen Produktbaustein nicht ersetzen. Pro Check ist genau ein Ergebnis auszugeben: MATCH mit mindestens einer belegenden candidateId; MISMATCH mit mindestens einer ausdrücklich widersprechenden candidateId; oder NOT_ESTABLISHED mit candidateIds:[]. Zusätzlich ist unmodeledDifferences immer als Array auszugeben. Jede fachlich relevante Abweichung der B-Stelle, für die kein passender Check vorhanden ist, muss dort source-bound als {dimension,description,candidateIds} erfasst werden; candidateIds darf dabei nicht leer sein. Beispiele sind eine zusätzliche Einschränkung, ein engerer Scope oder eine abweichende Wirkung. Zeilenpriorität ohne Überschneidung: FULL_COUNTERPART nur wenn alle Checks MATCH und unmodeledDifferences leer sind; PARTIAL_COUNTERPART sobald mindestens ein MATCH plus ein MISMATCH, NOT_ESTABLISHED oder eine unmodellierte Abweichung vorliegt; CONTRADICTED nur wenn kein MATCH vorliegt und alle Checks MISMATCH sind; sonst NO_COUNTERPART_ESTABLISHED. NO_COUNTERPART_ESTABLISHED bedeutet nur: in den vorgelegten exakten Kandidaten nicht belegt; es ist kein globaler Abwesenheitsnachweis. Erfinde niemals Fundstellen, IDs oder Inhalte. Das Ausgabeformat ist exakt {contractId,requirementId,outcome,componentFindings:[{componentId,dimension,outcome,candidateIds}],unmodeledDifferences:[{dimension,description,candidateIds}],rationale}. contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V3 sein.",
     },
     {
       role: "user",
@@ -128,7 +128,7 @@ function repairMessages(row, rawResponse, error) {
       role: "user",
       content: `Die Antwort ist formal ungültig (${errorClass(
         error
-      )}). Korrigiere dasselbe Objekt, ohne neue Kandidaten zu erfinden. Wichtig: outcome auf Zeilenebene ist ausschließlich FULL_COUNTERPART, PARTIAL_COUNTERPART, NO_COUNTERPART_ESTABLISHED oder CONTRADICTED. outcome innerhalb jedes componentFinding ist ausschließlich MATCH, MISMATCH oder NOT_ESTABLISHED. NOT_ESTABLISHED hat candidateIds exakt []; MATCH und MISMATCH benötigen mindestens eine für genau diese Komponente erlaubte candidateId. Bei mindestens einem MATCH plus einem abweichenden oder unbelegten Check ist die Zeile PARTIAL_COUNTERPART. CONTRADICTED ist nur ohne MATCH zulässig. requirementId und alle componentId/dimension-Paare müssen unverändert bleiben.`,
+      )}). Korrigiere dasselbe Objekt, ohne neue Kandidaten zu erfinden. Wichtig: outcome auf Zeilenebene ist ausschließlich FULL_COUNTERPART, PARTIAL_COUNTERPART, NO_COUNTERPART_ESTABLISHED oder CONTRADICTED. outcome innerhalb jedes componentFinding ist ausschließlich MATCH, MISMATCH oder NOT_ESTABLISHED. NOT_ESTABLISHED hat candidateIds exakt []; MATCH und MISMATCH benötigen mindestens eine für genau diese Komponente erlaubte candidateId. unmodeledDifferences ist immer ein Array; jeder Eintrag braucht dimension, eine Beschreibung und mindestens eine vorhandene candidateId. Bei mindestens einem MATCH plus einem abweichenden oder unbelegten Check oder einer unmodellierten Abweichung ist die Zeile PARTIAL_COUNTERPART. CONTRADICTED ist nur ohne MATCH zulässig. requirementId und alle componentId/dimension-Paare müssen unverändert bleiben.`,
     },
   ];
 }

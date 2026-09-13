@@ -2,7 +2,7 @@ const crypto = require("crypto");
 
 const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V2";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
-  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V2";
+  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V3";
 const REVIEW_OUTCOMES = new Set([
   "FULL_COUNTERPART",
   "PARTIAL_COUNTERPART",
@@ -10,6 +10,21 @@ const REVIEW_OUTCOMES = new Set([
   "CONTRADICTED",
 ]);
 const COMPONENT_OUTCOMES = new Set(["MATCH", "MISMATCH", "NOT_ESTABLISHED"]);
+const REVIEW_DIMENSIONS = new Set([
+  "OBJECT",
+  "PERIL_OR_CAUSE",
+  "DAMAGE_OR_EFFECT",
+  "COVERAGE_EFFECT",
+  "SCOPE",
+  "FACT_ROLE",
+  "CONDITION",
+  "VALUE_AND_UNIT",
+  "LIMIT_BASIS",
+  "DEDUCTIBLE",
+  "TEMPORAL_VALIDITY",
+  "DOCUMENT_ROLE",
+  "PRECEDENCE_OR_REPLACEMENT",
+]);
 const STOP_WORDS = new Set([
   "aber",
   "alle",
@@ -492,6 +507,7 @@ function validateSourceReviewResponse(row, response) {
     !REVIEW_OUTCOMES.has(response.outcome) ||
     !Array.isArray(response.componentFindings) ||
     response.componentFindings.length !== row.components.length ||
+    !Array.isArray(response.unmodeledDifferences) ||
     typeof response.rationale !== "string" ||
     !response.rationale.trim()
   )
@@ -523,14 +539,36 @@ function validateSourceReviewResponse(row, response) {
     )
       throw reviewError("LF_SOURCE_REVIEW_COMPONENT_EVIDENCE_INVALID");
   }
+  const rowCandidateIds = new Set(
+    row.components.flatMap(({ candidates }) =>
+      candidates.map(({ candidateId }) => candidateId)
+    )
+  );
+  for (const difference of response.unmodeledDifferences) {
+    if (
+      !REVIEW_DIMENSIONS.has(difference?.dimension) ||
+      typeof difference?.description !== "string" ||
+      !difference.description.trim() ||
+      !Array.isArray(difference.candidateIds) ||
+      difference.candidateIds.length === 0 ||
+      new Set(difference.candidateIds).size !==
+        difference.candidateIds.length ||
+      difference.candidateIds.some(
+        (candidateId) => !rowCandidateIds.has(candidateId)
+      )
+    )
+      throw reviewError("LF_SOURCE_REVIEW_UNMODELED_DIFFERENCE_INVALID");
+  }
   const outcomes = response.componentFindings.map(({ outcome }) => outcome);
-  const expectedOutcome = outcomes.every((outcome) => outcome === "MATCH")
-    ? "FULL_COUNTERPART"
-    : outcomes.includes("MATCH")
-      ? "PARTIAL_COUNTERPART"
-      : outcomes.every((outcome) => outcome === "MISMATCH")
-        ? "CONTRADICTED"
-        : "NO_COUNTERPART_ESTABLISHED";
+  const expectedOutcome =
+    outcomes.every((outcome) => outcome === "MATCH") &&
+    response.unmodeledDifferences.length === 0
+      ? "FULL_COUNTERPART"
+      : outcomes.includes("MATCH")
+        ? "PARTIAL_COUNTERPART"
+        : outcomes.every((outcome) => outcome === "MISMATCH")
+          ? "CONTRADICTED"
+          : "NO_COUNTERPART_ESTABLISHED";
   if (response.outcome !== expectedOutcome)
     throw reviewError("LF_SOURCE_REVIEW_ROW_OUTCOME_INVALID");
   return response;

@@ -127,6 +127,7 @@ describe("LF known fixture source review", () => {
         outcome: "MATCH",
         candidateIds: [component.candidates[0].candidateId],
       })),
+      unmodeledDifferences: [],
       rationale: "Die Originalstelle nennt den Gegenstand ausdrücklich.",
     };
     expect(validateSourceReviewResponse(row, response)).toEqual(response);
@@ -138,6 +139,20 @@ describe("LF known fixture source review", () => {
       ),
     };
     expect(validateSourceReviewResponse(row, partial)).toEqual(partial);
+    const implicitRestriction = {
+      ...response,
+      outcome: "PARTIAL_COUNTERPART",
+      unmodeledDifferences: [
+        {
+          dimension: "CONDITION",
+          description: "B enthält eine zusätzliche Einschränkung.",
+          candidateIds: [row.components[0].candidates[0].candidateId],
+        },
+      ],
+    };
+    expect(validateSourceReviewResponse(row, implicitRestriction)).toEqual(
+      implicitRestriction
+    );
     expect(() =>
       validateSourceReviewResponse(row, {
         ...response,

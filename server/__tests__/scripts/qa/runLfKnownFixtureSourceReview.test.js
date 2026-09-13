@@ -42,6 +42,7 @@ describe("LF known fixture source review runner", () => {
       "gemeinschaftlich genutzt ist nicht gewerblich genutzt"
     );
     expect(system).toContain("__row_context__-Check ist zwingend");
+    expect(system).toContain("unmodeledDifferences immer als Array");
     expect(system).toContain("kein globaler Abwesenheitsnachweis");
     expect(messages(row)[1].content).toContain('"requirementId":"VS-25"');
   });
