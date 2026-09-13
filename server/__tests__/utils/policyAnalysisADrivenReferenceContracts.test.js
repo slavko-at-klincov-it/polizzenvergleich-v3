@@ -11,6 +11,7 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   buildADrivenSemanticManifest,
   materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
@@ -903,6 +904,82 @@ describe("requirement-local semantic evidence completeness", () => {
         }),
       ])
     );
+  });
+
+  test("binds a clear cost anaphor to the prior cost role in the same requirement", () => {
+    const unit = evidenceUnit(
+      ["cost-role", "Entstehen Kosten für die Behandlung von Altlasten,"],
+      [
+        "cost-anaphor",
+        "werden nur jene Kosten ersetzt, die den Betrag übersteigen.",
+      ]
+    );
+    const requirements = [
+      requirement(
+        ["cost-role", "cost-anaphor"],
+        [
+          component("FACT_ROLE", "cost-role", {
+            label: "Kosten für die Behandlung von Altlasten",
+          }),
+          component("COVERAGE_EFFECT", "cost-anaphor", {
+            label: "ersetzt",
+            coverageEffect: "INCLUDED",
+          }),
+        ]
+      ),
+    ];
+
+    expect(requirementRoleEvidenceDiagnostics(unit, requirements)).toEqual([]);
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, requirements, {
+        semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
+      })
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "REQUIREMENT_ROLE_EVIDENCE_UNMAPPED",
+          signalId: "EXPLICIT_COST_ROLE",
+          matchedEvidence: expect.arrayContaining([
+            expect.objectContaining({ blockId: "cost-anaphor" }),
+          ]),
+        }),
+      ])
+    );
+  });
+
+  test("does not let a prior cost role absorb a new non-anaphoric cost type", () => {
+    const unit = evidenceUnit(
+      ["treatment", "Kosten für die Behandlung von Altlasten werden ersetzt."],
+      ["demolition", "Zusätzliche Kosten für den Abbruch werden nicht ersetzt."]
+    );
+    const diagnostics = requirementRoleEvidenceDiagnostics(unit, [
+      requirement(
+        ["treatment", "demolition"],
+        [
+          component("FACT_ROLE", "treatment", {
+            label: "Kosten für die Behandlung von Altlasten",
+          }),
+          component("COVERAGE_EFFECT", "treatment", {
+            label: "ersetzt",
+            coverageEffect: "INCLUDED",
+          }),
+          component("COVERAGE_EFFECT", "demolition", {
+            label: "nicht ersetzt",
+            coverageEffect: "EXCLUDED",
+          }),
+        ]
+      ),
+    ]);
+
+    expect(
+      diagnostics.filter(({ signalId }) => signalId === "EXPLICIT_COST_ROLE")
+    ).toEqual([
+      expect.objectContaining({
+        matchedEvidence: expect.arrayContaining([
+          expect.objectContaining({ blockId: "demolition" }),
+        ]),
+      }),
+    ]);
   });
 
   test("does not treat a German word after beträgt as an OCR numeric value", () => {
@@ -6479,7 +6556,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V51");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V52");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );

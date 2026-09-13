@@ -32,8 +32,10 @@ const A_SEMANTIC_SIGNAL_CONTRACT_ID_V7 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V7";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V8 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V8";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V9 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V9";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V10";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -224,6 +226,19 @@ const REQUIREMENT_ROLE_SIGNALS_V9 = Object.freeze(
       : signal
   )
 );
+const EXPLICIT_COST_ROLE_SIGNAL_V10 = Object.freeze({
+  ...REQUIREMENT_ROLE_SIGNALS_V9.find(
+    ({ signalId }) => signalId === "EXPLICIT_COST_ROLE"
+  ),
+  allowAnaphoricReference: true,
+});
+const REQUIREMENT_ROLE_SIGNALS_V10 = Object.freeze(
+  REQUIREMENT_ROLE_SIGNALS_V9.map((signal) =>
+    signal.signalId === "EXPLICIT_COST_ROLE"
+      ? EXPLICIT_COST_ROLE_SIGNAL_V10
+      : signal
+  )
+);
 const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -233,6 +248,7 @@ const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 
@@ -249,8 +265,10 @@ function requirementRoleSignals(semanticSignalContractId) {
     return REQUIREMENT_ROLE_SIGNALS_V7;
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V8)
     return REQUIREMENT_ROLE_SIGNALS_V8;
-  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V9)
     return REQUIREMENT_ROLE_SIGNALS_V9;
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+    return REQUIREMENT_ROLE_SIGNALS_V10;
   return REQUIREMENT_ROLE_SIGNALS_V2;
 }
 
@@ -439,7 +457,18 @@ function quantifiedComponent(signalMatch, sourceBlockIds) {
 }
 
 function componentSupportsSignal(signal, component, matchedEvidence) {
-  if (!componentHasSignalSource(component, matchedEvidence)) return false;
+  const hasSignalSource = componentHasSignalSource(component, matchedEvidence);
+  if (signal.signalId === "EXPLICIT_COST_ROLE")
+    return (
+      component.type === "FACT_ROLE" &&
+      /\b(?:kosten|mehrkosten|aufwendungen)\b/iu.test(component.label) &&
+      (hasSignalSource ||
+        (signal.allowAnaphoricReference === true &&
+          /\b(?:jene|diese|solche|genannten|vorgenannten|vorstehenden)\s+(?:kosten|mehrkosten|aufwendungen)\b/iu.test(
+            matchedEvidence.exactText
+          )))
+    );
+  if (!hasSignalSource) return false;
   if (signal.signalId === "EXPLICIT_EXCLUSION")
     return (
       component.type === "COVERAGE_EFFECT" &&
@@ -459,11 +488,6 @@ function componentSupportsSignal(signal, component, matchedEvidence) {
       (component.type === "VALUE_AND_UNIT" || component.type === "DEDUCTIBLE")
     );
   }
-  if (signal.signalId === "EXPLICIT_COST_ROLE")
-    return (
-      component.type === "FACT_ROLE" &&
-      /\b(?:kosten|mehrkosten|aufwendungen)\b/iu.test(component.label)
-    );
   if (signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT")
     return (
       signal.requiredComponentTypes.includes(component.type) &&
@@ -1939,6 +1963,7 @@ module.exports = {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
