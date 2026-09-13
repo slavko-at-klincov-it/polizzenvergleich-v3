@@ -196,15 +196,15 @@ describe("LF known fixture source review", () => {
       ...response,
       outcome: "FULL_COUNTERPART",
     });
-    const partial = {
+    const contextOnlyMatch = {
       ...response,
       componentFindings: response.componentFindings.map((finding, index) =>
         index ? { ...finding, outcome: "RELATED_ONLY" } : finding
       ),
     };
-    expect(validateSourceReviewResponse(row, partial)).toEqual({
-      ...partial,
-      outcome: "PARTIAL_COUNTERPART",
+    expect(validateSourceReviewResponse(row, contextOnlyMatch)).toEqual({
+      ...contextOnlyMatch,
+      outcome: "NO_COUNTERPART_ESTABLISHED",
     });
     const contradicted = {
       ...response,
@@ -216,6 +216,16 @@ describe("LF known fixture source review", () => {
     expect(validateSourceReviewResponse(row, contradicted)).toEqual({
       ...contradicted,
       outcome: "CONTRADICTED",
+    });
+    const wrongScope = {
+      ...response,
+      componentFindings: response.componentFindings.map((finding, index) =>
+        index ? finding : { ...finding, outcome: "RELATED_ONLY" }
+      ),
+    };
+    expect(validateSourceReviewResponse(row, wrongScope)).toEqual({
+      ...wrongScope,
+      outcome: "NO_COUNTERPART_ESTABLISHED",
     });
     const implicitRestriction = {
       ...response,

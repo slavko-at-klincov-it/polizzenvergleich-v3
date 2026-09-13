@@ -2,7 +2,7 @@ const crypto = require("crypto");
 
 const SOURCE_REVIEW_PACKET_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PACKET_V6";
 const SOURCE_REVIEW_RESPONSE_CONTRACT_ID =
-  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V5";
+  "LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V6";
 const REVIEW_OUTCOMES = new Set([
   "FULL_COUNTERPART",
   "PARTIAL_COUNTERPART",
@@ -810,14 +810,25 @@ function validateSourceReviewResponse(row, response) {
     )
       throw reviewError("LF_SOURCE_REVIEW_UNMODELED_DIFFERENCE_INVALID");
   }
-  const outcomes = response.componentFindings.map(({ outcome }) => outcome);
+  const contextFindings = response.componentFindings.filter(
+    ({ componentId }) => componentById.get(componentId)?.contextOnly === true
+  );
+  const substantiveFindings = response.componentFindings.filter(
+    ({ componentId }) => componentById.get(componentId)?.contextOnly !== true
+  );
+  if (contextFindings.length !== 1 || substantiveFindings.length === 0)
+    throw reviewError("LF_SOURCE_REVIEW_ROW_FINDING_TOPOLOGY_INVALID");
+  const contextOutcome = contextFindings[0].outcome;
+  const substantiveOutcomes = substantiveFindings.map(({ outcome }) => outcome);
+  const sameScopeEstablished = ["MATCH", "OPPOSITE"].includes(contextOutcome);
   const expectedOutcome =
-    outcomes.every((outcome) => outcome === "MATCH") &&
+    contextOutcome === "MATCH" &&
+    substantiveOutcomes.every((outcome) => outcome === "MATCH") &&
     response.unmodeledDifferences.length === 0
       ? "FULL_COUNTERPART"
-      : outcomes.includes("MATCH")
+      : contextOutcome === "MATCH" && substantiveOutcomes.includes("MATCH")
         ? "PARTIAL_COUNTERPART"
-        : outcomes.includes("OPPOSITE")
+        : sameScopeEstablished && substantiveOutcomes.includes("OPPOSITE")
           ? "CONTRADICTED"
           : "NO_COUNTERPART_ESTABLISHED";
   if (!REVIEW_OUTCOMES.has(expectedOutcome))

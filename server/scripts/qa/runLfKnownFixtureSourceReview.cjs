@@ -18,9 +18,9 @@ const {
   requestCompletionWithTimeout,
 } = require("./runADrivenReferenceClassification.cjs");
 
-const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V7";
-const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V7";
-const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V7";
+const RUN_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RUN_V8";
+const RESULT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_RESULT_V8";
+const PROMPT_CONTRACT_ID = "LF_1PLUS9_SOURCE_REVIEW_PROMPT_V8";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -163,6 +163,7 @@ function messages(row) {
         "Ähnliche Wörter sind kein Beleg, wenn Gegenstand, Gefahr, Wirkung, Rolle, Bedingung, Wert oder Scope abweichen; gemeinschaftlich genutzt ist nicht gewerblich genutzt.",
         "Ein Synonym ist nur bei gleicher versicherungsfachlicher Bedeutung ein MATCH.",
         "Der synthetische __row_context__-Check ist zwingend und prüft Kategorie, Unterkategorie und Prüfpunkt als fachlichen Scope; allgemeine Klauseln dürfen keinen speziellen Produktbaustein ersetzen.",
+        "Der synthetische __row_context__-Check kann allein niemals ein Gegenstück begründen; mindestens eine nicht-synthetische fachliche Komponente muss im selben Scope belegt sein.",
         "Pro Check ist genau ein Ergebnis auszugeben:",
         "MATCH mit mindestens einer candidateId bedeutet fachlich gleiche Unterstützung.",
         "OPPOSITE mit mindestens einer candidateId bedeutet ein echtes Gegenstück desselben Scopes mit gegenteiliger Wirkung.",
@@ -174,7 +175,7 @@ function messages(row) {
         "NO_COUNTERPART_ESTABLISHED bedeutet später nur: in den vorgelegten exakten Kandidaten nicht belegt; es ist kein globaler Abwesenheitsnachweis.",
         "Erfinde niemals Fundstellen, IDs oder Inhalte.",
         "Das Ausgabeformat ist exakt {contractId,requirementId,componentFindings:[{componentId,dimension,outcome,candidateIds}],unmodeledDifferences:[{dimension,description,candidateIds}],rationale}.",
-        "contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V5 sein.",
+        "contractId muss LF_1PLUS9_SOURCE_REVIEW_RESPONSE_V6 sein.",
       ].join(" "),
     },
     {

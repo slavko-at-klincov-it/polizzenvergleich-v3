@@ -60,6 +60,9 @@ describe("LF known fixture source review runner", () => {
     );
     expect(system).toContain("globalReferenceARebind");
     expect(system).toContain("__row_context__-Check ist zwingend");
+    expect(system).toContain(
+      "__row_context__-Check kann allein niemals ein Gegenstück begründen"
+    );
     expect(system).toContain("unmodeledDifferences ist immer ein Array");
     expect(system).toContain("kein globaler Abwesenheitsnachweis");
     expect(messages(row)[1].content).toContain('"requirementId":"VS-25"');
