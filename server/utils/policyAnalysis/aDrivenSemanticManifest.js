@@ -751,10 +751,12 @@ function materializeSharedSignalComponents(
           Boolean(inheritedConditionEvidence);
         const localText =
           exactEvidenceBinding || authoritativeLimitBasisEvidence
-          ? evidence.match
-          : inheritedConditionEvidence?.label ||
-            localComponent?.label ||
-            (evidenceBackedSignal ? evidence.match : requirement.displayLabel);
+            ? evidence.match
+            : inheritedConditionEvidence?.label ||
+              localComponent?.label ||
+              (evidenceBackedSignal
+                ? evidence.match
+                : requirement.displayLabel);
         const localMatches =
           evidenceBackedSignal || inheritedConditionEvidence
             ? [evidence.match]
