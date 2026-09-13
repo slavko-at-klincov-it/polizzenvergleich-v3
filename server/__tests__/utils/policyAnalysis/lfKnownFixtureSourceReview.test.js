@@ -177,6 +177,27 @@ describe("LF known fixture source review", () => {
     expect(evidence.exactQuote).toContain("Gegenstand 0");
   });
 
+  it("anchors excerpts on the specific component before generic A wording", () => {
+    const input = fixture();
+    input.goldCandidate.rows[0].point = "Berechtigter Versicherungsnehmerkreis";
+    input.goldCandidate.rows[0].system.aContent =
+      "Der Versicherungsnehmer erhält den Familienwohnbau-Rahmen.";
+    input.goldCandidate.rows[0].components[0].label =
+      "Familienwohnbau und Tochtergesellschaften";
+    input.oracle.benchmarkCandidates[0].range.exactQuote = `${"Versicherungsnehmer allgemeine Regel. ".repeat(
+      30
+    )}Besondere Vereinbarung: RV WEVIG/Familienwohnbau gilt als vereinbart.${" Nachlauf".repeat(
+      30
+    )}`;
+    const packet = buildLfKnownFixtureSourceReviewPacket({
+      ...input,
+      maximumQuoteCharacters: 240,
+    });
+    expect(packet.rows[0].components[1].candidates[0].exactQuote).toContain(
+      "Familienwohnbau"
+    );
+  });
+
   it("accepts only source-bound component findings and derives row truth", () => {
     const packet = buildLfKnownFixtureSourceReviewPacket({ ...fixture() });
     const row = packet.rows[0];

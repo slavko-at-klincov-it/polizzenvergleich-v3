@@ -198,12 +198,16 @@ function excerptRange(candidate, queryText, maximumQuoteCharacters) {
       excerpted: false,
     };
   const lowered = source.toLocaleLowerCase("de-AT");
-  const anchors = [...tokens(queryText)].sort(
-    (left, right) => right.length - left.length || left.localeCompare(right)
-  );
-  const anchorIndex = anchors.reduce((found, anchor) => {
+  const queryParts = Array.isArray(queryText) ? queryText : [queryText];
+  const anchorIndex = queryParts.reduce((found, queryPart) => {
     if (found >= 0) return found;
-    return lowered.indexOf(anchor.toLocaleLowerCase("de-AT"));
+    const anchors = [...tokens(queryPart)].sort(
+      (left, right) => right.length - left.length || left.localeCompare(right)
+    );
+    return anchors.reduce((partFound, anchor) => {
+      if (partFound >= 0) return partFound;
+      return lowered.indexOf(anchor.toLocaleLowerCase("de-AT"));
+    }, -1);
   }, -1);
   const center = anchorIndex >= 0 ? anchorIndex : 0;
   let start = Math.max(0, center - Math.floor(maximumQuoteCharacters / 3));
@@ -237,11 +241,11 @@ function compactCandidate(
   const excerpt = excerptRange(
     candidate,
     [
+      component.label,
       row.point,
       row.system?.aContent,
       row.claude?.sourceQuote,
-      component.label,
-    ].join(" "),
+    ],
     maximumQuoteCharacters
   );
   return {
