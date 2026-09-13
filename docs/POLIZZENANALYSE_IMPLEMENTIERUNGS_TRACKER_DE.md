@@ -8469,3 +8469,336 @@ direkte Korrektur gespeicherter Ergebnisartefakte bleibt unzulässig.
 
 Status: `A-QUELLABDECKUNG PASS; A-ATOMIZITÄT NICHT BEWIESEN; 141
 RISIKOKOMPONENTEN VOR PRODUKTROUTING GEZIELT ZU PRÜFEN`.
+
+### 133.33 Syntaktischer A-Neuplan: Strukturpfad ist kein Ausschlussbeleg
+
+Der auf Commit `f36bb7155fbc6cbc5470c6299171bed5d43e1b55` neu gebaute
+syntaktische A-Plan besitzt weiterhin 1.005/1.005 Quellblöcke, aber durch die
+allgemeine Klausel-, Listen- und Fortsetzungssegmentierung 376 statt 380
+Units und 58 statt 59 Batches. Aus dem vollständig validierten V35-Seed waren
+312 von 345 neu zu klassifizierenden Units nach aktueller Revalidierung
+source-identisch wiederverwendbar; 40 Batches waren vollständig und 18
+teilweise vorbesetzt.
+
+Der reale V57-Lauf übernahm beziehungsweise materialisierte Batch 1 bis 14
+als `PASS`. Batch 15 blieb nach acht begrenzten Modellversuchen korrekt
+fail-closed und wurde nicht als `PASS` gespeichert. Es gab keinen Timeout und
+keinen Transportfehler. Qwen deutete einen nur zur Navigation erhaltenen
+`structurePath` mit dem Text `Nicht versichert sind:` wiederholt als
+fachlichen Ausschluss. Der serverseitig verknüpfte `governingContext` enthielt
+hingegen ausschließlich Katastrophen-, Limit- und Gefahrkontext ohne
+wörtlichen Deckungswirkungs- oder Ausschlussausdruck. Zusätzlich zitierte die
+verbleibende Hochwasserkomponente nur den ersten Block eines einzigen über
+zwei Blöcke fortgesetzten Klammer-Listeneintrags. Der Validator verwarf alle
+acht Varianten; die 14 früheren PASS-Batches und alle Attempt-Artefakte
+blieben resumierbar erhalten.
+
+Commit `7d7f76e0a325bec0e8ff365319b40f4a8a3fd7c0` hebt Runner und Prompt auf
+V58/V26 und implementiert die allgemeine Grenze:
+
+- `structurePath` ist ausschließlich Navigation und nie semantische Evidenz;
+- `governingContext` trägt nur jene Dimensionen, die dort wörtlich belegt
+  sind; Limit, Scope oder Gefahr erzeugen keine Deckungswirkung;
+- ohne wörtlichen Wirkungsbeleg werden sowohl
+  `OPERATIVE_COVERAGE_STATEMENT` als auch `EXCLUSION` entfernt und die
+  verbleibenden source-bound Komponenten bestimmen die tatsächliche Klasse;
+- bei genau einem syntaktisch fortgesetzten, geklammerten Listenpunkt darf
+  eine einzige belegte Objekt-, Gefahren-, Schadens- oder Rollenkomponente
+  alle Blöcke dieses einen Segments zitieren;
+- echte wörtliche Ausschlüsse bleiben unverändert; mehrere unabhängige
+  Listensegmente werden niemals zusammengezogen.
+
+Die unveränderte reale V57-Antwort aus Versuch 2 wurde auf dem Mac Studio
+gegen den neuen Code erneut ausgewertet. Sie terminiert nun als
+`PERIL_OR_DAMAGE`, bindet beide Hochwasserblöcke, übernimmt die tatsächlich
+belegten Governor-Limits serverseitig und besteht den aktuellen
+Manifestvalidator. Am selben Byte-Stand bestanden auf dem Mac Studio:
+
+```text
+Node-Syntax:                         PASS
+Prettier:                            PASS
+fokussierter A-Vertrag:              291/291 PASS
+vollständiger Server-Lint:           PASS
+vollständige Server-Suites:          190/190 PASS
+vollständige Servertests:          2.823/2.823 PASS
+```
+
+Das beweist die allgemeine Korrektur des beobachteten Struktur-/Wirkungsfehlers
+und die sichere Wiederaufnahmefähigkeit. Es beweist noch keine vollständige
+A-Atomizität, keine vollständige B-Suche, keinen Holdout und keine
+Produktfreigabe. Der nächste Schritt ist die Wiederaufnahme desselben
+58-Batch-A-Laufs auf dem exakten Fix-Commit; neue Modellfehler bleiben
+inkrementell und fail-closed zu behandeln.
+
+Status: `V58/V26 STRUKTUR-EVIDENZGRENZE UND REALE BATCH-15-GEGENPROBE PASS;
+14/58 A-BATCHES RESUMIERBAR; VOLLSTÄNDIGER A-LAUF, B-SHADOW,
+PRODUKTROUTING, XLSX UND DEPLOYMENT OFFEN`.
+
+### 133.34 Zeilenweiser Gold-Kurs: 30er-Quellenkalibrierung statt technischer Stellvertretermetriken
+
+Die bisherige bekannte 1+9-Auswertung besaß keinen fachlich entschiedenen
+Zeilenstandard: `LF_COUNTERPART_GOLD_ORACLE_V1` enthielt zwar 283 Zeilen und
+631 Komponenten, war aber vollständig `UNREVIEWED`. Deshalb durfte weder ein
+technisches PASS noch die Zahl verarbeiteter A-Blöcke als Beleg für das beste
+Kundenergebnis gelten. Die Kurskorrektur priorisiert nun Originalstellen und
+misst jede weitere Änderung gegen einen source-bound Entscheid.
+
+Die allgemeine Quellensuche wurde dafür erweitert: A-Wortlaut wird unabhängig
+vom bisherigen Zeilenretrieval im gesamten bekannten B-Korpus gesucht,
+deutsche Komposita wie `Einbruch`/`Einbruchdiebstahl` werden erkannt,
+inzidentelle kurze Suffixe wie `Bruch`/`Einbruch` verworfen, pro semantischem
+Check werden bis zu drei dokumentdiverse globale Kandidaten gehalten und
+Modellzitate auf 600 Zeichen kompaktiert. Dadurch wurde für FE-18 erstmals die
+konkrete B-Stelle auf Seite 12 der Musterberechnung gefunden, die Schäden an
+Gebäudebestandteilen und Einfriedungen im Zuge eines Einbruchdiebstahls
+versichert.
+
+Die 30-Zeilen-Kalibrierung deckte anschließend zwei grundlegende
+Entscheidungsfehler auf und führte zu allgemeinen Verträgen:
+
+- Ein Match nur auf dem synthetischen Zeilenkontext darf ohne mindestens eine
+  gefundene fachliche Komponente niemals `gefunden` erzeugen.
+- Ein B-Gegenstück muss nicht wort- oder wertgleich sein. Derselbe fachliche
+  Vergleichskern mit anderem Wert, Limit, Selbstbehalt, Zeitraum, Scope oder
+  anderer Bedingung ist `COUNTERPART_WITH_DIFFERENCE` und bleibt für den
+  Kunden gefunden. Ein anderes Objekt, eine andere Gefahr, Wirkung oder Rolle
+  ist dagegen nur `RELATED_ONLY`.
+- Bei einer Kernkomponente bleibt der Kern `MATCH`, wenn lediglich ein
+  Modifikator abweicht; der Modifikator wird separat source-bound ausgewiesen.
+  Eine echte gegenteilige Wirkung desselben Scopes ist `OPPOSITE`.
+- Der Server leitet daraus zusätzlich strikt binär `customerFound` ab. Interne
+  Unterschiede bleiben für die Darstellung erhalten, erzeugen aber keinen
+  dritten Kundenstatus.
+
+Der finale Qwen-Review lief auf dem Mac Studio aus
+`/private/tmp/lf-gold-v10-0dd8a65a` und wurde nach einem fail-closed Stopp bei
+FE-03 auf Commit `a252ba7d8a90bf74a365553677e2c2539c3febf8` ab Zeile 12
+fortgesetzt. Zeilen 1 bis 11 wurden unverändert wiederverwendet. Konfiguration:
+
+```text
+Paketvertrag: LF_1PLUS9_SOURCE_REVIEW_PACKET_V6
+Prompt/Run: LF_1PLUS9_SOURCE_REVIEW_PROMPT_V10 / RUN_V10
+Modell: qwen/qwen3.6-35b-a3b
+Kontext: 42496
+Request-Timeout: 240000 ms
+Abort-Settlement: 15000 ms
+Model-Recovery: 180000 ms
+Maximum Attempts: 3
+```
+
+Ergebnis des vollständigen Modellreviews:
+
+```text
+Zeilen:                         30/30
+FULL_COUNTERPART:                  5
+PARTIAL_COUNTERPART:              10
+NO_COUNTERPART_ESTABLISHED:       15
+customerFound ja/nein:         15/15
+Modellversuche:                   38
+echte Timeouts:                    2
+semantisch ungültige Versuche:     6
+validierte Antworten:             30
+```
+
+Beide Timeouts wurden als Transportfehler protokolliert, abgebrochen, settled
+und erst nach gezieltem Entladen, Neuladen und exakter Modell-/Kontextprüfung
+wiederholt. Kein Timeout wurde als fachliches Nein gespeichert. Der
+Qwen-Summary-Dateihash ist
+`80a69912f996e06b690d2216f9d44167555d18e3ed56def83a7b2eaf3a22db5c`;
+der Paket-Dateihash ist
+`d7ec58b69cdc26018a44fb28180152c7533c09eda98db1aa611eb3a8de72ab86`.
+
+Qwen bleibt ausdrücklich `NOT_GOLD`. Der neue private
+`LF_1PLUS9_SOURCE_ADJUDICATION_DRAFT_V1` bindet deshalb die unabhängige
+Codex-Originalstellenprüfung und lässt negative Abwesenheit offen. Der
+Materialisierer verwirft erfundene Kandidaten-IDs, positive Entscheide ohne
+Quelle und widersprüchliche Originalrange-Hashes. Mehrere Ausschnitte derselben
+hashgebundenen Originalrange bleiben zulässig.
+
+Der 30er-Codex-Entwurf ergibt:
+
+```text
+customerFound:                         21
+negative Vollkorpussuche noch offen:    9
+FULL_COUNTERPART:                       3
+PARTIAL_COUNTERPART:                   18
+Qwen-Übereinstimmung:                    22
+Qwen-Abweichung:                         8
+Expertenreview erforderlich:            15
+Abwesenheit zertifiziert:                0
+```
+
+Die acht binären Konflikte sind sieben von Codex positiv entschiedene
+Qwen-Misses (`FE-18`, `ST-17`, `PR-08`, `VS-01`, `KO-04`, `VS-03`, `SP-02`)
+und ein von Codex verworfener Qwen-Treffer (`OK-09`: allgemeine
+Vertragskündigung ist keine Kündigung des Ökoschutz-Bausteins). Gegenüber dem
+alten Systemstatus auf denselben 30 Zeilen wurden 15 zusätzliche echte
+Fundstellenkandidaten aufgenommen und sechs alte falsche Treffer verworfen;
+der binäre Nettoanstieg beträgt neun Zeilen. Das ist ein fachlicher
+Reviewbefund für den bekannten 30er-Satz, noch keine 283er- oder
+Generalisierungsmetrik.
+
+Private Artefakte auf dem Mac Studio:
+
+```text
+Qwen:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-1PLUS9-SOURCE-REVIEW-30-V8-20260913-761B609A/qwen-review-v10
+
+Codex-Adjudikation:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-1PLUS9-SOURCE-ADJUDICATION-30-V1-20260913-D32FA6F1/source-adjudication.draft.private.json
+```
+
+Der interne Adjudikationshash ist
+`c4ea8d196ae7d26af9bbabdff43465b5d4699c310289e583f20c6acafeb41f20`,
+der Dateihash
+`e9afd9632e606d879b227b726258348f9c3c355950ed701a8d9609afbb9e2f6b`.
+Beide privaten Eingabedateien besitzen Modus `0600`.
+
+Auf Commit `536d367bbf65aa8a415b9c32340fc41d9a67ba10` bestanden im
+isolierten Mac-Studio-Worktree `/private/tmp/lf-adjudication-d32fa6f1`
+Syntax, Prettier und die drei fokussierten Suites mit 14/14 Tests.
+
+Nächster Gate: Für die neun Negativzeilen müssen alle neun Dokumente und die
+definierten Suchwege vollständig geprüft werden. Danach werden die 15
+reviewpflichtigen Zeilen fachlich bestätigt. Erst dann darf die
+Quellenadjudikation auf alle 283 Zeilen skaliert und anschließend als
+unveränderliches Gold eingefroren werden.
+
+Status: `30/30 QWEN-REVIEW UND SOURCE-BOUND CODEX-ENTWURF VORHANDEN; 21
+POSITIVE FUNDSTELLENENTSCHEIDE, 9 NEGATIVE VOLLKORPUSPRÜFUNGEN UND 15
+EXPERTENREVIEWS OFFEN; NOCH KEIN GOLD, KEINE KUNDEN-XLSX, KEIN DEPLOYMENT`.
+
+### 133.35 Erster verbindlicher Gold-Slice: 30/30 quellenentschieden, ohne unklar
+
+Die neun zuvor offenen Negativzeilen wurden nicht aus Retrieval-Top-N
+abgeleitet, sondern auf dem Mac Studio gegen die neun originalen B-PDFs
+geprüft. Der neue QA-Vertrag verifiziert für jede Datei zuerst den SHA-256-
+Fingerprint aus dem Oracle und extrahiert anschließend mit macOS PDFKit jede
+physische Seite. Der Lauf umfasste neun Dokumente, 77 Seiten, elf explizite
+Wortlaut-/Synonymrouten und 15 zu prüfende Fundstellen. Die Ausführung bindet
+also den vollständigen bekannten PDF-Textkorpus; sie beansprucht weder
+allgemeine Synonymvollständigkeit noch einen Holdoutbeweis.
+
+Der Vollscan korrigierte `PR-02`: Auf Seite 6 der Musterberechnung steht
+`RV WEVIG/Familienwohnbau gilt als vereinbart`, auf Seite 1 der konkrete
+Versicherungsnehmer `Firma WEG Treustraße 57`. Das ist kein vollständiger
+Gleichlaut des in A definierten Kreises aus Familienwohnbau,
+Tochtergesellschaften und LF-Immo-Betreuung, aber ein echtes Gegenstück mit
+abweichendem Scope. Die binäre Goldentscheidung lautet deshalb `gefunden`,
+fachlich `PARTIAL_COUNTERPART`. Claude hatte diesen Punkt bereits teilweise
+gefunden; Qwen und das alte System hatten ihn verfehlt.
+
+Die technische Ursache des Qwen-Misses lag zusätzlich in der
+Quellenkompaktierung: Der richtige globale Originalkandidat war vorhanden,
+der 600-Zeichen-Ausschnitt wurde jedoch auf das häufige längere Wort
+`Versicherungsnehmer` zentriert und endete unmittelbar vor dem spezifischen
+Wort `Familienwohnbau`. Die allgemeine Regel priorisiert nun zuerst den
+atomaren Komponentenbegriff, danach Prüfpunkt, A-Wortlaut und Claude-Zitat.
+Der neu materialisierte V9-Paketstand enthält die Seite-6-Stelle vollständig.
+
+Die verbleibenden acht Negativentscheidungen wurden nach Sichtung aller
+thematisch ähnlichen Vollkorpustreffer für genau diesen bekannten Fixture
+bestätigt:
+
+```text
+VS-25  gewerblich genutzte Nebengebäude
+SP-03  Zwischenlagerung im Gebäudeschadenscope
+LW-G-06 automatische Grünflächenberegnung/-bewässerung
+GL-26  definierter Glas-Ausschluss für Feuer-/Flugkörpergefahren
+OK-09  Kündigung eines eigenständigen Ökoschutz-Bausteins
+VS-31  Freileitungen, technische Bauten und Grabungsarbeiten
+PR-09  Nichtaddition paralleler Versicherungssummen
+VS-08  vollständige A-Definition Nebengebäude
+```
+
+Der unveränderliche private Gold-Slice lautet:
+
+```text
+Vertrag: LF_1PLUS9_GOLD_30_V1
+Status: FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_30_ROWS
+Zeilen: 30/30
+Gefunden: 22
+Nicht gefunden: 8
+FULL_COUNTERPART: 3
+PARTIAL_COUNTERPART: 19
+NO_COUNTERPART_ESTABLISHED: 8
+Unklar: 0
+bekannter Fixture-Nullfund über 9 PDFs/77 Seiten: 8
+interner Gold-Hash: 01b534e7bff717f3db3ce8a0742356e1644c7d489daf31ea549cbc10d9781747
+Dateihash: cff20090e2382b1131454f8d9a47f5dba3ca252deb8a1f8d5b95258dfec74f71
+```
+
+Artefakte auf dem Mac Studio:
+
+```text
+PDF-Vollkorpusaudit:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-1PLUS9-FULL-CORPUS-AUDIT-9-V2-20260913-86FE866E/full-corpus-audit.private.json
+
+Quellenpaket mit korrigierter Ausschnittwahl:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-1PLUS9-SOURCE-REVIEW-30-V9-20260913-21577084/review-packet.private.json
+
+Gold-Slice:
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-1PLUS9-GOLD-30-V2-20260913-02039DB4/gold-30.private.json
+```
+
+Auf Commit `02039db40` bestanden im isolierten Mac-Studio-Worktree
+`/private/tmp/lf-gold-02039db4` Syntax und Prettier sowie vier fokussierte
+Suites mit 14/14 Tests. Der systemweit installierte ESLint-9.39.3-Lauf ist
+derzeit wegen einer inkompatiblen installierten `eslint-plugin-react`-API
+(`context.getFirstTokens`) bereits beim Laden der Regel blockiert; dies ist
+kein fachlicher Test-PASS und wird nicht verschwiegen.
+
+Der nächste Schritt ist keine neue Nebenarchitektur. Derselbe Quellenvertrag
+wurde bereits auf alle 283 Zeilen materialisiert: 283 Zeilen, 631 fachliche
+Komponenten, 914 semantische Checks, 7.173 ausgewählte exakte Quellen sowie
+2.737 globale A- und 780 globale Claude-Rückbindungen über jeweils alle neun
+B-Dokumente. Der private Paket-Dateihash ist
+`1d932a0b1dc79cf4c5a6c42f81a0ce5dd6df7435376845ae38c6986d521d95ae`.
+Danach werden nur die konkreten
+Claude-/Qwen-/Systemabweichungen und negativen Zeilen gegen Originalstellen
+entschieden; das bekannte 283er-Gold bleibt Regression und darf nie
+Produktionszeilen eines neuen A-Dokuments vorgeben.
+
+Status: `LF_1PLUS9_GOLD_30_V1 FROZEN; 30/30 ENTSCHIEDEN, 22 GEFUNDEN, 8 NICHT
+GEFUNDEN, 0 UNKLAR; 283ER QUELLENPAKET VOLLSTÄNDIG UND QWEN-REVIEW GESTARTET; KEINE KUNDEN-XLSX,
+KEIN DEPLOYMENT UND KEIN GENERALISIERUNGS-/99-PROZENT-NACHWEIS`.
+
+### 133.36 Verbindliche binäre Gegenstücksemantik und sichere 283er-Wiederaufnahme
+
+Der Auftraggeber hat die fachliche Semantik am 13. September 2026
+ausdrücklich bestätigt: `GEFUNDEN` bedeutet, dass B eine quellengebundene
+Fundstelle zum selben fachlichen Element besitzt. Abweichende Werte, Limits,
+Bedingungen, Umfänge oder ein ausdrücklicher Ausschluss werden separat
+dargestellt und ändern den Fundstatus nicht. Keyword-Nennung, allgemeine
+Überschrift oder eine nur entfernt verwandte Deckung bleiben ohne Treffer.
+Diese Regel ist nun zusätzlich in Produktvertrag und ADR-031 verankert.
+
+Der bestehende V10-Quellenvertrag setzte diese Semantik bereits technisch um:
+`MATCH`, `COUNTERPART_WITH_DIFFERENCE` und `OPPOSITE` können je nach
+Komponentenrollup `customerFound: true` ergeben; ein synthetischer
+Zeilenkontext, `RELATED_ONLY` oder eine bloße Wortähnlichkeit kann keinen
+Treffer begründen. Daher war kein Neustart des 283er-Modellreviews wegen der
+fachlichen Bestätigung nötig.
+
+Beim ersten 283er-Start wurde nach vier gültigen Zeilen ein falscher
+LM-Studio-SDK-Pfad in der Timeout-Wiederherstellung beobachtet. Eine weitere
+Antwort für PR-05 war nach fehlgeschlagener sicherer Wiederherstellung unter
+dem alten Runner dennoch versucht worden. Ergebnis und beide Versuche wurden
+unverändert in eine private Quarantäne verschoben; sie gelten nicht als
+aktive Reviewevidenz. Der Runner bricht auf Commit
+`2e15135a58e47c208e00f5fb56b4e228c6282ce4` bei `retrySafe === false` nun
+fail-closed ohne weiteren Modellaufruf ab. Der neue Test belegt genau einen
+Versuch, ein Fehlerartefakt und kein Ergebnisartefakt; auf dem Mac Studio
+bestanden 7/7 fokussierte Tests.
+
+Der Lauf wurde aus dem isolierten Mac-Studio-Worktree
+`/Users/michaelmischkot/Code/validation-worktrees/lf-source-review-2e15135a5`
+mit Qwen `qwen/qwen3.6-35b-a3b`, Kontext 42.496 und dem verifizierten lokalen
+SDK `1.5.0` wiederaufgenommen. Die vier gültigen Zeilen werden
+wiederverwendet; weitergearbeitet wird ab PR-05. Die Modellentscheidungen
+bleiben `NOT_GOLD` und werden anschließend gegen Originalquellen und die
+anderen unabhängigen Ergebnisse adjudiziert.
+
+Status: `BINÄRE GEGENSTÜCKSEMANTIK VERBINDLICH; 283ER REVIEW SICHER
+WIEDERAUFGENOMMEN; QWEN BLEIBT NOT_GOLD; KEINE KUNDEN-XLSX UND KEIN
+DEPLOYMENT`.

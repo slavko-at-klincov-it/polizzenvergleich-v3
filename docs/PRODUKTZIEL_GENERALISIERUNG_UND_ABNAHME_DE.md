@@ -193,6 +193,15 @@ Das ist kein Widerspruch, weil verschiedene Objekte betroffen sind.
     ein Absatz kann mehrere Zeilen oder verpflichtende Komponenten besitzen.
 14. Jeder geplante Modellauftrag besitzt serverseitige IDs. Fehlende,
     doppelte oder unbekannte Antwort-IDs werden fail-closed `UNRESOLVED`.
+15. Die sichtbare Entscheidung im gerichteten LF-Modus ist strikt binär. Ein
+    A-Element ist `GEFUNDEN`, sobald Paket B ein quellengebundenes Gegenstück
+    desselben fachlichen Kerns enthält. Abweichende Werte, Limits,
+    Bedingungen, Umfänge oder eine ausdrücklich gegenteilige Wirkung wie ein
+    Ausschluss bleiben sichtbare Vergleichsdifferenzen, ändern den Fundstatus
+    aber nicht. Eine bloße Keyword-Nennung, allgemeine Überschrift oder nur
+    entfernt verwandte Deckung ist kein Gegenstück. `NICHT GEFUNDEN` ist erst
+    nach dem versionierten kontrollierten Suchvertrag zulässig und behauptet
+    niemals einen ausdrücklichen Ausschluss.
 
 Die Regeln 8 und 9 beschreiben den am 2. September beschlossenen
 Nachfolgevertrag. Paket-/Dokumenttypneutralität und die getrennte
