@@ -48,12 +48,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
       "runADrivenReferenceDinghyRetrieval.cjs",
       loadDinghy
     );
-    const unloadDinghy = source.indexOf(
-      "unload-lmstudio-model.cjs",
-      retrieval
-    );
+    const unloadDinghy = source.indexOf("unload-lmstudio-model.cjs", retrieval);
     expect(source).toContain("ensure_qwen");
-    expect(source).toContain("if [ \"$DINGHY_LOADED\" -eq 1 ]");
+    expect(source).toContain('if [ "$DINGHY_LOADED" -eq 1 ]');
     expect(restoreGuard).toBeGreaterThan(-1);
     expect(unloadQwen).toBeGreaterThan(restoreGuard);
     expect(loadDinghy).toBeGreaterThan(unloadQwen);
