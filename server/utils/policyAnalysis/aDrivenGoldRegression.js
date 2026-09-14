@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   A_DRIVEN_BINARY_RESULT_CONTRACT_ID,
+  A_DRIVEN_REQUIREMENT_BINARY_RESULT_CONTRACT_ID,
 } = require("./aDrivenBinaryReferenceResult");
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
@@ -238,8 +239,12 @@ function buildCrosswalk(manifest, rows) {
 
 function validateBinaryResult(result, manifest) {
   if (result === undefined || result === null) return null;
+  const supportedContractIds = new Set([
+    A_DRIVEN_BINARY_RESULT_CONTRACT_ID,
+    A_DRIVEN_REQUIREMENT_BINARY_RESULT_CONTRACT_ID,
+  ]);
   if (
-    result.contractId !== A_DRIVEN_BINARY_RESULT_CONTRACT_ID ||
+    !supportedContractIds.has(result.contractId) ||
     result.dynamicManifestSha256 !== manifest.manifestSha256 ||
     !Array.isArray(result.rows) ||
     result.rows.length !== manifest.requirements.length ||
@@ -249,9 +254,7 @@ function validateBinaryResult(result, manifest) {
   const { resultSha256, ...payload } = result;
   if (
     resultSha256 !==
-    sha256(
-      `${A_DRIVEN_BINARY_RESULT_CONTRACT_ID}\u0000${stableStringify(payload)}`
-    )
+    sha256(`${result.contractId}\u0000${stableStringify(payload)}`)
   )
     throw regressionError("LF_A_DRIVEN_GOLD_RESULT_DIGEST_INVALID");
   return new Map(result.rows.map((row) => [row.requirementId, row]));
@@ -260,9 +263,16 @@ function validateBinaryResult(result, manifest) {
 function evidenceSpans(resultRows, requirementIds) {
   return requirementIds.flatMap((requirementId) => {
     const row = resultRows.get(requirementId);
-    return (row?.bEvidence || []).flatMap(({ sourceSpans = [] }) =>
-      sourceSpans.map((span) => ({ requirementId, ...span }))
-    );
+    return (row?.bEvidence || []).flatMap((evidence) => {
+      if (Array.isArray(evidence.sourceSpans))
+        return evidence.sourceSpans.map((span) => ({
+          requirementId,
+          ...span,
+        }));
+      return evidence.documentUuid && evidence.exactText
+        ? [{ requirementId, ...evidence }]
+        : [];
+    });
   });
 }
 

@@ -39,6 +39,7 @@ const {
   materializeADrivenCounterpartSearchExecution,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartSearchPlan");
 const {
+  A_DRIVEN_REQUIREMENT_BINARY_RESULT_CONTRACT_ID,
   buildADrivenBinaryReferenceResult,
   buildADrivenRequirementBinaryReferenceResult,
   validateADrivenRequirementBinaryReferenceResult,
@@ -16048,6 +16049,78 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
       },
       resultRegression: null,
     });
+  });
+
+  test("measures the requirement-level V6 binary result without changing Gold", () => {
+    const manifest = searchEligibleManifest();
+    const gold = syntheticGold(manifest);
+    const evidenceText =
+      "Dasselbe fachliche Gegenstück ist in Paket B quellengebunden belegt.";
+    const evidenceHash = crypto
+      .createHash("sha256")
+      .update(evidenceText)
+      .digest("hex");
+    gold.rows[0].goldDecision.sources = [
+      {
+        referenceId: "gold-source",
+        exactText: evidenceText,
+        exactTextSha256: evidenceHash,
+      },
+    ];
+    const payload = {
+      schemaVersion: 1,
+      contractId: A_DRIVEN_REQUIREMENT_BINARY_RESULT_CONTRACT_ID,
+      runContractId: "LF_REFERENCE_A_DRIVEN_V2",
+      dynamicManifestSha256: manifest.manifestSha256,
+      requirementDecisionPlanSha256: "1".repeat(64),
+      finalRequirementDecisionSha256: "2".repeat(64),
+      documents: manifest.documents,
+      rows: manifest.requirements.map((requirement) => ({
+        requirementId: requirement.requirementId,
+        customerStatus: "FOUND",
+        bEvidence: [
+          {
+            documentUuid: "document-b",
+            physicalPageNumber: 1,
+            exactText: evidenceText,
+            exactTextSha256: evidenceHash,
+          },
+        ],
+      })),
+      summary: {
+        rows: manifest.requirements.length,
+        found: manifest.requirements.length,
+        notFound: 0,
+        unresolved: 0,
+        sideBOnlyRows: 0,
+        binaryCustomerStatus: true,
+      },
+      proofLimit: "QA-Test",
+    };
+    const result = {
+      ...payload,
+      resultSha256: digest(
+        A_DRIVEN_REQUIREMENT_BINARY_RESULT_CONTRACT_ID,
+        payload
+      ),
+    };
+    const regression = buildADrivenGoldRegression({
+      manifest,
+      gold,
+      expectedGoldSha256: gold.goldSha256,
+      result,
+    });
+
+    expect(regression.dynamicResultSha256).toBe(result.resultSha256);
+    expect(regression.resultRegression.summary).toMatchObject({
+      measurementEligibleRows: 1,
+      resolved: 1,
+      binaryMatches: 1,
+      binaryMismatches: 0,
+      boundGoldSources: 1,
+    });
+    expect(gold.productionRule).toBe(false);
+    expect(gold.qaOnly).toBe(true);
   });
 
   test("does not score rows whose shared A block creates an ambiguous Gold mapping", () => {
