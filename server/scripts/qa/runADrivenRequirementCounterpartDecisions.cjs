@@ -253,7 +253,9 @@ function repairInstruction(batch, diagnostics = []) {
     : "";
   return `Die vorige Antwort war serverseitig ungültig (${[
     ...new Set(diagnostics.map(({ code }) => code)),
-  ].join(", ")}). Korrigiere nur die angeforderten Requirements und halte alle IDs unverändert.${componentHint} COUNTERPART_WITH_DIFFERENCE ist ausschließlich für SCOPE, CONDITION, VALUE_AND_UNIT, LIMIT_BASIS, DEDUCTIBLE oder TEMPORAL_VALIDITY erlaubt. Für OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, FACT_ROLE, DOCUMENT_ROLE oder PRECEDENCE_OR_REPLACEMENT verwende MATCH bei demselben fachlichen Kern, OPPOSITE bei einem ausdrücklichen Gegenteil, RELATED_ONLY bei einem bloß verwandten anderen Kern oder NOT_ESTABLISHED ohne Beleg. Gib erneut ausschließlich das vollständige JSON-Array aus.`;
+  ].join(
+    ", "
+  )}). Korrigiere nur die angeforderten Requirements und halte alle IDs unverändert.${componentHint} COUNTERPART_WITH_DIFFERENCE ist ausschließlich für SCOPE, CONDITION, VALUE_AND_UNIT, LIMIT_BASIS, DEDUCTIBLE oder TEMPORAL_VALIDITY erlaubt. Für OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, FACT_ROLE, DOCUMENT_ROLE oder PRECEDENCE_OR_REPLACEMENT verwende MATCH bei demselben fachlichen Kern, OPPOSITE bei einem ausdrücklichen Gegenteil, RELATED_ONLY bei einem bloß verwandten anderen Kern oder NOT_ESTABLISHED ohne Beleg. Gib erneut ausschließlich das vollständige JSON-Array aus.`;
 }
 
 function prompt(batch, diagnostics = []) {
@@ -496,9 +498,7 @@ async function runBatch({
       lastRawText = observedRawText;
       lastError = error.message;
       if (error.retrySafe === false) break;
-      repairDiagnostics = [
-        { code: "MODEL_RESPONSE_INVALID", issues: [] },
-      ];
+      repairDiagnostics = [{ code: "MODEL_RESPONSE_INVALID", issues: [] }];
     }
   }
   const responses = batch.expectedRequirementIds

@@ -14749,9 +14749,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     );
     expect(instruction).toContain("RELATED_ONLY bei einem bloß verwandten");
     expect(requirementDecisionPrompt(batch)).toHaveLength(2);
-    expect(requirementDecisionPrompt(batch, [
-      { code: "INVALID_REQUIREMENT_RESPONSE", issues: [] },
-    ])).toHaveLength(3);
+    expect(
+      requirementDecisionPrompt(batch, [
+        { code: "INVALID_REQUIREMENT_RESPONSE", issues: [] },
+      ])
+    ).toHaveLength(3);
   });
 
   test("normalizes only repeated candidate IDs before strict validation", () => {
