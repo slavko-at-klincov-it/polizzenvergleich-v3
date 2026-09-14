@@ -14106,7 +14106,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     });
     expect(limitedResumed[0]).toEqual(limited[0]);
     expect(limitedResumed.newBatches).toBe(1);
-    expect(limitedResumeClient.chat.completions.create).toHaveBeenCalledTimes(1);
+    expect(limitedResumeClient.chat.completions.create).toHaveBeenCalledTimes(
+      1
+    );
   });
 
   test("plans every A component against every B document without B-only rows", () => {
