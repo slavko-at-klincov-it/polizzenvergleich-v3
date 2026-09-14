@@ -131,8 +131,6 @@ function comparisonStartErrorMessage(error) {
   const messages = {
     COMPARISON_BOTH_SIDES_REQUIRED:
       "Bitte mindestens ein Dokument auf Seite A und Seite B hinzufügen.",
-    COMPARISON_REFERENCE_EXACTLY_ONE_A_REQUIRED:
-      "Für den LF-IMMO-Referenzvergleich ist genau ein Referenzdokument auf Seite A erforderlich.",
     COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED:
       "Das Dokument auf Seite A entspricht nicht der versionierten LF-IMMO-Referenzfassung dieses Analyseverfahrens.",
   };
@@ -446,9 +444,7 @@ function policyComparisonEndpoints(app) {
         const status =
           error.message === "COMPARISON_BOTH_SIDES_REQUIRED"
             ? 400
-            : error.message === "COMPARISON_REFERENCE_EXACTLY_ONE_A_REQUIRED"
-              ? 400
-              : error.message === "COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED"
+            : error.message === "COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED"
                 ? 400
                 : errorStatus(error);
         return response

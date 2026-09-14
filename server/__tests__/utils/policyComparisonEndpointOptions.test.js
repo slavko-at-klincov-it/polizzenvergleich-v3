@@ -16,7 +16,7 @@ describe("policy comparison endpoint options", () => {
     expect(options.mode).toMatchObject({
       id: "LF_IMMO_REFERENCE_A_TO_B_V1",
       direction: "A_TO_B",
-      maxDocumentsA: 1,
+      maxDocumentsA: 9,
     });
   });
 

@@ -23,8 +23,12 @@ const {
   LF_DYNAMIC_REFERENCE_PROFILE,
 } = require("../utils/policyComparison/lfDynamicReferenceProfile");
 const {
+  LF_A_DRIVEN_REFERENCE_PROFILE,
+} = require("../utils/policyComparison/aDrivenReferenceProfile");
+const {
   analyzeReferenceDocument,
   completedReferenceCategoryViews,
+  extractReferenceDocument,
 } = require("../utils/policyComparison/referenceRunner");
 const {
   prepareDynamicReferenceTemplate,
@@ -56,9 +60,16 @@ const {
   CACHE_SCHEMA_VERSION: MODEL_RESPONSE_CACHE_SCHEMA_VERSION,
   seedResponseCacheFromRunHistory,
 } = require("../utils/policyAnalysis/validatedModelResponseCache");
+const {
+  loadHybridShadowContract,
+} = require("../utils/policyAnalysis/hybridShadowSearch");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command");
+const A_DRIVEN_RUNNER = path.join(
+  REPOSITORY_ROOT,
+  "run-a-driven-reference-product-v2.command"
+);
 const MODEL = process.env.POLICY_FULL_MODEL || "qwen/qwen3.6-35b-a3b";
 const MODEL_TOKEN_LIMIT = Number(
   process.env.POLICY_FULL_MODEL_TOKEN_LIMIT || 42496
@@ -66,8 +77,9 @@ const MODEL_TOKEN_LIMIT = Number(
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 let activeLease = null;
+let activeProductRunner = null;
 
-function terminateOwnedWorkerGroup() {
+function forceTerminateOwnedWorkerGroup() {
   if (process.env.POLICY_COMPARISON_WORKER_GROUP_LEADER === "1") {
     try {
       process.kill(-process.pid, "SIGKILL");
@@ -77,6 +89,16 @@ function terminateOwnedWorkerGroup() {
     }
   }
   process.exit(143);
+}
+
+function terminateOwnedWorkerGroup() {
+  if (activeProductRunner && activeProductRunner.exitCode === null) {
+    activeProductRunner.kill("SIGTERM");
+    const timer = setTimeout(forceTerminateOwnedWorkerGroup, 15_000);
+    timer.unref();
+    return;
+  }
+  forceTerminateOwnedWorkerGroup();
 }
 
 process.once("SIGTERM", terminateOwnedWorkerGroup);
@@ -117,9 +139,14 @@ function completedCategoryViews(outputDirectory) {
   });
 }
 
-function resumableRun({ sessionUuid, manifest, comparisonMode }) {
+function resumableRun({
+  sessionUuid,
+  manifest,
+  comparisonMode,
+  embeddingContractIdentity = null,
+}) {
   const contract = {
-    schemaVersion: 5,
+    schemaVersion: embeddingContractIdentity ? 6 : 5,
     releaseId: releaseIdentity(REPOSITORY_ROOT),
     comparisonMode,
     productProfile: manifest.productProfile,
@@ -130,6 +157,9 @@ function resumableRun({ sessionUuid, manifest, comparisonMode }) {
         comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
           ? MODEL_RESPONSE_CACHE_SCHEMA_VERSION
           : null,
+      ...(embeddingContractIdentity
+        ? { embeddingContract: embeddingContractIdentity }
+        : {}),
     },
     documents: manifest.documents.map(
       ({
@@ -162,14 +192,78 @@ function resumableRun({ sessionUuid, manifest, comparisonMode }) {
     throw new Error("COMPARISON_RUN_PATH_INVALID");
   privateDirectory(runRoot);
   const contractFile = path.join(runRoot, "run-contract.private.json");
+  const generatedAt = new Date().toISOString();
   if (fs.existsSync(contractFile)) {
     const existing = JSON.parse(fs.readFileSync(contractFile, "utf8"));
-    if (JSON.stringify(existing) !== JSON.stringify(contract))
+    const comparableExisting = embeddingContractIdentity
+      ? Object.fromEntries(
+          Object.entries(existing).filter(([key]) => key !== "generatedAt")
+        )
+      : existing;
+    if (JSON.stringify(comparableExisting) !== JSON.stringify(contract))
       throw new Error("COMPARISON_RESUME_CONTRACT_MISMATCH");
+    if (
+      embeddingContractIdentity &&
+      (!existing.generatedAt || Number.isNaN(Date.parse(existing.generatedAt)))
+    )
+      throw new Error("COMPARISON_RESUME_GENERATED_AT_INVALID");
+    return {
+      runRoot,
+      signature,
+      generatedAt: embeddingContractIdentity
+        ? existing.generatedAt
+        : generatedAt,
+    };
   } else {
-    writePrivateJson(contractFile, contract);
+    writePrivateJson(
+      contractFile,
+      embeddingContractIdentity ? { ...contract, generatedAt } : contract
+    );
   }
-  return { runRoot, signature };
+  return { runRoot, signature, generatedAt };
+}
+
+function configuredADrivenEmbeddingContract() {
+  const configured = String(
+    process.env.POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE || ""
+  ).trim();
+  if (!configured)
+    throw new Error("LF_A_DRIVEN_EMBEDDING_CONTRACT_REQUIRED");
+  if (!path.isAbsolute(configured))
+    throw new Error("LF_A_DRIVEN_EMBEDDING_CONTRACT_PATH_INVALID");
+  const contractFile = path.resolve(configured);
+  const { contract, identity } = loadHybridShadowContract(contractFile);
+  if (!contract?.enabled || identity?.enabled !== true)
+    throw new Error("LF_A_DRIVEN_EMBEDDING_CONTRACT_NOT_ENABLED");
+  return { contractFile, identity };
+}
+
+function snapshotADrivenEmbeddingContract({ runRoot, contractFile, identity }) {
+  const sourceStat = fs.lstatSync(contractFile);
+  if (!sourceStat.isFile() || sourceStat.isSymbolicLink())
+    throw new Error("LF_A_DRIVEN_EMBEDDING_CONTRACT_FILE_INVALID");
+  const bytes = fs.readFileSync(contractFile);
+  if (sha256(bytes) !== identity.contractSha256)
+    throw new Error("LF_A_DRIVEN_EMBEDDING_CONTRACT_CHANGED");
+  const snapshotFile = path.join(
+    runRoot,
+    "embedding-contract.private.json"
+  );
+  if (fs.existsSync(snapshotFile)) {
+    const snapshotStat = fs.lstatSync(snapshotFile);
+    if (
+      !snapshotStat.isFile() ||
+      snapshotStat.isSymbolicLink() ||
+      !fs.readFileSync(snapshotFile).equals(bytes)
+    )
+      throw new Error("LF_A_DRIVEN_EMBEDDING_CONTRACT_RESUME_MISMATCH");
+    return snapshotFile;
+  }
+  const temporary = `${snapshotFile}.tmp-${process.pid}`;
+  fs.writeFileSync(temporary, bytes, { mode: 0o600 });
+  fs.renameSync(temporary, snapshotFile);
+  fs.chmodSync(snapshotFile, 0o600);
+  return snapshotFile;
 }
 
 async function claimWorkerLease(session, inputManifest, leaseNonce) {
@@ -327,6 +421,57 @@ function runDocument({
   });
 }
 
+function runADrivenReferenceProduct({
+  runRoot,
+  contractFile,
+  sessionUuid,
+  runSignature,
+  generatedAt,
+  logFile,
+}) {
+  return new Promise((resolve, reject) => {
+    const log = fs.openSync(logFile, "a", 0o600);
+    let logClosed = false;
+    const closeLog = () => {
+      if (logClosed) return;
+      fs.closeSync(log);
+      logClosed = true;
+    };
+    const child = spawn(
+      "/bin/bash",
+      [
+        A_DRIVEN_RUNNER,
+        runRoot,
+        contractFile,
+        sessionUuid,
+        runSignature,
+        generatedAt,
+      ],
+      {
+        cwd: REPOSITORY_ROOT,
+        env: process.env,
+        stdio: ["ignore", log, log],
+      }
+    );
+    activeProductRunner = child;
+    child.once("error", (error) => {
+      activeProductRunner = null;
+      closeLog();
+      reject(error);
+    });
+    child.once("close", (code, signal) => {
+      activeProductRunner = null;
+      closeLog();
+      if (code === 0) return resolve();
+      reject(
+        new Error(
+          `LF_A_DRIVEN_PRODUCT_FAILED:exit=${code ?? "null"}:signal=${signal || "none"}:log=${logFile}`
+        )
+      );
+    });
+  });
+}
+
 async function main() {
   const sessionUuid = String(process.argv[2] || "").trim();
   const leaseNonce = String(process.argv[3] || "").trim();
@@ -343,39 +488,72 @@ async function main() {
   const comparisonMode = normalizePolicyComparisonMode(
     manifest?.comparisonMode || session.comparisonMode
   );
-  const expectedProfile =
-    comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
-      ? LF_DYNAMIC_REFERENCE_PROFILE
-      : PRODUCT_PROFILE;
+  const referenceMode =
+    comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B;
+  const validReferenceProfiles = [
+    LF_DYNAMIC_REFERENCE_PROFILE,
+    LF_A_DRIVEN_REFERENCE_PROFILE,
+  ];
+  const profileValid = referenceMode
+    ? validReferenceProfiles.some(
+        (profile) =>
+          JSON.stringify(manifest?.productProfile) === JSON.stringify(profile)
+      )
+    : JSON.stringify(manifest?.productProfile) === JSON.stringify(PRODUCT_PROFILE);
   if (
     manifest?.schemaVersion !== 3 ||
     manifest?.sessionUuid !== sessionUuid ||
     manifest?.workerLeaseNonce !== leaseNonce ||
-    JSON.stringify(manifest?.productProfile) !==
-      JSON.stringify(expectedProfile) ||
+    !profileValid ||
     manifest?.comparisonMode !== comparisonMode ||
     !Array.isArray(manifest.documents)
   )
     throw new Error("COMPARISON_INPUT_MANIFEST_INVALID");
   await claimWorkerLease(session, session.inputManifest, leaseNonce);
 
-  const referenceMode =
-    comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B;
-  const { runRoot, signature: resumeSignature } = resumableRun({
+  const aDrivenReferenceMode =
+    referenceMode &&
+    JSON.stringify(manifest.productProfile) ===
+      JSON.stringify(LF_A_DRIVEN_REFERENCE_PROFILE);
+  const embedding = aDrivenReferenceMode
+    ? configuredADrivenEmbeddingContract()
+    : null;
+  const {
+    runRoot,
+    signature: resumeSignature,
+    generatedAt,
+  } = resumableRun({
     sessionUuid,
     manifest,
     comparisonMode,
+    embeddingContractIdentity: embedding?.identity || null,
   });
+  const embeddingContractFile = aDrivenReferenceMode
+    ? snapshotADrivenEmbeddingContract({ runRoot, ...embedding })
+    : null;
   const responseCacheDirectory = referenceMode
+    && !aDrivenReferenceMode
     ? path.join(policyComparisonsPath, "runs", sessionUuid, "response-cache-v1")
     : null;
-  const responseCacheSeed = referenceMode
+  const responseCacheSeed = referenceMode && !aDrivenReferenceMode
     ? seedResponseCacheFromRunHistory({
         sessionRunsRoot: path.join(policyComparisonsPath, "runs", sessionUuid),
         cacheDirectory: responseCacheDirectory,
       })
     : null;
-  writePrivateJson(path.join(runRoot, "input-manifest.private.json"), manifest);
+  const runInputManifest = aDrivenReferenceMode
+    ? {
+        schemaVersion: manifest.schemaVersion,
+        sessionUuid: manifest.sessionUuid,
+        comparisonMode: manifest.comparisonMode,
+        productProfile: manifest.productProfile,
+        documents: manifest.documents,
+      }
+    : manifest;
+  writePrivateJson(
+    path.join(runRoot, "input-manifest.private.json"),
+    runInputManifest
+  );
   if (responseCacheSeed)
     writePrivateJson(
       path.join(runRoot, "response-cache-seed.private.json"),
@@ -403,6 +581,90 @@ async function main() {
     if ((await sha256File(sourceFile)) !== document.sha256)
       throw new Error(`COMPARISON_SOURCE_IDENTITY_MISMATCH:${document.uuid}`);
     return sourceFile;
+  }
+
+  if (aDrivenReferenceMode) {
+    const logFile = path.join(runRoot, "worker.log");
+    for (const [index, plannedRun] of plannedRuns.entries()) {
+      await updateSession(session.id, {
+        status: "RUNNING",
+        startedAt: new Date(),
+        progress: JSON.stringify({
+          phase: "EXTRACTING_REFERENCE_DOCUMENTS",
+          completedDocuments: index,
+          totalDocuments: manifest.documents.length,
+          currentDocument: {
+            uuid: plannedRun.document.uuid,
+            side: plannedRun.document.side,
+            originalName: plannedRun.document.originalName,
+          },
+        }),
+      });
+      await extractReferenceDocument({
+        file: await validatedSourceFile(plannedRun.document),
+        outputDirectory: plannedRun.outputDirectory,
+        logFile,
+      });
+    }
+    await updateSession(session.id, {
+      progress: JSON.stringify({
+        phase: "ANALYZING_REFERENCE_PRODUCT",
+        completedDocuments: 0,
+        totalDocuments: manifest.documents.length,
+        currentDocument: null,
+      }),
+    });
+    await runADrivenReferenceProduct({
+      runRoot,
+      contractFile: embeddingContractFile,
+      sessionUuid,
+      runSignature: resumeSignature,
+      generatedAt,
+      logFile,
+    });
+    const resultDirectory = path.join(runRoot, "result");
+    const published = validatePublishedComparisonArtifactSet(resultDirectory);
+    const result = readValidatedComparisonResult(
+      published.files["comparison.private.json"],
+      comparisonMode
+    );
+    if (result.sessionUuid !== sessionUuid)
+      throw new Error("COMPARISON_RESULT_SESSION_MISMATCH");
+    if (result.runSignature !== resumeSignature)
+      throw new Error("COMPARISON_RESULT_RUN_SIGNATURE_MISMATCH");
+    const archivedWorkbook = archiveComparisonWorkbook({
+      workbookFile: published.files["polizzenvergleich.xlsx"],
+      sessionUuid,
+      runSignature: resumeSignature,
+      comparisonMode,
+    });
+    const exportContract = buildComparisonExportContract({
+      comparisonMode,
+      sessionUuid,
+      runSignature: resumeSignature,
+      artifactSetManifestFile: published.manifestFile,
+      archivedWorkbook,
+    });
+    writePrivateJson(
+      path.join(resultDirectory, "export.private.json"),
+      exportContract
+    );
+    await updateSession(session.id, {
+      status: "COMPLETED",
+      progress: JSON.stringify({
+        phase: "COMPLETED",
+        completedDocuments: manifest.documents.length,
+        totalDocuments: manifest.documents.length,
+        completedCategories: result.totals.rows,
+        totalCategories: result.totals.rows,
+        currentDocument: null,
+      }),
+      resultPath: path.relative(policyComparisonsPath, resultDirectory),
+      error: null,
+      workerPid: null,
+      completedAt: new Date(),
+    });
+    return;
   }
 
   let dynamicTemplate = null;

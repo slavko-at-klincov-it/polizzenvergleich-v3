@@ -155,9 +155,7 @@ export default function PolicyComparisonPanel({
     const existing = documents.filter((document) => document.side === side);
     if (existing.length + pdfs.length > sideLimit(side)) {
       showToast(
-        side === "A" && referenceMode
-          ? "Im LF-IMMO-Referenzvergleich ist genau ein Referenzdokument A zulässig."
-          : "Pro Paket sind höchstens neun Dokumente zulässig.",
+        "Pro Paket sind höchstens neun Dokumente zulässig.",
         "error"
       );
       return;
@@ -362,7 +360,7 @@ export default function PolicyComparisonPanel({
               title={
                 options.mode?.sideALabel ||
                 (referenceMode
-                  ? "LF-IMMO-Referenzdokument A"
+                  ? "LF-IMMO-Referenzpaket A"
                   : "Dokumentpaket A")
               }
               documents={documents.filter(({ side }) => side === "A")}
@@ -390,7 +388,7 @@ export default function PolicyComparisonPanel({
           <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
             <p className="text-[11px] leading-4 text-zinc-400 light:text-slate-500 max-w-[490px]">
               {referenceMode
-                ? "Für die unterstützte LF-IMMO-Dokumentfamilie bindet Dokument A die Quellstellen und Werte an das kuratierte Fachprofil (283 Zeilen, 13 Kategorien). Abweichende oder fehlende Struktur stoppt den Lauf. B-only-Inhalte erzeugen keine Zeile."
+                ? "Das Referenzpaket A bestimmt bei jedem Lauf dynamisch Kategorien, Reihenfolge und alle fachlich relevanten Ergebniszeilen. In B werden ausschließlich quellengebundene Gegenstücke zu diesen A-Zeilen gesucht; B-only-Inhalte erzeugen keine Zeile."
                 : "Die PDFs bleiben außerhalb des Workspace-Index. Rolle und Geltungsstatus werden pro Quelldokument gespeichert."}
             </p>
             <div className="flex flex-wrap gap-2">
@@ -433,7 +431,7 @@ export default function PolicyComparisonPanel({
                   className="px-3 py-2 rounded-lg text-xs font-semibold bg-sky-500 text-sky-950 hover:bg-sky-400 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {referenceMode
-                    ? "LF-Profil an A binden und B prüfen"
+                    ? "A dynamisch erfassen und B prüfen"
                     : "5 Kernkategorien vollständig vergleichen"}
                 </button>
               )}
@@ -474,7 +472,11 @@ function ComparisonProgress({ progress }) {
       <div className="flex items-center justify-between text-xs text-sky-200 light:text-sky-800">
         <span>
           {progress?.phase === "BUILDING_A_TEMPLATE"
-            ? "LF-Fachprofil wird an Dokument A gebunden"
+            ? "Referenzpaket A wird dynamisch erfasst"
+            : progress?.phase === "EXTRACTING_REFERENCE_DOCUMENTS"
+              ? "Referenz- und Vergleichsdokumente werden extrahiert"
+              : progress?.phase === "ANALYZING_REFERENCE_PRODUCT"
+                ? "A-Zeilen und B-Gegenstücke werden geprüft"
             : progress?.phase === "BUILDING_COMPARISON"
               ? "Vergleichstabelle wird erstellt"
               : totalCategories > 0

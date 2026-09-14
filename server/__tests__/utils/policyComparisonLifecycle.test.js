@@ -23,6 +23,9 @@ const { PolicyComparison } = require("../../models/policyComparison");
 const {
   POLICY_COMPARISON_MODE,
 } = require("../../utils/policyComparison/modes");
+const {
+  LF_A_DRIVEN_REFERENCE_PROFILE,
+} = require("../../utils/policyComparison/aDrivenReferenceProfile");
 
 const updatedAt = new Date("2026-09-06T10:00:00.000Z");
 
@@ -128,6 +131,34 @@ describe("policy comparison lifecycle", () => {
     );
     expect(manifest.documents).toEqual(current.documents);
     expect(result.workerLeaseNonce).toBe(manifest.workerLeaseNonce);
+  });
+
+  test("queues a multi-document LF reference package with the A-driven profile", async () => {
+    const secondA = {
+      ...document("A", 1),
+      uuid: "a71e3058-328f-4871-85dc-0db9ee777f29",
+      originalName: "A-Nachtrag.pdf",
+      storagePath: "uploads/session/A-Nachtrag.pdf",
+    };
+    const current = session({
+      comparisonMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+      documents: [document("A", 0), secondA, document("B", 0)],
+    });
+    prisma.policy_comparison_sessions.findUnique
+      .mockResolvedValueOnce(current)
+      .mockResolvedValueOnce(session({ status: "QUEUED" }));
+    prisma.policy_comparison_sessions.updateMany.mockResolvedValue({
+      count: 1,
+    });
+
+    await expect(PolicyComparison.queue(current)).resolves.toBeDefined();
+    const update =
+      prisma.policy_comparison_sessions.updateMany.mock.calls[0][0];
+    const manifest = JSON.parse(update.data.inputManifest);
+    expect(manifest.productProfile).toEqual(LF_A_DRIVEN_REFERENCE_PROFILE);
+    expect(manifest.documents.filter(({ side }) => side === "A")).toHaveLength(
+      2
+    );
   });
 
   test("cancel cannot target a newer lease for the same session", async () => {

@@ -11,8 +11,8 @@ const {
   policyComparisonMode,
 } = require("../utils/policyComparison/modes");
 const {
-  LF_DYNAMIC_REFERENCE_PROFILE,
-} = require("../utils/policyComparison/lfDynamicReferenceProfile");
+  LF_A_DRIVEN_REFERENCE_PROFILE,
+} = require("../utils/policyComparison/aDrivenReferenceProfile");
 
 const SIDES = Object.freeze(["A", "B"]);
 const DOCUMENT_ROLES = Object.freeze([
@@ -354,11 +354,6 @@ const PolicyComparison = {
       const comparisonMode = normalizePolicyComparisonMode(
         current.comparisonMode
       );
-      if (
-        comparisonMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B &&
-        countA !== 1
-      )
-        throw new Error("COMPARISON_REFERENCE_EXACTLY_ONE_A_REQUIRED");
       const workerLeaseNonce = uuidv4();
       const inputManifest = {
         schemaVersion: 3,
@@ -369,7 +364,7 @@ const PolicyComparison = {
         productProfile:
           comparisonMode === POLICY_COMPARISON_MODE.SYMMETRIC_A_B
             ? PRODUCT_PROFILE
-            : LF_DYNAMIC_REFERENCE_PROFILE,
+            : LF_A_DRIVEN_REFERENCE_PROFILE,
         documents: current.documents.map((document) => ({
           uuid: document.uuid,
           side: document.side,

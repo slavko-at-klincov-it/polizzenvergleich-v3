@@ -197,10 +197,11 @@ describe("policy comparison worker contract", () => {
     expect(endpoint).not.toContain("process.kill(-current.workerPid");
   });
 
-  test("routes the directed LF workflow through the controlled no-embedding path", () => {
+  test("keeps the legacy dynamic LF profile resumable without changing stored runs", () => {
     expect(source).toContain("analyzeReferenceDocument");
     expect(source).toContain("prepareDynamicReferenceTemplate");
     expect(source).toContain("writeDynamicReferenceComparisonArtifacts");
+    expect(source).toContain("LF_DYNAMIC_REFERENCE_PROFILE");
     expect(source).toContain(
       'plannedRuns.filter(({ document }) => document.side === "B")'
     );
@@ -220,12 +221,28 @@ describe("policy comparison worker contract", () => {
     expect(referenceRunner).not.toContain(".embeddings.");
   });
 
+  test("routes newly queued LF packages through the complete A-driven V2 product runner", () => {
+    expect(source).toContain("LF_A_DRIVEN_REFERENCE_PROFILE");
+    expect(source).toContain("run-a-driven-reference-product-v2.command");
+    expect(source).toContain("POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE");
+    expect(source).toContain("loadHybridShadowContract");
+    expect(source).toContain("extractReferenceDocument");
+    expect(source).toContain("EXTRACTING_REFERENCE_DOCUMENTS");
+    expect(source).toContain("ANALYZING_REFERENCE_PRODUCT");
+    expect(source).toContain("embeddingContractIdentity");
+    expect(source).toContain("snapshotADrivenEmbeddingContract");
+    expect(source).toContain("embedding-contract.private.json");
+    expect(source).toContain("LF_A_DRIVEN_EMBEDDING_CONTRACT_CHANGED");
+    expect(source).toContain("activeProductRunner.kill(\"SIGTERM\")");
+    expect(source).not.toContain("LF_1PLUS9_GOLD_V1");
+  });
+
   test("uses the structure-compatible LF source manifest instead of a fixed PDF hash", () => {
     const model = fs.readFileSync(
       path.join(REPOSITORY_ROOT, "server/models/policyComparison.js"),
       "utf8"
     );
-    expect(model).toContain("LF_DYNAMIC_REFERENCE_PROFILE");
+    expect(model).toContain("LF_A_DRIVEN_REFERENCE_PROFILE");
     expect(model).not.toContain(
       "LF_REFERENCE_PROFILE.sourceProduct.documentSha256"
     );

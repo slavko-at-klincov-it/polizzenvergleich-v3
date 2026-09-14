@@ -19,7 +19,7 @@ describe("policy comparison modes", () => {
       policyComparisonMode(POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B)
     ).toMatchObject({
       direction: "A_TO_B",
-      maxDocumentsA: 1,
+      maxDocumentsA: 9,
       maxDocumentsB: 9,
       discoversSideBOnly: false,
     });
