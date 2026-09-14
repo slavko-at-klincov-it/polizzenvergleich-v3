@@ -14717,9 +14717,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
         rows: 1,
         positiveRows: 1,
         goldSources: 1,
+        corpusBoundGoldSources: 1,
         fullRetrievalBoundGoldSources: 1,
         selectedBoundGoldSources: 1,
         positiveRowsWithAllSourcesRetrieved: 1,
+        positiveRowsWithAllSourcesInCorpus: 1,
         positiveRowsWithAllSourcesSelected: 1,
         scopes: {
           AUTOMATIC_207: {

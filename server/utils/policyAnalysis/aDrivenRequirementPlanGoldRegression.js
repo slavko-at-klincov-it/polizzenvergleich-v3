@@ -9,7 +9,7 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // navigation set contain the frozen sources for the known LF 1+9 fixture.
 // Gold never creates a production row or changes candidate ranking here.
 const A_DRIVEN_REQUIREMENT_PLAN_GOLD_REGRESSION_CONTRACT_ID =
-  "LF_A_DRIVEN_REQUIREMENT_PLAN_GOLD_REGRESSION_V1";
+  "LF_A_DRIVEN_REQUIREMENT_PLAN_GOLD_REGRESSION_V2";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -182,27 +182,52 @@ function matchingCandidates(source, binding, candidates) {
   );
 }
 
-function bindingRecord(source, binding, fullCandidates, selectedCandidates) {
+function projectedMatches(candidates) {
+  const unique = new Map();
+  for (const candidate of candidates) {
+    const key = [
+      candidate.documentUuid,
+      candidate.physicalPageNumber,
+      candidate.exactTextSha256,
+    ].join(":");
+    if (!unique.has(key))
+      unique.set(key, {
+        candidateId: candidate.candidateId,
+        documentUuid: candidate.documentUuid,
+        physicalPageNumber: candidate.physicalPageNumber,
+        exactTextSha256: candidate.exactTextSha256,
+      });
+  }
+  return [...unique.values()].sort((left, right) =>
+    `${left.documentUuid}:${left.physicalPageNumber}:${left.exactTextSha256}`.localeCompare(
+      `${right.documentUuid}:${right.physicalPageNumber}:${right.exactTextSha256}`
+    )
+  );
+}
+
+function bindingRecord(
+  source,
+  binding,
+  corpusCandidates,
+  fullCandidates,
+  selectedCandidates
+) {
   if (!binding)
     return {
       referenceId: source.referenceId,
       exactTextSha256: source.exactTextSha256,
       status: "GOLD_DOCUMENT_UNMAPPED",
+      corpusRetrievalMatches: [],
       fullRetrievalMatches: [],
       selectedCandidateMatches: [],
     };
+  const corpusMatches = matchingCandidates(source, binding, corpusCandidates);
   const fullMatches = matchingCandidates(source, binding, fullCandidates);
   const selectedMatches = matchingCandidates(
     source,
     binding,
     selectedCandidates
   );
-  const project = (candidate) => ({
-    candidateId: candidate.candidateId,
-    documentUuid: candidate.documentUuid,
-    physicalPageNumber: candidate.physicalPageNumber,
-    exactTextSha256: candidate.exactTextSha256,
-  });
   return {
     referenceId: source.referenceId,
     exactTextSha256: source.exactTextSha256,
@@ -212,9 +237,12 @@ function bindingRecord(source, binding, fullCandidates, selectedCandidates) {
       ? "SELECTED_BOUND"
       : fullMatches.length
         ? "FULL_RETRIEVAL_ONLY"
-        : "NOT_RETRIEVED",
-    fullRetrievalMatches: fullMatches.map(project),
-    selectedCandidateMatches: selectedMatches.map(project),
+        : corpusMatches.length
+          ? "CORPUS_RETRIEVAL_ONLY"
+          : "NOT_RETRIEVED",
+    corpusRetrievalMatches: projectedMatches(corpusMatches),
+    fullRetrievalMatches: projectedMatches(fullMatches),
+    selectedCandidateMatches: projectedMatches(selectedMatches),
   };
 }
 
@@ -257,15 +285,25 @@ function summarize(records) {
     positiveRows: positive.length,
     negativeRows: records.length - positive.length,
     goldSources: sources.length,
-    fullRetrievalBoundGoldSources: sources.filter(
+    corpusBoundGoldSources: sources.filter(
       ({ status }) =>
         status !== "NOT_RETRIEVED" && status !== "GOLD_DOCUMENT_UNMAPPED"
+    ).length,
+    fullRetrievalBoundGoldSources: sources.filter(
+      ({ status }) =>
+        status === "SELECTED_BOUND" || status === "FULL_RETRIEVAL_ONLY"
     ).length,
     selectedBoundGoldSources: sources.filter(
       ({ status }) => status === "SELECTED_BOUND"
     ).length,
     positiveRowsWithAnySourceRetrieved: positive.filter(
       ({ anyGoldSourceInFullRetrieval }) => anyGoldSourceInFullRetrieval
+    ).length,
+    positiveRowsWithAnySourceInCorpus: positive.filter(
+      ({ anyGoldSourceInCorpus }) => anyGoldSourceInCorpus
+    ).length,
+    positiveRowsWithAllSourcesInCorpus: positive.filter(
+      ({ allGoldSourcesInCorpus }) => allGoldSourcesInCorpus
     ).length,
     positiveRowsWithAllSourcesRetrieved: positive.filter(
       ({ allGoldSourcesInFullRetrieval }) => allGoldSourcesInFullRetrieval
@@ -305,6 +343,7 @@ function buildADrivenRequirementPlanGoldRegression({
   });
   const documentsByGoldName = goldDocumentBindings(gold, searchPlan);
   const fullByRequirement = fullCandidatesByRequirement(searchExecution);
+  const corpusCandidates = [...fullByRequirement.values()].flat();
   const selectedByRequirement = new Map(
     decisionPlan.rows.map((row) => [row.requirementId, row.candidates])
   );
@@ -324,6 +363,7 @@ function buildADrivenRequirementPlanGoldRegression({
       bindingRecord(
         source,
         documentsByGoldName.get(source.file),
+        corpusCandidates,
         fullCandidates,
         selectedCandidates
       )
@@ -336,6 +376,16 @@ function buildADrivenRequirementPlanGoldRegression({
       goldCustomerFound: row.goldDecision.customerFound === true,
       goldOutcome: row.goldDecision.outcome,
       sourceBindings,
+      anyGoldSourceInCorpus: sourceStatuses.some(
+        (status) =>
+          status !== "NOT_RETRIEVED" && status !== "GOLD_DOCUMENT_UNMAPPED"
+      ),
+      allGoldSourcesInCorpus:
+        sourceStatuses.length > 0 &&
+        sourceStatuses.every(
+          (status) =>
+            status !== "NOT_RETRIEVED" && status !== "GOLD_DOCUMENT_UNMAPPED"
+        ),
       anyGoldSourceInFullRetrieval: sourceStatuses.some(
         (status) =>
           status === "SELECTED_BOUND" || status === "FULL_RETRIEVAL_ONLY"
@@ -353,7 +403,7 @@ function buildADrivenRequirementPlanGoldRegression({
     };
   });
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: A_DRIVEN_REQUIREMENT_PLAN_GOLD_REGRESSION_CONTRACT_ID,
     qaOnly: true,
     productionRule: false,
