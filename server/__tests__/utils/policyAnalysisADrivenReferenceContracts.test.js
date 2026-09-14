@@ -14477,8 +14477,41 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
 
   test("combines disjoint hash-bound plan segments without recomputing valid responses", () => {
     const { decisionPlan } = requirementDecisionFixture();
-    const legacyPayload = JSON.parse(JSON.stringify(decisionPlan));
-    delete legacyPayload.planSha256;
+    const twoBatchPayload = JSON.parse(JSON.stringify(decisionPlan));
+    delete twoBatchPayload.planSha256;
+    const secondRow = JSON.parse(JSON.stringify(twoBatchPayload.rows[0]));
+    secondRow.requirementId = `${secondRow.requirementId}-second`;
+    secondRow.reviewId = `${secondRow.reviewId}-second`;
+    twoBatchPayload.rows.push(secondRow);
+    twoBatchPayload.batches = [
+      {
+        ...twoBatchPayload.batches[0],
+        batchIndex: 0,
+        expectedRequirementIds: [twoBatchPayload.rows[0].requirementId],
+        rows: [twoBatchPayload.rows[0]],
+      },
+      {
+        ...twoBatchPayload.batches[0],
+        batchId: `${twoBatchPayload.batches[0].batchId}-second`,
+        batchIndex: 1,
+        expectedRequirementIds: [secondRow.requirementId],
+        rows: [secondRow],
+      },
+    ];
+    twoBatchPayload.summary.requirements = 2;
+    twoBatchPayload.summary.components =
+      twoBatchPayload.rows[0].components.length * 2;
+    twoBatchPayload.summary.selectedCandidates =
+      twoBatchPayload.rows[0].candidates.length * 2;
+    twoBatchPayload.summary.batches = 2;
+    const currentPlan = {
+      ...twoBatchPayload,
+      planSha256: digest(
+        A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
+        twoBatchPayload
+      ),
+    };
+    const legacyPayload = JSON.parse(JSON.stringify(twoBatchPayload));
     legacyPayload.contractId =
       A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID_V2;
     const legacyPlan = {
@@ -14488,7 +14521,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         legacyPayload
       ),
     };
-    const split = Math.max(1, Math.floor(decisionPlan.batches.length / 2));
+    const split = 1;
 
     const combined = buildADrivenRequirementSegmentedPlan({
       segments: [
@@ -14498,9 +14531,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
           endBatchIndexExclusive: split,
         },
         {
-          plan: decisionPlan,
+          plan: currentPlan,
           startBatchIndex: split,
-          endBatchIndexExclusive: decisionPlan.batches.length,
+          endBatchIndexExclusive: currentPlan.batches.length,
         },
       ],
     });
@@ -14511,7 +14544,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       goldInputsAllowed: false,
     });
     expect(combined.rows.map(({ requirementId }) => requirementId)).toEqual(
-      decisionPlan.rows.map(({ requirementId }) => requirementId)
+      currentPlan.rows.map(({ requirementId }) => requirementId)
     );
     expect(combined.selection.segments).toEqual([
       expect.objectContaining({
@@ -14520,34 +14553,80 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         endBatchIndexExclusive: split,
       }),
       expect.objectContaining({
-        sourcePlanSha256: decisionPlan.planSha256,
+        sourcePlanSha256: currentPlan.planSha256,
         startBatchIndex: split,
-        endBatchIndexExclusive: decisionPlan.batches.length,
+        endBatchIndexExclusive: currentPlan.batches.length,
       }),
     ]);
   });
 
   test("rejects gaps and semantic drift between plan segments", () => {
     const { decisionPlan } = requirementDecisionFixture();
-    const split = Math.max(1, Math.floor(decisionPlan.batches.length / 2));
+    const twoBatchPayload = JSON.parse(JSON.stringify(decisionPlan));
+    delete twoBatchPayload.planSha256;
+    const secondRow = JSON.parse(JSON.stringify(twoBatchPayload.rows[0]));
+    secondRow.requirementId = `${secondRow.requirementId}-second`;
+    secondRow.reviewId = `${secondRow.reviewId}-second`;
+    twoBatchPayload.rows.push(secondRow);
+    twoBatchPayload.batches = [
+      {
+        ...twoBatchPayload.batches[0],
+        batchIndex: 0,
+        expectedRequirementIds: [twoBatchPayload.rows[0].requirementId],
+        rows: [twoBatchPayload.rows[0]],
+      },
+      {
+        ...twoBatchPayload.batches[0],
+        batchId: `${twoBatchPayload.batches[0].batchId}-second`,
+        batchIndex: 1,
+        expectedRequirementIds: [secondRow.requirementId],
+        rows: [secondRow],
+      },
+    ];
+    twoBatchPayload.summary.requirements = 2;
+    twoBatchPayload.summary.components =
+      twoBatchPayload.rows[0].components.length * 2;
+    twoBatchPayload.summary.selectedCandidates =
+      twoBatchPayload.rows[0].candidates.length * 2;
+    twoBatchPayload.summary.batches = 2;
+    const currentPlan = {
+      ...twoBatchPayload,
+      planSha256: digest(
+        A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
+        twoBatchPayload
+      ),
+    };
+    const split = 1;
     expect(() =>
       buildADrivenRequirementSegmentedPlan({
         segments: [
           {
-            plan: decisionPlan,
+            plan: currentPlan,
             startBatchIndex: 0,
             endBatchIndexExclusive: split,
           },
           {
-            plan: decisionPlan,
-            startBatchIndex: split + 1,
-            endBatchIndexExclusive: decisionPlan.batches.length,
+            plan: currentPlan,
+            startBatchIndex: split,
+            endBatchIndexExclusive: split,
+          },
+        ],
+      })
+    ).toThrow("LF_A_DRIVEN_SEGMENT_RANGE_INVALID");
+
+    expect(() =>
+      buildADrivenRequirementSegmentedPlan({
+        segments: [
+          {
+            plan: currentPlan,
+            startBatchIndex: 0,
+            endBatchIndexExclusive: split,
           },
         ],
       })
     ).toThrow("LF_A_DRIVEN_SEGMENT_RANGE_GAP");
 
-    const driftedPayload = JSON.parse(JSON.stringify(decisionPlan));
+    const driftedPayload = JSON.parse(JSON.stringify(currentPlan));
     delete driftedPayload.planSha256;
     driftedPayload.rows[0].displayLabel += " manipuliert";
     driftedPayload.batches[0].rows[0].displayLabel += " manipuliert";
@@ -14567,9 +14646,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
             endBatchIndexExclusive: split,
           },
           {
-            plan: decisionPlan,
+            plan: currentPlan,
             startBatchIndex: split,
-            endBatchIndexExclusive: decisionPlan.batches.length,
+            endBatchIndexExclusive: currentPlan.batches.length,
           },
         ],
       })
