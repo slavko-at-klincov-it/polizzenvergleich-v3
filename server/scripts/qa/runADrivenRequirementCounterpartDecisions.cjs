@@ -188,6 +188,46 @@ function parseJsonArray(modelText) {
   return parsed;
 }
 
+function normalizeRepeatedCandidateIds(responses) {
+  let duplicateCandidateIdsRemoved = 0;
+  const unique = (values) => {
+    if (!Array.isArray(values)) return values;
+    const normalized = [...new Set(values)];
+    duplicateCandidateIdsRemoved += values.length - normalized.length;
+    return normalized;
+  };
+  const normalizedResponses = responses.map((response) => ({
+    ...response,
+    ...(response?.contextFinding
+      ? {
+          contextFinding: {
+            ...response.contextFinding,
+            candidateIds: unique(response.contextFinding.candidateIds),
+          },
+        }
+      : {}),
+    ...(Array.isArray(response?.componentFindings)
+      ? {
+          componentFindings: response.componentFindings.map((finding) => ({
+            ...finding,
+            candidateIds: unique(finding.candidateIds),
+          })),
+        }
+      : {}),
+    ...(Array.isArray(response?.unmodeledDifferences)
+      ? {
+          unmodeledDifferences: response.unmodeledDifferences.map(
+            (difference) => ({
+              ...difference,
+              candidateIds: unique(difference.candidateIds),
+            })
+          ),
+        }
+      : {}),
+  }));
+  return { responses: normalizedResponses, duplicateCandidateIdsRemoved };
+}
+
 function prompt(batch) {
   return [
     {
@@ -350,7 +390,10 @@ async function runBatch({
         recoverModelAfterAbort,
       });
       observedRawText = completion.choices?.[0]?.message?.content || "";
-      const parsed = parseJsonArray(observedRawText);
+      const parsedResponse = normalizeRepeatedCandidateIds(
+        parseJsonArray(observedRawText)
+      );
+      const parsed = parsedResponse.responses;
       const currentValidation = validateBatchResponses(
         plan,
         workingBatch,
@@ -380,6 +423,8 @@ async function runBatch({
         rawResponseSha256: sha256(observedRawText),
         rawResponse: observedRawText,
         responses: parsed,
+        duplicateCandidateIdsRemoved:
+          parsedResponse.duplicateCandidateIdsRemoved,
         acceptedRequirements: accepted.size,
         pendingRequirements: pending.length,
         requestValidationPassed: currentValidation.passed,
@@ -792,6 +837,7 @@ if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
 module.exports = {
+  normalizeRepeatedCandidateIds,
   parseJsonArray,
   processBatches,
   prompt,

@@ -73,6 +73,7 @@ const {
   runBatch: runCounterpartDecisionBatch,
 } = require("../../scripts/qa/runADrivenReferenceCounterpartDecisions.cjs");
 const {
+  normalizeRepeatedCandidateIds,
   prompt: requirementDecisionPrompt,
   runBatch: runRequirementDecisionBatch,
 } = require("../../scripts/qa/runADrivenRequirementCounterpartDecisions.cjs");
@@ -14473,6 +14474,45 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(JSON.stringify(request).toLowerCase()).not.toContain("gold");
   });
 
+  test("normalizes only repeated candidate IDs before strict validation", () => {
+    const source = [
+      {
+        requirementId: "requirement",
+        contextFinding: {
+          outcome: "MATCH",
+          candidateIds: ["one", "one", "two"],
+        },
+        componentFindings: [
+          {
+            componentId: "component",
+            candidateIds: ["two", "two"],
+          },
+        ],
+        unmodeledDifferences: [
+          { dimension: "SCOPE", candidateIds: ["one", "one"] },
+        ],
+      },
+    ];
+
+    const normalized = normalizeRepeatedCandidateIds(source);
+
+    expect(normalized).toMatchObject({
+      duplicateCandidateIdsRemoved: 3,
+      responses: [
+        {
+          contextFinding: { candidateIds: ["one", "two"] },
+          componentFindings: [{ candidateIds: ["two"] }],
+          unmodeledDifferences: [{ candidateIds: ["one"] }],
+        },
+      ],
+    });
+    expect(source[0].contextFinding.candidateIds).toEqual([
+      "one",
+      "one",
+      "two",
+    ]);
+  });
+
   test("retries invalid JSON and stores only a contract-valid requirement response", async () => {
     const { decisionPlan } = requirementDecisionFixture();
     const sourceBatch = decisionPlan.batches[0];
@@ -14535,6 +14575,64 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       acceptedRequirements: 1,
       pendingRequirements: 0,
     });
+  });
+
+  test("accepts a source-bound response after removing duplicate candidate references", async () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const sourceBatch = decisionPlan.batches[0];
+    const row = sourceBatch.rows[0];
+    const batch = {
+      ...sourceBatch,
+      expectedRequirementIds: [row.requirementId],
+      rows: [row],
+    };
+    const candidateId = row.candidates[0].candidateId;
+    const response = {
+      requirementId: row.requirementId,
+      contextFinding: {
+        outcome: "MATCH",
+        candidateIds: [candidateId, candidateId],
+      },
+      componentFindings: row.components.map((component) => ({
+        componentId: component.componentId,
+        dimension: component.dimension,
+        outcome: "MATCH",
+        candidateIds: [candidateId, candidateId],
+      })),
+      unmodeledDifferences: [],
+      rationale: "Dasselbe fachliche Element ist belegt.",
+    };
+    const result = await runRequirementDecisionBatch({
+      client: {
+        chat: {
+          completions: {
+            create: jest.fn(async () => ({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [{ message: { content: JSON.stringify([response]) } }],
+              usage: {},
+            })),
+          },
+        },
+      },
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: decisionPlan,
+      batch,
+      maximumAttempts: 1,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.attempts[0].duplicateCandidateIdsRemoved).toBe(
+      row.components.length + 1
+    );
+    expect(result.responses[0].contextFinding.candidateIds).toEqual([
+      candidateId,
+    ]);
+    expect(
+      result.responses[0].componentFindings.every(
+        ({ candidateIds }) => candidateIds.length === 1
+      )
+    ).toBe(true);
   });
 
   test("keeps a source-bound partial or opposite counterpart found", () => {
