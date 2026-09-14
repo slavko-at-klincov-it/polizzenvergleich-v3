@@ -15553,9 +15553,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         },
         completeCorpus,
       })
-    ).toThrow(
-      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_ARTIFACT_MISMATCH"
-    );
+    ).toThrow("LF_A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_ARTIFACT_MISMATCH");
   });
 });
 

@@ -505,14 +505,12 @@ function validateADrivenRequirementAbsenceDecisionArtifact(
     );
   const terminalResponses = decisions.partitionResults
     .filter(({ status }) => status === "TERMINAL")
-    .map(
-      ({ partitionId, decision, selectedCandidateIds, rationale }) => ({
-        partitionId,
-        decision,
-        candidateIds: selectedCandidateIds,
-        rationale,
-      })
-    );
+    .map(({ partitionId, decision, selectedCandidateIds, rationale }) => ({
+      partitionId,
+      decision,
+      candidateIds: selectedCandidateIds,
+      rationale,
+    }));
   const rebuilt = validateADrivenRequirementAbsenceResponses({
     plan,
     responses: terminalResponses,
@@ -599,10 +597,7 @@ function buildADrivenRequirementRescueReviewPlan({
     decisionPlan.rows.map((row) => [row.requirementId, row])
   );
   const preliminaryByRequirement = new Map(
-    preliminaryDecisions.results.map((result) => [
-      result.requirementId,
-      result,
-    ])
+    preliminaryDecisions.results.map((result) => [result.requirementId, result])
   );
   const candidatesById = new Map(
     absencePlan.candidates.map((candidate) => [
@@ -802,17 +797,13 @@ function buildADrivenRequirementRescueReviewPlan({
     batches,
     summary: {
       requirements: rows.length,
-      components: rows.reduce(
-        (sum, row) => sum + row.components.length,
-        0
-      ),
+      components: rows.reduce((sum, row) => sum + row.components.length, 0),
       selectedCandidates: rows.reduce(
         (sum, row) => sum + row.candidates.length,
         0
       ),
       fullCorpusReviewCandidates: rows.reduce(
-        (sum, row) =>
-          sum + row.searchCoverage.fullCorpusReviewCandidates,
+        (sum, row) => sum + row.searchCoverage.fullCorpusReviewCandidates,
         0
       ),
       batches: batches.length,

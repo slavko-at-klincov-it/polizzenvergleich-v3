@@ -56,16 +56,8 @@ function argumentsFrom(argv) {
     absenceDecisions: path.resolve(values.absenceDecisions),
     completeCorpus: path.resolve(values.completeCorpus),
     output: path.resolve(values.output),
-    maximumRequirementsPerBatch: integer(
-      "maximumRequirementsPerBatch",
-      1,
-      1
-    ),
-    maximumBatchCharacters: integer(
-      "maximumBatchCharacters",
-      160_000,
-      10_000
-    ),
+    maximumRequirementsPerBatch: integer("maximumRequirementsPerBatch", 1, 1),
+    maximumBatchCharacters: integer("maximumBatchCharacters", 160_000, 10_000),
   };
 }
 
