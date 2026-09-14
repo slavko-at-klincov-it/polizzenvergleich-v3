@@ -15771,8 +15771,21 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       found: 1,
       notFound: 0,
       file: workbookFile,
+      formulaCells: 0,
+      sheets: 1,
     });
     expect(fs.statSync(workbookFile).mode & 0o777).toBe(0o600);
+    const workbookHash = crypto
+      .createHash("sha256")
+      .update(fs.readFileSync(workbookFile))
+      .digest("hex");
+    await writeADrivenRequirementReviewWorkbook(binaryFound, workbookFile);
+    expect(
+      crypto
+        .createHash("sha256")
+        .update(fs.readFileSync(workbookFile))
+        .digest("hex")
+    ).toBe(workbookHash);
 
     const rescueNegativeResponse = {
       requirementId: rescueRow.requirementId,

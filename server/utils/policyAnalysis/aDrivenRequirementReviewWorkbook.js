@@ -244,8 +244,68 @@ function persistedValues(sheet, rowNumber) {
   );
 }
 
+async function validateADrivenRequirementReviewWorkbook(result, file) {
+  const rows = reviewWorkbookRows(result);
+  if (!fs.existsSync(file))
+    throw workbookError("LF_A_DRIVEN_REQUIREMENT_REVIEW_FILE_MISSING");
+  const stat = fs.lstatSync(file);
+  if (!stat.isFile() || stat.isSymbolicLink())
+    throw workbookError("LF_A_DRIVEN_REQUIREMENT_REVIEW_FILE_INVALID");
+  const persisted = new ExcelJS.Workbook();
+  await persisted.xlsx.readFile(file);
+  const persistedSheet = persisted.getWorksheet(SHEET_NAME);
+  const formulaCells = [];
+  persistedSheet?.eachRow((row) =>
+    row.eachCell((cell) => {
+      if (cell.formula) formulaCells.push(cell.address);
+    })
+  );
+  const expectedWidths = [
+    8, 28, 22, 42, 58, 28, 38, 58, 44, 38, 18, 32, 42,
+  ];
+  const view = persistedSheet?.views?.[0];
+  const firstDataRow = persistedSheet?.getRow(HEADER_ROW + 1);
+  const lastDataRow = persistedSheet?.getRow(HEADER_ROW + rows.length);
+  if (
+    !persistedSheet ||
+    persisted.worksheets.length !== 1 ||
+    persistedSheet.rowCount !== HEADER_ROW + rows.length ||
+    JSON.stringify(persistedValues(persistedSheet, HEADER_ROW)) !==
+      JSON.stringify(HEADERS) ||
+    rows.some(
+      (expected, index) =>
+        JSON.stringify(
+          persistedValues(persistedSheet, HEADER_ROW + 1 + index)
+        ) !== JSON.stringify(expected)
+    ) ||
+    formulaCells.length !== 0 ||
+    expectedWidths.some(
+      (width, index) =>
+        Math.abs(Number(persistedSheet.getColumn(index + 1).width) - width) >
+        0.01
+    ) ||
+    view?.state !== "frozen" ||
+    view.xSplit !== 4 ||
+    view.ySplit !== HEADER_ROW ||
+    firstDataRow?.getCell(13).fill?.fgColor?.argb !== "FFFFF2CC" ||
+    lastDataRow?.getCell(13).fill?.fgColor?.argb !== "FFFFF2CC"
+  )
+    throw workbookError("LF_A_DRIVEN_REQUIREMENT_REVIEW_ROUNDTRIP_INVALID");
+  return {
+    contractId: A_DRIVEN_REQUIREMENT_REVIEW_WORKBOOK_CONTRACT_ID,
+    file,
+    rows: rows.length,
+    found: rows.filter((row) => row[10] === "Gefunden").length,
+    notFound: rows.filter((row) => row[10] === "Nicht gefunden").length,
+    formulaCells: formulaCells.length,
+    sheets: persisted.worksheets.length,
+  };
+}
+
 async function writeADrivenRequirementReviewWorkbook(result, file) {
   const rows = reviewWorkbookRows(result);
+  if (fs.existsSync(file))
+    return validateADrivenRequirementReviewWorkbook(result, file);
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Polizzenvergleich V3";
   workbook.subject = A_DRIVEN_REQUIREMENT_REVIEW_WORKBOOK_CONTRACT_ID;
@@ -260,29 +320,7 @@ async function writeADrivenRequirementReviewWorkbook(result, file) {
   fs.chmodSync(temporary, 0o600);
   fs.renameSync(temporary, file);
 
-  const persisted = new ExcelJS.Workbook();
-  await persisted.xlsx.readFile(file);
-  const persistedSheet = persisted.getWorksheet(SHEET_NAME);
-  if (
-    !persistedSheet ||
-    persistedSheet.rowCount !== HEADER_ROW + rows.length ||
-    JSON.stringify(persistedValues(persistedSheet, HEADER_ROW)) !==
-      JSON.stringify(HEADERS) ||
-    rows.some(
-      (expected, index) =>
-        JSON.stringify(
-          persistedValues(persistedSheet, HEADER_ROW + 1 + index)
-        ) !== JSON.stringify(expected)
-    )
-  )
-    throw workbookError("LF_A_DRIVEN_REQUIREMENT_REVIEW_ROUNDTRIP_INVALID");
-  return {
-    contractId: A_DRIVEN_REQUIREMENT_REVIEW_WORKBOOK_CONTRACT_ID,
-    file,
-    rows: rows.length,
-    found: rows.filter((row) => row[10] === "Gefunden").length,
-    notFound: rows.filter((row) => row[10] === "Nicht gefunden").length,
-  };
+  return validateADrivenRequirementReviewWorkbook(result, file);
 }
 
 module.exports = {
@@ -291,5 +329,6 @@ module.exports = {
   HEADER_ROW,
   SHEET_NAME,
   reviewWorkbookRows,
+  validateADrivenRequirementReviewWorkbook,
   writeADrivenRequirementReviewWorkbook,
 };
