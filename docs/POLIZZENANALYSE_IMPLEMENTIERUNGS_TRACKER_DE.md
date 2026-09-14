@@ -9402,3 +9402,114 @@ getrennter QA-Messwert und erzeugt keine Produktionszeile.
 Status: `V2-STANDARD-ARTEFAKTGRENZE PASS; 364/364 ZEILEN BINÄR UND ATOMAR
 PUBLIZIERT; WORKER-ROUTING UND FRISCHER DYNAMISCHER 1+9-ENDLAUF NOCH OFFEN;
 KEIN DEPLOYMENT`.
+
+### 133.45 Worker-Produktpfad, begrenzter B-Pilot und hashgebundener 1+9-Integrationslauf
+
+Die Commits `1e12e5e78` bis `6b53aa0e4` verbinden den dynamischen
+`LF_REFERENCE_A_DRIVEN_V2`-Vertrag mit Queue, Worker, Modellwechseln und der
+bestehenden atomaren Ergebnis-/Exportgrenze. Neue LF-Läufe akzeptieren ein bis
+neun A-Dokumente. Der Worker extrahiert alle A-/B-Dokumente, bindet den
+versionierten Dinghy-Vertrag in die Laufsignatur und ruft den Produkt-Runner
+mit seiner eigenen Node-22-Laufzeit auf. Der Produkt-Runner verwendet nach der
+terminalen A-Klassifikation deren validiertes semantisches Manifest direkt;
+ein zuvor nachgeschalteter, verlustbehafteter zweiter Shadow-Rebuild wurde mit
+`6b53aa0e4` entfernt.
+
+Ein erster realer Fortsetzungsversuch auf demselben 1+9-Korpus bestätigte die
+vollständige Wiederverwendung von 58/58 A-Batches, 10.890/10.890
+Retrievalrankings, 58.010 kompakten Suchkandidaten, neun B-Dokumenten und 322
+Klauseln. Die damalige Produktverdrahtung fügte jedoch zwei vollständige
+Korpuskandidaten pro Requirement und B-Dokument in den primären Prompt ein.
+Der Plan enthielt 7.413 Kandidaten, 178 Batches und durchschnittlich 91.778
+JSON-Zeichen pro Batch. Batch 1 bestand erst nach einem harten Timeout von
+192.565 ms und einem zweiten Versuch von 138.332 ms. Der Lauf wurde danach
+kontrolliert gestoppt; genau ein vollständiger Batch blieb erhalten, Batch 2
+blieb resumierbar.
+
+Zwei streng auf je drei neue Batches begrenzte Piloten trennten Batchgröße und
+Evidenzmenge:
+
+```text
+Korpus-Backstop 2/Dokument, 80.000 Zeichen:
+  332 Batches, 3/3 PASS, 0 Timeouts, 377.423 ms gesamt
+
+Korpus-Backstop 1/Dokument, 70.000 Zeichen:
+  201 Batches, 3/3 PASS, 0 Timeouts, 312.728 ms gesamt
+  4.488 Kandidaten, Zeilen 11.256 bis 55.943 Zeichen
+```
+
+Der zweite Wert entspricht dem bereits in Abschnitt 133.39 validierten
+V3-Evidenzvertrag. Die vollständige Mehrkanalsuche bleibt unverändert; ein
+primärer Korpus-Backstop wird nicht als Nullfundbeweis verwendet. Für
+`FALLBACK_REQUIRED` bleibt weiterhin die getrennte vollständige Prüfung aller
+322 hashgebundenen B-Klauseln verbindlich. Commit
+`03000528e9a405aac847f834085b8151e1a994b2`, formatiert in
+`d139eda853976263c03403cb4c87f46f4e83e150`, korrigiert deshalb nur die
+Produktdefaults auf einen Korpus-Backstop pro Dokument, höchstens zwei
+Requirements und 70.000 Zeichen pro primärem Batch. Derselbe Commit leitet
+SIGTERM an das gerade aktive Kind weiter, bevor der EXIT-Trap Modelle und
+globale Sperre bereinigt.
+
+Weil dynamisches Manifest, Suchplan, Suchausführung und vollständiger B-Korpus
+byte- und hashgleich mit dem bereits abgeschlossenen 364er-V3-Stand waren,
+wurden weder die 364 Primärentscheidungen noch die 495 Vollkorpuspartitionen
+erneut berechnet. Die bestehende Artefaktkette wurde innerhalb des Mac Studio
+kopiert, jeweils gegen ihre Originaldatei verglichen und anschließend durch
+alle bestehenden Downstream-Validatoren des Produkt-Runners geprüft. Der neue
+private QA-Lauf liegt unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-PRODUCT-REUSE-20260915-D139EDA8/
+```
+
+Der integrierte Lauf auf Commit
+`d139eda853976263c03403cb4c87f46f4e83e150` bestand und wurde ein zweites Mal
+unverändert als Resume validiert:
+
+```text
+A-Dokumente:                         1
+B-Dokumente:                         9
+dynamische A-Requirements:         364
+Komponenten:                      1.210
+GEFUNDEN:                           330
+NICHT GEFUNDEN:                      34
+UNRESOLVED:                           0
+B-only-Zeilen:                        0
+FULL/PARTIAL/CONTRADICTED:     232/96/2
+```
+
+Zentrale Hashes:
+
+```text
+dynamisches Manifest: 6796617ee1f020bf57cbe7f45ac6fa875d52b5c09006bd66ea1ff2c435bec1e2
+finale Entscheidungen: 8c615a783bdb15d6017ebbf0815db0cccc538078f113414de25561962f9bddfe
+binäres Ergebnis:       20fb73d940f7c317444ebecfeb75af3a48bcdb2a1038db2a7015606388d92282
+comparison.private:     1bb42ef9378552c3963f499c9760cc214dd52ed196da488bbc4dda4625a79384
+polizzenvergleich.xlsx: bf0f151c6d880d1954e8f930b5d60ca169c93fbf9c4906995c61ba74e77fba71
+```
+
+Die getrennte Gold-283-Messung ist reproduzierbar unverändert: 283/283
+A-Quellen abgedeckt, 144 eindeutig messbar, 139 Split-/Merge-mehrdeutig,
+134/144 binär übereinstimmend, zehn Abweichungen (ein False Positive, neun
+False Negatives). Regressionshash
+`92a95998d547d2fff564eb499187b4ce952ac30f762c8bcfa8614e0eb875cebe`,
+Dateihash
+`9214fc7b1f61d0d6b698c8f21b12fc203fddc1892e95990322ad767cdd8c6127`.
+Die zehn privaten Abweichungs-IDs wurden nicht geöffnet oder neu adjudiziert.
+
+Auf dem Mac Studio bestanden Shellsyntax, Prettier und 17/17 fokussierte
+Runner-/Worker-Vertragstests. Ein realer SIGTERM-Test gegen den validierenden
+Resume-Lauf endete mit Status 130, null aktiven Kindprozessen, freigegebener
+globaler Modellsperre und Qwen `qwen/qwen3.6-35b-a3b` weiterhin `idle`, Kontext
+42.496, Parallelität 1 und Queue 0.
+
+Der erzeugte XLSX ist ein privates QA-/Review-Artefakt, keine freigegebene
+Kunden-XLSX. Der Lauf beweist die integrierte, resumierbare Produktgrenze und
+reproduziert den bekannten 1+9-Stand; wegen der hashgebundenen Wiederverwendung
+ist er kein vollständig neu berechneter Modell-Endlauf, kein Holdout- oder
+Generalisierungsnachweis und keine Deploymentfreigabe.
+
+Status: `LF_REFERENCE_A_DRIVEN_V2 WORKER-/RUNNER-INTEGRATION PASS;
+HASHGEBUNDENER 1+9-PRODUKTLAUF 364/364 TERMINAL UND RESUMIERBAR; SUCHQUALITÄT
+GEGEN GOLD UNVERÄNDERT 134/144 AUF EINDEUTIGEN MAPPINGS; 139 CROSSWALK-FÄLLE
+NICHT BINÄR MESSBAR; KEIN DEPLOYMENT`.
