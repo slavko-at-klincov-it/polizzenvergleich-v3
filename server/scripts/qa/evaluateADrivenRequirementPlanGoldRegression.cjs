@@ -35,6 +35,7 @@ function argumentsFrom(argv) {
     "expectedGoldSha256",
     "expectedGoldFileSha256",
     "maximumCandidatesPerComponent",
+    "maximumCompleteCorpusCandidatesPerComponent",
     "maximumRequirementsPerBatch",
     "maximumBatchCharacters",
   ]);
@@ -78,6 +79,10 @@ function argumentsFrom(argv) {
     ),
     maximumRequirementsPerBatch: numberArgument(
       "maximumRequirementsPerBatch",
+      4
+    ),
+    maximumCompleteCorpusCandidatesPerComponent: numberArgument(
+      "maximumCompleteCorpusCandidatesPerComponent",
       4
     ),
     maximumBatchCharacters: numberArgument("maximumBatchCharacters", 120_000),
@@ -149,6 +154,8 @@ try {
         )
       : null,
     maximumCandidatesPerComponent: args.maximumCandidatesPerComponent,
+    maximumCompleteCorpusCandidatesPerComponent:
+      args.maximumCompleteCorpusCandidatesPerComponent,
     maximumRequirementsPerBatch: args.maximumRequirementsPerBatch,
     maximumBatchCharacters: args.maximumBatchCharacters,
   });

@@ -6,6 +6,7 @@ const {
 const {
   validateADrivenSemanticManifest,
 } = require("./aDrivenSemanticManifest");
+const { validateADrivenCompleteBCorpus } = require("./aDrivenCompleteBCorpus");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 
 // The retrieval matrix remains component x B-document. Only the semantic
@@ -54,6 +55,7 @@ const CHANNEL_WEIGHTS = Object.freeze({
   LEXICAL_BM25: 4,
   VALUE_ROLE: 4,
   STRUCTURAL: 1,
+  COMPLETE_B_CORPUS: 0,
 });
 
 function sha256(value) {
@@ -193,6 +195,61 @@ function candidateCatalog(requirement, packages, documentsByUuid) {
   return [...catalog.values()];
 }
 
+function addCompleteCorpusCandidates(
+  catalog,
+  requirement,
+  completeCorpus,
+  documentsByUuid
+) {
+  const byId = new Map(
+    catalog.map((candidate) => [candidate.candidateId, candidate])
+  );
+  for (const clause of completeCorpus.clauses) {
+    const document = documentsByUuid.get(clause.documentUuid);
+    if (
+      !document ||
+      document.documentSha256 !== clause.documentSha256 ||
+      document.documentPosition !== clause.documentPosition
+    )
+      throw decisionError("LF_A_DRIVEN_REQUIREMENT_COMPLETE_CORPUS_INVALID");
+    const candidateId = sourceCandidateId(
+      requirement.requirementId,
+      clause,
+      clause,
+      clause
+    );
+    const existing = byId.get(candidateId);
+    if (existing) {
+      existing.channels = [
+        ...new Set([...existing.channels, "COMPLETE_B_CORPUS"]),
+      ].sort();
+      existing.completeCorpus = true;
+      continue;
+    }
+    const candidate = {
+      candidateId,
+      documentUuid: clause.documentUuid,
+      documentSha256: clause.documentSha256,
+      documentPosition: clause.documentPosition,
+      documentRole: clause.documentRole,
+      documentStatus: clause.documentStatus,
+      originalName: document.originalName,
+      physicalPageNumber: clause.physicalPageNumber,
+      clauseBoundaryId: clause.clauseBoundaryId,
+      documentStart: clause.documentStart,
+      documentEnd: clause.documentEnd,
+      exactText: clause.exactText,
+      exactTextSha256: clause.exactTextSha256,
+      channels: ["COMPLETE_B_CORPUS"],
+      targetComponentIds: [],
+      completeCorpus: true,
+    };
+    catalog.push(candidate);
+    byId.set(candidateId, candidate);
+  }
+  return catalog;
+}
+
 function candidateScore(candidate, component, requirement) {
   const candidateTokens = tokens(candidate.exactText);
   const componentTokens = tokens(
@@ -228,40 +285,56 @@ function selectForComponent(
   candidates,
   component,
   requirement,
-  maximumCandidates
+  maximumCandidates,
+  maximumCompleteCorpusCandidates
 ) {
-  const ranked = candidates
-    .filter(({ targetComponentIds }) =>
+  const ranked = (eligible) =>
+    candidates
+      .filter(eligible)
+      .map((candidate) => ({
+        candidate,
+        score: candidateScore(candidate, component, requirement),
+      }))
+      .sort(
+        (left, right) =>
+          right.score - left.score ||
+          left.candidate.documentPosition - right.candidate.documentPosition ||
+          left.candidate.documentStart - right.candidate.documentStart ||
+          left.candidate.candidateId.localeCompare(right.candidate.candidateId)
+      );
+  const select = (items, maximum) => {
+    const selected = [];
+    const selectedIds = new Set();
+    const selectedDocuments = new Set();
+    for (const item of items) {
+      if (selected.length >= maximum) break;
+      if (selectedDocuments.has(item.candidate.documentUuid)) continue;
+      selected.push(item.candidate);
+      selectedIds.add(item.candidate.candidateId);
+      selectedDocuments.add(item.candidate.documentUuid);
+    }
+    for (const item of items) {
+      if (selected.length >= maximum) break;
+      if (selectedIds.has(item.candidate.candidateId)) continue;
+      selected.push(item.candidate);
+      selectedIds.add(item.candidate.candidateId);
+    }
+    return selected;
+  };
+  const retrieved = select(
+    ranked(({ targetComponentIds }) =>
       targetComponentIds.includes(component.componentId)
-    )
-    .map((candidate) => ({
-      candidate,
-      score: candidateScore(candidate, component, requirement),
-    }))
-    .sort(
-      (left, right) =>
-        right.score - left.score ||
-        left.candidate.documentPosition - right.candidate.documentPosition ||
-        left.candidate.documentStart - right.candidate.documentStart ||
-        left.candidate.candidateId.localeCompare(right.candidate.candidateId)
-    );
-  const selected = [];
-  const selectedIds = new Set();
-  const selectedDocuments = new Set();
-  for (const item of ranked) {
-    if (selected.length >= maximumCandidates) break;
-    if (selectedDocuments.has(item.candidate.documentUuid)) continue;
-    selected.push(item.candidate);
-    selectedIds.add(item.candidate.candidateId);
-    selectedDocuments.add(item.candidate.documentUuid);
-  }
-  for (const item of ranked) {
-    if (selected.length >= maximumCandidates) break;
-    if (selectedIds.has(item.candidate.candidateId)) continue;
-    selected.push(item.candidate);
-    selectedIds.add(item.candidate.candidateId);
-  }
-  return selected;
+    ),
+    maximumCandidates
+  );
+  const complete = select(
+    ranked(({ completeCorpus }) => completeCorpus === true),
+    maximumCompleteCorpusCandidates
+  );
+  const selected = new Map();
+  for (const candidate of [...retrieved, ...complete])
+    selected.set(candidate.candidateId, candidate);
+  return [...selected.values()];
 }
 
 function modelCandidate(candidate) {
@@ -283,14 +356,29 @@ function modelCandidate(candidate) {
   };
 }
 
-function reviewRow(requirement, packages, documentsByUuid, maximumCandidates) {
+function reviewRow(
+  requirement,
+  packages,
+  documentsByUuid,
+  completeCorpus,
+  maximumCandidates,
+  maximumCompleteCorpusCandidates
+) {
   const catalog = candidateCatalog(requirement, packages, documentsByUuid);
+  if (completeCorpus)
+    addCompleteCorpusCandidates(
+      catalog,
+      requirement,
+      completeCorpus,
+      documentsByUuid
+    );
   const components = requirement.components.map((component) => {
     const selected = selectForComponent(
       catalog,
       component,
       requirement,
-      maximumCandidates
+      maximumCandidates,
+      maximumCompleteCorpusCandidates
     );
     return {
       componentId: component.componentId,
@@ -347,6 +435,9 @@ function reviewRow(requirement, packages, documentsByUuid, maximumCandidates) {
       ),
       candidateSelection: "PER_COMPONENT_RANKED_WITH_DOCUMENT_DIVERSITY",
       maximumCandidatesPerComponent: maximumCandidates,
+      maximumCompleteCorpusCandidatesPerComponent:
+        maximumCompleteCorpusCandidates,
+      completeCorpusAvailable: Boolean(completeCorpus),
       sourceCandidatesAvailable: catalog.length,
       sourceCandidatesSelected: candidates.length,
       absenceCertified: false,
@@ -358,7 +449,9 @@ function buildADrivenRequirementDecisionPlan({
   manifest,
   searchPlan,
   searchExecution,
+  completeCorpus = null,
   maximumCandidatesPerComponent = 4,
+  maximumCompleteCorpusCandidatesPerComponent = 4,
   maximumRequirementsPerBatch = 2,
   maximumBatchCharacters = 160_000,
 } = {}) {
@@ -367,10 +460,14 @@ function buildADrivenRequirementDecisionPlan({
   validateADrivenCounterpartSearchExecution(searchExecution, {
     plan: searchPlan,
   });
+  if (completeCorpus)
+    validateADrivenCompleteBCorpus(completeCorpus, { searchPlan });
   if (
     searchExecution.searchPlanSha256 !== searchPlan.planSha256 ||
     !Number.isInteger(maximumCandidatesPerComponent) ||
     maximumCandidatesPerComponent < 1 ||
+    !Number.isInteger(maximumCompleteCorpusCandidatesPerComponent) ||
+    maximumCompleteCorpusCandidatesPerComponent < 0 ||
     !Number.isInteger(maximumRequirementsPerBatch) ||
     maximumRequirementsPerBatch < 1 ||
     !Number.isInteger(maximumBatchCharacters) ||
@@ -403,7 +500,9 @@ function buildADrivenRequirementDecisionPlan({
       requirement,
       packages,
       documentsByUuid,
-      maximumCandidatesPerComponent
+      completeCorpus,
+      maximumCandidatesPerComponent,
+      maximumCompleteCorpusCandidatesPerComponent
     );
   });
   const batches = [];
@@ -448,8 +547,10 @@ function buildADrivenRequirementDecisionPlan({
     dynamicManifestSha256: manifest.manifestSha256,
     searchPlanSha256: searchPlan.planSha256,
     searchExecutionSha256: searchExecution.executionSha256,
+    completeBCorpusSha256: completeCorpus?.corpusSha256 || null,
     selection: {
       maximumCandidatesPerComponent,
+      maximumCompleteCorpusCandidatesPerComponent,
       maximumRequirementsPerBatch,
       maximumBatchCharacters,
       characterClippingAllowed: false,

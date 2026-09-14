@@ -14650,6 +14650,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
       .createHash("sha256")
       .update(exactText)
       .digest("hex");
+    const retrievalText = "Allgemeine Hinweise zur Sachversicherung.";
+    const retrievalTextSha256 = crypto
+      .createHash("sha256")
+      .update(retrievalText)
+      .digest("hex");
     const completeCorpus = buildADrivenCompleteBCorpus({
       documents: [
         {
@@ -14680,11 +14685,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
             sourceSpans: [
               {
                 candidateId: `source-${item.packageId}`,
-                exactText,
-                exactTextSha256,
+                exactText: retrievalText,
+                exactTextSha256: retrievalTextSha256,
                 physicalPageNumber: 1,
                 documentStart: 0,
-                documentEnd: exactText.length,
+                documentEnd: retrievalText.length,
                 channels: ["DINGHY", "LEXICAL_BM25"],
               },
             ],
@@ -14736,18 +14741,19 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
         rows: 1,
         positiveRows: 1,
         goldSources: 1,
-        retrievalCorpusBoundGoldSources: 1,
+        retrievalCorpusBoundGoldSources: 0,
         completeBCorpusBoundGoldSources: 1,
-        fullRetrievalBoundGoldSources: 1,
+        fullRetrievalBoundGoldSources: 0,
         selectedBoundGoldSources: 1,
-        positiveRowsWithAllSourcesRetrieved: 1,
+        positiveRowsWithAllSourcesRetrieved: 0,
         positiveRowsWithAllSourcesInCompleteCorpus: 1,
         positiveRowsWithAllSourcesSelected: 1,
         scopes: {
           AUTOMATIC_207: {
             rows: 1,
             positiveRows: 1,
-            positiveRowsFullyRetrieved: 1,
+            positiveRowsFullyRetrieved: 0,
+            positiveRowsFullyInCompleteCorpus: 1,
             positiveRowsFullySelected: 1,
           },
         },
