@@ -244,8 +244,7 @@ function parseSingleDecision(value) {
     parsed = [JSON.parse(normalized)];
   else if (normalized.startsWith("[") && normalized.endsWith("]"))
     parsed = JSON.parse(normalized);
-  else
-    throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_JSON_VALUE_MISSING");
+  else throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_JSON_VALUE_MISSING");
   if (!Array.isArray(parsed) || parsed.length !== 1)
     throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_RESPONSE_COUNT_INVALID");
   return parsed[0];
