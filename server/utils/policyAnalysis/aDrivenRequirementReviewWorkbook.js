@@ -260,9 +260,7 @@ async function validateADrivenRequirementReviewWorkbook(result, file) {
       if (cell.formula) formulaCells.push(cell.address);
     })
   );
-  const expectedWidths = [
-    8, 28, 22, 42, 58, 28, 38, 58, 44, 38, 18, 32, 42,
-  ];
+  const expectedWidths = [8, 28, 22, 42, 58, 28, 38, 58, 44, 38, 18, 32, 42];
   const view = persistedSheet?.views?.[0];
   const firstDataRow = persistedSheet?.getRow(HEADER_ROW + 1);
   const lastDataRow = persistedSheet?.getRow(HEADER_ROW + rows.length);
