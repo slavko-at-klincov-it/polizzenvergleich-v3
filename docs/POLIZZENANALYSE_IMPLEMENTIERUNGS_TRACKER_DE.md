@@ -8986,3 +8986,51 @@ verbindliche Restweg stehen in
 Status: `SICHERE ARTEFAKTGRENZE ERREICHT; GOLD-30 UNVERÄNDERT; GEMEINSAME
 MATRIX TEILWEISE GEBUNDEN; ASTRA-283-ARTEFAKT FEHLT; KEIN VOLLLAUF, KEINE
 PRODUKTMUTATION, KEINE XLSX UND KEIN DEPLOYMENT`.
+
+### 133.41 Source-bound Gold-283-V1 abgeschlossen
+
+Der vollständige blinde Astra-283-Lauf wurde am vom Auftraggeber genannten
+Pfad gefunden, über Frozen-, Manifest-, Entscheidungs-, Evidenz- und
+Vergleichsdateien hashgebunden und ohne neuen Modelllauf in die bestehende
+Matrix aufgenommen. Er lief auf dem Mac Studio mit `gpt-6-astra`, Reasoning
+`xhigh`, und umfasst 283/283 Zeilen.
+
+Der korrigierte QA-Validator bestätigte 254 gemeinsame Positivzeilen, 727/727
+typgerecht lokalisierte und zeilengebundene Quellenverwendungen sowie 567/570
+vorbereitete Komponentenbindungen. 47 Positivzeilen waren wegen Kern-/Scope-
+oder Komponentenfindings auffällig. Zusammen mit den 29 primären Fällen
+wurden exakt die freigegebenen 76 IDs anhand minimaler Originalpassagen über
+`ssh macstudio` entschieden. Es wurden keine Kundendokumente übertragen,
+keine Passagen lokal gespeichert und keine 77. ID ergänzt.
+
+76er-Ergebnis: 13 `FULL_COUNTERPART`, 45 `PARTIAL_COUNTERPART`, 8
+`CONTRADICTED`, 10 `NO_COUNTERPART_ESTABLISHED`. Die übrigen 207 Zeilen sind
+138 `FULL_COUNTERPART` und 69 `PARTIAL_COUNTERPART`; nicht neu adjudizierte
+Gold-30-Zeilen behalten ihre eingefrorene Klasse. Finales Gold: 283/283, 273
+gefunden und 10 nicht gefunden. Die Nullfund-IDs sind `PR-09`, `VS-22`,
+`VS-31`, `SP-03`, `FE-17`, `FE-19`, `FE-20`, `HP-13`, `HP-24` und `AV-30`.
+
+Autoritatives privates Artefakt:
+
+`/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-1PLUS9-GOLD-283-V1-20260914-61665410/gold-283-v1.private.json`
+
+Datei-SHA-256:
+`9ed4ab6ba3dbd896de48ecf94e6874881391600ef2cc027afae5af5d21123a55`.
+Interner Gold-Hash:
+`d9475c0e8145b5f326ae54ffaab58e5b2c2d154521837452993fc72712257179`.
+
+Commit `616654105038b1802706cb31ca0ddc9e9725e446` wurde ausschließlich im
+isolierten Mac-Studio-Worktree geprüft: Syntax/JSON PASS, gezielte Jest-Suite
+3/3 PASS, Realvalidator 207/47 PASS, Real-Freeze PASS, unabhängige Hash-,
+Kardinalitäts-, Modus- und Quellenprüfung PASS. Die nicht in der eingefrorenen
+`source_row_map` enthaltenen Referenzen `RAH02`, `RFE12` und `RAK09` wurden
+explizit verworfen und nicht als Goldquelle verwendet.
+
+Ein methodisch überholtes Zwischenartefakt unter `...C8753E35` wurde weder
+gelöscht noch überschrieben, sondern mit `SUPERSEDED.private.json` als
+nichtautoritativ markiert. `a667b26b0` bleibt ein unvalidierter
+Produktentwurf. Kein Deployment, keine Kunden-XLSX und keine Produktmutation
+erfolgten.
+
+Status: `GOLD-283-V1 SOURCE-BOUND EINGEFROREN; 273 GEFUNDEN / 10 NICHT
+GEFUNDEN; NÄCHSTER PFAD LF_REFERENCE_A_DRIVEN_V2; KEIN DEPLOYMENT`.

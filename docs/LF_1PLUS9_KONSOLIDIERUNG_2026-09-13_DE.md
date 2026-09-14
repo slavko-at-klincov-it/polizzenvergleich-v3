@@ -362,3 +362,65 @@ Auch ein perfektes Ergebnis gegen Gold-283-V1 belegt nur Regression auf dem
 bekannten LF-1+9-Set. Produktgeneralisierung und ein 99-Prozent-Anspruch
 erfordern weiterhin zuvor unbekannte, versionierte und fachlich gelabelte
 Mehrversicherer-Holdouts nach dem Produktcharter.
+
+## 9. Gold-283-V1 eingefroren – 14. September 2026
+
+Der zuvor fehlende blinde Astra-283-Bestand wurde unter
+`blind_challenger_20260913T114500Z` gefunden und hashgebunden. Der Lauf
+verwendete `gpt-6-astra` mit Reasoning `xhigh`, lief auf dem Mac Studio von
+`2026-09-13T19:26:27Z` bis `2026-09-13T19:55:06Z` und umfasst 283
+Templatezeilen. Es wurde kein neuer Modelllauf gestartet.
+
+Der korrigierte Positivquellenvalidator prüfte 254 gemeinsame Positivzeilen,
+727 Quellenverwendungen und 570 Komponenten. Alle 727 Quellenverwendungen
+besitzen eine typgerechte Fundstelle und eingefrorene Zeilenbindung. 567/570
+Komponenten hatten vorbereitete B-Evidenz; die drei Lücken `FE-03/explosives`,
+`GL-05/safety_glass` und `GL-07/plastic_domes` wurden in der begrenzten
+Quellenadjudikation behandelt. Zusammen mit 44 weiteren Kern-/Scope-Findings
+ergaben sich 47 auffällige Positivzeilen. Mit den 29 primären Streit-/Nullfällen
+blieb der freigegebene Umfang exakt 76 IDs; keine weitere Zeile wurde
+hinzugenommen.
+
+Die 76 Quellenentscheidungen verteilen sich auf 13 `FULL_COUNTERPART`, 45
+`PARTIAL_COUNTERPART`, 8 `CONTRADICTED` und 10
+`NO_COUNTERPART_ESTABLISHED`. Die übrigen 207 gemeinsamen Positivzeilen wurden
+nur bei gültiger Quellen-, Fundstellen-, Kern-/Scope- und Komponentenbindung
+übernommen; ihre Verteilung ist 138 `FULL_COUNTERPART` und 69
+`PARTIAL_COUNTERPART`. Nicht neu adjudizierte Zeilen des eingefrorenen
+Gold-30 behalten dessen Klasse. Sieben Abweichungen aus dem 76er-Review sind
+als versionierte Korrekturen im Gold-30-Crosscheck ausgewiesen; Gold-30 selbst
+blieb bytegenau unverändert.
+
+Endergebnis Gold-283-V1:
+
+- 283/283 eindeutige Entscheidungen;
+- 273 `Gefunden`, davon 151 `FULL_COUNTERPART`, 114
+  `PARTIAL_COUNTERPART` und 8 `CONTRADICTED`;
+- 10 `Nicht gefunden`: `PR-09`, `VS-22`, `VS-31`, `SP-03`, `FE-17`,
+  `FE-19`, `FE-20`, `HP-13`, `HP-24`, `AV-30`;
+- 0 ungültige Entscheidungsbindungen und 0 ungültige ausgewählte Quellen;
+- interner Gold-Hash
+  `d9475c0e8145b5f326ae54ffaab58e5b2c2d154521837452993fc72712257179`;
+- Datei-SHA-256
+  `9ed4ab6ba3dbd896de48ecf94e6874881391600ef2cc027afae5af5d21123a55`;
+- privater Mac-Studio-Pfad
+  `/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-1PLUS9-GOLD-283-V1-20260914-61665410/gold-283-v1.private.json`.
+
+Die drei Evidenz-IDs `RAH02`, `RFE12` und `RAK09` existieren in der
+Evidenzbank, aber nicht in der eingefrorenen Astra-`source_row_map`. Sie wurden
+daher nicht als Goldquellen verwendet und im Gold als technisch verworfene
+Referenzen protokolliert. Ein früheres, bereits geschriebenes Zwischenartefakt
+unter `...C8753E35` bleibt unverändert erhalten, ist durch
+`SUPERSEDED.private.json` jedoch ausdrücklich keine Goldautorität.
+
+QA-Implementierungsstand ist Commit
+`616654105038b1802706cb31ca0ddc9e9725e446`. Mac-Studio-Prüfung: Syntax und
+JSON PASS, gezielte Jest-Suite 3/3 PASS, Realvalidator 207/47 wie erwartet,
+Real-Freeze und unabhängige Hash-/Kardinalitäts-/Quellenprüfung PASS. Der
+unvalidierte Produktentwurf `a667b26b0` wurde dadurch weder freigegeben noch
+deployed. Es gab keine Produktänderung, Kunden-XLSX oder Installation.
+
+Nächster und einziger Produktpfad ist jetzt `LF_REFERENCE_A_DRIVEN_V2`.
+Gold-283-V1 bleibt dabei ausschließlich Test-Oracle des bekannten LF-1+9-Sets
+und darf weder 283 Produktionszeilen vorgeben noch als Generalisierungs- oder
+99-Prozent-Nachweis ausgegeben werden.
