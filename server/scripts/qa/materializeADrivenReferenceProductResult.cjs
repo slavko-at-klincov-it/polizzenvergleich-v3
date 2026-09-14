@@ -10,8 +10,16 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenCompleteBCorpus");
 const {
   buildADrivenReferenceProductResult,
+  productMarkdown,
   validateADrivenReferenceProductResult,
+  writeADrivenReferenceProductArtifacts,
 } = require("../../utils/policyComparison/aDrivenReferenceResultBuilder");
+const {
+  validatePublishedComparisonArtifactSet,
+} = require("../../utils/policyComparison/artifactSetPublisher");
+const {
+  validateADrivenRequirementReviewWorkbook,
+} = require("../../utils/policyAnalysis/aDrivenRequirementReviewWorkbook");
 const {
   presentReferenceCustomerResult,
   validateReferenceCustomerResult,
@@ -53,8 +61,9 @@ function argumentsFrom(argv) {
     "sessionUuid",
     "runSignature",
   ];
+  const optional = ["artifactOutputDirectory"];
   const unknown = Object.keys(values).filter(
-    (name) => !required.includes(name)
+    (name) => !required.includes(name) && !optional.includes(name)
   );
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
   for (const name of required)
@@ -64,10 +73,9 @@ function argumentsFrom(argv) {
   return {
     ...values,
     ...Object.fromEntries(
-      [...fileArguments, "outputDirectory"].map((name) => [
-        name,
-        path.resolve(values[name]),
-      ])
+      [...fileArguments, "outputDirectory", ...optional]
+        .filter((name) => values[name])
+        .map((name) => [name, path.resolve(values[name])])
     ),
   };
 }
@@ -151,7 +159,63 @@ function productDocuments({ manifest, completeBCorpus, sourceInputManifest }) {
   return [...sourceDocuments, ...counterpartDocuments];
 }
 
-try {
+async function materializeOrValidateArtifactSet({
+  artifactOutputDirectory,
+  productInputs,
+}) {
+  if (!artifactOutputDirectory) return null;
+  if (!fs.existsSync(artifactOutputDirectory)) {
+    const artifacts = await writeADrivenReferenceProductArtifacts({
+      ...productInputs,
+      outputDirectory: artifactOutputDirectory,
+    });
+    return {
+      outputDirectory: artifactOutputDirectory,
+      reused: false,
+      manifestSha256: artifacts.artifactSetManifest.manifestDigestSha256,
+      comparisonSha256: sha256Bytes(readRegularFile(artifacts.jsonFile, "LF_A_DRIVEN_PRODUCT_ARTIFACT_JSON")),
+      workbookSha256: sha256Bytes(readRegularFile(artifacts.workbookFile, "LF_A_DRIVEN_PRODUCT_ARTIFACT_WORKBOOK")),
+    };
+  }
+
+  const published = validatePublishedComparisonArtifactSet(
+    artifactOutputDirectory
+  );
+  const persisted = readJson(
+    published.files["comparison.private.json"],
+    "LF_A_DRIVEN_PRODUCT_ARTIFACT_JSON"
+  );
+  validateADrivenReferenceProductResult(persisted, productInputs);
+  presentReferenceCustomerResult(persisted);
+  if (
+    fs.readFileSync(published.files["comparison.md"], "utf8") !==
+    productMarkdown(persisted)
+  )
+    throw new Error("LF_A_DRIVEN_PRODUCT_ARTIFACT_MARKDOWN_MISMATCH");
+  await validateADrivenRequirementReviewWorkbook(
+    productInputs.binaryResult,
+    published.files["polizzenvergleich.xlsx"]
+  );
+  return {
+    outputDirectory: artifactOutputDirectory,
+    reused: true,
+    manifestSha256: published.manifest.manifestDigestSha256,
+    comparisonSha256: sha256Bytes(
+      readRegularFile(
+        published.files["comparison.private.json"],
+        "LF_A_DRIVEN_PRODUCT_ARTIFACT_JSON"
+      )
+    ),
+    workbookSha256: sha256Bytes(
+      readRegularFile(
+        published.files["polizzenvergleich.xlsx"],
+        "LF_A_DRIVEN_PRODUCT_ARTIFACT_WORKBOOK"
+      )
+    ),
+  };
+}
+
+async function main() {
   const args = argumentsFrom(process.argv.slice(2));
   const inputFiles = {
     manifest: args.manifest,
@@ -202,6 +266,10 @@ try {
   validateADrivenReferenceProductResult(productResult, productInputs);
   const customerResult = presentReferenceCustomerResult(productResult);
   validateReferenceCustomerResult(customerResult);
+  const artifactSet = await materializeOrValidateArtifactSet({
+    artifactOutputDirectory: args.artifactOutputDirectory,
+    productInputs,
+  });
 
   const productFile = path.join(
     args.outputDirectory,
@@ -260,7 +328,9 @@ try {
     jsonBytes(summary),
     "LF_A_DRIVEN_PRODUCT_SUMMARY_RESUME_MISMATCH"
   );
-  console.log(JSON.stringify(summary));
-} catch (error) {
-  fail(error.stack || error.message);
+  console.log(JSON.stringify({ ...summary, artifactSet }));
 }
+
+main().catch((error) => {
+  fail(error.stack || error.message);
+});
