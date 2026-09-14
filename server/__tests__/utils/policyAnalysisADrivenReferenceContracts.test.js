@@ -42,6 +42,9 @@ const {
   buildADrivenBinaryReferenceResult,
 } = require("../../utils/policyAnalysis/aDrivenBinaryReferenceResult");
 const {
+  buildADrivenGoldRegression,
+} = require("../../utils/policyAnalysis/aDrivenGoldRegression");
+const {
   assessADrivenManifestAtomicityRisks,
   buildADrivenAStatusAudit,
   compareADrivenManifestAtomicity,
@@ -14287,5 +14290,84 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
         retrieval: tampered,
       })
     ).toThrow("LF_A_DRIVEN_RETRIEVAL_DIGEST_INVALID");
+  });
+});
+
+describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
+  function syntheticGold(manifest) {
+    const requirement = manifest.requirements[0];
+    const component = requirement.components[0];
+    return {
+      contractId: "LF_1PLUS9_GOLD_283_V1",
+      status: "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS",
+      goldAuthority: true,
+      qaOnly: true,
+      productionRule: false,
+      releaseApproval: false,
+      generalizationProof: false,
+      goldSha256: "9".repeat(64),
+      summary: { rows: 1 },
+      rows: [
+        {
+          analysisRowId: "LR01-001",
+          requirementId: "KNOWN-01",
+          referenceA: {
+            sourceSpans: [{ blockIds: requirement.sourceBlockIds }],
+          },
+          components: [
+            {
+              componentId: "known-component",
+              factRole:
+                component.type === "OBJECT" ? "INSURED_OBJECT" : "BENEFIT",
+            },
+          ],
+          goldDecision: {
+            customerFound: true,
+            outcome: "FULL_COUNTERPART",
+            sources: [],
+          },
+        },
+      ],
+    };
+  }
+
+  test("keeps frozen Gold as a QA-only source-overlap denominator", () => {
+    const manifest = searchEligibleManifest();
+    const gold = syntheticGold(manifest);
+    const regression = buildADrivenGoldRegression({
+      manifest,
+      gold,
+      expectedGoldSha256: gold.goldSha256,
+    });
+
+    expect(regression).toMatchObject({
+      qaOnly: true,
+      productionRule: false,
+      generalizationProof: false,
+      dynamicResultSha256: null,
+      crosswalk: {
+        summary: {
+          legacyRequirements: 1,
+          legacyRequirementsSourceCovered: 1,
+          legacyRequirementsMissing: 0,
+          legacyComponents: 1,
+          legacyComponentsRoleCovered: 1,
+        },
+      },
+      resultRegression: null,
+    });
+  });
+
+  test("rejects a different Gold identity before evaluation", () => {
+    const manifest = searchEligibleManifest();
+    const gold = syntheticGold(manifest);
+
+    expect(() =>
+      buildADrivenGoldRegression({
+        manifest,
+        gold,
+        expectedGoldSha256: "8".repeat(64),
+      })
+    ).toThrow("LF_A_DRIVEN_GOLD_INPUT_INVALID");
   });
 });
