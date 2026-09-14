@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const { validateADrivenCompleteBCorpus } = require("./aDrivenCompleteBCorpus");
 const {
+  A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
   validateADrivenRequirementDecisionArtifact,
   validateADrivenRequirementDecisionPlan,
 } = require("./aDrivenRequirementCounterpartDecision");
@@ -10,6 +11,8 @@ const A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_CONTRACT_ID =
   "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_V1";
 const A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_CONTRACT_ID =
   "LF_A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_V1";
+const A_DRIVEN_REQUIREMENT_RESCUE_REVIEW_STRATEGY =
+  "FULL_CORPUS_POSITIVE_CANDIDATE_REVIEW";
 const PARTITION_DECISIONS = new Set([
   "COUNTERPART_PRESENT",
   "NO_COUNTERPART_IN_PARTITION",
@@ -482,11 +485,360 @@ function validateADrivenRequirementAbsenceResponses({
   };
 }
 
+function validateADrivenRequirementAbsenceDecisionArtifact(
+  decisions,
+  plan,
+  { requireComplete = false } = {}
+) {
+  validateADrivenRequirementAbsencePlan(plan);
+  if (
+    decisions?.contractId !==
+      A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_CONTRACT_ID ||
+    decisions.absencePlanSha256 !== plan.planSha256 ||
+    !Array.isArray(decisions.partitionResults) ||
+    !Array.isArray(decisions.results) ||
+    !Array.isArray(decisions.diagnostics) ||
+    !/^[a-f0-9]{64}$/u.test(String(decisions.decisionSha256 || ""))
+  )
+    throw absenceError(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_ARTIFACT_INVALID"
+    );
+  const terminalResponses = decisions.partitionResults
+    .filter(({ status }) => status === "TERMINAL")
+    .map(
+      ({ partitionId, decision, selectedCandidateIds, rationale }) => ({
+        partitionId,
+        decision,
+        candidateIds: selectedCandidateIds,
+        rationale,
+      })
+    );
+  const rebuilt = validateADrivenRequirementAbsenceResponses({
+    plan,
+    responses: terminalResponses,
+  });
+  if (stableStringify(rebuilt) !== stableStringify(decisions))
+    throw absenceError(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_ARTIFACT_MISMATCH"
+    );
+  if (
+    requireComplete &&
+    (decisions.summary.unresolved !== 0 ||
+      decisions.summary.terminalPartitions !== plan.partitions.length ||
+      decisions.results.some(
+        ({ status }) =>
+          status !== "TERMINAL" && status !== "COUNTERPART_REVIEW_REQUIRED"
+      ))
+  )
+    throw absenceError(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_ARTIFACT_INCOMPLETE"
+    );
+  return decisions;
+}
+
+function rescueCandidateId({
+  absencePlanSha256,
+  requirementId,
+  absenceCandidateId,
+}) {
+  return `RCR-${sha256(
+    stableStringify({
+      absencePlanSha256,
+      requirementId,
+      absenceCandidateId,
+    })
+  ).slice(0, 24)}`;
+}
+
+function candidateSourceKey(candidate) {
+  return stableStringify({
+    documentUuid: candidate.documentUuid,
+    documentSha256: candidate.documentSha256,
+    clauseBoundaryId: candidate.clauseBoundaryId,
+    documentStart: candidate.documentStart,
+    documentEnd: candidate.documentEnd,
+    exactTextSha256: candidate.exactTextSha256,
+  });
+}
+
+function buildADrivenRequirementRescueReviewPlan({
+  decisionPlan,
+  preliminaryDecisions,
+  absencePlan,
+  absenceDecisions,
+  completeCorpus,
+  maximumRequirementsPerBatch = 1,
+  maximumBatchCharacters = 160_000,
+} = {}) {
+  validateADrivenRequirementDecisionPlan(decisionPlan);
+  validateADrivenRequirementDecisionArtifact(
+    preliminaryDecisions,
+    decisionPlan
+  );
+  validateADrivenRequirementAbsencePlan(absencePlan);
+  validateADrivenRequirementAbsenceDecisionArtifact(
+    absenceDecisions,
+    absencePlan,
+    { requireComplete: true }
+  );
+  validateADrivenCompleteBCorpus(completeCorpus);
+  if (
+    absencePlan.decisionPlanSha256 !== decisionPlan.planSha256 ||
+    absencePlan.preliminaryDecisionSha256 !==
+      preliminaryDecisions.decisionSha256 ||
+    absencePlan.completeBCorpusSha256 !== completeCorpus.corpusSha256 ||
+    decisionPlan.completeBCorpusSha256 !== completeCorpus.corpusSha256 ||
+    !Number.isInteger(maximumRequirementsPerBatch) ||
+    maximumRequirementsPerBatch < 1 ||
+    !Number.isInteger(maximumBatchCharacters) ||
+    maximumBatchCharacters < 10_000
+  )
+    throw absenceError("LF_A_DRIVEN_REQUIREMENT_RESCUE_INPUT_INVALID");
+
+  const rowsByRequirement = new Map(
+    decisionPlan.rows.map((row) => [row.requirementId, row])
+  );
+  const preliminaryByRequirement = new Map(
+    preliminaryDecisions.results.map((result) => [
+      result.requirementId,
+      result,
+    ])
+  );
+  const candidatesById = new Map(
+    absencePlan.candidates.map((candidate) => [
+      candidate.candidateId,
+      candidate,
+    ])
+  );
+  const documentsById = new Map(
+    completeCorpus.documents.map((document) => [
+      document.documentUuid,
+      document,
+    ])
+  );
+  const reviewResults = absenceDecisions.results.filter(
+    ({ status }) => status === "COUNTERPART_REVIEW_REQUIRED"
+  );
+  if (reviewResults.length === 0)
+    throw absenceError("LF_A_DRIVEN_REQUIREMENT_RESCUE_EMPTY");
+
+  const rows = reviewResults
+    .map((absenceResult) => {
+      const row = rowsByRequirement.get(absenceResult.requirementId);
+      const preliminary = preliminaryByRequirement.get(
+        absenceResult.requirementId
+      );
+      if (
+        !row ||
+        preliminary?.customerStatus !== "FALLBACK_REQUIRED" ||
+        !Array.isArray(absenceResult.selectedCandidateIds) ||
+        absenceResult.selectedCandidateIds.length === 0
+      )
+        throw absenceError(
+          "LF_A_DRIVEN_REQUIREMENT_RESCUE_REQUIREMENT_INVALID",
+          absenceResult.requirementId
+        );
+
+      const candidates = row.candidates.map((candidate) => ({ ...candidate }));
+      const candidateIdBySource = new Map(
+        candidates.map((candidate) => [
+          candidateSourceKey(candidate),
+          candidate.candidateId,
+        ])
+      );
+      const fullCorpusReviewCandidateIds = [];
+      for (const absenceCandidateId of absenceResult.selectedCandidateIds) {
+        const candidate = candidatesById.get(absenceCandidateId);
+        const document = candidate
+          ? documentsById.get(candidate.documentUuid)
+          : null;
+        if (
+          !candidate ||
+          !document ||
+          document.documentSha256 !== candidate.documentSha256 ||
+          document.documentPosition !== candidate.documentPosition
+        )
+          throw absenceError(
+            "LF_A_DRIVEN_REQUIREMENT_RESCUE_CANDIDATE_INVALID",
+            absenceCandidateId
+          );
+        const sourceKey = candidateSourceKey(candidate);
+        let candidateId = candidateIdBySource.get(sourceKey);
+        if (!candidateId) {
+          candidateId = rescueCandidateId({
+            absencePlanSha256: absencePlan.planSha256,
+            requirementId: row.requirementId,
+            absenceCandidateId,
+          });
+          candidates.push({
+            candidateId,
+            documentUuid: candidate.documentUuid,
+            documentSha256: candidate.documentSha256,
+            documentPosition: candidate.documentPosition,
+            documentRole: candidate.documentRole,
+            documentStatus: candidate.documentStatus,
+            originalName: document.originalName,
+            physicalPageNumber: candidate.physicalPageNumber,
+            clauseBoundaryId: candidate.clauseBoundaryId,
+            documentStart: candidate.documentStart,
+            documentEnd: candidate.documentEnd,
+            exactText: candidate.exactText,
+            exactTextSha256: candidate.exactTextSha256,
+            channels: ["COMPLETE_B_CORPUS_RESCUE"],
+          });
+          candidateIdBySource.set(sourceKey, candidateId);
+        }
+        fullCorpusReviewCandidateIds.push(candidateId);
+      }
+      const uniqueReviewCandidateIds = [
+        ...new Set(fullCorpusReviewCandidateIds),
+      ].sort();
+      const components = row.components.map((component) => ({
+        ...component,
+        navigationCandidateIds: [
+          ...new Set([
+            ...component.navigationCandidateIds,
+            ...uniqueReviewCandidateIds,
+          ]),
+        ].sort(),
+      }));
+      candidates.sort(
+        (left, right) =>
+          left.documentPosition - right.documentPosition ||
+          left.physicalPageNumber - right.physicalPageNumber ||
+          left.documentStart - right.documentStart ||
+          left.candidateId.localeCompare(right.candidateId)
+      );
+      const reviewIdentity = {
+        absenceDecisionSha256: absenceDecisions.decisionSha256,
+        requirementId: row.requirementId,
+        candidateIds: candidates.map(({ candidateId }) => candidateId),
+        fullCorpusReviewCandidateIds: uniqueReviewCandidateIds,
+      };
+      return {
+        ...row,
+        reviewId: `ADR-${sha256(stableStringify(reviewIdentity)).slice(0, 24)}`,
+        components,
+        candidates,
+        searchCoverage: {
+          ...row.searchCoverage,
+          candidateSelection: A_DRIVEN_REQUIREMENT_RESCUE_REVIEW_STRATEGY,
+          absencePlanSha256: absencePlan.planSha256,
+          absenceDecisionSha256: absenceDecisions.decisionSha256,
+          fullCorpusReviewCandidateIds: uniqueReviewCandidateIds,
+          fullCorpusReviewCandidates: uniqueReviewCandidateIds.length,
+          absenceCertified: false,
+        },
+      };
+    })
+    .sort(
+      (left, right) =>
+        left.sourceOrder[0] - right.sourceOrder[0] ||
+        left.sourceOrder[1] - right.sourceOrder[1] ||
+        left.sourceOrder[2] - right.sourceOrder[2] ||
+        left.requirementId.localeCompare(right.requirementId)
+    );
+
+  const batches = [];
+  let current = [];
+  let currentCharacters = 0;
+  const flush = () => {
+    if (current.length === 0) return;
+    const batchIndex = batches.length;
+    const expectedRequirementIds = current.map(
+      ({ requirementId }) => requirementId
+    );
+    batches.push({
+      batchId: `ADRRB-${sha256(
+        stableStringify({
+          absenceDecisionSha256: absenceDecisions.decisionSha256,
+          batchIndex,
+          expectedRequirementIds,
+        })
+      ).slice(0, 24)}`,
+      batchIndex,
+      expectedRequirementIds,
+      rows: current,
+    });
+    current = [];
+    currentCharacters = 0;
+  };
+  for (const row of rows) {
+    const rowCharacters = JSON.stringify(row).length;
+    if (rowCharacters > maximumBatchCharacters)
+      throw absenceError(
+        "LF_A_DRIVEN_REQUIREMENT_RESCUE_ROW_TOO_LARGE",
+        row.requirementId
+      );
+    if (
+      current.length >= maximumRequirementsPerBatch ||
+      currentCharacters + rowCharacters > maximumBatchCharacters
+    )
+      flush();
+    current.push(row);
+    currentCharacters += rowCharacters;
+  }
+  flush();
+  const payload = {
+    schemaVersion: 3,
+    contractId: A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
+    dynamicManifestSha256: decisionPlan.dynamicManifestSha256,
+    searchPlanSha256: decisionPlan.searchPlanSha256,
+    searchExecutionSha256: decisionPlan.searchExecutionSha256,
+    completeBCorpusSha256: decisionPlan.completeBCorpusSha256,
+    selection: {
+      strategy: A_DRIVEN_REQUIREMENT_RESCUE_REVIEW_STRATEGY,
+      sourceDecisionPlanSha256: decisionPlan.planSha256,
+      preliminaryDecisionSha256: preliminaryDecisions.decisionSha256,
+      absencePlanSha256: absencePlan.planSha256,
+      absenceDecisionSha256: absenceDecisions.decisionSha256,
+      maximumRequirementsPerBatch,
+      maximumBatchCharacters,
+      characterClippingAllowed: false,
+      candidateAuthority: "SERVER_BOUND_NAVIGATION_ONLY",
+      goldInputsAllowed: false,
+    },
+    rows,
+    batches,
+    summary: {
+      requirements: rows.length,
+      components: rows.reduce(
+        (sum, row) => sum + row.components.length,
+        0
+      ),
+      selectedCandidates: rows.reduce(
+        (sum, row) => sum + row.candidates.length,
+        0
+      ),
+      fullCorpusReviewCandidates: rows.reduce(
+        (sum, row) =>
+          sum + row.searchCoverage.fullCorpusReviewCandidates,
+        0
+      ),
+      batches: batches.length,
+      absenceCertifiedRequirements: 0,
+    },
+  };
+  const plan = {
+    ...payload,
+    planSha256: sha256(
+      `${A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID}\u0000${stableStringify(
+        payload
+      )}`
+    ),
+  };
+  validateADrivenRequirementDecisionPlan(plan);
+  return plan;
+}
+
 module.exports = {
   A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_CONTRACT_ID,
   A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_CONTRACT_ID,
+  A_DRIVEN_REQUIREMENT_RESCUE_REVIEW_STRATEGY,
   PARTITION_DECISIONS,
   buildADrivenRequirementAbsencePlan,
+  buildADrivenRequirementRescueReviewPlan,
+  validateADrivenRequirementAbsenceDecisionArtifact,
   validateADrivenRequirementAbsencePlan,
   validateADrivenRequirementAbsencePartitionResponse,
   validateADrivenRequirementAbsenceResponses,

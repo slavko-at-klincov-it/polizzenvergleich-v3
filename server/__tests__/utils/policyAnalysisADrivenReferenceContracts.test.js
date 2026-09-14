@@ -95,6 +95,8 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenRequirementSegmentedPlan");
 const {
   buildADrivenRequirementAbsencePlan,
+  buildADrivenRequirementRescueReviewPlan,
+  validateADrivenRequirementAbsenceDecisionArtifact,
   validateADrivenRequirementAbsencePlan,
   validateADrivenRequirementAbsencePartitionResponse,
   validateADrivenRequirementAbsenceResponses,
@@ -15443,6 +15445,117 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       reasonCode: "FULL_CORPUS_COUNTERPART_CANDIDATE_FOUND",
     });
     expect(candidateFound.results[0].bEvidence).toHaveLength(1);
+    expect(
+      validateADrivenRequirementAbsenceDecisionArtifact(
+        candidateFound,
+        absencePlan,
+        { requireComplete: true }
+      )
+    ).toBe(candidateFound);
+
+    const rescuePlan = buildADrivenRequirementRescueReviewPlan({
+      decisionPlan,
+      preliminaryDecisions,
+      absencePlan,
+      absenceDecisions: candidateFound,
+      completeCorpus,
+      maximumRequirementsPerBatch: 1,
+    });
+    expect(rescuePlan.summary).toMatchObject({
+      requirements: 1,
+      components: decisionPlan.rows[0].components.length,
+      fullCorpusReviewCandidates: 1,
+      batches: 1,
+    });
+    expect(rescuePlan.selection).toMatchObject({
+      strategy: "FULL_CORPUS_POSITIVE_CANDIDATE_REVIEW",
+      sourceDecisionPlanSha256: decisionPlan.planSha256,
+      preliminaryDecisionSha256: preliminaryDecisions.decisionSha256,
+      absencePlanSha256: absencePlan.planSha256,
+      absenceDecisionSha256: candidateFound.decisionSha256,
+      characterClippingAllowed: false,
+      goldInputsAllowed: false,
+    });
+    const rescueRow = rescuePlan.rows[0];
+    expect(rescueRow.searchCoverage.fullCorpusReviewCandidateIds).toHaveLength(
+      1
+    );
+    const rescueCandidateId =
+      rescueRow.searchCoverage.fullCorpusReviewCandidateIds[0];
+    expect(
+      rescueRow.components.every(({ navigationCandidateIds }) =>
+        navigationCandidateIds.includes(rescueCandidateId)
+      )
+    ).toBe(true);
+    expect(
+      rescueRow.candidates.find(
+        ({ candidateId }) => candidateId === rescueCandidateId
+      )
+    ).toMatchObject({
+      documentUuid: absencePlan.candidates[0].documentUuid,
+      exactTextSha256: absencePlan.candidates[0].exactTextSha256,
+    });
+    const rescueRun = await runRequirementDecisionBatch({
+      client: {
+        chat: {
+          completions: {
+            create: jest.fn(async () => ({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify([
+                      {
+                        requirementId: rescueRow.requirementId,
+                        contextFinding: {
+                          outcome: "MATCH",
+                          candidateIds: [rescueCandidateId],
+                        },
+                        componentFindings: rescueRow.components.map(
+                          ({ componentId, dimension }) => ({
+                            componentId,
+                            dimension,
+                            outcome: "MATCH",
+                            candidateIds: [rescueCandidateId],
+                          })
+                        ),
+                        unmodeledDifferences: [],
+                        rationale:
+                          "Der Vollkorpuskandidat belegt denselben fachlichen Kern.",
+                      },
+                    ]),
+                  },
+                },
+              ],
+              usage: {},
+            })),
+          },
+        },
+      },
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: rescuePlan,
+      batch: rescuePlan.batches[0],
+      maximumAttempts: 1,
+      requestTimeoutMs: 100,
+      abortSettlementTimeoutMs: 10,
+      recoverModelAfterAbort: jest.fn(),
+    });
+    expect(rescueRun.validation.passed).toBe(true);
+    expect(() =>
+      buildADrivenRequirementRescueReviewPlan({
+        decisionPlan,
+        preliminaryDecisions,
+        absencePlan,
+        absenceDecisions: {
+          ...candidateFound,
+          decisionSha256: "0".repeat(64),
+        },
+        completeCorpus,
+      })
+    ).toThrow(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_ARTIFACT_MISMATCH"
+    );
   });
 });
 

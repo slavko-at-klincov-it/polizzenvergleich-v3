@@ -52,6 +52,7 @@ function argumentsFrom(argv) {
     values[name] = value;
   }
   const allowed = new Set([
+    "decisionPlan",
     "manifest",
     "searchPlan",
     "searchExecution",
@@ -74,16 +75,22 @@ function argumentsFrom(argv) {
   ]);
   const unknown = Object.keys(values).filter((key) => !allowed.has(key));
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
-  for (const required of [
+  for (const required of ["output", "lmStudioSdk", "qwenModelKey"])
+    if (!values[required]) fail(`--${required} ist erforderlich`);
+  const sourceInputs = [
     "manifest",
     "searchPlan",
     "searchExecution",
     "completeCorpus",
-    "output",
-    "lmStudioSdk",
-    "qwenModelKey",
-  ])
-    if (!values[required]) fail(`--${required} ist erforderlich`);
+  ];
+  if (
+    values.decisionPlan
+      ? sourceInputs.some((name) => values[name])
+      : sourceInputs.some((name) => !values[name])
+  )
+    fail(
+      "Exakt --decisionPlan oder alle vier Quellen --manifest, --searchPlan, --searchExecution und --completeCorpus sind erforderlich"
+    );
   const integer = (name, fallback, minimum = 1) => {
     const parsed = Number(values[name] ?? fallback);
     if (!Number.isSafeInteger(parsed) || parsed < minimum)
@@ -91,10 +98,17 @@ function argumentsFrom(argv) {
     return parsed;
   };
   const result = {
-    manifest: path.resolve(values.manifest),
-    searchPlan: path.resolve(values.searchPlan),
-    searchExecution: path.resolve(values.searchExecution),
-    completeCorpus: path.resolve(values.completeCorpus),
+    decisionPlan: values.decisionPlan
+      ? path.resolve(values.decisionPlan)
+      : null,
+    manifest: values.manifest ? path.resolve(values.manifest) : null,
+    searchPlan: values.searchPlan ? path.resolve(values.searchPlan) : null,
+    searchExecution: values.searchExecution
+      ? path.resolve(values.searchExecution)
+      : null,
+    completeCorpus: values.completeCorpus
+      ? path.resolve(values.completeCorpus)
+      : null,
     output: path.resolve(values.output),
     lmStudioSdk: path.resolve(values.lmStudioSdk),
     qwenModelKey: values.qwenModelKey,
@@ -747,30 +761,42 @@ async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
 
 async function run() {
   const args = argumentsFrom(process.argv.slice(2));
-  const manifest = readJson(args.manifest, "LF_A_DRIVEN_REQUIREMENT_MANIFEST");
-  const searchPlan = readJson(
-    args.searchPlan,
-    "LF_A_DRIVEN_REQUIREMENT_SEARCH_PLAN"
-  );
-  const searchExecution = readJson(
-    args.searchExecution,
-    "LF_A_DRIVEN_REQUIREMENT_SEARCH_EXECUTION"
-  );
-  const completeCorpus = readJson(
-    args.completeCorpus,
-    "LF_A_DRIVEN_REQUIREMENT_COMPLETE_B_CORPUS"
-  );
-  const plan = buildADrivenRequirementDecisionPlan({
-    manifest,
-    searchPlan,
-    searchExecution,
-    completeCorpus,
-    maximumCandidatesPerComponent: args.maximumCandidatesPerComponent,
-    maximumCompleteCorpusCandidatesPerDocument:
-      args.maximumCompleteCorpusCandidatesPerDocument,
-    maximumRequirementsPerBatch: args.maximumRequirementsPerBatch,
-    maximumBatchCharacters: args.maximumBatchCharacters,
-  });
+  let plan;
+  if (args.decisionPlan) {
+    plan = readJson(
+      args.decisionPlan,
+      "LF_A_DRIVEN_REQUIREMENT_PREBUILT_DECISION_PLAN"
+    );
+    validateADrivenRequirementDecisionPlan(plan);
+  } else {
+    const manifest = readJson(
+      args.manifest,
+      "LF_A_DRIVEN_REQUIREMENT_MANIFEST"
+    );
+    const searchPlan = readJson(
+      args.searchPlan,
+      "LF_A_DRIVEN_REQUIREMENT_SEARCH_PLAN"
+    );
+    const searchExecution = readJson(
+      args.searchExecution,
+      "LF_A_DRIVEN_REQUIREMENT_SEARCH_EXECUTION"
+    );
+    const completeCorpus = readJson(
+      args.completeCorpus,
+      "LF_A_DRIVEN_REQUIREMENT_COMPLETE_B_CORPUS"
+    );
+    plan = buildADrivenRequirementDecisionPlan({
+      manifest,
+      searchPlan,
+      searchExecution,
+      completeCorpus,
+      maximumCandidatesPerComponent: args.maximumCandidatesPerComponent,
+      maximumCompleteCorpusCandidatesPerDocument:
+        args.maximumCompleteCorpusCandidatesPerDocument,
+      maximumRequirementsPerBatch: args.maximumRequirementsPerBatch,
+      maximumBatchCharacters: args.maximumBatchCharacters,
+    });
+  }
   if (fs.existsSync(args.output)) {
     const stat = fs.lstatSync(args.output);
     if (!stat.isDirectory() || stat.isSymbolicLink())
