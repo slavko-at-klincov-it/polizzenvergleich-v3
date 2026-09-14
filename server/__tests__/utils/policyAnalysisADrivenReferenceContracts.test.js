@@ -16063,6 +16063,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
     gold.rows[0].goldDecision.sources = [
       {
         referenceId: "gold-source",
+        file: "Vergleich B.pdf",
+        location: "Seite 1",
         exactText: evidenceText,
         exactTextSha256: evidenceHash,
       },
@@ -16081,6 +16083,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
         bEvidence: [
           {
             documentUuid: "document-b",
+            originalName: "Vergleich B.pdf",
             physicalPageNumber: 1,
             exactText: evidenceText,
             exactTextSha256: evidenceHash,
@@ -16118,6 +16121,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
       binaryMatches: 1,
       binaryMismatches: 0,
       boundGoldSources: 1,
+      sameFileGoldSources: 1,
+      sameFileAndPageGoldSources: 1,
     });
     expect(gold.productionRule).toBe(false);
     expect(gold.qaOnly).toBe(true);

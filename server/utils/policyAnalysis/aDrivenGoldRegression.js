@@ -56,6 +56,22 @@ function validSha(value) {
   return /^[a-f0-9]{64}$/u.test(String(value || ""));
 }
 
+function normalizedFileIdentity(value) {
+  const basename = String(value || "")
+    .split(/[\\/]/u)
+    .at(-1)
+    .replace(/\.[^.]+$/u, "");
+  return normalizedText(basename).replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
+function locationContainsPage(location, page) {
+  return (
+    Number.isInteger(page) &&
+    page > 0 &&
+    new RegExp(`(?:^|\\D)${page}(?:\\D|$)`, "u").test(String(location || ""))
+  );
+}
+
 function goldRows(gold, expectedGoldSha256) {
   if (
     gold?.contractId !== GOLD_CONTRACT_ID ||
@@ -280,7 +296,12 @@ function sourceBinding(goldSource, spans) {
   const exact = String(goldSource?.exactText || "");
   const exactHash = goldSource?.exactTextSha256;
   if (!exact || !validSha(exactHash) || sha256(exact) !== exactHash)
-    return { status: "GOLD_SOURCE_INVALID", dynamicEvidence: [] };
+    return {
+      status: "GOLD_SOURCE_INVALID",
+      dynamicEvidence: [],
+      sameFileEvidence: [],
+      sameFileAndPageEvidence: [],
+    };
   const normalized = normalizedText(exact);
   const matches = spans.filter((span) => {
     const candidate = String(span.exactText || "");
@@ -294,9 +315,18 @@ function sourceBinding(goldSource, spans) {
         normalized.includes(normalizedCandidate))
     );
   });
-  return {
-    status: matches.length ? "BOUND" : "NOT_BOUND",
-    dynamicEvidence: matches.map(
+  const goldFileIdentity = normalizedFileIdentity(goldSource.file);
+  const sameFile = goldFileIdentity
+    ? spans.filter(
+        (span) =>
+          normalizedFileIdentity(span.originalName) === goldFileIdentity
+      )
+    : [];
+  const sameFileAndPage = sameFile.filter((span) =>
+    locationContainsPage(goldSource.location, span.physicalPageNumber)
+  );
+  const metadataEvidence = (entries) =>
+    entries.map(
       ({
         requirementId,
         documentUuid,
@@ -308,7 +338,12 @@ function sourceBinding(goldSource, spans) {
         physicalPageNumber,
         exactTextSha256,
       })
-    ),
+    );
+  return {
+    status: matches.length ? "BOUND" : "NOT_BOUND",
+    dynamicEvidence: metadataEvidence(matches),
+    sameFileEvidence: metadataEvidence(sameFile),
+    sameFileAndPageEvidence: metadataEvidence(sameFileAndPage),
   };
 }
 
@@ -402,6 +437,23 @@ function buildResultRegression(rows, crosswalk, resultRows) {
         (sum, { sourceBindings }) =>
           sum +
           sourceBindings.filter(({ status }) => status === "BOUND").length,
+        0
+      ),
+      sameFileGoldSources: records.reduce(
+        (sum, { sourceBindings }) =>
+          sum +
+          sourceBindings.filter(
+            ({ sameFileEvidence }) => sameFileEvidence.length > 0
+          ).length,
+        0
+      ),
+      sameFileAndPageGoldSources: records.reduce(
+        (sum, { sourceBindings }) =>
+          sum +
+          sourceBindings.filter(
+            ({ sameFileAndPageEvidence }) =>
+              sameFileAndPageEvidence.length > 0
+          ).length,
         0
       ),
     },
