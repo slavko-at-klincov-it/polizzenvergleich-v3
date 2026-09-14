@@ -30,6 +30,7 @@ function argumentsFrom(argv) {
     "gold",
     "searchPlan",
     "searchExecution",
+    "completeCorpus",
     "output",
     "expectedGoldSha256",
     "expectedGoldFileSha256",
@@ -67,6 +68,9 @@ function argumentsFrom(argv) {
     gold: path.resolve(values.gold),
     searchPlan: path.resolve(values.searchPlan),
     searchExecution: path.resolve(values.searchExecution),
+    completeCorpus: values.completeCorpus
+      ? path.resolve(values.completeCorpus)
+      : null,
     output: path.resolve(values.output),
     maximumCandidatesPerComponent: numberArgument(
       "maximumCandidatesPerComponent",
@@ -138,6 +142,12 @@ try {
       args.searchExecution,
       "LF_A_DRIVEN_REQUIREMENT_SEARCH_EXECUTION"
     ),
+    completeCorpus: args.completeCorpus
+      ? readJson(
+          args.completeCorpus,
+          "LF_A_DRIVEN_REQUIREMENT_COMPLETE_B_CORPUS"
+        )
+      : null,
     maximumCandidatesPerComponent: args.maximumCandidatesPerComponent,
     maximumRequirementsPerBatch: args.maximumRequirementsPerBatch,
     maximumBatchCharacters: args.maximumBatchCharacters,

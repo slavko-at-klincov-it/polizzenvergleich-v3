@@ -79,6 +79,9 @@ const {
   buildADrivenRequirementDecisionPlan,
   validateADrivenRequirementDecisionResponses,
 } = require("../../utils/policyAnalysis/aDrivenRequirementCounterpartDecision");
+const {
+  buildADrivenCompleteBCorpus,
+} = require("../../utils/policyAnalysis/aDrivenCompleteBCorpus");
 const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
@@ -14647,6 +14650,21 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
       .createHash("sha256")
       .update(exactText)
       .digest("hex");
+    const completeCorpus = buildADrivenCompleteBCorpus({
+      documents: [
+        {
+          document: {
+            uuid: "b-doc",
+            position: 0,
+            sha256: "b".repeat(64),
+            role: "TERMS",
+            documentStatus: "FRAMEWORK_TERMS",
+            originalName: "known-b.pdf",
+          },
+          artifact: artifact([`${exactText}\n`], "b"),
+        },
+      ],
+    });
     const retrieval = retrievalArtifact(
       searchPlan,
       searchPlan.packages.map((item) => ({
@@ -14707,6 +14725,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
       expectedGoldSha256: gold.goldSha256,
       searchPlan,
       searchExecution,
+      completeCorpus,
     });
 
     expect(regression).toMatchObject({
@@ -14717,11 +14736,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
         rows: 1,
         positiveRows: 1,
         goldSources: 1,
-        corpusBoundGoldSources: 1,
+        retrievalCorpusBoundGoldSources: 1,
+        completeBCorpusBoundGoldSources: 1,
         fullRetrievalBoundGoldSources: 1,
         selectedBoundGoldSources: 1,
         positiveRowsWithAllSourcesRetrieved: 1,
-        positiveRowsWithAllSourcesInCorpus: 1,
+        positiveRowsWithAllSourcesInCompleteCorpus: 1,
         positiveRowsWithAllSourcesSelected: 1,
         scopes: {
           AUTOMATIC_207: {

@@ -3,13 +3,14 @@ const { buildADrivenGoldRegression } = require("./aDrivenGoldRegression");
 const {
   buildADrivenRequirementDecisionPlan,
 } = require("./aDrivenRequirementCounterpartDecision");
+const { validateADrivenCompleteBCorpus } = require("./aDrivenCompleteBCorpus");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 
 // QA-only measurement of whether the dynamic retrieval and its bounded model
 // navigation set contain the frozen sources for the known LF 1+9 fixture.
 // Gold never creates a production row or changes candidate ranking here.
 const A_DRIVEN_REQUIREMENT_PLAN_GOLD_REGRESSION_CONTRACT_ID =
-  "LF_A_DRIVEN_REQUIREMENT_PLAN_GOLD_REGRESSION_V2";
+  "LF_A_DRIVEN_REQUIREMENT_PLAN_GOLD_REGRESSION_V3";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -221,7 +222,8 @@ function projectedMatches(candidates) {
 function bindingRecord(
   source,
   binding,
-  corpusCandidates,
+  retrievalCorpusCandidates,
+  completeCorpusCandidates,
   fullCandidates,
   selectedCandidates
 ) {
@@ -230,11 +232,21 @@ function bindingRecord(
       referenceId: source.referenceId,
       exactTextSha256: source.exactTextSha256,
       status: "GOLD_DOCUMENT_UNMAPPED",
-      corpusRetrievalMatches: [],
+      retrievalCorpusMatches: [],
+      completeCorpusMatches: [],
       fullRetrievalMatches: [],
       selectedCandidateMatches: [],
     };
-  const corpusMatches = matchingCandidates(source, binding, corpusCandidates);
+  const retrievalCorpusMatches = matchingCandidates(
+    source,
+    binding,
+    retrievalCorpusCandidates
+  );
+  const completeCorpusMatches = matchingCandidates(
+    source,
+    binding,
+    completeCorpusCandidates
+  );
   const fullMatches = matchingCandidates(source, binding, fullCandidates);
   const selectedMatches = matchingCandidates(
     source,
@@ -250,10 +262,13 @@ function bindingRecord(
       ? "SELECTED_BOUND"
       : fullMatches.length
         ? "FULL_RETRIEVAL_ONLY"
-        : corpusMatches.length
-          ? "CORPUS_RETRIEVAL_ONLY"
-          : "NOT_RETRIEVED",
-    corpusRetrievalMatches: projectedMatches(corpusMatches),
+        : retrievalCorpusMatches.length
+          ? "RETRIEVAL_CORPUS_ONLY"
+          : completeCorpusMatches.length
+            ? "COMPLETE_B_CORPUS_ONLY"
+            : "NOT_IN_COMPLETE_B_CORPUS",
+    retrievalCorpusMatches: projectedMatches(retrievalCorpusMatches),
+    completeCorpusMatches: projectedMatches(completeCorpusMatches),
     fullRetrievalMatches: projectedMatches(fullMatches),
     selectedCandidateMatches: projectedMatches(selectedMatches),
   };
@@ -286,6 +301,10 @@ function summarize(records) {
           positiveRowsFullyRetrieved: found.filter(
             ({ allGoldSourcesInFullRetrieval }) => allGoldSourcesInFullRetrieval
           ).length,
+          positiveRowsFullyInCompleteCorpus: found.filter(
+            ({ allGoldSourcesInCompleteCorpus }) =>
+              allGoldSourcesInCompleteCorpus
+          ).length,
           positiveRowsFullySelected: found.filter(
             ({ allGoldSourcesSelected }) => allGoldSourcesSelected
           ).length,
@@ -298,9 +317,17 @@ function summarize(records) {
     positiveRows: positive.length,
     negativeRows: records.length - positive.length,
     goldSources: sources.length,
-    corpusBoundGoldSources: sources.filter(
+    retrievalCorpusBoundGoldSources: sources.filter(({ status }) =>
+      [
+        "SELECTED_BOUND",
+        "FULL_RETRIEVAL_ONLY",
+        "RETRIEVAL_CORPUS_ONLY",
+      ].includes(status)
+    ).length,
+    completeBCorpusBoundGoldSources: sources.filter(
       ({ status }) =>
-        status !== "NOT_RETRIEVED" && status !== "GOLD_DOCUMENT_UNMAPPED"
+        status !== "NOT_IN_COMPLETE_B_CORPUS" &&
+        status !== "GOLD_DOCUMENT_UNMAPPED"
     ).length,
     fullRetrievalBoundGoldSources: sources.filter(
       ({ status }) =>
@@ -312,11 +339,17 @@ function summarize(records) {
     positiveRowsWithAnySourceRetrieved: positive.filter(
       ({ anyGoldSourceInFullRetrieval }) => anyGoldSourceInFullRetrieval
     ).length,
-    positiveRowsWithAnySourceInCorpus: positive.filter(
-      ({ anyGoldSourceInCorpus }) => anyGoldSourceInCorpus
+    positiveRowsWithAnySourceInRetrievalCorpus: positive.filter(
+      ({ anyGoldSourceInRetrievalCorpus }) => anyGoldSourceInRetrievalCorpus
     ).length,
-    positiveRowsWithAllSourcesInCorpus: positive.filter(
-      ({ allGoldSourcesInCorpus }) => allGoldSourcesInCorpus
+    positiveRowsWithAllSourcesInRetrievalCorpus: positive.filter(
+      ({ allGoldSourcesInRetrievalCorpus }) => allGoldSourcesInRetrievalCorpus
+    ).length,
+    positiveRowsWithAnySourceInCompleteCorpus: positive.filter(
+      ({ anyGoldSourceInCompleteCorpus }) => anyGoldSourceInCompleteCorpus
+    ).length,
+    positiveRowsWithAllSourcesInCompleteCorpus: positive.filter(
+      ({ allGoldSourcesInCompleteCorpus }) => allGoldSourcesInCompleteCorpus
     ).length,
     positiveRowsWithAllSourcesRetrieved: positive.filter(
       ({ allGoldSourcesInFullRetrieval }) => allGoldSourcesInFullRetrieval
@@ -337,6 +370,7 @@ function buildADrivenRequirementPlanGoldRegression({
   expectedGoldSha256,
   searchPlan,
   searchExecution,
+  completeCorpus = null,
   maximumCandidatesPerComponent = 4,
   maximumRequirementsPerBatch = 4,
   maximumBatchCharacters = 120_000,
@@ -356,7 +390,20 @@ function buildADrivenRequirementPlanGoldRegression({
   });
   const documentsByGoldName = goldDocumentBindings(gold, searchPlan);
   const fullByRequirement = fullCandidatesByRequirement(searchExecution);
-  const corpusCandidates = uniqueCorpusCandidates(fullByRequirement);
+  const retrievalCorpusCandidates = uniqueCorpusCandidates(fullByRequirement);
+  if (completeCorpus)
+    validateADrivenCompleteBCorpus(completeCorpus, { searchPlan });
+  const completeCorpusCandidates = completeCorpus
+    ? completeCorpus.clauses.map((clause) => ({
+        candidateId: clause.clauseBoundaryId,
+        documentUuid: clause.documentUuid,
+        documentSha256: clause.documentSha256,
+        physicalPageNumber: clause.physicalPageNumber,
+        exactText: clause.exactText,
+        exactTextSha256: clause.exactTextSha256,
+        normalizedExactText: normalizedText(clause.exactText),
+      }))
+    : retrievalCorpusCandidates;
   const selectedByRequirement = new Map(
     decisionPlan.rows.map((row) => [row.requirementId, row.candidates])
   );
@@ -376,7 +423,8 @@ function buildADrivenRequirementPlanGoldRegression({
       bindingRecord(
         source,
         documentsByGoldName.get(source.file),
-        corpusCandidates,
+        retrievalCorpusCandidates,
+        completeCorpusCandidates,
         fullCandidates,
         selectedCandidates
       )
@@ -389,15 +437,33 @@ function buildADrivenRequirementPlanGoldRegression({
       goldCustomerFound: row.goldDecision.customerFound === true,
       goldOutcome: row.goldDecision.outcome,
       sourceBindings,
-      anyGoldSourceInCorpus: sourceStatuses.some(
-        (status) =>
-          status !== "NOT_RETRIEVED" && status !== "GOLD_DOCUMENT_UNMAPPED"
+      anyGoldSourceInRetrievalCorpus: sourceStatuses.some((status) =>
+        [
+          "SELECTED_BOUND",
+          "FULL_RETRIEVAL_ONLY",
+          "RETRIEVAL_CORPUS_ONLY",
+        ].includes(status)
       ),
-      allGoldSourcesInCorpus:
+      allGoldSourcesInRetrievalCorpus:
+        sourceStatuses.length > 0 &&
+        sourceStatuses.every((status) =>
+          [
+            "SELECTED_BOUND",
+            "FULL_RETRIEVAL_ONLY",
+            "RETRIEVAL_CORPUS_ONLY",
+          ].includes(status)
+        ),
+      anyGoldSourceInCompleteCorpus: sourceStatuses.some(
+        (status) =>
+          status !== "NOT_IN_COMPLETE_B_CORPUS" &&
+          status !== "GOLD_DOCUMENT_UNMAPPED"
+      ),
+      allGoldSourcesInCompleteCorpus:
         sourceStatuses.length > 0 &&
         sourceStatuses.every(
           (status) =>
-            status !== "NOT_RETRIEVED" && status !== "GOLD_DOCUMENT_UNMAPPED"
+            status !== "NOT_IN_COMPLETE_B_CORPUS" &&
+            status !== "GOLD_DOCUMENT_UNMAPPED"
         ),
       anyGoldSourceInFullRetrieval: sourceStatuses.some(
         (status) =>
@@ -416,7 +482,7 @@ function buildADrivenRequirementPlanGoldRegression({
     };
   });
   const payload = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     contractId: A_DRIVEN_REQUIREMENT_PLAN_GOLD_REGRESSION_CONTRACT_ID,
     qaOnly: true,
     productionRule: false,
@@ -426,6 +492,7 @@ function buildADrivenRequirementPlanGoldRegression({
     dynamicManifestSha256: manifest.manifestSha256,
     searchPlanSha256: searchPlan.planSha256,
     searchExecutionSha256: searchExecution.executionSha256,
+    completeBCorpusSha256: completeCorpus?.corpusSha256 || null,
     decisionPlanSha256: decisionPlan.planSha256,
     selection: decisionPlan.selection,
     records,
