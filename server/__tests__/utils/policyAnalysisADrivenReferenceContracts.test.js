@@ -88,6 +88,11 @@ const {
 const {
   buildADrivenCompleteBCorpus,
 } = require("../../utils/policyAnalysis/aDrivenCompleteBCorpus");
+const {
+  buildADrivenRequirementAbsencePlan,
+  validateADrivenRequirementAbsencePlan,
+  validateADrivenRequirementAbsenceResponses,
+} = require("../../utils/policyAnalysis/aDrivenRequirementAbsenceCertification");
 const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
@@ -14853,6 +14858,133 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       status: "UNRESOLVED",
       reasonCode: "INVALID_REQUIREMENT_RESPONSE",
     });
+  });
+
+  test("certifies NOT_FOUND only after every complete B clause partition is terminal", () => {
+    const { manifest, searchPlan, searchExecution } =
+      requirementDecisionFixture();
+    const completeCorpus = buildADrivenCompleteBCorpus({
+      documents: [
+        document(
+          "b-doc",
+          0,
+          artifact(
+            [
+              "Seite 1\nErste fachfremde Klausel.",
+              "Seite 2\nZweite fachfremde Klausel.",
+              "Seite 3\nDritte fachfremde Klausel.",
+            ],
+            "b"
+          )
+        ),
+      ],
+    });
+    const decisionPlan = buildADrivenRequirementDecisionPlan({
+      manifest,
+      searchPlan,
+      searchExecution,
+      completeCorpus,
+      maximumCompleteCorpusCandidatesPerDocument: 1,
+    });
+    const preliminaryResponses = decisionPlan.rows.map((row) => {
+      const candidateId = row.candidates[0].candidateId;
+      return {
+        requirementId: row.requirementId,
+        contextFinding: {
+          outcome: "RELATED_ONLY",
+          candidateIds: [candidateId],
+        },
+        componentFindings: row.components.map((component) => ({
+          componentId: component.componentId,
+          dimension: component.dimension,
+          outcome: "RELATED_ONLY",
+          candidateIds: [candidateId],
+        })),
+        unmodeledDifferences: [],
+        rationale: "Kein Gegenstück in der Navigationsauswahl.",
+      };
+    });
+    const preliminaryDecisions =
+      validateADrivenRequirementDecisionResponses({
+        plan: decisionPlan,
+        responses: preliminaryResponses,
+      });
+    const absencePlan = buildADrivenRequirementAbsencePlan({
+      decisionPlan,
+      preliminaryDecisions,
+      completeCorpus,
+      maximumPartitionCharacters: 10_000,
+    });
+
+    expect(validateADrivenRequirementAbsencePlan(absencePlan)).toBe(true);
+    expect(absencePlan.summary).toMatchObject({
+      fallbackRequirements: 1,
+      documents: 1,
+      corpusClauses: completeCorpus.clauses.length,
+      plannedClauseReviews: completeCorpus.clauses.length,
+      customerNotFoundEligible: false,
+    });
+    expect(
+      new Set(
+        absencePlan.partitions.flatMap(({ candidateIds }) => candidateIds)
+      ).size
+    ).toBe(completeCorpus.clauses.length);
+
+    const negativeResponses = absencePlan.partitions.map((partition) => ({
+      partitionId: partition.partitionId,
+      decision: "NO_COUNTERPART_IN_PARTITION",
+      candidateIds: [],
+      rationale: "Kein Gegenstück in dieser vollständigen Partition.",
+    }));
+    const certified = validateADrivenRequirementAbsenceResponses({
+      plan: absencePlan,
+      responses: negativeResponses,
+    });
+    expect(certified.summary).toMatchObject({
+      requirements: 1,
+      terminalNotFound: 1,
+      counterpartReviewRequired: 0,
+      unresolved: 0,
+      terminalPartitions: absencePlan.partitions.length,
+      customerNotFoundEligible: true,
+    });
+    expect(certified.results[0]).toMatchObject({
+      status: "TERMINAL",
+      customerStatus: "NOT_FOUND",
+      absenceCertified: true,
+      reviewedDocuments: 1,
+      reviewedClauses: completeCorpus.clauses.length,
+    });
+
+    const incomplete = validateADrivenRequirementAbsenceResponses({
+      plan: absencePlan,
+      responses: negativeResponses.slice(1),
+    });
+    expect(incomplete.results[0]).toMatchObject({
+      status: "UNRESOLVED",
+      customerStatus: "FALLBACK_REQUIRED",
+      absenceCertified: false,
+    });
+    expect(incomplete.summary.customerNotFoundEligible).toBe(false);
+
+    const positiveResponses = JSON.parse(JSON.stringify(negativeResponses));
+    positiveResponses[0] = {
+      partitionId: absencePlan.partitions[0].partitionId,
+      decision: "COUNTERPART_PRESENT",
+      candidateIds: [absencePlan.partitions[0].candidateIds[0]],
+      rationale: "Ein möglicher fachlicher Gegenstückkandidat ist vorhanden.",
+    };
+    const candidateFound = validateADrivenRequirementAbsenceResponses({
+      plan: absencePlan,
+      responses: positiveResponses,
+    });
+    expect(candidateFound.results[0]).toMatchObject({
+      status: "COUNTERPART_REVIEW_REQUIRED",
+      customerStatus: "FALLBACK_REQUIRED",
+      absenceCertified: false,
+      reasonCode: "FULL_CORPUS_COUNTERPART_CANDIDATE_FOUND",
+    });
+    expect(candidateFound.results[0].bEvidence).toHaveLength(1);
   });
 });
 

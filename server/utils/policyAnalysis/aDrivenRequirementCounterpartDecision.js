@@ -755,10 +755,7 @@ function derivedDecision(row, response) {
   };
 }
 
-function validateADrivenRequirementDecisionResponses({
-  plan,
-  responses = [],
-} = {}) {
+function validateADrivenRequirementDecisionPlan(plan) {
   if (
     plan?.contractId !== A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID ||
     !Array.isArray(plan.rows) ||
@@ -775,6 +772,14 @@ function validateADrivenRequirementDecisionResponses({
     )
   )
     throw decisionError("LF_A_DRIVEN_REQUIREMENT_PLAN_DIGEST_INVALID");
+  return true;
+}
+
+function validateADrivenRequirementDecisionResponses({
+  plan,
+  responses = [],
+} = {}) {
+  validateADrivenRequirementDecisionPlan(plan);
   const responsesById = new Map();
   for (const response of responses) {
     const list = responsesById.get(response?.requirementId) || [];
@@ -874,6 +879,33 @@ function validateADrivenRequirementDecisionResponses({
   };
 }
 
+function validateADrivenRequirementDecisionArtifact(decisions, plan) {
+  validateADrivenRequirementDecisionPlan(plan);
+  if (
+    decisions?.contractId !== A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID ||
+    decisions.decisionPlanSha256 !== plan?.planSha256 ||
+    !Array.isArray(decisions.results) ||
+    decisions.results.length !== plan.rows.length ||
+    !Array.isArray(decisions.diagnostics) ||
+    decisions.summary?.plannedRequirements !== plan.rows.length ||
+    decisions.summary?.unresolvedRequirements !== 0 ||
+    decisions.diagnostics.length !== 0 ||
+    !/^[a-f0-9]{64}$/u.test(String(decisions.decisionSha256 || ""))
+  )
+    throw decisionError("LF_A_DRIVEN_REQUIREMENT_DECISION_ARTIFACT_INVALID");
+  const { decisionSha256, ...payload } = decisions;
+  if (
+    decisionSha256 !==
+    sha256(
+      `${A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID}\u0000${stableStringify(
+        payload
+      )}`
+    )
+  )
+    throw decisionError("LF_A_DRIVEN_REQUIREMENT_DECISION_DIGEST_INVALID");
+  return decisions;
+}
+
 module.exports = {
   A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID,
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
@@ -881,5 +913,7 @@ module.exports = {
   DIFFERENCE_DIMENSIONS,
   IDENTITY_CORE_TYPES,
   buildADrivenRequirementDecisionPlan,
+  validateADrivenRequirementDecisionArtifact,
+  validateADrivenRequirementDecisionPlan,
   validateADrivenRequirementDecisionResponses,
 };
