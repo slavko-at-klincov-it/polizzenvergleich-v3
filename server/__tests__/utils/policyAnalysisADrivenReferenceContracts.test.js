@@ -15238,11 +15238,13 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ).toEqual([absencePlan.partitions[0].candidateIds[0]]);
     expect(
       requirementAbsencePositiveCandidateSignals({
-        rawResponse: `${JSON.stringify(negativeResponses[0])}\n${JSON.stringify({
-          ...negativeResponses[0],
-          decision: "COUNTERPART_PRESENT",
-          candidateIds: ["UNKNOWN-CANDIDATE"],
-        })}`,
+        rawResponse: `${JSON.stringify(negativeResponses[0])}\n${JSON.stringify(
+          {
+            ...negativeResponses[0],
+            decision: "COUNTERPART_PRESENT",
+            candidateIds: ["UNKNOWN-CANDIDATE"],
+          }
+        )}`,
         plan: absencePlan,
         partition: absencePlan.partitions[0],
       })
@@ -15351,11 +15353,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     });
     expect(
       confirmedNegativeRun.attempts.map(({ errorClass }) => errorClass)
-    ).toEqual([
-      "MODEL_RESPONSE_INVALID",
-      "POSITIVE_SIGNAL_CONFLICT",
-      null,
-    ]);
+    ).toEqual(["MODEL_RESPONSE_INVALID", "POSITIVE_SIGNAL_CONFLICT", null]);
     expect(
       parseRequirementAbsenceDecision(JSON.stringify(negativeResponses[0]))
     ).toEqual(negativeResponses[0]);
