@@ -14751,9 +14751,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(instruction).toContain("Erlaubte candidateIds je Requirement");
     for (const { candidateId } of batch.rows[0].candidates)
       expect(instruction).toContain(candidateId);
-    expect(instruction).toContain(
-      "entferne jede andere oder erfundene ID"
-    );
+    expect(instruction).toContain("entferne jede andere oder erfundene ID");
     expect(requirementDecisionPrompt(batch)).toHaveLength(2);
     expect(
       requirementDecisionPrompt(batch, [

@@ -264,7 +264,9 @@ function repairInstruction(batch, diagnostics = []) {
               .map(({ candidateId }) => candidateId)
               .join(",")}]`
         )
-        .join("; ")}. Verwende in contextFinding, componentFindings und unmodeledDifferences ausschließlich eine Teilmenge dieser IDs und kopiere jede verwendete ID exakt; entferne jede andere oder erfundene ID.`
+        .join(
+          "; "
+        )}. Verwende in contextFinding, componentFindings und unmodeledDifferences ausschließlich eine Teilmenge dieser IDs und kopiere jede verwendete ID exakt; entferne jede andere oder erfundene ID.`
     : "";
   return `Die vorige Antwort war serverseitig ungültig (${[
     ...new Set(diagnostics.map(({ code }) => code)),
