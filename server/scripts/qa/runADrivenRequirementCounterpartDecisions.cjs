@@ -232,8 +232,32 @@ function normalizeRepeatedCandidateIds(responses) {
   return { responses: normalizedResponses, duplicateCandidateIdsRemoved };
 }
 
-function prompt(batch) {
-  return [
+function repairInstruction(batch, diagnostics = []) {
+  if (!Array.isArray(diagnostics) || diagnostics.length === 0) return null;
+  const componentsById = new Map(
+    batch.rows.flatMap((row) =>
+      row.components.map((component) => [component.componentId, component])
+    )
+  );
+  const invalidComponents = diagnostics
+    .flatMap(({ issues = [] }) => issues)
+    .filter(({ code, componentId }) =>
+      Boolean(code === "COMPONENT_FINDING_INVALID" && componentId)
+    )
+    .map(({ componentId }) => componentsById.get(componentId))
+    .filter(Boolean);
+  const componentHint = invalidComponents.length
+    ? ` Beanstandete Komponenten: ${invalidComponents
+        .map(({ componentId, dimension }) => `${componentId}:${dimension}`)
+        .join(", ")}.`
+    : "";
+  return `Die vorige Antwort war serverseitig ungültig (${[
+    ...new Set(diagnostics.map(({ code }) => code)),
+  ].join(", ")}). Korrigiere nur die angeforderten Requirements und halte alle IDs unverändert.${componentHint} COUNTERPART_WITH_DIFFERENCE ist ausschließlich für SCOPE, CONDITION, VALUE_AND_UNIT, LIMIT_BASIS, DEDUCTIBLE oder TEMPORAL_VALIDITY erlaubt. Für OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, FACT_ROLE, DOCUMENT_ROLE oder PRECEDENCE_OR_REPLACEMENT verwende MATCH bei demselben fachlichen Kern, OPPOSITE bei einem ausdrücklichen Gegenteil, RELATED_ONLY bei einem bloß verwandten anderen Kern oder NOT_ESTABLISHED ohne Beleg. Gib erneut ausschließlich das vollständige JSON-Array aus.`;
+}
+
+function prompt(batch, diagnostics = []) {
+  const messages = [
     {
       role: "system",
       content:
@@ -250,6 +274,9 @@ function prompt(batch) {
       }),
     },
   ];
+  const correction = repairInstruction(batch, diagnostics);
+  if (correction) messages.push({ role: "user", content: correction });
+  return messages;
 }
 
 function subsetPlan(plan, batch) {
@@ -373,11 +400,12 @@ async function runBatch({
     0
   );
   if (accepted.size === 0) workingBatch = batch;
+  let repairDiagnostics = [];
   let lastRawText = "";
   let lastError = null;
   for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
     if (accepted.size === batch.expectedRequirementIds.length) break;
-    const messages = prompt(workingBatch);
+    const messages = prompt(workingBatch, repairDiagnostics);
     const started = performance.now();
     let observedRawText = "";
     try {
@@ -439,12 +467,13 @@ async function runBatch({
       lastRawText = observedRawText;
       lastError = null;
       if (!pending.length) break;
+      repairDiagnostics = currentValidation.diagnostics;
       workingBatch = repairBatch(batch, pending, attempt + 1);
     } catch (error) {
       const attemptRecord = {
         attempt,
         requestedRequirementIds: workingBatch.expectedRequirementIds,
-        messagesSha256: sha256(JSON.stringify(prompt(workingBatch))),
+        messagesSha256: sha256(JSON.stringify(messages)),
         durationMs: Math.round(performance.now() - started),
         errorClass: errorClass(error),
         timedOut: error?.telemetry?.timedOut === true,
@@ -467,6 +496,9 @@ async function runBatch({
       lastRawText = observedRawText;
       lastError = error.message;
       if (error.retrySafe === false) break;
+      repairDiagnostics = [
+        { code: "MODEL_RESPONSE_INVALID", issues: [] },
+      ];
     }
   }
   const responses = batch.expectedRequirementIds
@@ -849,6 +881,7 @@ module.exports = {
   parseJsonArray,
   processBatches,
   prompt,
+  repairInstruction,
   runBatch,
   subsetPlan,
   validateBatchResponses,

@@ -75,6 +75,7 @@ const {
 const {
   normalizeRepeatedCandidateIds,
   prompt: requirementDecisionPrompt,
+  repairInstruction: requirementDecisionRepairInstruction,
   runBatch: runRequirementDecisionBatch,
 } = require("../../scripts/qa/runADrivenRequirementCounterpartDecisions.cjs");
 const {
@@ -14720,6 +14721,37 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       decisionPlan.batches[0].expectedRequirementIds
     );
     expect(JSON.stringify(request).toLowerCase()).not.toContain("gold");
+  });
+
+  test("gives invalid identity-core difference retries actionable schema feedback", () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const batch = decisionPlan.batches[0];
+    const component = batch.rows[0].components.find(({ identityCore }) =>
+      Boolean(identityCore)
+    );
+    const instruction = requirementDecisionRepairInstruction(batch, [
+      {
+        code: "INVALID_REQUIREMENT_RESPONSE",
+        issues: [
+          {
+            code: "COMPONENT_FINDING_INVALID",
+            componentId: component.componentId,
+          },
+        ],
+      },
+    ]);
+
+    expect(instruction).toContain(
+      `${component.componentId}:${component.dimension}`
+    );
+    expect(instruction).toContain(
+      "COUNTERPART_WITH_DIFFERENCE ist ausschließlich"
+    );
+    expect(instruction).toContain("RELATED_ONLY bei einem bloß verwandten");
+    expect(requirementDecisionPrompt(batch)).toHaveLength(2);
+    expect(requirementDecisionPrompt(batch, [
+      { code: "INVALID_REQUIREMENT_RESPONSE", issues: [] },
+    ])).toHaveLength(3);
   });
 
   test("normalizes only repeated candidate IDs before strict validation", () => {
