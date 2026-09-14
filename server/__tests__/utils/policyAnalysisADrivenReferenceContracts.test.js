@@ -82,8 +82,10 @@ const {
   buildADrivenCounterpartDecisionPlan,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartDecisionPlan");
 const {
+  A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID,
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
   buildADrivenRequirementDecisionPlan,
+  validateADrivenRequirementDecisionArtifact,
   validateADrivenRequirementDecisionResponses,
 } = require("../../utils/policyAnalysis/aDrivenRequirementCounterpartDecision");
 const {
@@ -95,11 +97,13 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenRequirementSegmentedPlan");
 const {
   buildADrivenRequirementAbsencePlan,
+  buildADrivenRequirementFinalDecisions,
   buildADrivenRequirementRescueReviewPlan,
   validateADrivenRequirementAbsenceDecisionArtifact,
   validateADrivenRequirementAbsencePlan,
   validateADrivenRequirementAbsencePartitionResponse,
   validateADrivenRequirementAbsenceResponses,
+  validateADrivenRequirementFinalDecisionArtifact,
 } = require("../../utils/policyAnalysis/aDrivenRequirementAbsenceCertification");
 const {
   parseSingleDecision: parseRequirementAbsenceDecision,
@@ -15415,6 +15419,111 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       reviewedDocuments: 1,
       reviewedClauses: completeCorpus.clauses.length,
     });
+    const finalCertified = buildADrivenRequirementFinalDecisions({
+      decisionPlan,
+      preliminaryDecisions,
+      absencePlan,
+      absenceDecisions: certified,
+    });
+    expect(finalCertified.summary).toMatchObject({
+      plannedRequirements: 1,
+      terminalRequirements: 1,
+      unresolvedRequirements: 0,
+      foundRequirements: 0,
+      notFoundRequirements: 1,
+      absenceCertifiedRequirements: 1,
+      completeCorpusAbsences: 1,
+      rescueCounterparts: 0,
+      rescueAbsences: 0,
+      binaryCustomerStatus: true,
+      sideBOnlyRows: 0,
+    });
+    expect(finalCertified.results[0]).toMatchObject({
+      customerFound: false,
+      customerStatus: "NOT_FOUND",
+      absenceCertified: true,
+      resolutionPath: "COMPLETE_CORPUS_ABSENCE",
+      counterpartEvidence: [],
+    });
+    expect(
+      validateADrivenRequirementFinalDecisionArtifact(finalCertified, {
+        decisionPlan,
+        preliminaryDecisions,
+        absencePlan,
+        absenceDecisions: certified,
+      })
+    ).toBe(finalCertified);
+
+    const semanticallyTamperedPreliminary = JSON.parse(
+      JSON.stringify(preliminaryDecisions)
+    );
+    semanticallyTamperedPreliminary.results[0].customerFound = true;
+    semanticallyTamperedPreliminary.results[0].customerStatus = "FOUND";
+    semanticallyTamperedPreliminary.results[0].counterpartOutcome =
+      "FULL_COUNTERPART";
+    delete semanticallyTamperedPreliminary.decisionSha256;
+    semanticallyTamperedPreliminary.decisionSha256 = digest(
+      A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID,
+      semanticallyTamperedPreliminary
+    );
+    expect(() =>
+      validateADrivenRequirementDecisionArtifact(
+        semanticallyTamperedPreliminary,
+        decisionPlan
+      )
+    ).toThrow("LF_A_DRIVEN_REQUIREMENT_DECISION_ARTIFACT_MISMATCH");
+
+    const preliminaryCandidateId = decisionPlan.rows[0].candidates[0].candidateId;
+    const preliminaryFound = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: [
+        {
+          requirementId: decisionPlan.rows[0].requirementId,
+          contextFinding: {
+            outcome: "MATCH",
+            candidateIds: [preliminaryCandidateId],
+          },
+          componentFindings: decisionPlan.rows[0].components.map(
+            ({ componentId, dimension }) => ({
+              componentId,
+              dimension,
+              outcome: "MATCH",
+              candidateIds: [preliminaryCandidateId],
+            })
+          ),
+          unmodeledDifferences: [],
+          rationale: "Das Gegenstück ist bereits im ersten Suchlauf belegt.",
+        },
+      ],
+    });
+    const emptyAbsencePlan = buildADrivenRequirementAbsencePlan({
+      decisionPlan,
+      preliminaryDecisions: preliminaryFound,
+      completeCorpus,
+      maximumPartitionCharacters: 10_000,
+    });
+    const emptyAbsenceDecisions =
+      validateADrivenRequirementAbsenceResponses({
+        plan: emptyAbsencePlan,
+        responses: [],
+      });
+    const finalPreliminaryFound = buildADrivenRequirementFinalDecisions({
+      decisionPlan,
+      preliminaryDecisions: preliminaryFound,
+      absencePlan: emptyAbsencePlan,
+      absenceDecisions: emptyAbsenceDecisions,
+    });
+    expect(finalPreliminaryFound.summary).toMatchObject({
+      foundRequirements: 1,
+      notFoundRequirements: 0,
+      preliminaryCounterparts: 1,
+      completeCorpusAbsences: 0,
+    });
+    expect(finalPreliminaryFound.results[0]).toMatchObject({
+      customerStatus: "FOUND",
+      resolutionPath: "PRELIMINARY_COUNTERPART",
+      absenceReview: null,
+    });
 
     const incomplete = validateADrivenRequirementAbsenceResponses({
       plan: absencePlan,
@@ -15542,6 +15651,103 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       recoverModelAfterAbort: jest.fn(),
     });
     expect(rescueRun.validation.passed).toBe(true);
+    const rescueDecisions = validateADrivenRequirementDecisionResponses({
+      plan: rescuePlan,
+      responses: rescueRun.responses,
+    });
+    const finalFound = buildADrivenRequirementFinalDecisions({
+      decisionPlan,
+      preliminaryDecisions,
+      absencePlan,
+      absenceDecisions: candidateFound,
+      rescuePlan,
+      rescueDecisions,
+    });
+    expect(finalFound.summary).toMatchObject({
+      foundRequirements: 1,
+      notFoundRequirements: 0,
+      rescueCounterparts: 1,
+      rescueAbsences: 0,
+    });
+    expect(finalFound.results[0]).toMatchObject({
+      customerFound: true,
+      customerStatus: "FOUND",
+      counterpartOutcome: "FULL_COUNTERPART",
+      absenceCertified: false,
+      resolutionPath: "FULL_CORPUS_RESCUE_COUNTERPART",
+    });
+    expect(finalFound.results[0].counterpartEvidence).toHaveLength(1);
+
+    const rescueNegativeResponse = {
+      requirementId: rescueRow.requirementId,
+      contextFinding: {
+        outcome: "RELATED_ONLY",
+        candidateIds: [rescueCandidateId],
+      },
+      componentFindings: rescueRow.components.map(
+        ({ componentId, dimension }) => ({
+          componentId,
+          dimension,
+          outcome: "RELATED_ONLY",
+          candidateIds: [rescueCandidateId],
+        })
+      ),
+      unmodeledDifferences: [],
+      rationale:
+        "Der Vollkorpuskandidat ist geprüft, aber kein fachliches Gegenstück.",
+    };
+    const rescueNegativeDecisions =
+      validateADrivenRequirementDecisionResponses({
+        plan: rescuePlan,
+        responses: [rescueNegativeResponse],
+      });
+    const finalRescueAbsence = buildADrivenRequirementFinalDecisions({
+      decisionPlan,
+      preliminaryDecisions,
+      absencePlan,
+      absenceDecisions: candidateFound,
+      rescuePlan,
+      rescueDecisions: rescueNegativeDecisions,
+    });
+    expect(finalRescueAbsence.summary).toMatchObject({
+      foundRequirements: 0,
+      notFoundRequirements: 1,
+      rescueCounterparts: 0,
+      rescueAbsences: 1,
+      absenceCertifiedRequirements: 1,
+    });
+    expect(finalRescueAbsence.results[0]).toMatchObject({
+      customerFound: false,
+      customerStatus: "NOT_FOUND",
+      absenceCertified: true,
+      resolutionPath: "FULL_CORPUS_RESCUE_ABSENCE",
+      counterpartEvidence: [],
+    });
+    expect(finalRescueAbsence.results[0].assessment.bEvidence).toHaveLength(1);
+
+    const incompleteRescuePlan = JSON.parse(JSON.stringify(rescuePlan));
+    incompleteRescuePlan.rows[0].searchCoverage.fullCorpusReviewCandidateIds =
+      [];
+    delete incompleteRescuePlan.planSha256;
+    incompleteRescuePlan.planSha256 = digest(
+      A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
+      incompleteRescuePlan
+    );
+    const incompleteRescueDecisions =
+      validateADrivenRequirementDecisionResponses({
+        plan: incompleteRescuePlan,
+        responses: [rescueNegativeResponse],
+      });
+    expect(() =>
+      buildADrivenRequirementFinalDecisions({
+        decisionPlan,
+        preliminaryDecisions,
+        absencePlan,
+        absenceDecisions: candidateFound,
+        rescuePlan: incompleteRescuePlan,
+        rescueDecisions: incompleteRescueDecisions,
+      })
+    ).toThrow("LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_SOURCE_COVERAGE_INVALID");
     expect(() =>
       buildADrivenRequirementRescueReviewPlan({
         decisionPlan,

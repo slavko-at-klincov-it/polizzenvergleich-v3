@@ -13,6 +13,8 @@ const A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_CONTRACT_ID =
   "LF_A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_V1";
 const A_DRIVEN_REQUIREMENT_RESCUE_REVIEW_STRATEGY =
   "FULL_CORPUS_POSITIVE_CANDIDATE_REVIEW";
+const A_DRIVEN_REQUIREMENT_FINAL_DECISION_CONTRACT_ID =
+  "LF_A_DRIVEN_REQUIREMENT_FINAL_DECISION_V1";
 const PARTITION_DECISIONS = new Set([
   "COUNTERPART_PRESENT",
   "NO_COUNTERPART_IN_PARTITION",
@@ -559,6 +561,378 @@ function candidateSourceKey(candidate) {
   });
 }
 
+function assertSameIds(expected, actual, code) {
+  const expectedIds = [...expected].sort();
+  const actualIds = [...actual].sort();
+  if (
+    expectedIds.length !== actualIds.length ||
+    expectedIds.some((id, index) => id !== actualIds[index])
+  )
+    throw absenceError(code);
+}
+
+function decisionAssessment(result) {
+  return {
+    contextFinding: result.contextFinding,
+    componentFindings: result.componentFindings,
+    unmodeledDifferences: result.unmodeledDifferences,
+    rationale: result.rationale,
+    selectedCandidateIds: result.selectedCandidateIds,
+    bEvidence: result.bEvidence,
+  };
+}
+
+function validateRescueReviewLineage({
+  decisionPlan,
+  preliminaryDecisions,
+  absencePlan,
+  absenceDecisions,
+  rescuePlan,
+  rescueDecisions,
+}) {
+  validateADrivenRequirementDecisionPlan(rescuePlan);
+  validateADrivenRequirementDecisionArtifact(rescueDecisions, rescuePlan);
+  if (
+    rescuePlan.selection?.strategy !==
+      A_DRIVEN_REQUIREMENT_RESCUE_REVIEW_STRATEGY ||
+    rescuePlan.dynamicManifestSha256 !== decisionPlan.dynamicManifestSha256 ||
+    rescuePlan.searchPlanSha256 !== decisionPlan.searchPlanSha256 ||
+    rescuePlan.searchExecutionSha256 !== decisionPlan.searchExecutionSha256 ||
+    rescuePlan.completeBCorpusSha256 !== decisionPlan.completeBCorpusSha256 ||
+    rescuePlan.selection.sourceDecisionPlanSha256 !== decisionPlan.planSha256 ||
+    rescuePlan.selection.preliminaryDecisionSha256 !==
+      preliminaryDecisions.decisionSha256 ||
+    rescuePlan.selection.absencePlanSha256 !== absencePlan.planSha256 ||
+    rescuePlan.selection.absenceDecisionSha256 !==
+      absenceDecisions.decisionSha256 ||
+    rescuePlan.selection.goldInputsAllowed !== false ||
+    rescuePlan.selection.characterClippingAllowed !== false
+  )
+    throw absenceError("LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_LINEAGE_INVALID");
+
+  const absenceReviewById = new Map(
+    absenceDecisions.results
+      .filter(({ status }) => status === "COUNTERPART_REVIEW_REQUIRED")
+      .map((result) => [result.requirementId, result])
+  );
+  assertSameIds(
+    absenceReviewById.keys(),
+    rescuePlan.rows.map(({ requirementId }) => requirementId),
+    "LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_COVERAGE_INVALID"
+  );
+  for (const row of rescuePlan.rows) {
+    const absenceResult = absenceReviewById.get(row.requirementId);
+    const expectedSources = new Set(
+      absenceResult.selectedCandidateIds.map((candidateId) => {
+        const candidate = absencePlan.candidates.find(
+          ({ candidateId: expected }) => expected === candidateId
+        );
+        if (!candidate)
+          throw absenceError(
+            "LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_SOURCE_INVALID",
+            candidateId
+          );
+        return candidateSourceKey(candidate);
+      })
+    );
+    const reviewCandidateIds =
+      row.searchCoverage?.fullCorpusReviewCandidateIds || [];
+    const candidatesById = new Map(
+      row.candidates.map((candidate) => [candidate.candidateId, candidate])
+    );
+    const observedSources = new Set(
+      reviewCandidateIds.map((candidateId) => {
+        const candidate = candidatesById.get(candidateId);
+        if (!candidate)
+          throw absenceError(
+            "LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_SOURCE_INVALID",
+            candidateId
+          );
+        return candidateSourceKey(candidate);
+      })
+    );
+    assertSameIds(
+      expectedSources,
+      observedSources,
+      "LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_SOURCE_COVERAGE_INVALID"
+    );
+    if (
+      row.components.some(({ navigationCandidateIds }) =>
+        reviewCandidateIds.some(
+          (candidateId) => !navigationCandidateIds.includes(candidateId)
+        )
+      )
+    )
+      throw absenceError(
+        "LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_NAVIGATION_INVALID",
+        row.requirementId
+      );
+  }
+}
+
+function buildADrivenRequirementFinalDecisions({
+  decisionPlan,
+  preliminaryDecisions,
+  absencePlan,
+  absenceDecisions,
+  rescuePlan = null,
+  rescueDecisions = null,
+} = {}) {
+  validateADrivenRequirementDecisionPlan(decisionPlan);
+  validateADrivenRequirementDecisionArtifact(
+    preliminaryDecisions,
+    decisionPlan
+  );
+  validateADrivenRequirementAbsencePlan(absencePlan);
+  validateADrivenRequirementAbsenceDecisionArtifact(
+    absenceDecisions,
+    absencePlan,
+    { requireComplete: true }
+  );
+  if (
+    absencePlan.decisionPlanSha256 !== decisionPlan.planSha256 ||
+    absencePlan.preliminaryDecisionSha256 !==
+      preliminaryDecisions.decisionSha256 ||
+    absencePlan.completeBCorpusSha256 !== decisionPlan.completeBCorpusSha256
+  )
+    throw absenceError("LF_A_DRIVEN_REQUIREMENT_FINAL_LINEAGE_INVALID");
+
+  const preliminaryById = new Map(
+    preliminaryDecisions.results.map((result) => [result.requirementId, result])
+  );
+  const fallbackIds = preliminaryDecisions.results
+    .filter(({ customerStatus }) => customerStatus === "FALLBACK_REQUIRED")
+    .map(({ requirementId }) => requirementId);
+  assertSameIds(
+    fallbackIds,
+    absencePlan.requirements.map(({ requirementId }) => requirementId),
+    "LF_A_DRIVEN_REQUIREMENT_FINAL_ABSENCE_PLAN_COVERAGE_INVALID"
+  );
+  assertSameIds(
+    fallbackIds,
+    absenceDecisions.results.map(({ requirementId }) => requirementId),
+    "LF_A_DRIVEN_REQUIREMENT_FINAL_ABSENCE_DECISION_COVERAGE_INVALID"
+  );
+
+  const absenceById = new Map(
+    absenceDecisions.results.map((result) => [result.requirementId, result])
+  );
+  const reviewIds = absenceDecisions.results
+    .filter(({ status }) => status === "COUNTERPART_REVIEW_REQUIRED")
+    .map(({ requirementId }) => requirementId);
+  if (reviewIds.length > 0) {
+    if (!rescuePlan || !rescueDecisions)
+      throw absenceError("LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_REQUIRED");
+    validateRescueReviewLineage({
+      decisionPlan,
+      preliminaryDecisions,
+      absencePlan,
+      absenceDecisions,
+      rescuePlan,
+      rescueDecisions,
+    });
+  } else if (rescuePlan || rescueDecisions) {
+    throw absenceError("LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_UNEXPECTED");
+  }
+  const rescueById = new Map(
+    (rescueDecisions?.results || []).map((result) => [
+      result.requirementId,
+      result,
+    ])
+  );
+  assertSameIds(
+    reviewIds,
+    rescueById.keys(),
+    "LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_DECISION_COVERAGE_INVALID"
+  );
+
+  const results = decisionPlan.rows.map(({ requirementId }) => {
+    const preliminary = preliminaryById.get(requirementId);
+    if (!preliminary || preliminary.status !== "TERMINAL")
+      throw absenceError(
+        "LF_A_DRIVEN_REQUIREMENT_FINAL_PRELIMINARY_INVALID",
+        requirementId
+      );
+    if (preliminary.customerStatus === "FOUND")
+      return {
+        requirementId,
+        status: "TERMINAL",
+        reasonCode: null,
+        customerFound: true,
+        customerStatus: "FOUND",
+        counterpartOutcome: preliminary.counterpartOutcome,
+        absenceCertified: false,
+        resolutionPath: "PRELIMINARY_COUNTERPART",
+        decisionProvenance: {
+          decisionPlanSha256: decisionPlan.planSha256,
+          preliminaryDecisionSha256: preliminaryDecisions.decisionSha256,
+          absencePlanSha256: null,
+          absenceDecisionSha256: null,
+          rescuePlanSha256: null,
+          rescueDecisionSha256: null,
+        },
+        assessment: decisionAssessment(preliminary),
+        counterpartEvidence: preliminary.bEvidence,
+        absenceReview: null,
+      };
+
+    const absence = absenceById.get(requirementId);
+    if (!absence)
+      throw absenceError(
+        "LF_A_DRIVEN_REQUIREMENT_FINAL_ABSENCE_MISSING",
+        requirementId
+      );
+    if (
+      absence.status === "TERMINAL" &&
+      absence.customerStatus === "NOT_FOUND" &&
+      absence.absenceCertified === true
+    )
+      return {
+        requirementId,
+        status: "TERMINAL",
+        reasonCode: null,
+        customerFound: false,
+        customerStatus: "NOT_FOUND",
+        counterpartOutcome: null,
+        absenceCertified: true,
+        resolutionPath: "COMPLETE_CORPUS_ABSENCE",
+        decisionProvenance: {
+          decisionPlanSha256: decisionPlan.planSha256,
+          preliminaryDecisionSha256: preliminaryDecisions.decisionSha256,
+          absencePlanSha256: absencePlan.planSha256,
+          absenceDecisionSha256: absenceDecisions.decisionSha256,
+          rescuePlanSha256: null,
+          rescueDecisionSha256: null,
+        },
+        assessment: decisionAssessment(preliminary),
+        counterpartEvidence: [],
+        absenceReview: {
+          reviewedDocuments: absence.reviewedDocuments,
+          reviewedClauses: absence.reviewedClauses,
+          reviewedPartitions: absence.reviewedPartitions,
+          reviewedPositiveCandidateIds: [],
+        },
+      };
+    if (absence.status !== "COUNTERPART_REVIEW_REQUIRED")
+      throw absenceError(
+        "LF_A_DRIVEN_REQUIREMENT_FINAL_ABSENCE_INVALID",
+        requirementId
+      );
+
+    const rescue = rescueById.get(requirementId);
+    if (!rescue || rescue.status !== "TERMINAL")
+      throw absenceError(
+        "LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_INVALID",
+        requirementId
+      );
+    const found = rescue.customerStatus === "FOUND";
+    if (!found && rescue.customerStatus !== "FALLBACK_REQUIRED")
+      throw absenceError(
+        "LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_INVALID",
+        requirementId
+      );
+    return {
+      requirementId,
+      status: "TERMINAL",
+      reasonCode: null,
+      customerFound: found,
+      customerStatus: found ? "FOUND" : "NOT_FOUND",
+      counterpartOutcome: found ? rescue.counterpartOutcome : null,
+      absenceCertified: !found,
+      resolutionPath: found
+        ? "FULL_CORPUS_RESCUE_COUNTERPART"
+        : "FULL_CORPUS_RESCUE_ABSENCE",
+      decisionProvenance: {
+        decisionPlanSha256: decisionPlan.planSha256,
+        preliminaryDecisionSha256: preliminaryDecisions.decisionSha256,
+        absencePlanSha256: absencePlan.planSha256,
+        absenceDecisionSha256: absenceDecisions.decisionSha256,
+        rescuePlanSha256: rescuePlan.planSha256,
+        rescueDecisionSha256: rescueDecisions.decisionSha256,
+      },
+      assessment: decisionAssessment(rescue),
+      counterpartEvidence: found ? rescue.bEvidence : [],
+      absenceReview: {
+        reviewedDocuments: absencePlan.summary.documents,
+        reviewedClauses: absencePlan.summary.corpusClauses,
+        reviewedPartitions: absencePlan.coverage.find(
+          ({ requirementId: expected }) => expected === requirementId
+        )?.partitions,
+        reviewedPositiveCandidateIds: absence.selectedCandidateIds,
+      },
+    };
+  });
+  const payload = {
+    schemaVersion: 1,
+    contractId: A_DRIVEN_REQUIREMENT_FINAL_DECISION_CONTRACT_ID,
+    dynamicManifestSha256: decisionPlan.dynamicManifestSha256,
+    decisionPlanSha256: decisionPlan.planSha256,
+    preliminaryDecisionSha256: preliminaryDecisions.decisionSha256,
+    absencePlanSha256: absencePlan.planSha256,
+    absenceDecisionSha256: absenceDecisions.decisionSha256,
+    rescuePlanSha256: rescuePlan?.planSha256 || null,
+    rescueDecisionSha256: rescueDecisions?.decisionSha256 || null,
+    results,
+    diagnostics: [],
+    summary: {
+      plannedRequirements: decisionPlan.rows.length,
+      terminalRequirements: results.length,
+      unresolvedRequirements: 0,
+      foundRequirements: results.filter(
+        ({ customerStatus }) => customerStatus === "FOUND"
+      ).length,
+      notFoundRequirements: results.filter(
+        ({ customerStatus }) => customerStatus === "NOT_FOUND"
+      ).length,
+      absenceCertifiedRequirements: results.filter(
+        ({ absenceCertified }) => absenceCertified
+      ).length,
+      preliminaryCounterparts: results.filter(
+        ({ resolutionPath }) => resolutionPath === "PRELIMINARY_COUNTERPART"
+      ).length,
+      completeCorpusAbsences: results.filter(
+        ({ resolutionPath }) => resolutionPath === "COMPLETE_CORPUS_ABSENCE"
+      ).length,
+      rescueCounterparts: results.filter(
+        ({ resolutionPath }) =>
+          resolutionPath === "FULL_CORPUS_RESCUE_COUNTERPART"
+      ).length,
+      rescueAbsences: results.filter(
+        ({ resolutionPath }) =>
+          resolutionPath === "FULL_CORPUS_RESCUE_ABSENCE"
+      ).length,
+      binaryCustomerStatus: true,
+      sideBOnlyRows: 0,
+    },
+    proofLimit:
+      "Der binäre Status gilt für den hashgebundenen extrahierten B-Korpus dieses Laufs. Er ist weder ein mathematischer Vollständigkeitsbeweis noch ein Generalisierungs- oder Holdoutnachweis.",
+  };
+  return {
+    ...payload,
+    finalDecisionSha256: sha256(
+      `${A_DRIVEN_REQUIREMENT_FINAL_DECISION_CONTRACT_ID}\u0000${stableStringify(
+        payload
+      )}`
+    ),
+  };
+}
+
+function validateADrivenRequirementFinalDecisionArtifact(
+  artifact,
+  inputs = {}
+) {
+  const rebuilt = buildADrivenRequirementFinalDecisions(inputs);
+  if (
+    artifact?.contractId !== A_DRIVEN_REQUIREMENT_FINAL_DECISION_CONTRACT_ID ||
+    !/^[a-f0-9]{64}$/u.test(String(artifact.finalDecisionSha256 || "")) ||
+    stableStringify(artifact) !== stableStringify(rebuilt)
+  )
+    throw absenceError(
+      "LF_A_DRIVEN_REQUIREMENT_FINAL_DECISION_ARTIFACT_INVALID"
+    );
+  return artifact;
+}
+
 function buildADrivenRequirementRescueReviewPlan({
   decisionPlan,
   preliminaryDecisions,
@@ -825,12 +1199,15 @@ function buildADrivenRequirementRescueReviewPlan({
 module.exports = {
   A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_CONTRACT_ID,
   A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_CONTRACT_ID,
+  A_DRIVEN_REQUIREMENT_FINAL_DECISION_CONTRACT_ID,
   A_DRIVEN_REQUIREMENT_RESCUE_REVIEW_STRATEGY,
   PARTITION_DECISIONS,
   buildADrivenRequirementAbsencePlan,
+  buildADrivenRequirementFinalDecisions,
   buildADrivenRequirementRescueReviewPlan,
   validateADrivenRequirementAbsenceDecisionArtifact,
   validateADrivenRequirementAbsencePlan,
   validateADrivenRequirementAbsencePartitionResponse,
   validateADrivenRequirementAbsenceResponses,
+  validateADrivenRequirementFinalDecisionArtifact,
 };

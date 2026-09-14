@@ -903,6 +903,26 @@ function validateADrivenRequirementDecisionArtifact(decisions, plan) {
     )
   )
     throw decisionError("LF_A_DRIVEN_REQUIREMENT_DECISION_DIGEST_INVALID");
+  const rebuilt = validateADrivenRequirementDecisionResponses({
+    plan,
+    responses: decisions.results.map(
+      ({
+        requirementId,
+        contextFinding,
+        componentFindings,
+        unmodeledDifferences,
+        rationale,
+      }) => ({
+        requirementId,
+        contextFinding,
+        componentFindings,
+        unmodeledDifferences,
+        rationale,
+      })
+    ),
+  });
+  if (stableStringify(rebuilt) !== stableStringify(decisions))
+    throw decisionError("LF_A_DRIVEN_REQUIREMENT_DECISION_ARTIFACT_MISMATCH");
   return decisions;
 }
 
