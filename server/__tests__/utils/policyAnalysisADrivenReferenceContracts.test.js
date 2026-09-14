@@ -14283,8 +14283,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
               ({ checkId, dimension, role }) => ({
                 checkId,
                 dimension,
-                outcome:
-                  role === "TARGET" ? "MISMATCH" : "NOT_ESTABLISHED",
+                outcome: role === "TARGET" ? "MISMATCH" : "NOT_ESTABLISHED",
                 candidateIds: role === "TARGET" ? ["candidate-one"] : [],
               })
             ),
@@ -14296,7 +14295,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       responses: partialResponses,
     });
     expect(partial.summary.unresolvedPackages).toBe(0);
-    expect(partial.results[0]).toMatchObject({
+    expect(partial.results[partialPackageIndex]).toMatchObject({
       status: "TERMINAL",
       decision: "CONTRADICTED",
       selectedCandidateIds: ["candidate-one"],
@@ -14490,15 +14489,14 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       );
       return {
         ...response,
-        componentFindings: response.componentFindings.map(
-          (finding, index) =>
-            index === oppositeIndex
-              ? {
-                  ...finding,
-                  outcome: "OPPOSITE",
-                  candidateIds: [candidateId],
-                }
-              : finding
+        componentFindings: response.componentFindings.map((finding, index) =>
+          index === oppositeIndex
+            ? {
+                ...finding,
+                outcome: "OPPOSITE",
+                candidateIds: [candidateId],
+              }
+            : finding
         ),
       };
     });

@@ -364,7 +364,9 @@ function buildADrivenRequirementDecisionPlan({
 } = {}) {
   validateADrivenSemanticManifest(manifest);
   validateADrivenCounterpartSearchPlan(searchPlan, manifest);
-  validateADrivenCounterpartSearchExecution(searchExecution, { plan: searchPlan });
+  validateADrivenCounterpartSearchExecution(searchExecution, {
+    plan: searchPlan,
+  });
   if (
     searchExecution.searchPlanSha256 !== searchPlan.planSha256 ||
     !Number.isInteger(maximumCandidatesPerComponent) ||
@@ -386,7 +388,8 @@ function buildADrivenRequirementDecisionPlan({
   }
   const rows = orderedRequirements(manifest).map((requirement) => {
     const packages = packagesByRequirement.get(requirement.requirementId) || [];
-    const expected = requirement.components.length * searchPlan.documents.length;
+    const expected =
+      requirement.components.length * searchPlan.documents.length;
     if (
       packages.length !== expected ||
       new Set(packages.map(({ packageId }) => packageId)).size !== expected ||
@@ -457,10 +460,7 @@ function buildADrivenRequirementDecisionPlan({
     batches,
     summary: {
       requirements: rows.length,
-      components: rows.reduce(
-        (sum, row) => sum + row.components.length,
-        0
-      ),
+      components: rows.reduce((sum, row) => sum + row.components.length, 0),
       selectedCandidates: rows.reduce(
         (sum, row) => sum + row.candidates.length,
         0
@@ -506,8 +506,8 @@ function responseIssues(row, response) {
       !COMPONENT_OUTCOMES.has(finding.outcome) ||
       !Array.isArray(finding.candidateIds) ||
       new Set(finding.candidateIds).size !== finding.candidateIds.length ||
-      finding.candidateIds.some((candidateId) =>
-        !allowedCandidates.has(candidateId)
+      finding.candidateIds.some(
+        (candidateId) => !allowedCandidates.has(candidateId)
       ) ||
       (finding.outcome === "NOT_ESTABLISHED"
         ? finding.candidateIds.length !== 0
@@ -526,8 +526,8 @@ function responseIssues(row, response) {
     !Array.isArray(response.contextFinding.candidateIds) ||
     new Set(response.contextFinding.candidateIds).size !==
       response.contextFinding.candidateIds.length ||
-    response.contextFinding.candidateIds.some((candidateId) =>
-      !allowedCandidates.has(candidateId)
+    response.contextFinding.candidateIds.some(
+      (candidateId) => !allowedCandidates.has(candidateId)
     ) ||
     (response.contextFinding.outcome === "NOT_ESTABLISHED"
       ? response.contextFinding.candidateIds.length !== 0
@@ -544,8 +544,8 @@ function responseIssues(row, response) {
         !difference.description.trim() ||
         !Array.isArray(difference.candidateIds) ||
         difference.candidateIds.length === 0 ||
-        difference.candidateIds.some((candidateId) =>
-          !allowedCandidates.has(candidateId)
+        difference.candidateIds.some(
+          (candidateId) => !allowedCandidates.has(candidateId)
         )
       )
         issues.push({ code: "UNMODELED_DIFFERENCE_INVALID" });
