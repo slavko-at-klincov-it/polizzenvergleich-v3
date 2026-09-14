@@ -14270,8 +14270,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
         0
       )
     ).toBe(manifest.summary.semanticComponents);
+    const partialPackageIndex = searchExecution.packages.findIndex(
+      ({ componentType }) => componentType !== "COVERAGE_EFFECT"
+    );
     const partialResponses = searchExecution.packages.map((item, index) =>
-      index === 0
+      index === partialPackageIndex
         ? {
             packageId: item.packageId,
             decision: "CONTRADICTED",
@@ -14443,21 +14446,24 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       )
     ).toBe(true);
     expect(decisionPlan.selection.characterClippingAllowed).toBe(false);
-    expect(JSON.stringify(decisionPlan)).not.toContain("gold");
+    expect(decisionPlan.selection.goldInputsAllowed).toBe(false);
   });
 
   test("keeps a source-bound partial or opposite counterpart found", () => {
     const { decisionPlan } = requirementDecisionFixture();
     const partialResponses = decisionPlan.rows.map((row) => {
       const candidateId = row.candidates[0].candidateId;
+      const coreIndex = row.components.findIndex(
+        ({ identityCore }) => identityCore
+      );
       return {
         requirementId: row.requirementId,
         contextFinding: { outcome: "MATCH", candidateIds: [candidateId] },
         componentFindings: row.components.map((component, index) => ({
           componentId: component.componentId,
           dimension: component.dimension,
-          outcome: index === 0 ? "MATCH" : "NOT_ESTABLISHED",
-          candidateIds: index === 0 ? [candidateId] : [],
+          outcome: index === coreIndex ? "MATCH" : "NOT_ESTABLISHED",
+          candidateIds: index === coreIndex ? [candidateId] : [],
         })),
         unmodeledDifferences: [],
         rationale: "Der fachliche Kern ist belegt; Details fehlen.",
@@ -14477,14 +14483,25 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       absenceCertified: false,
     });
 
-    const oppositeResponses = partialResponses.map((response, rowIndex) => ({
-      ...response,
-      componentFindings: response.componentFindings.map((finding, index) => ({
-        ...finding,
-        outcome:
-          rowIndex === 0 && index === 0 ? "OPPOSITE" : finding.outcome,
-      })),
-    }));
+    const oppositeResponses = partialResponses.map((response, rowIndex) => {
+      const candidateId = decisionPlan.rows[rowIndex].candidates[0].candidateId;
+      const oppositeIndex = response.componentFindings.findIndex(
+        ({ dimension }) => dimension === "COVERAGE_EFFECT"
+      );
+      return {
+        ...response,
+        componentFindings: response.componentFindings.map(
+          (finding, index) =>
+            index === oppositeIndex
+              ? {
+                  ...finding,
+                  outcome: "OPPOSITE",
+                  candidateIds: [candidateId],
+                }
+              : finding
+        ),
+      };
+    });
     const opposite = validateADrivenRequirementDecisionResponses({
       plan: decisionPlan,
       responses: oppositeResponses,
