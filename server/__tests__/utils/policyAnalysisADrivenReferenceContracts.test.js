@@ -91,8 +91,13 @@ const {
 const {
   buildADrivenRequirementAbsencePlan,
   validateADrivenRequirementAbsencePlan,
+  validateADrivenRequirementAbsencePartitionResponse,
   validateADrivenRequirementAbsenceResponses,
 } = require("../../utils/policyAnalysis/aDrivenRequirementAbsenceCertification");
+const {
+  prompt: requirementAbsencePrompt,
+  runPartition: runRequirementAbsencePartition,
+} = require("../../scripts/qa/runADrivenRequirementAbsenceDecisions.cjs");
 const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
@@ -14860,7 +14865,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     });
   });
 
-  test("certifies NOT_FOUND only after every complete B clause partition is terminal", () => {
+  test("certifies NOT_FOUND only after every complete B clause partition is terminal", async () => {
     const { manifest, searchPlan, searchExecution } =
       requirementDecisionFixture();
     const completeCorpus = buildADrivenCompleteBCorpus({
@@ -14935,6 +14940,57 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       candidateIds: [],
       rationale: "Kein Gegenstück in dieser vollständigen Partition.",
     }));
+    expect(
+      validateADrivenRequirementAbsencePartitionResponse({
+        plan: absencePlan,
+        partitionId: absencePlan.partitions[0].partitionId,
+        response: negativeResponses[0],
+      }).result
+    ).toMatchObject({
+      status: "TERMINAL",
+      decision: "NO_COUNTERPART_IN_PARTITION",
+    });
+    const partitionPrompt = requirementAbsencePrompt(
+      absencePlan,
+      absencePlan.partitions[0]
+    );
+    expect(partitionPrompt[0].content).toContain(
+      "vollständige, servergebundene Partition"
+    );
+    expect(JSON.stringify(partitionPrompt).toLowerCase()).not.toContain(
+      "gold"
+    );
+    const partitionRun = await runRequirementAbsencePartition({
+      client: {
+        chat: {
+          completions: {
+            create: jest.fn(async () => ({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify([negativeResponses[0]]),
+                  },
+                },
+              ],
+              usage: {},
+            })),
+          },
+        },
+      },
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: absencePlan,
+      partition: absencePlan.partitions[0],
+      maximumAttempts: 1,
+      requestTimeoutMs: 100,
+      abortSettlementTimeoutMs: 10,
+      recoverModelAfterAbort: jest.fn(),
+    });
+    expect(partitionRun.validation.result).toMatchObject({
+      status: "TERMINAL",
+      decision: "NO_COUNTERPART_IN_PARTITION",
+    });
     const certified = validateADrivenRequirementAbsenceResponses({
       plan: absencePlan,
       responses: negativeResponses,

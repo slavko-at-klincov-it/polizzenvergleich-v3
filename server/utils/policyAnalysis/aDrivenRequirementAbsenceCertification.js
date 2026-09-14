@@ -294,6 +294,62 @@ function validateADrivenRequirementAbsencePlan(plan) {
   return true;
 }
 
+function partitionResponseResult(partition, response) {
+  const selected = response?.candidateIds;
+  const allowed = new Set(partition.candidateIds);
+  const valid =
+    response?.partitionId === partition.partitionId &&
+    PARTITION_DECISIONS.has(response.decision) &&
+    Array.isArray(selected) &&
+    new Set(selected).size === selected.length &&
+    selected.every((candidateId) => allowed.has(candidateId)) &&
+    (response.decision === "COUNTERPART_PRESENT"
+      ? selected.length > 0
+      : selected.length === 0) &&
+    typeof response.rationale === "string" &&
+    Boolean(response.rationale.trim());
+  if (!valid)
+    return {
+      result: {
+        partitionId: partition.partitionId,
+        requirementId: partition.requirementId,
+        status: "UNRESOLVED",
+        reasonCode: "INVALID_PARTITION_RESPONSE",
+      },
+      diagnostic: {
+        partitionId: partition.partitionId,
+        code: "INVALID_PARTITION_RESPONSE",
+      },
+    };
+  return {
+    result: {
+      partitionId: partition.partitionId,
+      requirementId: partition.requirementId,
+      documentUuid: partition.documentUuid,
+      status: "TERMINAL",
+      reasonCode: null,
+      decision: response.decision,
+      selectedCandidateIds: selected,
+      rationale: response.rationale,
+    },
+    diagnostic: null,
+  };
+}
+
+function validateADrivenRequirementAbsencePartitionResponse({
+  plan,
+  partitionId,
+  response,
+} = {}) {
+  validateADrivenRequirementAbsencePlan(plan);
+  const partition = plan.partitions.find(
+    ({ partitionId: expected }) => expected === partitionId
+  );
+  if (!partition)
+    throw absenceError("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PARTITION_UNKNOWN");
+  return partitionResponseResult(partition, response);
+}
+
 function validateADrivenRequirementAbsenceResponses({
   plan,
   responses = [],
@@ -329,41 +385,9 @@ function validateADrivenRequirementAbsenceResponses({
         reasonCode,
       };
     }
-    const response = records[0];
-    const selected = response.candidateIds;
-    const allowed = new Set(partition.candidateIds);
-    const valid =
-      PARTITION_DECISIONS.has(response.decision) &&
-      Array.isArray(selected) &&
-      new Set(selected).size === selected.length &&
-      selected.every((candidateId) => allowed.has(candidateId)) &&
-      (response.decision === "COUNTERPART_PRESENT"
-        ? selected.length > 0
-        : selected.length === 0) &&
-      typeof response.rationale === "string" &&
-      response.rationale.trim();
-    if (!valid) {
-      diagnostics.push({
-        partitionId: partition.partitionId,
-        code: "INVALID_PARTITION_RESPONSE",
-      });
-      return {
-        partitionId: partition.partitionId,
-        requirementId: partition.requirementId,
-        status: "UNRESOLVED",
-        reasonCode: "INVALID_PARTITION_RESPONSE",
-      };
-    }
-    return {
-      partitionId: partition.partitionId,
-      requirementId: partition.requirementId,
-      documentUuid: partition.documentUuid,
-      status: "TERMINAL",
-      reasonCode: null,
-      decision: response.decision,
-      selectedCandidateIds: selected,
-      rationale: response.rationale,
-    };
+    const validated = partitionResponseResult(partition, records[0]);
+    if (validated.diagnostic) diagnostics.push(validated.diagnostic);
+    return validated.result;
   });
   for (const partitionId of responsesByPartition.keys())
     if (!partitionIds.has(partitionId))
@@ -464,5 +488,6 @@ module.exports = {
   PARTITION_DECISIONS,
   buildADrivenRequirementAbsencePlan,
   validateADrivenRequirementAbsencePlan,
+  validateADrivenRequirementAbsencePartitionResponse,
   validateADrivenRequirementAbsenceResponses,
 };
