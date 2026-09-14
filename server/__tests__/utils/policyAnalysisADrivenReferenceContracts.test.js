@@ -73,6 +73,10 @@ const {
   runBatch: runCounterpartDecisionBatch,
 } = require("../../scripts/qa/runADrivenReferenceCounterpartDecisions.cjs");
 const {
+  prompt: requirementDecisionPrompt,
+  runBatch: runRequirementDecisionBatch,
+} = require("../../scripts/qa/runADrivenRequirementCounterpartDecisions.cjs");
+const {
   buildADrivenCounterpartDecisionPlan,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartDecisionPlan");
 const {
@@ -14452,6 +14456,85 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ).toBe(true);
     expect(decisionPlan.selection.characterClippingAllowed).toBe(false);
     expect(decisionPlan.selection.goldInputsAllowed).toBe(false);
+  });
+
+  test("uses a source-bound binary counterpart prompt without Gold input", () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const messages = requirementDecisionPrompt(decisionPlan.batches[0]);
+    const system = messages[0].content;
+    const request = JSON.parse(messages[1].content);
+
+    expect(system).toContain("GEFUNDEN bedeutet");
+    expect(system).toContain("Abweichende Werte, Limits, Bedingungen");
+    expect(system).toContain("bloße Keyword-Nennung");
+    expect(request.expectedRequirementIds).toEqual(
+      decisionPlan.batches[0].expectedRequirementIds
+    );
+    expect(JSON.stringify(request).toLowerCase()).not.toContain("gold");
+  });
+
+  test("retries invalid JSON and stores only a contract-valid requirement response", async () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const sourceBatch = decisionPlan.batches[0];
+    const row = sourceBatch.rows[0];
+    const batch = {
+      ...sourceBatch,
+      expectedRequirementIds: [row.requirementId],
+      rows: [row],
+    };
+    const candidateId = row.candidates[0].candidateId;
+    const valid = {
+      requirementId: row.requirementId,
+      contextFinding: { outcome: "MATCH", candidateIds: [candidateId] },
+      componentFindings: row.components.map((component) => ({
+        componentId: component.componentId,
+        dimension: component.dimension,
+        outcome: "MATCH",
+        candidateIds: [candidateId],
+      })),
+      unmodeledDifferences: [],
+      rationale: "Dasselbe fachliche Element ist quellengebunden belegt.",
+    };
+    const client = {
+      chat: {
+        completions: {
+          create: jest
+            .fn()
+            .mockResolvedValueOnce({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [{ message: { content: "kein JSON" } }],
+              usage: {},
+            })
+            .mockResolvedValueOnce({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [{ message: { content: JSON.stringify([valid]) } }],
+              usage: {},
+            }),
+        },
+      },
+    };
+
+    const result = await runRequirementDecisionBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: decisionPlan,
+      batch,
+      maximumAttempts: 2,
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses).toEqual([valid]);
+    expect(result.attempts).toHaveLength(2);
+    expect(result.attempts[0]).toMatchObject({
+      errorClass: "MODEL_RESPONSE_INVALID",
+      responses: [],
+    });
+    expect(result.attempts[1]).toMatchObject({
+      errorClass: null,
+      acceptedRequirements: 1,
+      pendingRequirements: 0,
+    });
   });
 
   test("keeps a source-bound partial or opposite counterpart found", () => {
