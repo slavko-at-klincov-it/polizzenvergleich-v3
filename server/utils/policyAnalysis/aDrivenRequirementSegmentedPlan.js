@@ -32,8 +32,7 @@ function validateSourcePlan(plan) {
     throw segmentedPlanError("LF_A_DRIVEN_SEGMENT_SOURCE_PLAN_INVALID");
   const { planSha256, ...payload } = plan;
   if (
-    planSha256 !==
-    sha256(`${plan.contractId}\u0000${stableStringify(payload)}`)
+    planSha256 !== sha256(`${plan.contractId}\u0000${stableStringify(payload)}`)
   )
     throw segmentedPlanError("LF_A_DRIVEN_SEGMENT_SOURCE_PLAN_DIGEST_INVALID");
   if (
@@ -63,8 +62,8 @@ function validateSourcePlan(plan) {
         )
     ) ||
     stableStringify(
-      plan.batches.flatMap(({ expectedRequirementIds }) =>
-        expectedRequirementIds
+      plan.batches.flatMap(
+        ({ expectedRequirementIds }) => expectedRequirementIds
       )
     ) !== stableStringify(plan.rows.map(({ requirementId }) => requirementId))
   )
@@ -198,10 +197,7 @@ function buildADrivenRequirementSegmentedPlan({ segments = [] } = {}) {
     batches,
     summary: {
       requirements: rows.length,
-      components: rows.reduce(
-        (sum, row) => sum + row.components.length,
-        0
-      ),
+      components: rows.reduce((sum, row) => sum + row.components.length, 0),
       selectedCandidates: rows.reduce(
         (sum, row) => sum + row.candidates.length,
         0
