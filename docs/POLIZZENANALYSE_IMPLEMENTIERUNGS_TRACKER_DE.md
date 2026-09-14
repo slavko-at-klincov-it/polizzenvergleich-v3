@@ -8926,3 +8926,109 @@ und Astra als primärem 283er-Reviewer entschieden werden.
 Status: `SOL PROBLEM-4 NICHT BESTANDEN; BLINDQUELLENINPUT NICHT
 EVIDENZVOLLSTÄNDIG; GOLD-30 NICHT GESTARTET; 283 NICHT FREIGEGEBEN; QWEN
 98/283 UNVERÄNDERT RESUMIERBAR`.
+
+### 133.39 LF_REFERENCE_A_DRIVEN_V2: B-Pilot, ehrliche Gold-Messung und kontextfester Rescue
+
+Die Produktarbeit wurde auf dem sauberen Entwicklungsbranch
+`codex/lf-reference-a-driven-v2` fortgesetzt. Gold-283 blieb unverändert und
+ist weiterhin ausschließlich QA-Regression für das bekannte LF-1+9-Set. Das
+V61-A-Manifest blieb ebenfalls unverändert bei 1.005 Quellblöcken, 364
+dynamischen Requirements, 1.210 Komponenten und null `UNRESOLVED`.
+
+Für dieselben neun hashgebundenen B-Dokumente wurde der vollständige
+extrahierte Klauselkorpus mit 322 Klauselgrenzen materialisiert. Die
+Mehrkanalsuche umfasst 10.890 Komponenten-Dokument-Pakete und 58.010
+kompaktisierte Kandidaten. Der Korpus liegt ausschließlich auf dem Mac Studio
+unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-BASELINE-20260914-4E44C037/complete-b-corpus.private.json
+```
+
+Korpus-Hash:
+`28ed0da539dd0f215d0c66ec7c3f0c1d60da1dd8a86802f593d40f152a7f6754`.
+Die Existenz dieses vollständigen Extraktionskorpus zertifiziert noch keinen
+fachlichen Nullfund.
+
+Der erste Gold-Crosswalk hatte Ergebnisdetails über reine gemeinsame
+A-SourceBlock-IDs gemessen. Das war methodisch zu breit: Mehrere fachlich
+verschiedene Goldzeilen und dynamische Requirements können denselben Absatz
+teilen. Commit `6435c1f14` stellt deshalb auf
+`LF_A_DRIVEN_GOLD_283_REGRESSION_V2` um und erlaubt eine Ergebnismessung ohne
+weitere semantische Adjudikation nur bei bijektiver Blockzuordnung. Der neue
+Befund lautet:
+
+```text
+A-Quellabdeckung:              283/283
+eindeutig ergebnismessbar:     144
+Split-/Merge-mehrdeutig:       139
+Rollenkomponenten abgedeckt:   567/631
+Rollenlücken:                  64
+```
+
+Artefakt:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-BASELINE-20260914-4E44C037/gold-regression-v2.private.json
+```
+
+Dateihash:
+`567c22bc22c13dce3163e2f90b240ae817675eec4b6f45cc0f957b835bbda05a`;
+interner Regressionshash:
+`779600811262d1d253fed12c45ae5211c42084bd868ece5a0458eeb1a9004be9`.
+
+Der erste source-bound Requirement-Pilot verwendete Qwen
+`qwen/qwen3.6-35b-a3b`, Kontext 42.496, je einen frischen Requirement-Batch
+und den Plan `LF_A_DRIVEN_REQUIREMENT_DECISION_PLAN_V2`. 13 Batches wurden
+gültig abgeschlossen und bleiben unverändert gespeichert. Batch 12 stoppte
+zunächst nach einer formal ungültigen Antwort und zwei harten Timeouts
+fail-closed. Die Antwort enthielt dieselben gültigen Candidate-IDs mehrfach.
+Commit `b1b32e41e` entfernt ausschließlich solche Wiederholungen vor der
+weiterhin strikten Validierung; Rohantwort und Anzahl der entfernten Duplikate
+bleiben im privaten Versuchsjournal. Derselbe Batch bestand danach im ersten
+neuen Versuch. Commit `9c8fd3aac` verschärft zusätzlich den fachlichen
+Rollup: `GEFUNDEN` verlangt nun alle Komponenten des Identitätskerns desselben
+fachlichen Elements; ein einzelner passender Kernteil genügt nicht.
+
+Ein zweites Stoppsignal war fachlich-technisch relevanter: Der zusätzliche
+Vollkorpus-Rescue wurde bisher pro Komponente und B-Dokument wiederholt. Ein
+8-Komponenten-Fall enthielt dadurch 34 vollständige Klauselkandidaten,
+78.874 JSON-Zeichen und 45.743 Zeichen reine B-Evidenz; drei Versuche liefen
+jeweils in den harten Timeout. Commit `1e66b2c63` ändert keine Quellen- oder
+Klauselgrenze, sondern nur die Navigation: Retrieval bleibt pro Komponente,
+der ergänzende Vollkorpus-Rescue wird einmal pro Requirement und B-Dokument
+gewählt. Ganze Satz-/Klausel-/Listen-/Tabellenkontexte und kombinierte
+Mehrquellenbelege bleiben erhalten; es gibt kein Zeichen-Clipping.
+
+Der neue Plan `LF_A_DRIVEN_REQUIREMENT_DECISION_PLAN_V3` enthält 4.488 statt
+8.798 ausgewählte Kandidaten. Die maximale Requirement-Größe sank von rund
+112.000 auf 55.943 Zeichen; kein Requirement überschreitet 70.000 Zeichen.
+Der zuvor dreimal timeoutende Batch sank von 34 auf 15 Kandidaten und bestand
+im ersten Versuch nach 80.337 ms. Zusätzlich bestand der größte verbleibende
+V3-Batch mit 14 Komponenten und 21 Kandidaten im ersten Versuch nach
+107.182 ms. Private Pilotartefakte:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-REQ-PILOT-V3-B14-20260914-1E66B2C6/
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-REQ-PILOT-V3-MAX-B42-20260914-1E66B2C6/
+```
+
+Auf Commit `1e66b2c63` bestanden im isolierten Mac-Studio-Worktree
+`/private/tmp/lf-reference-a-driven-v2-8da2` drei fokussierte Suites mit
+333/333 Tests sowie Syntax und Prettier. Es wurde kein vollständiger
+Modelllauf, keine Kunden-XLSX, kein Deployment und keine Releasefreigabe
+ausgeführt.
+
+Nächster verbindlicher Schritt: den V3-Requirement-Entscheidungspfad mit der
+vollständigen, partitionierten B-Abwesenheitsprüfung verbinden. Ein
+`FALLBACK_REQUIRED` darf erst dann zu `NICHT GEFUNDEN` werden, wenn jede
+hashgebundene B-Klausel des betreffenden Requirements terminal geprüft wurde.
+Danach folgen der dynamische Ergebnisbuilder, ein kontrollierter V3-Lauf und
+die ehrliche Messung ausschließlich der eindeutig zuordenbaren Goldzeilen;
+mehrdeutige Crosswalk-Fälle bleiben sichtbar statt als Treffer oder Fehler
+gerechnet zu werden.
+
+Status: `A DYNAMISCH VOLLSTÄNDIG; B-RETRIEVAL VOLLSTÄNDIG; REQUIREMENT-PILOT
+KONTEXTFEST AUF ZWEI WORST-CASE-BATCHES BESTANDEN; QUALIFIZIERTER NULLFUND,
+PRODUKTINTEGRATION, XLSX UND VOLLSTÄNDIGER 1+9-LAUF NOCH OFFEN; KEIN
+DEPLOYMENT`.
