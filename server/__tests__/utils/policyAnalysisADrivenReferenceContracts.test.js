@@ -108,6 +108,10 @@ const {
   validateADrivenRequirementFinalDecisionArtifact,
 } = require("../../utils/policyAnalysis/aDrivenRequirementAbsenceCertification");
 const {
+  reviewWorkbookRows,
+  writeADrivenRequirementReviewWorkbook,
+} = require("../../utils/policyAnalysis/aDrivenRequirementReviewWorkbook");
+const {
   parseSingleDecision: parseRequirementAbsenceDecision,
   positiveCandidateSignals: requirementAbsencePositiveCandidateSignals,
   preliminaryDecisionArtifact,
@@ -15481,6 +15485,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       manualAssessment: "",
       resolutionPath: "COMPLETE_CORPUS_ABSENCE",
     });
+    expect(reviewWorkbookRows(binaryCertified)[0]).toMatchObject({
+      7: "",
+      9: "",
+      10: "Nicht gefunden",
+      12: "",
+    });
     expect(
       validateADrivenRequirementBinaryReferenceResult(binaryCertified, {
         manifest,
@@ -15744,6 +15754,25 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(binaryFound.rows[0].componentFindings).toHaveLength(
       manifest.summary.semanticComponents
     );
+    const workbookRows = reviewWorkbookRows(binaryFound);
+    expect(workbookRows).toHaveLength(1);
+    expect(workbookRows[0][10]).toBe("Gefunden");
+    expect(workbookRows[0][12]).toBe("");
+    const workbookDirectory = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-driven-review-workbook-")
+    );
+    const workbookFile = path.join(workbookDirectory, "review.xlsx");
+    const workbookSummary = await writeADrivenRequirementReviewWorkbook(
+      binaryFound,
+      workbookFile
+    );
+    expect(workbookSummary).toMatchObject({
+      rows: 1,
+      found: 1,
+      notFound: 0,
+      file: workbookFile,
+    });
+    expect(fs.statSync(workbookFile).mode & 0o777).toBe(0o600);
 
     const rescueNegativeResponse = {
       requirementId: rescueRow.requirementId,

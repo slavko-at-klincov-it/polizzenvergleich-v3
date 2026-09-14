@@ -579,6 +579,7 @@ function buildADrivenRequirementBinaryReferenceResult({
     dynamicManifestSha256: manifest.manifestSha256,
     requirementDecisionPlanSha256: decisionPlan.planSha256,
     finalRequirementDecisionSha256: finalDecisions.finalDecisionSha256,
+    documents: manifest.documents,
     rows,
     summary: {
       rows: rows.length,
