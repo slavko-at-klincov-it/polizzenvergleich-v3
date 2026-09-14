@@ -95,6 +95,7 @@ const {
   validateADrivenRequirementAbsenceResponses,
 } = require("../../utils/policyAnalysis/aDrivenRequirementAbsenceCertification");
 const {
+  parseSingleDecision: parseRequirementAbsenceDecision,
   prompt: requirementAbsencePrompt,
   runPartition: runRequirementAbsencePartition,
 } = require("../../scripts/qa/runADrivenRequirementAbsenceDecisions.cjs");
@@ -14957,10 +14958,18 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(partitionPrompt[0].content).toContain(
       "vollständige, servergebundene Partition"
     );
-    expect(partitionPrompt[0].content).toContain(
-      "Ein leeres Array ist immer ungültig"
-    );
+    expect(partitionPrompt[0].content).toContain("genau ein JSON-Objekt");
+    expect(partitionPrompt[0].content).toContain("ein leeres Array");
     expect(JSON.stringify(partitionPrompt).toLowerCase()).not.toContain("gold");
+    expect(
+      parseRequirementAbsenceDecision(JSON.stringify(negativeResponses[0]))
+    ).toEqual(negativeResponses[0]);
+    expect(
+      parseRequirementAbsenceDecision(JSON.stringify([negativeResponses[0]]))
+    ).toEqual(negativeResponses[0]);
+    expect(() => parseRequirementAbsenceDecision("[]")).toThrow(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_RESPONSE_COUNT_INVALID"
+    );
     const partitionRun = await runRequirementAbsencePartition({
       client: {
         chat: {
@@ -14970,7 +14979,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
               choices: [
                 {
                   message: {
-                    content: JSON.stringify([negativeResponses[0]]),
+                    content: JSON.stringify(negativeResponses[0]),
                   },
                 },
               ],
