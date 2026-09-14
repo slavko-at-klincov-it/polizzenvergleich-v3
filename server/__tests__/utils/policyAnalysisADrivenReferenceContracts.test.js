@@ -89,6 +89,10 @@ const {
   buildADrivenCompleteBCorpus,
 } = require("../../utils/policyAnalysis/aDrivenCompleteBCorpus");
 const {
+  A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID_V2,
+  buildADrivenRequirementSegmentedPlan,
+} = require("../../utils/policyAnalysis/aDrivenRequirementSegmentedPlan");
+const {
   buildADrivenRequirementAbsencePlan,
   validateADrivenRequirementAbsencePlan,
   validateADrivenRequirementAbsencePartitionResponse,
@@ -14469,6 +14473,107 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ).toBe(true);
     expect(decisionPlan.selection.characterClippingAllowed).toBe(false);
     expect(decisionPlan.selection.goldInputsAllowed).toBe(false);
+  });
+
+  test("combines disjoint hash-bound plan segments without recomputing valid responses", () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const legacyPayload = JSON.parse(JSON.stringify(decisionPlan));
+    delete legacyPayload.planSha256;
+    legacyPayload.contractId =
+      A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID_V2;
+    const legacyPlan = {
+      ...legacyPayload,
+      planSha256: digest(
+        A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID_V2,
+        legacyPayload
+      ),
+    };
+    const split = Math.max(1, Math.floor(decisionPlan.batches.length / 2));
+
+    const combined = buildADrivenRequirementSegmentedPlan({
+      segments: [
+        {
+          plan: legacyPlan,
+          startBatchIndex: 0,
+          endBatchIndexExclusive: split,
+        },
+        {
+          plan: decisionPlan,
+          startBatchIndex: split,
+          endBatchIndexExclusive: decisionPlan.batches.length,
+        },
+      ],
+    });
+
+    expect(combined.selection).toMatchObject({
+      strategy: "HASH_BOUND_DISJOINT_SOURCE_PLAN_SEGMENTS",
+      characterClippingAllowed: false,
+      goldInputsAllowed: false,
+    });
+    expect(combined.rows.map(({ requirementId }) => requirementId)).toEqual(
+      decisionPlan.rows.map(({ requirementId }) => requirementId)
+    );
+    expect(combined.selection.segments).toEqual([
+      expect.objectContaining({
+        sourcePlanSha256: legacyPlan.planSha256,
+        startBatchIndex: 0,
+        endBatchIndexExclusive: split,
+      }),
+      expect.objectContaining({
+        sourcePlanSha256: decisionPlan.planSha256,
+        startBatchIndex: split,
+        endBatchIndexExclusive: decisionPlan.batches.length,
+      }),
+    ]);
+  });
+
+  test("rejects gaps and semantic drift between plan segments", () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const split = Math.max(1, Math.floor(decisionPlan.batches.length / 2));
+    expect(() =>
+      buildADrivenRequirementSegmentedPlan({
+        segments: [
+          {
+            plan: decisionPlan,
+            startBatchIndex: 0,
+            endBatchIndexExclusive: split,
+          },
+          {
+            plan: decisionPlan,
+            startBatchIndex: split + 1,
+            endBatchIndexExclusive: decisionPlan.batches.length,
+          },
+        ],
+      })
+    ).toThrow("LF_A_DRIVEN_SEGMENT_RANGE_GAP");
+
+    const driftedPayload = JSON.parse(JSON.stringify(decisionPlan));
+    delete driftedPayload.planSha256;
+    driftedPayload.rows[0].displayLabel += " manipuliert";
+    driftedPayload.batches[0].rows[0].displayLabel += " manipuliert";
+    const drifted = {
+      ...driftedPayload,
+      planSha256: digest(
+        A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
+        driftedPayload
+      ),
+    };
+    expect(() =>
+      buildADrivenRequirementSegmentedPlan({
+        segments: [
+          {
+            plan: drifted,
+            startBatchIndex: 0,
+            endBatchIndexExclusive: split,
+          },
+          {
+            plan: decisionPlan,
+            startBatchIndex: split,
+            endBatchIndexExclusive: decisionPlan.batches.length,
+          },
+        ],
+      })
+    ).toThrow("LF_A_DRIVEN_SEGMENT_PLAN_SEMANTIC_IDENTITY_MISMATCH");
   });
 
   test("adds complete-corpus rescue once per requirement and document", () => {
