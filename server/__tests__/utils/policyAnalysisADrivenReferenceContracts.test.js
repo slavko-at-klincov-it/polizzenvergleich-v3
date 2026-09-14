@@ -14904,11 +14904,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         rationale: "Kein Gegenstück in der Navigationsauswahl.",
       };
     });
-    const preliminaryDecisions =
-      validateADrivenRequirementDecisionResponses({
-        plan: decisionPlan,
-        responses: preliminaryResponses,
-      });
+    const preliminaryDecisions = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: preliminaryResponses,
+    });
     const absencePlan = buildADrivenRequirementAbsencePlan({
       decisionPlan,
       preliminaryDecisions,

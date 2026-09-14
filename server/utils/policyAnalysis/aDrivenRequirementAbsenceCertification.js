@@ -1,7 +1,5 @@
 const crypto = require("crypto");
-const {
-  validateADrivenCompleteBCorpus,
-} = require("./aDrivenCompleteBCorpus");
+const { validateADrivenCompleteBCorpus } = require("./aDrivenCompleteBCorpus");
 const {
   validateADrivenRequirementDecisionArtifact,
   validateADrivenRequirementDecisionPlan,
@@ -105,8 +103,10 @@ function partitionDocumentCandidates({
   };
   for (const candidate of candidates) {
     const proposed = [...current, candidate];
-    const characters = JSON.stringify({ requirement, candidates: proposed })
-      .length;
+    const characters = JSON.stringify({
+      requirement,
+      candidates: proposed,
+    }).length;
     if (characters > maximumPartitionCharacters && current.length > 0) {
       flush();
       if (
@@ -154,8 +154,7 @@ function buildADrivenRequirementAbsencePlan({
   );
   const fallbackRows = decisionPlan.rows.filter(
     ({ requirementId }) =>
-      preliminaryById.get(requirementId)?.customerStatus ===
-      "FALLBACK_REQUIRED"
+      preliminaryById.get(requirementId)?.customerStatus === "FALLBACK_REQUIRED"
   );
   const requirements = fallbackRows.map(absenceRequirement);
   const candidates = completeCorpus.clauses
@@ -167,7 +166,10 @@ function buildADrivenRequirementAbsencePlan({
         left.documentStart - right.documentStart ||
         left.candidateId.localeCompare(right.candidateId)
     );
-  if (new Set(candidates.map(({ candidateId }) => candidateId)).size !== candidates.length)
+  if (
+    new Set(candidates.map(({ candidateId }) => candidateId)).size !==
+    candidates.length
+  )
     throw absenceError("LF_A_DRIVEN_REQUIREMENT_ABSENCE_CANDIDATES_DUPLICATE");
   const candidatesByDocument = new Map();
   for (const candidate of candidates) {
@@ -180,7 +182,8 @@ function buildADrivenRequirementAbsencePlan({
   for (const requirement of requirements) {
     const requirementPartitions = [];
     for (const document of completeCorpus.documents) {
-      const documentCandidates = candidatesByDocument.get(document.documentUuid) || [];
+      const documentCandidates =
+        candidatesByDocument.get(document.documentUuid) || [];
       const planned = partitionDocumentCandidates({
         requirement,
         document,
@@ -258,8 +261,12 @@ function validateADrivenRequirementAbsencePlan(plan) {
     )
   )
     throw absenceError("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_DIGEST_INVALID");
-  const candidateIds = new Set(plan.candidates.map(({ candidateId }) => candidateId));
-  const partitionIds = new Set(plan.partitions.map(({ partitionId }) => partitionId));
+  const candidateIds = new Set(
+    plan.candidates.map(({ candidateId }) => candidateId)
+  );
+  const partitionIds = new Set(
+    plan.partitions.map(({ partitionId }) => partitionId)
+  );
   if (
     candidateIds.size !== plan.candidates.length ||
     partitionIds.size !== plan.partitions.length ||
@@ -311,7 +318,10 @@ function validateADrivenRequirementAbsenceResponses({
       const reasonCode = records.length
         ? "DUPLICATE_PARTITION_RESPONSE"
         : "MISSING_PARTITION_RESPONSE";
-      diagnostics.push({ partitionId: partition.partitionId, code: reasonCode });
+      diagnostics.push({
+        partitionId: partition.partitionId,
+        code: reasonCode,
+      });
       return {
         partitionId: partition.partitionId,
         requirementId: partition.requirementId,
@@ -378,8 +388,8 @@ function validateADrivenRequirementAbsenceResponses({
       };
     const selectedCandidateIds = [
       ...new Set(
-        observed.flatMap(({ selectedCandidateIds = [] }) =>
-          selectedCandidateIds
+        observed.flatMap(
+          ({ selectedCandidateIds = [] }) => selectedCandidateIds
         )
       ),
     ].sort();
