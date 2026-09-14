@@ -558,8 +558,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
         ],
         dimensionChecks: decisionChecks(
           item,
-          item.semanticChecks.map((_check, index) =>
-            index === 0 ? "MISMATCH" : "MATCH"
+          item.semanticChecks.map(({ role }) =>
+            role === "TARGET" ? "MISMATCH" : "MATCH"
           ),
           [item.candidates[0]?.compactCandidateId || "missing-candidate"]
         ),
