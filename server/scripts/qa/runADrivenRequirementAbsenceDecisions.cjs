@@ -273,17 +273,97 @@ function parseSingleDecision(value) {
   return parsed[0];
 }
 
+function jsonObjectsFromText(value) {
+  const source = String(value || "");
+  const objects = [];
+  let start = -1;
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === '"') inString = false;
+      continue;
+    }
+    if (character === '"') {
+      inString = true;
+      continue;
+    }
+    if (character === "{") {
+      if (depth === 0) start = index;
+      depth += 1;
+      continue;
+    }
+    if (character !== "}" || depth === 0) continue;
+    depth -= 1;
+    if (depth !== 0 || start < 0) continue;
+    try {
+      objects.push(JSON.parse(source.slice(start, index + 1)));
+    } catch {
+      // The strict parser still owns acceptance; this scanner only preserves
+      // validated positive conflict signals from otherwise malformed output.
+    }
+    start = -1;
+  }
+  return objects;
+}
+
+function positiveCandidateSignals({ rawResponse, plan, partition }) {
+  const candidateIds = [];
+  for (const response of jsonObjectsFromText(rawResponse)) {
+    try {
+      const validation = validateADrivenRequirementAbsencePartitionResponse({
+        plan,
+        partitionId: partition.partitionId,
+        response,
+      });
+      if (
+        validation.result.status === "TERMINAL" &&
+        response.decision === "COUNTERPART_PRESENT"
+      )
+        candidateIds.push(...response.candidateIds);
+    } catch {
+      // Unknown IDs, wrong partitions and malformed objects are not signals.
+    }
+  }
+  return [...new Set(candidateIds)].sort();
+}
+
 function retryInstruction(attempts) {
   const previous = attempts.at(-1);
   if (!previous) return null;
-  if (previous.errorClass === "MODEL_RESPONSE_INVALID")
-    return [
+  const observedPositiveCandidateIds = [
+    ...new Set(
+      attempts.flatMap(({ positiveCandidateSignals: signals }) => signals || [])
+    ),
+  ].sort();
+  const positiveConflictInstruction = observedPositiveCandidateIds.length
+    ? `Ein früherer ungültiger Versuch enthielt einen vertragsgültigen Positivhinweis für diese vorgelegten candidateIds: ${observedPositiveCandidateIds.join(
+        ", "
+      )}. Prüfe diese IDs ausdrücklich; sie dürfen durch eine spätere Negativantwort nicht still verschwinden.`
+    : null;
+  if (previous.errorClass === "MODEL_RESPONSE_INVALID") {
+    const messages = [
       "KORREKTUR FÜR DIESEN RETRY:",
       "Die vorige Antwort war kein einzelner gültiger JSON-Wert.",
       "Entscheide zuerst endgültig und gib danach genau ein einziges JSON-Objekt aus.",
       "Keine Analyse, Selbstkorrektur, Markdown-Markierung oder weitere JSON-Variante vor oder nach diesem Objekt.",
       "Das Objekt muss ausschließlich partitionId, decision, candidateIds und rationale enthalten.",
-    ].join(" ");
+    ];
+    if (positiveConflictInstruction) messages.push(positiveConflictInstruction);
+    return messages.join(" ");
+  }
+  if (previous.errorClass === "POSITIVE_SIGNAL_CONFLICT")
+    return [
+      "KORREKTUR FÜR DIESEN RETRY:",
+      positiveConflictInstruction,
+      "Die vorige saubere Negativantwort genügt wegen dieses Konflikts noch nicht zur Abwesenheitszertifizierung. Entscheide erneut source-bound und gib genau ein einziges finales JSON-Objekt ohne Begleittext aus.",
+    ]
+      .filter(Boolean)
+      .join(" ");
   if (previous.validation?.result?.status !== "TERMINAL")
     return [
       "KORREKTUR FÜR DIESEN RETRY:",
@@ -396,10 +476,24 @@ async function runPartition({
         partitionId: partition.partitionId,
         response,
       });
+      const observedPositiveCandidateIds = [
+        ...new Set(
+          attempts.flatMap(
+            ({ positiveCandidateSignals: signals }) => signals || []
+          )
+        ),
+      ].sort();
+      const positiveSignalConflict =
+        response.decision === "NO_COUNTERPART_IN_PARTITION" &&
+        observedPositiveCandidateIds.length > 0 &&
+        !attempts.some(
+          ({ errorClass: priorErrorClass }) =>
+            priorErrorClass === "POSITIVE_SIGNAL_CONFLICT"
+        );
       const attemptRecord = {
         attempt,
         durationMs: Math.round(performance.now() - started),
-        errorClass: null,
+        errorClass: positiveSignalConflict ? "POSITIVE_SIGNAL_CONFLICT" : null,
         timedOut: false,
         abortTriggered: false,
         responseModel: completion.model || null,
@@ -410,9 +504,11 @@ async function runPartition({
         rawResponseSha256: sha256(rawResponse),
         response,
         validation,
+        positiveCandidateSignals: observedPositiveCandidateIds,
       };
       attempts.push(attemptRecord);
       await onAttempt(attemptRecord);
+      if (positiveSignalConflict) continue;
       if (validation.result.status === "TERMINAL")
         return {
           schemaVersion: 1,
@@ -447,6 +543,11 @@ async function runPartition({
         rawResponseSha256: sha256(rawResponse),
         response: null,
         validation: null,
+        positiveCandidateSignals: positiveCandidateSignals({
+          rawResponse,
+          plan,
+          partition,
+        }),
         error: error.message,
       };
       attempts.push(attemptRecord);
@@ -705,7 +806,9 @@ if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
 module.exports = {
+  jsonObjectsFromText,
   parseSingleDecision,
+  positiveCandidateSignals,
   preliminaryDecision,
   preliminaryDecisionArtifact,
   prompt,

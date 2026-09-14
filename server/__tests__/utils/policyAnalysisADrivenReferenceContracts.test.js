@@ -101,6 +101,7 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenRequirementAbsenceCertification");
 const {
   parseSingleDecision: parseRequirementAbsenceDecision,
+  positiveCandidateSignals: requirementAbsencePositiveCandidateSignals,
   preliminaryDecisionArtifact,
   prompt: requirementAbsencePrompt,
   runPartition: runRequirementAbsencePartition,
@@ -15228,6 +15229,24 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       }
     )}`;
     expect(() => parseRequirementAbsenceDecision(malformed)).toThrow();
+    expect(
+      requirementAbsencePositiveCandidateSignals({
+        rawResponse: malformed,
+        plan: absencePlan,
+        partition: absencePlan.partitions[0],
+      })
+    ).toEqual([absencePlan.partitions[0].candidateIds[0]]);
+    expect(
+      requirementAbsencePositiveCandidateSignals({
+        rawResponse: `${JSON.stringify(negativeResponses[0])}\n${JSON.stringify({
+          ...negativeResponses[0],
+          decision: "COUNTERPART_PRESENT",
+          candidateIds: ["UNKNOWN-CANDIDATE"],
+        })}`,
+        plan: absencePlan,
+        partition: absencePlan.partitions[0],
+      })
+    ).toEqual([]);
     const retryMessages = [];
     const repairedRun = await runRequirementAbsencePartition({
       client: {
@@ -15241,15 +15260,17 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
                   choices: [{ message: { content: malformed } }],
                   usage: {},
                 };
+              const response =
+                retryMessages.length === 2
+                  ? negativeResponses[0]
+                  : {
+                      ...negativeResponses[0],
+                      decision: "COUNTERPART_PRESENT",
+                      candidateIds: [absencePlan.partitions[0].candidateIds[0]],
+                    };
               return {
                 model: "qwen/qwen3.6-35b-a3b",
-                choices: [
-                  {
-                    message: {
-                      content: JSON.stringify(negativeResponses[0]),
-                    },
-                  },
-                ],
+                choices: [{ message: { content: JSON.stringify(response) } }],
                 usage: {},
               };
             }),
@@ -15260,22 +15281,81 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       modelContext: 42_496,
       plan: absencePlan,
       partition: absencePlan.partitions[0],
-      maximumAttempts: 2,
+      maximumAttempts: 3,
       requestTimeoutMs: 100,
       abortSettlementTimeoutMs: 10,
       recoverModelAfterAbort: jest.fn(),
     });
-    expect(repairedRun.validation.result.status).toBe("TERMINAL");
-    expect(repairedRun.attempts).toHaveLength(2);
+    expect(repairedRun.validation.result).toMatchObject({
+      status: "TERMINAL",
+      decision: "COUNTERPART_PRESENT",
+    });
+    expect(repairedRun.attempts).toHaveLength(3);
     expect(repairedRun.attempts[0].errorClass).toBe("MODEL_RESPONSE_INVALID");
+    expect(repairedRun.attempts[0].positiveCandidateSignals).toEqual([
+      absencePlan.partitions[0].candidateIds[0],
+    ]);
+    expect(repairedRun.attempts[1].errorClass).toBe("POSITIVE_SIGNAL_CONFLICT");
     expect(retryMessages[0]).toHaveLength(2);
     expect(retryMessages[1]).toHaveLength(3);
+    expect(retryMessages[2]).toHaveLength(3);
     expect(retryMessages[1].at(-1).content).toContain(
       "genau ein einziges JSON-Objekt"
     );
     expect(retryMessages[1].at(-1).content).toContain(
       "Keine Analyse, Selbstkorrektur"
     );
+    expect(retryMessages[1].at(-1).content).toContain(
+      absencePlan.partitions[0].candidateIds[0]
+    );
+    expect(retryMessages[2].at(-1).content).toContain(
+      "nicht zur Abwesenheitszertifizierung"
+    );
+    const confirmedNegativeRun = await runRequirementAbsencePartition({
+      client: {
+        chat: {
+          completions: {
+            create: jest
+              .fn()
+              .mockResolvedValueOnce({
+                model: "qwen/qwen3.6-35b-a3b",
+                choices: [{ message: { content: malformed } }],
+                usage: {},
+              })
+              .mockResolvedValue({
+                model: "qwen/qwen3.6-35b-a3b",
+                choices: [
+                  {
+                    message: {
+                      content: JSON.stringify(negativeResponses[0]),
+                    },
+                  },
+                ],
+                usage: {},
+              }),
+          },
+        },
+      },
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: absencePlan,
+      partition: absencePlan.partitions[0],
+      maximumAttempts: 3,
+      requestTimeoutMs: 100,
+      abortSettlementTimeoutMs: 10,
+      recoverModelAfterAbort: jest.fn(),
+    });
+    expect(confirmedNegativeRun.validation.result).toMatchObject({
+      status: "TERMINAL",
+      decision: "NO_COUNTERPART_IN_PARTITION",
+    });
+    expect(
+      confirmedNegativeRun.attempts.map(({ errorClass }) => errorClass)
+    ).toEqual([
+      "MODEL_RESPONSE_INVALID",
+      "POSITIVE_SIGNAL_CONFLICT",
+      null,
+    ]);
     expect(
       parseRequirementAbsenceDecision(JSON.stringify(negativeResponses[0]))
     ).toEqual(negativeResponses[0]);
