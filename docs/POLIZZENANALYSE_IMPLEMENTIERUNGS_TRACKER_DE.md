@@ -9248,3 +9248,106 @@ die dynamischen A-Zeilen weder erzeugen noch verändern.
 Status: `A-GEORDNETE BINÄRPROJEKTION UND INTERNE XLSX PASS; 364/364 ZEILEN
 TERMINAL; SHADOW-PRODUKTINTEGRATION, ECHTER DYNAMISCHER 1+9-LAUF UND
 GOLD-REGRESSION NOCH OFFEN; KEIN DEPLOYMENT`.
+
+### 133.43 V2-Produktprojektion und erste ehrliche Gold-283-Ergebnismessung
+
+Vor der Fortsetzung wurde auf dem freigegebenen Mac Studio Qwen
+`qwen/qwen3.6-35b-a3b` mit dem Modellschlüssel
+`qwen3.6-35b-a3b-mlx-text`, Kontext 42.496 und Parallelität 1 geladen. LM
+Studio meldete vor und nach den Prüfungen `idle` und eine leere Warteschlange.
+
+Die Commits `0b6a5e878`, `a13d43bf3` und `14639ef9a` ergänzen eine eng
+abgegrenzte Produktprojektion des bestehenden V2-Vertrags. Sie erzeugt keine
+neuen fachlichen Entscheidungen, sondern validiert die gesamte bereits
+gespeicherte A-/B-Entscheidungslinie, ordnet die 364 Zeilen dynamisch nach A
+und übersetzt sie in die bestehende API-/Kundenpresenter-Form. Der neue
+Profilvertrag erlaubt ein oder mehrere A-Dokumente, verlangt die vollständige
+B-Paketsuche, kennt ausschließlich binäre Kundenstati und erklärt Gold
+ausdrücklich nicht zur Produktionszeilenquelle.
+
+Der erste reale 1+9-Shadow verwendete ausschließlich die vorhandenen,
+hashgebundenen V2-Artefakte und erzeugte ohne Modellaufruf:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-PRODUCT-SHADOW-20260914-14639EF9/comparison.private.json
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-PRODUCT-SHADOW-20260914-14639EF9/comparison.customer.private.json
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-PRODUCT-SHADOW-20260914-14639EF9/summary.private.json
+```
+
+Ergebnis:
+
+```text
+A-Dokumente:                       1
+B-Dokumente:                       9
+dynamische A-Zeilen:             364
+GEFUNDEN:                         330
+NICHT GEFUNDEN:                    34
+UNRESOLVED:                         0
+B-only-Zeilen:                      0
+Gold als Produktionseingang:     nein
+Kunden-XLSX erzeugt:             nein
+Deployment:                      nein
+```
+
+Interner Produkt-Result-Hash:
+`532a6fb85c175895c587eaf63d07c3ce2cc1f01f8bcc7b21bdeabce787db29f2`;
+Dateihash privates Produktresultat:
+`3f658fa64b2c8194715c185b3c7293c99aa1f18e6b0ac2d1c4a04f9310b62d02`;
+Dateihash Customer-Presenter-Readview:
+`8a0a2bb0143c78603bbfef207ccd7aaf6649c300bb0355595421d44bf5ba41b6`.
+Eine zweite Materialisierung mit identischem Laufvertrag verwendete die
+Dateien unverändert und ergab dieselben Hashes. Alle drei Dateien besitzen
+Modus `0600`.
+
+Die Commits `7252ce213`, `23587837e` und `7c3030165` erweitern danach nur die
+QA-Goldmessung für den requirement-basierten V6-Binärvertrag. Gold bleibt
+unverändert hashgeprüft:
+
+```text
+Gold intern:  d9475c0e8145b5f326ae54ffaab58e5b2c2d154521837452993fc72712257179
+Gold-Datei:   9ed4ab6ba3dbd896de48ecf94e6874881391600ef2cc027afae5af5d21123a55
+```
+
+Erste Ergebnismessung:
+
+```text
+Gold-A-Quellen abgedeckt:        283/283
+eindeutig ergebnismessbar:       144
+Split-/Merge-mehrdeutig:         139
+binäre Übereinstimmungen:      134/144
+binäre Abweichungen:             10
+False Positives:                   1
+False Negatives:                   9
+Gold-Quellen textgebunden:        24/374
+gleiches B-Dokument:             133/374
+gleiches B-Dokument und Seite:   111/374
+```
+
+Das versionierte Diagnoseartefakt liegt unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-PRODUCT-SHADOW-20260914-14639EF9/gold-regression-v3.private.json
+```
+
+Interner Regressionshash:
+`92a95998d547d2fff564eb499187b4ce952ac30f762c8bcfa8614e0eb875cebe`;
+Dateihash:
+`9214fc7b1f61d0d6b698c8f21b12fc203fddc1892e95990322ad767cdd8c6127`.
+Die Datei-/Seitenmetrik ist nur Diagnose und lockert `BOUND` nicht. Die
+niedrige Textbindung darf weder als 350 fachliche Fehler noch als PASS
+interpretiert werden: In 111 Fällen liegt eine gewählte V2-Evidenz im selben
+Dokument auf derselben Seite wie die Gold-Quelle, aber mit einem anderen
+Span. Diese Fälle benötigen eine quellengebundene Bewertung statt einer
+automatischen Gleichsetzung.
+
+Auf dem exakten Commit `7c3030165de5be64d468be579f7a0bea17ae8276`
+bestanden Syntax, Prettier und 315/315 fokussierte Tests. Die zehn eindeutig
+messbaren binären Abweichungen sind der nächste fachliche Block. Eine
+detaillierte private Provenienz-/Quellenprüfung wurde nicht ausgeführt, weil
+die frühere Freigabe auf exakt 76 IDs begrenzt war und deren maschinenlesbare
+Liste nicht an diesen Lauf gebunden ist. Ohne ausdrückliche Freigabe wird der
+Prüfumfang nicht erweitert.
+
+Status: `ECHTER 1+9-V2-PRODUKT-SHADOW UND API-PROJEKTION PASS; GOLDMESSUNG
+134/144 EINDEUTIGE ZEILEN KORREKT, 10 ABWEICHUNGEN OFFEN; DETAILPRÜFUNG DIESER
+10 IDs FREIGABEPFLICHTIG; KEINE KUNDEN-XLSX, KEIN DEPLOYMENT`.
