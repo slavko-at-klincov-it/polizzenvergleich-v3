@@ -9503,6 +9503,15 @@ Resume-Lauf endete mit Status 130, null aktiven Kindprozessen, freigegebener
 globaler Modellsperre und Qwen `qwen/qwen3.6-35b-a3b` weiterhin `idle`, Kontext
 42.496, Parallelität 1 und Queue 0.
 
+Der anschließend verbreiterte Policy-Comparison-Testlauf deckte einen
+veralteten UI-Vertragstest auf, der noch das verworfene feste
+„283 Zeilen/13 Kategorien“-Schema verlangte. Commit
+`001743eed3b66e4767cdcaecee374f332d3cbd85` richtet ausschließlich diesen Test
+am bereits implementierten dynamischen A-Vertrag aus. Auf genau diesem Commit
+bestanden im neuen isolierten Mac-Studio-Worktree Shellsyntax, Prettier und
+32/32 Suites mit 716/716 Tests; der Endpoint-Test verwendete ein isoliertes
+temporäres `STORAGE_DIR`.
+
 Der erzeugte XLSX ist ein privates QA-/Review-Artefakt, keine freigegebene
 Kunden-XLSX. Der Lauf beweist die integrierte, resumierbare Produktgrenze und
 reproduziert den bekannten 1+9-Stand; wegen der hashgebundenen Wiederverwendung
