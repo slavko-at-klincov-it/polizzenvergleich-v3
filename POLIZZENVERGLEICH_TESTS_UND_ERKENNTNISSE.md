@@ -4704,6 +4704,10 @@ Produktdefaults und leitet SIGTERM an das aktive Kind weiter. Ein realer
 Abbruchtest endete mit Status 130, null Kindprozessen, freigegebener globaler
 Modellsperre und Qwen weiterhin `idle`. Auf dem Mac Studio bestanden
 Shellsyntax, Prettier und 17/17 fokussierte Runner-/Worker-Vertragstests.
+Ein anschließender breiter Lauf fand noch einen veralteten UI-Test, der das
+verworfene feste 283er-Schema erwartete. Nach dessen Korrektur in
+`001743eed3b66e4767cdcaecee374f332d3cbd85` bestanden 32/32 Suites mit
+716/716 Tests auf dem Mac Studio.
 
 **Beweist:** Der neue A-getriebene Pfad erreicht mit exakt gebundenen
 Zwischenartefakten die bestehende Ergebnis-/Exportgrenze, bleibt resumierbar
