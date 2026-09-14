@@ -101,6 +101,7 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenRequirementAbsenceCertification");
 const {
   parseSingleDecision: parseRequirementAbsenceDecision,
+  preliminaryDecisionArtifact,
   prompt: requirementAbsencePrompt,
   runPartition: runRequirementAbsencePartition,
 } = require("../../scripts/qa/runADrivenRequirementAbsenceDecisions.cjs");
@@ -15086,6 +15087,17 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       status: "UNRESOLVED",
       reasonCode: "INVALID_REQUIREMENT_RESPONSE",
     });
+
+    expect(preliminaryDecisionArtifact(decisionPlan, result)).toMatchObject({
+      subset: { planSha256: decisionPlan.planSha256 },
+      decisions: {
+        decisionSha256: result.decisionSha256,
+        summary: { fallbackRequiredRequirements: result.results.length },
+      },
+    });
+    expect(() => preliminaryDecisionArtifact(decisionPlan, invalid)).toThrow(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_DECISIONS_INVALID"
+    );
   });
 
   test("certifies NOT_FOUND only after every complete B clause partition is terminal", async () => {

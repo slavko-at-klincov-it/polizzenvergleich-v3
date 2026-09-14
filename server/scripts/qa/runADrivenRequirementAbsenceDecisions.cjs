@@ -9,6 +9,7 @@ const { performance } = require("perf_hooks");
 const { OpenAI } = require("openai");
 const {
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
+  validateADrivenRequirementDecisionArtifact,
   validateADrivenRequirementDecisionResponses,
 } = require("../../utils/policyAnalysis/aDrivenRequirementCounterpartDecision");
 const {
@@ -59,6 +60,7 @@ function argumentsFrom(argv) {
   const allowed = new Set([
     "decisionPlan",
     "preliminaryBatch",
+    "preliminaryDecisions",
     "completeCorpus",
     "output",
     "model",
@@ -76,13 +78,16 @@ function argumentsFrom(argv) {
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
   for (const required of [
     "decisionPlan",
-    "preliminaryBatch",
     "completeCorpus",
     "output",
     "lmStudioSdk",
     "qwenModelKey",
   ])
     if (!values[required]) fail(`--${required} ist erforderlich`);
+  if (Boolean(values.preliminaryBatch) === Boolean(values.preliminaryDecisions))
+    fail(
+      "Exakt eines von --preliminaryBatch oder --preliminaryDecisions ist erforderlich"
+    );
   const integer = (name, fallback, minimum = 1) => {
     const parsed = Number(values[name] ?? fallback);
     if (!Number.isSafeInteger(parsed) || parsed < minimum)
@@ -91,7 +96,12 @@ function argumentsFrom(argv) {
   };
   const result = {
     decisionPlan: path.resolve(values.decisionPlan),
-    preliminaryBatch: path.resolve(values.preliminaryBatch),
+    preliminaryBatch: values.preliminaryBatch
+      ? path.resolve(values.preliminaryBatch)
+      : null,
+    preliminaryDecisions: values.preliminaryDecisions
+      ? path.resolve(values.preliminaryDecisions)
+      : null,
     completeCorpus: path.resolve(values.completeCorpus),
     output: path.resolve(values.output),
     lmStudioSdk: path.resolve(values.lmStudioSdk),
@@ -233,6 +243,19 @@ function preliminaryDecision(plan, batch) {
   )
     throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_NOT_FALLBACK");
   return { subset, decisions };
+}
+
+function preliminaryDecisionArtifact(plan, decisions) {
+  validateADrivenRequirementDecisionArtifact(decisions, plan);
+  if (
+    decisions.summary.unresolvedRequirements !== 0 ||
+    decisions.summary.terminalRequirements !== plan.rows.length ||
+    decisions.summary.fallbackRequiredRequirements < 1
+  )
+    throw new Error(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_DECISIONS_INVALID"
+    );
+  return { subset: plan, decisions };
 }
 
 function parseSingleDecision(value) {
@@ -491,15 +514,25 @@ async function run() {
     args.decisionPlan,
     "LF_A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_PLAN"
   );
-  const sourceBatch = readJson(
-    args.preliminaryBatch,
-    "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_BATCH"
-  );
+  const sourceBatch = args.preliminaryBatch
+    ? readJson(
+        args.preliminaryBatch,
+        "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_BATCH"
+      )
+    : null;
+  const sourceDecisions = args.preliminaryDecisions
+    ? readJson(
+        args.preliminaryDecisions,
+        "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_DECISIONS"
+      )
+    : null;
   const completeCorpus = readJson(
     args.completeCorpus,
     "LF_A_DRIVEN_REQUIREMENT_ABSENCE_COMPLETE_CORPUS"
   );
-  const preliminary = preliminaryDecision(sourcePlan, sourceBatch);
+  const preliminary = sourceDecisions
+    ? preliminaryDecisionArtifact(sourcePlan, sourceDecisions)
+    : preliminaryDecision(sourcePlan, sourceBatch);
   const plan = buildADrivenRequirementAbsencePlan({
     decisionPlan: preliminary.subset,
     preliminaryDecisions: preliminary.decisions,
@@ -652,6 +685,7 @@ if (require.main === module)
 module.exports = {
   parseSingleDecision,
   preliminaryDecision,
+  preliminaryDecisionArtifact,
   prompt,
   runPartition,
   subsetDecisionPlan,
