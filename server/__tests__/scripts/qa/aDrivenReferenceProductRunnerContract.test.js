@@ -17,7 +17,6 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
     const stages = [
       "buildADrivenReferenceShadow.cjs",
       "runADrivenReferenceClassification.cjs",
-      "buildADrivenReferenceShadow.cjs",
       "runADrivenReferenceDinghyRetrieval.cjs",
       "buildADrivenCompleteBCorpus.cjs",
       "runADrivenRequirementCounterpartDecisions.cjs",
@@ -36,6 +35,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
     expect(source).toContain(
       '--sourceInputManifest "$RUN_ROOT/input-manifest.private.json"'
     );
+    expect(source).toContain('A_FINAL_ROOT="$A_CLASSIFICATION_ROOT"');
+    expect(source.match(/buildADrivenReferenceShadow\.cjs/gu)).toHaveLength(1);
     expect(source).not.toContain("gold-regression");
     expect(source).not.toContain("Gold-283");
   });

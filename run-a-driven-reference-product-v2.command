@@ -28,7 +28,7 @@ GENERATED_AT="$5"
 OUTPUT_ROOT="$RUN_ROOT/a-driven-v2"
 A_PLAN_ROOT="$OUTPUT_ROOT/a-plan"
 A_CLASSIFICATION_ROOT="$OUTPUT_ROOT/a-classification"
-A_FINAL_ROOT="$OUTPUT_ROOT/a-final"
+A_FINAL_ROOT="$A_CLASSIFICATION_ROOT"
 B_RETRIEVAL_ROOT="$OUTPUT_ROOT/b-retrieval"
 B_COMPLETE_ROOT="$OUTPUT_ROOT/b-complete"
 B_COMPLETE_CORPUS="$B_COMPLETE_ROOT/complete-b-corpus.private.json"
@@ -160,11 +160,6 @@ ensure_qwen
   const summary = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
   if (summary.unresolvedBatches !== 0 || summary.unresolvedUnits !== 0) process.exit(2);
 ' "$A_CLASSIFICATION_ROOT/summary.private.json"
-
-"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/buildADrivenReferenceShadow.cjs" \
-  --runRoot "$RUN_ROOT" \
-  --responses "$A_CLASSIFICATION_ROOT/responses.private.json" \
-  --output "$A_FINAL_ROOT"
 
 DINGHY_IDENTIFIER="$("$NODE_BIN" -e '
   const fs = require("fs");
