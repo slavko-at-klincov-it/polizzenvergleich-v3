@@ -40,6 +40,8 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenCounterpartSearchPlan");
 const {
   buildADrivenBinaryReferenceResult,
+  buildADrivenRequirementBinaryReferenceResult,
+  validateADrivenRequirementBinaryReferenceResult,
 } = require("../../utils/policyAnalysis/aDrivenBinaryReferenceResult");
 const {
   buildADrivenGoldRegression,
@@ -15453,6 +15455,42 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         absenceDecisions: certified,
       })
     ).toBe(finalCertified);
+    const binaryCertified = buildADrivenRequirementBinaryReferenceResult({
+      manifest,
+      decisionPlan,
+      preliminaryDecisions,
+      absencePlan,
+      absenceDecisions: certified,
+      finalDecisions: finalCertified,
+    });
+    expect(binaryCertified.summary).toMatchObject({
+      rows: 1,
+      found: 0,
+      notFound: 1,
+      unresolved: 0,
+      sideBOnlyRows: 0,
+      binaryCustomerStatus: true,
+    });
+    expect(binaryCertified.rows[0]).toMatchObject({
+      requirementId: decisionPlan.rows[0].requirementId,
+      customerStatus: "NOT_FOUND",
+      customerStatusLabel: "Nicht gefunden",
+      counterpartOutcome: "NO_COUNTERPART_ESTABLISHED",
+      bEvidence: [],
+      bCounterparts: [],
+      manualAssessment: "",
+      resolutionPath: "COMPLETE_CORPUS_ABSENCE",
+    });
+    expect(
+      validateADrivenRequirementBinaryReferenceResult(binaryCertified, {
+        manifest,
+        decisionPlan,
+        preliminaryDecisions,
+        absencePlan,
+        absenceDecisions: certified,
+        finalDecisions: finalCertified,
+      })
+    ).toBe(binaryCertified);
 
     const semanticallyTamperedPreliminary = JSON.parse(
       JSON.stringify(preliminaryDecisions)
@@ -15677,6 +15715,35 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       resolutionPath: "FULL_CORPUS_RESCUE_COUNTERPART",
     });
     expect(finalFound.results[0].counterpartEvidence).toHaveLength(1);
+    const binaryFound = buildADrivenRequirementBinaryReferenceResult({
+      manifest,
+      decisionPlan,
+      preliminaryDecisions,
+      absencePlan,
+      absenceDecisions: candidateFound,
+      rescuePlan,
+      rescueDecisions,
+      finalDecisions: finalFound,
+    });
+    expect(binaryFound.summary).toMatchObject({
+      rows: 1,
+      found: 1,
+      notFound: 0,
+      unresolved: 0,
+      sideBOnlyRows: 0,
+      binaryCustomerStatus: true,
+    });
+    expect(binaryFound.rows[0]).toMatchObject({
+      customerStatus: "FOUND",
+      customerStatusLabel: "Gefunden",
+      counterpartOutcome: "FULL_COUNTERPART",
+      resolutionPath: "FULL_CORPUS_RESCUE_COUNTERPART",
+      manualAssessment: "",
+    });
+    expect(binaryFound.rows[0].bCounterparts).toHaveLength(1);
+    expect(binaryFound.rows[0].componentFindings).toHaveLength(
+      manifest.summary.semanticComponents
+    );
 
     const rescueNegativeResponse = {
       requirementId: rescueRow.requirementId,
