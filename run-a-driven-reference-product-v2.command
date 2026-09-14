@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-NODE_BIN="$SCRIPT_DIR/.runtime/node-v22.23.2/bin/node"
+NODE_BIN="${V3_NODE_BIN:-$SCRIPT_DIR/.runtime/node-v22.23.2/bin/node}"
 LMS_BIN="${V3_LMS_BIN:-$HOME/.lmstudio/bin/lms}"
 LMSTUDIO_SDK="${V3_LMSTUDIO_SDK:-$HOME/.lmstudio/extensions/plugins/lmstudio/js-code-sandbox/node_modules/@lmstudio/sdk/dist/index.cjs}"
 BASE_URL="${LMSTUDIO_BASE_PATH:-http://127.0.0.1:1234/v1}"

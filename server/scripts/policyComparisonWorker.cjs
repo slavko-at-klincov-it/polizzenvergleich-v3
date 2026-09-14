@@ -445,7 +445,7 @@ function runADrivenReferenceProduct({
       ],
       {
         cwd: REPOSITORY_ROOT,
-        env: process.env,
+        env: { ...process.env, V3_NODE_BIN: process.execPath },
         stdio: ["ignore", log, log],
       }
     );

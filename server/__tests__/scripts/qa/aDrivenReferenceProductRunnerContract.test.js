@@ -11,6 +11,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
   const source = fs.readFileSync(RUNNER, "utf8");
 
   test("executes the existing V2 stages in the required fail-closed order", () => {
+    expect(source).toContain(
+      'NODE_BIN="${V3_NODE_BIN:-$SCRIPT_DIR/.runtime/node-v22.23.2/bin/node}"'
+    );
     const stages = [
       "buildADrivenReferenceShadow.cjs",
       "runADrivenReferenceClassification.cjs",

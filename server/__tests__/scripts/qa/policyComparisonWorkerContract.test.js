@@ -230,6 +230,7 @@ describe("policy comparison worker contract", () => {
     expect(source).toContain("EXTRACTING_REFERENCE_DOCUMENTS");
     expect(source).toContain("ANALYZING_REFERENCE_PRODUCT");
     expect(source).toContain("embeddingContractIdentity");
+    expect(source).toContain("V3_NODE_BIN: process.execPath");
     expect(source).toContain("snapshotADrivenEmbeddingContract");
     expect(source).toContain("embedding-contract.private.json");
     expect(source).toContain("LF_A_DRIVEN_EMBEDDING_CONTRACT_CHANGED");
