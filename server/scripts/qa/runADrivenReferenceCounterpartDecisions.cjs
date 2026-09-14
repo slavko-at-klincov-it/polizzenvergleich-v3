@@ -463,7 +463,7 @@ async function runBatch({
           role: "user",
           content: `Die Antwort verletzt den Vertrag: ${JSON.stringify(
             currentValidation.diagnostics
-          )}. Korrigiere ausschließlich die noch erwarteten Pakete. Verwende nur vorhandene compactCandidateIds. SUPPORTED verlangt ausschließlich MATCH; CONTRADICTED verlangt mindestens ein MISMATCH und kein NOT_ESTABLISHED; NOT_SUPPORTED verlangt mindestens ein NOT_ESTABLISHED und kein MISMATCH. Jeder NOT_ESTABLISHED-Check hat candidateIds exakt []; nur MATCH oder MISMATCH dürfen Kandidaten-IDs tragen. Teilbelege bleiben MATCH mit candidateIds. selectedCandidateIds ist exakt die Vereinigungsmenge aller dimensionChecks.candidateIds und darf bei einem MATCH oder MISMATCH niemals leer sein. Nur wenn ausnahmslos alle Checks NOT_ESTABLISHED sind, ist selectedCandidateIds:[] zulässig.`,
+          )}. Korrigiere ausschließlich die noch erwarteten Pakete. Verwende nur vorhandene compactCandidateIds. Der TARGET-Check bestimmt decision: TARGET MATCH ergibt SUPPORTED, TARGET MISMATCH ergibt CONTRADICTED und TARGET NOT_ESTABLISHED ergibt NOT_SUPPORTED. CONTEXT-Abweichungen bleiben sichtbar, ändern aber den TARGET-Gegenstückstatus nicht. Jeder NOT_ESTABLISHED-Check hat candidateIds exakt []; nur MATCH oder MISMATCH dürfen Kandidaten-IDs tragen. selectedCandidateIds ist exakt die Vereinigungsmenge aller dimensionChecks.candidateIds und darf bei einem MATCH oder MISMATCH niemals leer sein. Nur wenn ausnahmslos alle Checks NOT_ESTABLISHED sind, ist selectedCandidateIds:[] zulässig.`,
         },
       ];
     } catch (error) {

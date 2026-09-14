@@ -199,9 +199,7 @@ function buildADrivenBinaryReferenceResult({
         ["SUPPORTED", "CONTRADICTED"].includes(decision)
       );
       const componentExact = documentFindings.some(
-        ({ decision, dimensionChecks }) =>
-          decision === "SUPPORTED" &&
-          dimensionChecks.every(({ outcome }) => outcome === "MATCH")
+        ({ decision }) => decision === "SUPPORTED"
       );
       const componentContradicted = documentFindings.some(
         ({ decision }) => decision === "CONTRADICTED"
@@ -227,10 +225,10 @@ function buildADrivenBinaryReferenceResult({
     const identityCoreFindings = componentFindings.filter(({ componentId }) =>
       identityCoreIds.has(componentId)
     );
-    const found = identityCoreFindings.every(
+    const found = identityCoreFindings.some(
       ({ componentFound }) => componentFound
     );
-    const notFoundCertified = identityCoreFindings.some(
+    const notFoundCertified = identityCoreFindings.every(
       ({ componentAbsenceCertified }) => componentAbsenceCertified
     );
     if (!found && !notFoundCertified)

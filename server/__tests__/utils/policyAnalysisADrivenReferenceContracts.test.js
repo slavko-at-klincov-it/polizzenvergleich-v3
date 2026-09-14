@@ -72,6 +72,10 @@ const {
 const {
   buildADrivenCounterpartDecisionPlan,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartDecisionPlan");
+const {
+  buildADrivenRequirementDecisionPlan,
+  validateADrivenRequirementDecisionResponses,
+} = require("../../utils/policyAnalysis/aDrivenRequirementCounterpartDecision");
 const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
@@ -14270,13 +14274,14 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       index === 0
         ? {
             packageId: item.packageId,
-            decision: "SUPPORTED",
+            decision: "CONTRADICTED",
             selectedCandidateIds: ["candidate-one"],
             dimensionChecks: item.semanticChecks.map(
               ({ checkId, dimension, role }) => ({
                 checkId,
                 dimension,
-                outcome: role === "TARGET" ? "MATCH" : "NOT_ESTABLISHED",
+                outcome:
+                  role === "TARGET" ? "MISMATCH" : "NOT_ESTABLISHED",
                 candidateIds: role === "TARGET" ? ["candidate-one"] : [],
               })
             ),
@@ -14290,7 +14295,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     expect(partial.summary.unresolvedPackages).toBe(0);
     expect(partial.results[0]).toMatchObject({
       status: "TERMINAL",
-      decision: "SUPPORTED",
+      decision: "CONTRADICTED",
       selectedCandidateIds: ["candidate-one"],
       absenceConclusion: false,
     });
@@ -14361,6 +14366,177 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
         retrieval: tampered,
       })
     ).toThrow("LF_A_DRIVEN_RETRIEVAL_DIGEST_INVALID");
+  });
+});
+
+describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
+  function requirementDecisionFixture() {
+    const manifest = searchEligibleManifest();
+    const searchPlan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
+    });
+    const exactText = "Gebäude und Nebengebäude sind versichert.";
+    const retrieval = retrievalArtifact(
+      searchPlan,
+      searchPlan.packages.map((item) => ({
+        packageId: item.packageId,
+        completedChannels: [...REQUIRED_SEARCH_CHANNELS],
+        candidates: [
+          {
+            compactCandidateId: `candidate-${item.packageId}`,
+            documentUuid: "b-doc",
+            documentSha256: "b".repeat(64),
+            clauseBoundaryId: "clause-one",
+            channels: ["DINGHY", "LEXICAL_BM25"],
+            sourceSpans: [
+              {
+                candidateId: `source-${item.packageId}`,
+                exactText,
+                exactTextSha256: crypto
+                  .createHash("sha256")
+                  .update(exactText)
+                  .digest("hex"),
+                physicalPageNumber: 1,
+                documentStart: 0,
+                documentEnd: exactText.length,
+                channels: ["DINGHY", "LEXICAL_BM25"],
+              },
+            ],
+          },
+        ],
+      }))
+    );
+    const searchExecution = materializeADrivenCounterpartSearchExecution({
+      plan: searchPlan,
+      retrieval,
+    });
+    const decisionPlan = buildADrivenRequirementDecisionPlan({
+      manifest,
+      searchPlan,
+      searchExecution,
+    });
+    return { manifest, searchPlan, searchExecution, decisionPlan };
+  }
+
+  test("keeps the complete retrieval matrix but reviews one coherent A requirement", () => {
+    const { manifest, searchExecution, decisionPlan } =
+      requirementDecisionFixture();
+
+    expect(decisionPlan.summary).toMatchObject({
+      requirements: manifest.summary.semanticRequirements,
+      components: manifest.summary.semanticComponents,
+      absenceCertifiedRequirements: 0,
+    });
+    expect(decisionPlan.rows).toHaveLength(
+      manifest.summary.semanticRequirements
+    );
+    expect(decisionPlan.batches.length).toBeLessThan(
+      searchExecution.packages.length
+    );
+    expect(
+      decisionPlan.rows.every(
+        ({ components, candidates, searchCoverage }) =>
+          components.length > 0 &&
+          candidates.length > 0 &&
+          searchCoverage.channelsComplete
+      )
+    ).toBe(true);
+    expect(decisionPlan.selection.characterClippingAllowed).toBe(false);
+    expect(JSON.stringify(decisionPlan)).not.toContain("gold");
+  });
+
+  test("keeps a source-bound partial or opposite counterpart found", () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const partialResponses = decisionPlan.rows.map((row) => {
+      const candidateId = row.candidates[0].candidateId;
+      return {
+        requirementId: row.requirementId,
+        contextFinding: { outcome: "MATCH", candidateIds: [candidateId] },
+        componentFindings: row.components.map((component, index) => ({
+          componentId: component.componentId,
+          dimension: component.dimension,
+          outcome: index === 0 ? "MATCH" : "NOT_ESTABLISHED",
+          candidateIds: index === 0 ? [candidateId] : [],
+        })),
+        unmodeledDifferences: [],
+        rationale: "Der fachliche Kern ist belegt; Details fehlen.",
+      };
+    });
+    const partial = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: partialResponses,
+    });
+
+    expect(partial.summary.unresolvedRequirements).toBe(0);
+    expect(partial.results[0]).toMatchObject({
+      status: "TERMINAL",
+      customerFound: true,
+      customerStatus: "FOUND",
+      counterpartOutcome: "PARTIAL_COUNTERPART",
+      absenceCertified: false,
+    });
+
+    const oppositeResponses = partialResponses.map((response, rowIndex) => ({
+      ...response,
+      componentFindings: response.componentFindings.map((finding, index) => ({
+        ...finding,
+        outcome:
+          rowIndex === 0 && index === 0 ? "OPPOSITE" : finding.outcome,
+      })),
+    }));
+    const opposite = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: oppositeResponses,
+    });
+    expect(opposite.results[0]).toMatchObject({
+      customerFound: true,
+      counterpartOutcome: "CONTRADICTED",
+    });
+  });
+
+  test("requires exhaustive fallback for related-only or missing candidates", () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const responses = decisionPlan.rows.map((row) => {
+      const candidateId = row.candidates[0].candidateId;
+      return {
+        requirementId: row.requirementId,
+        contextFinding: {
+          outcome: "RELATED_ONLY",
+          candidateIds: [candidateId],
+        },
+        componentFindings: row.components.map((component) => ({
+          componentId: component.componentId,
+          dimension: component.dimension,
+          outcome: "RELATED_ONLY",
+          candidateIds: [candidateId],
+        })),
+        unmodeledDifferences: [],
+        rationale: "Nur thematische Nähe.",
+      };
+    });
+    const result = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses,
+    });
+
+    expect(result.results[0]).toMatchObject({
+      customerFound: null,
+      customerStatus: "FALLBACK_REQUIRED",
+      counterpartOutcome: null,
+      absenceCertified: false,
+    });
+
+    const tampered = JSON.parse(JSON.stringify(responses));
+    tampered[0].componentFindings[0].candidateIds = ["invented-candidate"];
+    const invalid = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: tampered,
+    });
+    expect(invalid.results[0]).toMatchObject({
+      status: "UNRESOLVED",
+      reasonCode: "INVALID_REQUIREMENT_RESPONSE",
+    });
   });
 });
 
