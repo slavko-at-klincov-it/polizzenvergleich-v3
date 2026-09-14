@@ -106,14 +106,17 @@ function fixture() {
     },
     gold30: {
       contractId: "LF_1PLUS9_GOLD_30_V1",
-      rows: ids.slice(0, 30).map((requirementId, index) => ({
+      rows: [...ids.slice(0, 29), ids[76]].map((requirementId, index) => ({
         requirementId,
         goldDecision: {
           outcome:
             index === 0
               ? "NO_COUNTERPART_ESTABLISHED"
-              : "FULL_COUNTERPART",
+              : index === 29
+                ? "PARTIAL_COUNTERPART"
+                : "FULL_COUNTERPART",
           customerFound: index !== 0,
+          rationale: `Gold-30-Entscheidung ${index}`,
         },
       })),
     },
@@ -157,6 +160,11 @@ describe("LF Gold-283 QA freezer", () => {
     expect(gold.rows[76].goldDecision.reviewMethod).toBe(
       "VALIDATED_207_COMMON_POSITIVE_ACCEPTANCE"
     );
+    expect(gold.rows[76].goldDecision).toMatchObject({
+      outcome: "PARTIAL_COUNTERPART",
+      decisionProvenance: "FROZEN_GOLD30_V1_CARRIED_FORWARD",
+      rationale: "Gold-30-Entscheidung 29",
+    });
   });
 
   it("rejects scope drift and invented source references", () => {

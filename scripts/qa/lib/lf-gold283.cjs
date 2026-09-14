@@ -189,6 +189,9 @@ function buildLfKnownFixtureGold283({
   const candidateById = new Map(
     goldCandidate.rows.map((row) => [row.requirementId, row])
   );
+  const gold30ById = new Map(
+    gold30.rows.map((row) => [row.requirementId, row])
+  );
   const validationById = new Map(
     validation.rows.map((row) => [row.requirementId, row])
   );
@@ -240,9 +243,11 @@ function buildLfKnownFixtureGold283({
         throw goldError("LF_GOLD283_ROW_BINDING_INVALID", requirementId);
 
       const explicit = adjudicationById.get(requirementId);
+      const frozenGold30Row = gold30ById.get(requirementId);
       const outcome = explicit
         ? explicit.outcome
-        : automaticOutcome(comparison.Astra_F, requirementId);
+        : frozenGold30Row?.goldDecision?.outcome ||
+          automaticOutcome(comparison.Astra_F, requirementId);
       if (!OUTCOMES.has(outcome))
         throw goldError("LF_GOLD283_OUTCOME_INVALID", requirementId);
       const customerFound = outcome !== "NO_COUNTERPART_ESTABLISHED";
@@ -258,7 +263,12 @@ function buildLfKnownFixtureGold283({
         reviewedReferenceIds.length < 1 ||
         (customerFound && selectedReferenceIds.length < 1) ||
         (!customerFound && selectedReferenceIds.length !== 0) ||
-        !String(explicit?.rationale || comparison.assessment || "").trim()
+        !String(
+          explicit?.rationale ||
+            frozenGold30Row?.goldDecision?.rationale ||
+            comparison.assessment ||
+            ""
+        ).trim()
       )
         throw goldError("LF_GOLD283_DECISION_EVIDENCE_INVALID", requirementId);
 
@@ -288,10 +298,17 @@ function buildLfKnownFixtureGold283({
           reviewMethod: explicit
             ? "BOUNDED_76_SOURCE_ADJUDICATION"
             : "VALIDATED_207_COMMON_POSITIVE_ACCEPTANCE",
+          decisionProvenance: explicit
+            ? "VERSIONED_76_SOURCE_ADJUDICATION"
+            : frozenGold30Row
+              ? "FROZEN_GOLD30_V1_CARRIED_FORWARD"
+              : "ASTRA_FABLE_COMMON_POSITIVE_WITH_VALIDATED_BINDINGS",
           outcome,
           customerFound,
           rationale: String(
-            explicit?.rationale || comparison.assessment
+            explicit?.rationale ||
+              frozenGold30Row?.goldDecision?.rationale ||
+              comparison.assessment
           ).trim(),
           sources,
           reviewedSources,
@@ -400,7 +417,8 @@ function buildLfKnownFixtureGold283({
     },
     gold30Comparison: {
       frozenGold30FileSha256: fileBindings.gold30.fileSha256,
-      unchanged: true,
+      artifactUnchanged: true,
+      differencesAreVersionedCorrectionsFromBounded76Review: true,
       differences: gold30Differences,
     },
     rows,
