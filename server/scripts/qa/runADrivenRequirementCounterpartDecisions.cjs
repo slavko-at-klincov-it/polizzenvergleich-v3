@@ -11,6 +11,7 @@ const {
   A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID,
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
   buildADrivenRequirementDecisionPlan,
+  validateADrivenRequirementDecisionPlan,
   validateADrivenRequirementDecisionResponses,
 } = require("../../utils/policyAnalysis/aDrivenRequirementCounterpartDecision");
 const {
