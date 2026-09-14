@@ -318,8 +318,7 @@ function sourceBinding(goldSource, spans) {
   const goldFileIdentity = normalizedFileIdentity(goldSource.file);
   const sameFile = goldFileIdentity
     ? spans.filter(
-        (span) =>
-          normalizedFileIdentity(span.originalName) === goldFileIdentity
+        (span) => normalizedFileIdentity(span.originalName) === goldFileIdentity
       )
     : [];
   const sameFileAndPage = sameFile.filter((span) =>
@@ -451,8 +450,7 @@ function buildResultRegression(rows, crosswalk, resultRows) {
         (sum, { sourceBindings }) =>
           sum +
           sourceBindings.filter(
-            ({ sameFileAndPageEvidence }) =>
-              sameFileAndPageEvidence.length > 0
+            ({ sameFileAndPageEvidence }) => sameFileAndPageEvidence.length > 0
           ).length,
         0
       ),
