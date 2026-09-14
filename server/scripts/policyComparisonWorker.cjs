@@ -227,8 +227,7 @@ function configuredADrivenEmbeddingContract() {
   const configured = String(
     process.env.POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE || ""
   ).trim();
-  if (!configured)
-    throw new Error("LF_A_DRIVEN_EMBEDDING_CONTRACT_REQUIRED");
+  if (!configured) throw new Error("LF_A_DRIVEN_EMBEDDING_CONTRACT_REQUIRED");
   if (!path.isAbsolute(configured))
     throw new Error("LF_A_DRIVEN_EMBEDDING_CONTRACT_PATH_INVALID");
   const contractFile = path.resolve(configured);
@@ -245,10 +244,7 @@ function snapshotADrivenEmbeddingContract({ runRoot, contractFile, identity }) {
   const bytes = fs.readFileSync(contractFile);
   if (sha256(bytes) !== identity.contractSha256)
     throw new Error("LF_A_DRIVEN_EMBEDDING_CONTRACT_CHANGED");
-  const snapshotFile = path.join(
-    runRoot,
-    "embedding-contract.private.json"
-  );
+  const snapshotFile = path.join(runRoot, "embedding-contract.private.json");
   if (fs.existsSync(snapshotFile)) {
     const snapshotStat = fs.lstatSync(snapshotFile);
     if (
@@ -499,7 +495,8 @@ async function main() {
         (profile) =>
           JSON.stringify(manifest?.productProfile) === JSON.stringify(profile)
       )
-    : JSON.stringify(manifest?.productProfile) === JSON.stringify(PRODUCT_PROFILE);
+    : JSON.stringify(manifest?.productProfile) ===
+      JSON.stringify(PRODUCT_PROFILE);
   if (
     manifest?.schemaVersion !== 3 ||
     manifest?.sessionUuid !== sessionUuid ||
@@ -531,16 +528,26 @@ async function main() {
   const embeddingContractFile = aDrivenReferenceMode
     ? snapshotADrivenEmbeddingContract({ runRoot, ...embedding })
     : null;
-  const responseCacheDirectory = referenceMode
-    && !aDrivenReferenceMode
-    ? path.join(policyComparisonsPath, "runs", sessionUuid, "response-cache-v1")
-    : null;
-  const responseCacheSeed = referenceMode && !aDrivenReferenceMode
-    ? seedResponseCacheFromRunHistory({
-        sessionRunsRoot: path.join(policyComparisonsPath, "runs", sessionUuid),
-        cacheDirectory: responseCacheDirectory,
-      })
-    : null;
+  const responseCacheDirectory =
+    referenceMode && !aDrivenReferenceMode
+      ? path.join(
+          policyComparisonsPath,
+          "runs",
+          sessionUuid,
+          "response-cache-v1"
+        )
+      : null;
+  const responseCacheSeed =
+    referenceMode && !aDrivenReferenceMode
+      ? seedResponseCacheFromRunHistory({
+          sessionRunsRoot: path.join(
+            policyComparisonsPath,
+            "runs",
+            sessionUuid
+          ),
+          cacheDirectory: responseCacheDirectory,
+        })
+      : null;
   const runInputManifest = aDrivenReferenceMode
     ? {
         schemaVersion: manifest.schemaVersion,

@@ -445,8 +445,8 @@ function policyComparisonEndpoints(app) {
           error.message === "COMPARISON_BOTH_SIDES_REQUIRED"
             ? 400
             : error.message === "COMPARISON_REFERENCE_LF_DOCUMENT_REQUIRED"
-                ? 400
-                : errorStatus(error);
+              ? 400
+              : errorStatus(error);
         return response
           .status(status)
           .json({ success: false, error: comparisonStartErrorMessage(error) });

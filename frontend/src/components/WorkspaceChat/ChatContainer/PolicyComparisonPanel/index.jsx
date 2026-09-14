@@ -154,10 +154,7 @@ export default function PolicyComparisonPanel({
     if (!pdfs.length) return;
     const existing = documents.filter((document) => document.side === side);
     if (existing.length + pdfs.length > sideLimit(side)) {
-      showToast(
-        "Pro Paket sind höchstens neun Dokumente zulässig.",
-        "error"
-      );
+      showToast("Pro Paket sind höchstens neun Dokumente zulässig.", "error");
       return;
     }
     setBusy(true);
@@ -359,9 +356,7 @@ export default function PolicyComparisonPanel({
               side="A"
               title={
                 options.mode?.sideALabel ||
-                (referenceMode
-                  ? "LF-IMMO-Referenzpaket A"
-                  : "Dokumentpaket A")
+                (referenceMode ? "LF-IMMO-Referenzpaket A" : "Dokumentpaket A")
               }
               documents={documents.filter(({ side }) => side === "A")}
               roleOptions={options.documentRoles}
@@ -477,11 +472,11 @@ function ComparisonProgress({ progress }) {
               ? "Referenz- und Vergleichsdokumente werden extrahiert"
               : progress?.phase === "ANALYZING_REFERENCE_PRODUCT"
                 ? "A-Zeilen und B-Gegenstücke werden geprüft"
-            : progress?.phase === "BUILDING_COMPARISON"
-              ? "Vergleichstabelle wird erstellt"
-              : totalCategories > 0
-                ? `Kategorien ${completedCategories}/${totalCategories}`
-                : `Dokumentanalyse ${completed}/${total}`}
+                : progress?.phase === "BUILDING_COMPARISON"
+                  ? "Vergleichstabelle wird erstellt"
+                  : totalCategories > 0
+                    ? `Kategorien ${completedCategories}/${totalCategories}`
+                    : `Dokumentanalyse ${completed}/${total}`}
         </span>
         <span>{percent}%</span>
       </div>
