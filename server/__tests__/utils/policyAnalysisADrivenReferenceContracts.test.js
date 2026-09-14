@@ -15233,27 +15233,26 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       client: {
         chat: {
           completions: {
-            create: jest
-              .fn(async ({ messages }) => {
-                retryMessages.push(messages);
-                if (retryMessages.length === 1)
-                  return {
-                    model: "qwen/qwen3.6-35b-a3b",
-                    choices: [{ message: { content: malformed } }],
-                    usage: {},
-                  };
+            create: jest.fn(async ({ messages }) => {
+              retryMessages.push(messages);
+              if (retryMessages.length === 1)
                 return {
                   model: "qwen/qwen3.6-35b-a3b",
-                  choices: [
-                    {
-                      message: {
-                        content: JSON.stringify(negativeResponses[0]),
-                      },
-                    },
-                  ],
+                  choices: [{ message: { content: malformed } }],
                   usage: {},
                 };
-              }),
+              return {
+                model: "qwen/qwen3.6-35b-a3b",
+                choices: [
+                  {
+                    message: {
+                      content: JSON.stringify(negativeResponses[0]),
+                    },
+                  },
+                ],
+                usage: {},
+              };
+            }),
           },
         },
       },
