@@ -9098,3 +9098,83 @@ Status: `ERSTER VOLLSTÄNDIGER NULLFUND 13/13 PARTITIONEN, 322/322 KLAUSELN UND
 9/9 DOKUMENTE PASS; VOLLSTÄNDIGER 364ER-ENTSCHEIDUNGSSTAND,
 PRODUKTINTEGRATION, XLSX UND DYNAMISCHER 1+9-ENDLAUF NOCH OFFEN; KEIN
 DEPLOYMENT`.
+
+### 133.41 Vollkorpus-Rescue und finaler binärer 364er-Requirement-Stand
+
+Der vollständige Abwesenheitslauf wurde bis 495/495 Partitionen fortgesetzt.
+Alle 45 Fallback-Requirements wurden damit gegen neun Dokumente und 322
+extrahierte B-Klauseln geprüft. Das Ergebnis enthielt 28 direkte terminale
+Nullfunde und 17 Fälle mit insgesamt 24 positiven Klauselkandidaten. Diese 17
+Fälle wurden anschließend mit dem unveränderten Requirement-Identitätsvertrag
+jeweils in einem eigenen, vollständigen Kontext nachgeprüft. Gold-Labels oder
+Legacy-Zeilen waren kein Modelleingang.
+
+Der Rescue-Lauf verwendete Qwen `qwen/qwen3.6-35b-a3b`, Kontext 42.496 und
+Parallelität 1. Alle 17 Batches bestanden; 21 Modellversuche enthielten vier
+begrenzte Validierungs-Retries, null Timeouts und null persistierte ungültige
+PASS-Antworten. Elf Fälle sind echte Gegenstücke, sechs blieben nach Prüfung
+der positiven Kandidaten negativ. Neun der elf bestätigten Treffer verwenden
+mindestens eine neue, erst durch die vollständige B-Korpusprüfung gefundene
+Quelle. Damit ist ein realer Suchqualitätsgewinn gegenüber der kompakten
+Erstnavigation belegt.
+
+Private Rescue-Artefakte auf dem Mac Studio:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-RESCUE-17-20260914-1DEF62FD/decision-plan.private.json
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-RESCUE-17-20260914-1DEF62FD/requirement-decisions.private.json
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-RESCUE-17-20260914-1DEF62FD/checkpoint.private.json
+```
+
+Interner Rescue-Plan-Hash:
+`5ad61695013b1c091ea0200e1160a320964e25fa913f8306c9606c8078bdaaa5`;
+interner Rescue-Entscheidungshash:
+`e5848576383d70f30877fb32ddfabe189f927bbde9f2a6286d943c5d3bc1b826`;
+Dateihash der Rescue-Entscheidung:
+`630a52612723da8fb85c3834115648c250047b81393fec1db3e9e720b231efb8`.
+
+Commit `36ab0e29d` ergänzt anschließend einen allgemeinen, hashgebundenen
+Finalvertrag. Er übernimmt 319 bereits source-bound bestätigte Ersttreffer,
+28 direkte Vollkorpus-Nullfunde, elf Rescue-Treffer und sechs erst nach
+Rescue zulässige Nullfunde. Plan-, Entscheidungs- und Quellenlinien werden
+erneut semantisch validiert; ein bloß neu berechneter Hash über manipulierte
+abgeleitete Stati genügt nicht. Das finale Ergebnis lautet:
+
+```text
+dynamische A-Requirements:       364/364 terminal
+GEFUNDEN:                        330
+NICHT GEFUNDEN:                   34
+UNRESOLVED:                        0
+B-only-Zeilen:                     0
+```
+
+Finales privates Artefakt:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-RESCUE-17-20260914-1DEF62FD/final-requirement-decisions.private.json
+```
+
+Interner Final-Hash:
+`8c615a783bdb15d6017ebbf0815db0cccc538078f113414de25561962f9bddfe`;
+Dateihash:
+`fc0703c4571d3088286b0210779ffd62730744287db75fdbe8fbfacacd134667`.
+Die erneute Materialisierung mit denselben Inputs ergab exakt dieselben Werte
+und Hashes.
+
+Auf dem exakten Commit `36ab0e29d6abf90376cafa974bae8dc9363f9c62`
+bestanden im isolierten Mac-Studio-Worktree Syntax, Prettier und 314/314
+fokussierte Tests. Qwen blieb danach idle geladen; kein Modellrunner war
+aktiv. Es gab keinen Produkt- oder Reviewer-Neulauf, keine Kunden-XLSX, kein
+Deployment und keine Releasefreigabe.
+
+Die Verteilung 330/34 gehört zum dynamischen Universum von 364 A-Requirements
+und ist nicht direkt mit Gold-283 beziehungsweise dessen 273/10-Verteilung
+vergleichbar. Gold bleibt eine getrennte QA-Regression für das bekannte
+1+9-Set und kein Produktionsschema. Nächster Schritt ist die Integration des
+finalen Requirement-Vertrags in den A-geordneten Ergebnisbuilder, den Worker
+und die interne XLSX; erst danach folgt ein echter dynamischer Produktlauf und
+die sichtbare Split-/Merge-bewusste Goldmessung.
+
+Status: `SUCH- UND ENTSCHEIDUNGSPFAD 364/364 BINÄR ABGESCHLOSSEN; 11 ECHTE
+VOLLKORPUS-RESCUE-TREFFER; PRODUKTINTEGRATION, INTERNE XLSX, DYNAMISCHER
+1+9-PRODUKTLAUF UND GOLD-REGRESSION NOCH OFFEN; KEIN DEPLOYMENT`.
