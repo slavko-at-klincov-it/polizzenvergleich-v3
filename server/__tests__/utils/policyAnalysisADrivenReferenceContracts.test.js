@@ -112,6 +112,13 @@ const {
   writeADrivenRequirementReviewWorkbook,
 } = require("../../utils/policyAnalysis/aDrivenRequirementReviewWorkbook");
 const {
+  buildADrivenReferenceProductResult,
+  validateADrivenReferenceProductResult,
+} = require("../../utils/policyComparison/aDrivenReferenceResultBuilder");
+const {
+  presentReferenceCustomerResult,
+} = require("../../utils/policyComparison/referenceCustomerPresentation");
+const {
   parseSingleDecision: parseRequirementAbsenceDecision,
   positiveCandidateSignals: requirementAbsencePositiveCandidateSignals,
   preliminaryDecisionArtifact,
@@ -15754,6 +15761,109 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(binaryFound.rows[0].componentFindings).toHaveLength(
       manifest.summary.semanticComponents
     );
+    const productDocuments = [
+      ...manifest.documents.map((document) => ({
+        uuid: document.documentUuid,
+        side: "A",
+        position: document.documentPosition,
+        role: document.documentRole,
+        documentStatus: document.documentStatus,
+        originalName: "Referenz A.pdf",
+        sha256: document.documentSha256,
+      })),
+      {
+        uuid: binaryFound.rows[0].bCounterparts[0].documentUuid,
+        side: "B",
+        position: 0,
+        role: "MAIN_POLICY",
+        documentStatus: "ACTIVE",
+        originalName: "Vergleich B.pdf",
+        sha256: "b".repeat(64),
+      },
+    ];
+    const productInputs = {
+      binaryResult: binaryFound,
+      manifest,
+      lineageInputs: {
+        manifest,
+        decisionPlan,
+        preliminaryDecisions,
+        absencePlan,
+        absenceDecisions: candidateFound,
+        rescuePlan,
+        rescueDecisions,
+        finalDecisions: finalFound,
+      },
+      documents: productDocuments,
+      metadata: {
+        generatedAt: "2026-09-14T00:00:00.000Z",
+        sessionUuid: "session",
+        runSignature: "signature",
+      },
+    };
+    const productResult = buildADrivenReferenceProductResult(productInputs);
+    expect(productResult).toMatchObject({
+      contractId: "LF_A_DRIVEN_REFERENCE_A_TO_B_RESULT_V1",
+      comparisonMode: "LF_IMMO_REFERENCE_A_TO_B_V1",
+      customerPresentationContractId: "LF_REFERENCE_CUSTOMER_PRESENTATION_V1",
+      productProfile: {
+        id: "LF_REFERENCE_A_DRIVEN_V2",
+        discoversTopologyFromSourceA: true,
+        supportsMultipleSourceDocuments: true,
+        goldDefinesProductionRows: false,
+      },
+      template: {
+        semanticRequirements: 1,
+        incompleteSearchRequirements: 0,
+      },
+      totals: {
+        rows: 1,
+        found: 1,
+        notFound: 0,
+        unresolved: 0,
+        sideBOnlyRows: 0,
+      },
+    });
+    expect(productResult.categories).toHaveLength(1);
+    expect(productResult.categories[0].rows[0]).toMatchObject({
+      categoryId: binaryFound.rows[0].requirementId,
+      packageB: {
+        coverage: "Fachliches Gegenstück vorhanden",
+        contributors: [
+          expect.objectContaining({
+            documentUuid: binaryFound.rows[0].bCounterparts[0].documentUuid,
+          }),
+        ],
+      },
+    });
+    expect(
+      validateADrivenReferenceProductResult(productResult, productInputs)
+    ).toBe(productResult);
+    const customerResult = presentReferenceCustomerResult(productResult);
+    expect(customerResult).toMatchObject({
+      contractId: "LF_REFERENCE_CUSTOMER_PRESENTATION_V1",
+      totals: {
+        rows: 1,
+        sideBOnlyRows: 0,
+        customerSearchStatuses: { GEFUNDEN: 1, NICHT_GEFUNDEN: 0 },
+      },
+    });
+    expect(customerResult.categories[0].rows[0]).toMatchObject({
+      customerSearchStatus: "GEFUNDEN",
+      customerSearchStatusLabel: "Gefunden",
+    });
+    expect(customerResult.categories[0].rows[0]).not.toHaveProperty(
+      "pointDecision"
+    );
+    const tamperedProductResult = JSON.parse(JSON.stringify(productResult));
+    tamperedProductResult.categories[0].rows[0].packageB.documentedContent =
+      "Manipuliert";
+    expect(() =>
+      validateADrivenReferenceProductResult(
+        tamperedProductResult,
+        productInputs
+      )
+    ).toThrow("LF_A_DRIVEN_PRODUCT_RESULT_INVALID");
     const workbookRows = reviewWorkbookRows(binaryFound);
     expect(workbookRows).toHaveLength(1);
     expect(workbookRows[0][10]).toBe("Gefunden");
