@@ -173,8 +173,15 @@ async function materializeOrValidateArtifactSet({
       outputDirectory: artifactOutputDirectory,
       reused: false,
       manifestSha256: artifacts.artifactSetManifest.manifestDigestSha256,
-      comparisonSha256: sha256Bytes(readRegularFile(artifacts.jsonFile, "LF_A_DRIVEN_PRODUCT_ARTIFACT_JSON")),
-      workbookSha256: sha256Bytes(readRegularFile(artifacts.workbookFile, "LF_A_DRIVEN_PRODUCT_ARTIFACT_WORKBOOK")),
+      comparisonSha256: sha256Bytes(
+        readRegularFile(artifacts.jsonFile, "LF_A_DRIVEN_PRODUCT_ARTIFACT_JSON")
+      ),
+      workbookSha256: sha256Bytes(
+        readRegularFile(
+          artifacts.workbookFile,
+          "LF_A_DRIVEN_PRODUCT_ARTIFACT_WORKBOOK"
+        )
+      ),
     };
   }
 
