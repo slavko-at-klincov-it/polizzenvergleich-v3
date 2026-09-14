@@ -30,6 +30,7 @@ function fixture() {
   const decisions = Object.fromEntries(
     ids.map((id) => [id, { status: "Ja", refs: ["B1"] }])
   );
+  decisions[ids[76]].status = "Nein";
   return {
     matrix: {
       rows: ids.map((requirementId, sourceOrder) => ({
@@ -55,12 +56,12 @@ function fixture() {
         status: flagged.has(requirementId) ? "FLAGGED" : "PASS",
       })),
     },
-    comparisons: ids.map((id) => ({
+    comparisons: ids.map((id, index) => ({
       id,
       Astra_E: "Ja",
-      Astra_F: "Ja",
+      Astra_F: index === 76 ? "Nein" : "Ja",
       Fable_E: "Ja",
-      Fable_F: "Ja",
+      Fable_F: index === 76 ? "Nein" : "Ja",
       assessment: "Beide Quellen stimmen im fachlichen Kern überein.",
     })),
     astraDecisions: decisions,

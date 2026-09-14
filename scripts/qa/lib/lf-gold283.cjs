@@ -98,7 +98,7 @@ function bindReference(referenceId, evidenceBank, sourceRowMap) {
 }
 
 function automaticOutcome(status, requirementId) {
-  if (status === "Ja" || status === "Vertragsregel")
+  if (status === "Ja" || status === "Nein" || status === "Vertragsregel")
     return "FULL_COUNTERPART";
   if (status === "Teilweise") return "PARTIAL_COUNTERPART";
   throw goldError(
@@ -242,7 +242,7 @@ function buildLfKnownFixtureGold283({
       const explicit = adjudicationById.get(requirementId);
       const outcome = explicit
         ? explicit.outcome
-        : automaticOutcome(astraDecision.status, requirementId);
+        : automaticOutcome(comparison.Astra_F, requirementId);
       if (!OUTCOMES.has(outcome))
         throw goldError("LF_GOLD283_OUTCOME_INVALID", requirementId);
       const customerFound = outcome !== "NO_COUNTERPART_ESTABLISHED";
