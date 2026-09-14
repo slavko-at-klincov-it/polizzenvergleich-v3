@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const { sha256 } = require("../policyAnalysis/runIdentity");
 const { stableStringify } = require("../policyAnalysis/aDrivenSourceUnitPlan");
 const {
@@ -10,11 +12,18 @@ const {
 const { POLICY_COMPARISON_MODE } = require("./modes");
 const {
   LF_CUSTOMER_PRESENTATION_CONTRACT_ID,
+  presentReferenceCustomerResult,
 } = require("./referenceCustomerPresentation");
-const { LF_A_DRIVEN_REFERENCE_PROFILE } = require("./aDrivenReferenceProfile");
-
-const A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID =
-  "LF_A_DRIVEN_REFERENCE_A_TO_B_RESULT_V1";
+const {
+  A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID,
+  A_DRIVEN_REFERENCE_PRODUCT_RESULT_SCHEMA_VERSION,
+  LF_A_DRIVEN_REFERENCE_PROFILE,
+} = require("./aDrivenReferenceProfile");
+const { publishComparisonArtifactSet } = require("./artifactSetPublisher");
+const {
+  validateADrivenRequirementReviewWorkbook,
+  writeADrivenRequirementReviewWorkbook,
+} = require("../policyAnalysis/aDrivenRequirementReviewWorkbook");
 
 function resultError(code, detail) {
   const error = new Error(detail ? `${code}:${detail}` : code);
@@ -220,7 +229,7 @@ function buildADrivenReferenceProductResult({
   if (rowCount !== binaryResult.rows.length)
     throw resultError("LF_A_DRIVEN_PRODUCT_ROW_COVERAGE_INVALID");
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: A_DRIVEN_REFERENCE_PRODUCT_RESULT_SCHEMA_VERSION,
     contractId: A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID,
     customerPresentationContractId: LF_CUSTOMER_PRESENTATION_CONTRACT_ID,
     status: "LF_A_DRIVEN_REFERENCE_PRODUCT_RESULT_MATERIALIZED",
@@ -269,7 +278,107 @@ function buildADrivenReferenceProductResult({
   };
 }
 
+function allProductRows(result) {
+  return (result.categories || []).flatMap(({ categoryView, rows }) =>
+    (rows || []).map((row) => ({ categoryView, row }))
+  );
+}
+
+function validateADrivenReferenceProductResultEnvelope(result) {
+  if (
+    result?.schemaVersion !==
+      A_DRIVEN_REFERENCE_PRODUCT_RESULT_SCHEMA_VERSION ||
+    result?.contractId !== A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID ||
+    result?.customerPresentationContractId !==
+      LF_CUSTOMER_PRESENTATION_CONTRACT_ID ||
+    result?.status !== "LF_A_DRIVEN_REFERENCE_PRODUCT_RESULT_MATERIALIZED" ||
+    result?.comparisonMode !== POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B ||
+    stableStringify(result?.productProfile) !==
+      stableStringify(LF_A_DRIVEN_REFERENCE_PROFILE) ||
+    result?.template?.runContractId !== LF_A_DRIVEN_REFERENCE_PROFILE.id ||
+    !/^[a-f0-9]{64}$/u.test(
+      String(result?.template?.dynamicManifestSha256 || "")
+    ) ||
+    !/^[a-f0-9]{64}$/u.test(
+      String(result?.sourceResult?.resultSha256 || "")
+    ) ||
+    !/^[a-f0-9]{64}$/u.test(
+      String(result?.sourceResult?.finalRequirementDecisionSha256 || "")
+    ) ||
+    !/^[a-f0-9]{64}$/u.test(String(result?.resultSha256 || "")) ||
+    !Array.isArray(result?.documents) ||
+    !Array.isArray(result?.categories)
+  )
+    throw resultError("LF_A_DRIVEN_PRODUCT_RESULT_ENVELOPE_INVALID");
+  const { resultSha256, ...payload } = result;
+  if (
+    resultSha256 !==
+    sha256(
+      `${A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID}\u0000${stableStringify(
+        payload
+      )}`
+    )
+  )
+    throw resultError("LF_A_DRIVEN_PRODUCT_RESULT_DIGEST_INVALID");
+  const documentIds = result.documents.map(({ uuid }) => uuid);
+  const sideA = result.documents.filter(({ side }) => side === "A");
+  const sideB = result.documents.filter(({ side }) => side === "B");
+  const rows = allProductRows(result);
+  const rowKeys = rows.map(
+    ({ categoryView, row }) => `${categoryView}:${row.categoryId}`
+  );
+  if (
+    sideA.length < 1 ||
+    sideB.length < 1 ||
+    new Set(documentIds).size !== documentIds.length ||
+    new Set(rowKeys).size !== rowKeys.length ||
+    rows.length !== result.totals?.rows ||
+    rows.length !== result.totals?.referenceRowsAnalyzed ||
+    result.categories.length !== result.totals?.categories ||
+    result.totals?.sideBOnlyRows !== 0 ||
+    result.totals?.unresolved !== 0 ||
+    result.template?.semanticRequirements !== rows.length ||
+    result.template?.incompleteSearchRequirements !== 0
+  )
+    throw resultError("LF_A_DRIVEN_PRODUCT_RESULT_ROWS_INVALID");
+  const documentIdSet = new Set(documentIds);
+  const observedFound = rows.filter(
+    ({ row }) => row.packageB?.contributors?.length > 0
+  ).length;
+  if (
+    observedFound !== result.totals.found ||
+    rows.length - observedFound !== result.totals.notFound ||
+    rows.some(({ row }) => {
+      const contributors = row.packageB?.contributors || [];
+      const found = contributors.length > 0;
+      return (
+        !oneLine(row.packageA?.documentedContent) ||
+        !oneLine(row.packageA?.source) ||
+        !Array.isArray(row.packageA?.documentUuids) ||
+        row.packageA.documentUuids.length === 0 ||
+        row.packageA.documentUuids.some(
+          (uuid) => !sideA.some((document) => document.uuid === uuid)
+        ) ||
+        contributors.some(
+          ({ documentUuid, source, exactText, physicalPageNumber }) =>
+            !documentIdSet.has(documentUuid) ||
+            !sideB.some((document) => document.uuid === documentUuid) ||
+            !oneLine(source) ||
+            !oneLine(exactText) ||
+            !Number.isInteger(physicalPageNumber) ||
+            physicalPageNumber < 1
+        ) ||
+        found !== Boolean(oneLine(row.packageB?.documentedContent)) ||
+        found !== Boolean(oneLine(row.packageB?.source))
+      );
+    })
+  )
+    throw resultError("LF_A_DRIVEN_PRODUCT_RESULT_EVIDENCE_INVALID");
+  return result;
+}
+
 function validateADrivenReferenceProductResult(result, inputs) {
+  validateADrivenReferenceProductResultEnvelope(result);
   const rebuilt = buildADrivenReferenceProductResult(inputs);
   if (
     result?.contractId !== A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID ||
@@ -279,8 +388,102 @@ function validateADrivenReferenceProductResult(result, inputs) {
   return result;
 }
 
+function customerSafeADrivenReferenceReadView(result) {
+  validateADrivenReferenceProductResultEnvelope(result);
+  return JSON.parse(JSON.stringify(result));
+}
+
+function productMarkdown(result) {
+  validateADrivenReferenceProductResultEnvelope(result);
+  const lines = [
+    "# LF-Referenzvergleich A nach B",
+    "",
+    `Dynamische A-Zeilen: ${result.totals.rows}; gefunden: ${result.totals.found}; nicht gefunden: ${result.totals.notFound}; B-only-Zeilen: 0.`,
+    "",
+    result.proofLimit,
+    "",
+  ];
+  for (const category of result.categories) {
+    lines.push(`## ${category.categoryView} · ${category.categoryName}`, "");
+    for (const row of category.rows)
+      lines.push(
+        `- ${row.categoryId} · ${row.categoryName}: ${
+          row.packageB.contributors.length ? "GEFUNDEN" : "NICHT GEFUNDEN"
+        }`
+      );
+    lines.push("");
+  }
+  return `${lines.join("\n")}\n`;
+}
+
+async function writeADrivenReferenceProductArtifacts({
+  binaryResult,
+  manifest,
+  lineageInputs,
+  documents,
+  metadata,
+  outputDirectory,
+} = {}) {
+  const inputs = {
+    binaryResult,
+    manifest,
+    lineageInputs,
+    documents,
+    metadata,
+  };
+  const result = buildADrivenReferenceProductResult(inputs);
+  const markdown = productMarkdown(result);
+  const published = await publishComparisonArtifactSet({
+    outputDirectory,
+    writeArtifacts: async (stagingDirectory) => {
+      fs.writeFileSync(
+        path.join(stagingDirectory, "comparison.private.json"),
+        `${JSON.stringify(result, null, 2)}\n`,
+        { encoding: "utf8", mode: 0o600 }
+      );
+      fs.writeFileSync(
+        path.join(stagingDirectory, "comparison.md"),
+        markdown,
+        { encoding: "utf8", mode: 0o600 }
+      );
+      await writeADrivenRequirementReviewWorkbook(
+        binaryResult,
+        path.join(stagingDirectory, "polizzenvergleich.xlsx")
+      );
+    },
+    validateArtifacts: async ({ files }) => {
+      const persisted = JSON.parse(
+        fs.readFileSync(files["comparison.private.json"], "utf8")
+      );
+      validateADrivenReferenceProductResult(persisted, inputs);
+      presentReferenceCustomerResult(persisted);
+      if (
+        fs.readFileSync(files["comparison.md"], "utf8") !==
+        productMarkdown(persisted)
+      )
+        throw resultError("LF_A_DRIVEN_PRODUCT_MARKDOWN_ROUNDTRIP_INVALID");
+      await validateADrivenRequirementReviewWorkbook(
+        binaryResult,
+        files["polizzenvergleich.xlsx"]
+      );
+    },
+  });
+  return {
+    result,
+    jsonFile: published.files["comparison.private.json"],
+    markdownFile: published.files["comparison.md"],
+    workbookFile: published.files["polizzenvergleich.xlsx"],
+    artifactSetManifest: published.manifest,
+    artifactSetManifestFile: published.manifestFile,
+  };
+}
+
 module.exports = {
   A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID,
   buildADrivenReferenceProductResult,
+  customerSafeADrivenReferenceReadView,
+  productMarkdown,
   validateADrivenReferenceProductResult,
+  validateADrivenReferenceProductResultEnvelope,
+  writeADrivenReferenceProductArtifacts,
 };

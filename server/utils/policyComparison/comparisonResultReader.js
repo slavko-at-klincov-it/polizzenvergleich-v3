@@ -13,6 +13,10 @@ const {
 const {
   validateDynamicReferenceTemplateArtifacts,
 } = require("./dynamicReferenceRunner");
+const {
+  A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID,
+  customerSafeADrivenReferenceReadView,
+} = require("./aDrivenReferenceResultBuilder");
 
 function regularFile(file, fsImpl, errorCode) {
   if (!fsImpl.existsSync(file)) throw new Error(errorCode);
@@ -49,6 +53,11 @@ function readValidatedComparisonResult(
     throw new Error(
       `COMPARISON_RESULT_MODE_MISMATCH:${expectedMode}:${resultMode}`
     );
+  if (
+    expectedMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B &&
+    result.contractId === A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID
+  )
+    return customerSafeADrivenReferenceReadView(result);
   if (
     expectedMode === POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B &&
     result.contractId === DYNAMIC_REFERENCE_RESULT_CONTRACT_ID

@@ -115,7 +115,17 @@ const {
 const {
   buildADrivenReferenceProductResult,
   validateADrivenReferenceProductResult,
+  writeADrivenReferenceProductArtifacts,
 } = require("../../utils/policyComparison/aDrivenReferenceResultBuilder");
+const {
+  validatePublishedComparisonArtifactSet,
+} = require("../../utils/policyComparison/artifactSetPublisher");
+const {
+  readValidatedComparisonResult,
+} = require("../../utils/policyComparison/comparisonResultReader");
+const {
+  POLICY_COMPARISON_MODE,
+} = require("../../utils/policyComparison/modes");
 const {
   presentReferenceCustomerResult,
 } = require("../../utils/policyComparison/referenceCustomerPresentation");
@@ -15865,6 +15875,31 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         productInputs
       )
     ).toThrow("LF_A_DRIVEN_PRODUCT_RESULT_INVALID");
+    const productArtifactRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-driven-product-artifacts-")
+    );
+    const productArtifactDirectory = path.join(productArtifactRoot, "result");
+    const productArtifacts = await writeADrivenReferenceProductArtifacts({
+      ...productInputs,
+      outputDirectory: productArtifactDirectory,
+    });
+    expect(productArtifacts.result.resultSha256).toBe(
+      productResult.resultSha256
+    );
+    expect(validatePublishedComparisonArtifactSet(productArtifactDirectory))
+      .toMatchObject({
+        outputDirectory: productArtifactDirectory,
+        reused: true,
+      });
+    expect(
+      readValidatedComparisonResult(
+        productArtifacts.jsonFile,
+        POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
+      )
+    ).toEqual(productResult);
+    expect(fs.statSync(productArtifacts.workbookFile).mode & 0o777).toBe(
+      0o600
+    );
     const workbookRows = reviewWorkbookRows(binaryFound);
     expect(workbookRows).toHaveLength(1);
     expect(workbookRows[0][10]).toBe("Gefunden");

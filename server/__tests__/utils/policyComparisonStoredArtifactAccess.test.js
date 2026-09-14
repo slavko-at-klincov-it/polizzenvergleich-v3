@@ -14,6 +14,10 @@ const {
   LF_REFERENCE_PROFILE,
 } = require("../../utils/policyComparison/lfReferenceProfile");
 const {
+  A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID,
+  LF_A_DRIVEN_REFERENCE_PROFILE,
+} = require("../../utils/policyComparison/aDrivenReferenceProfile");
+const {
   POLICY_COMPARISON_MODE,
 } = require("../../utils/policyComparison/modes");
 const {
@@ -182,6 +186,35 @@ describe("stored policy comparison artifact access", () => {
     fs.writeFileSync(
       path.join(resultDirectory, "polizzenvergleich.xlsx"),
       "lf"
+    );
+
+    expect(() =>
+      readValidatedStoredComparisonArtifacts(
+        {
+          policyComparisonsRoot: root,
+          resultPath: path.relative(root, resultDirectory),
+          expectedComparisonMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+          expectedSessionUuid: sessionUuid,
+        },
+        { readResult }
+      )
+    ).toThrow("COMPARISON_EXPORT_CONTRACT_MISSING");
+  });
+
+  test("never downgrades an A-driven V2 result to manifest-free legacy access", () => {
+    const resultDirectory = path.join(root, "lf-a-driven-v2", "result");
+    fs.mkdirSync(resultDirectory, { recursive: true });
+    fs.writeFileSync(
+      path.join(resultDirectory, "comparison.private.json"),
+      JSON.stringify({
+        schemaVersion: 1,
+        contractId: A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID,
+        productProfile: LF_A_DRIVEN_REFERENCE_PROFILE,
+      })
+    );
+    fs.writeFileSync(
+      path.join(resultDirectory, "polizzenvergleich.xlsx"),
+      "lf-a-driven-v2"
     );
 
     expect(() =>

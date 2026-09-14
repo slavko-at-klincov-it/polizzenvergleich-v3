@@ -19,6 +19,10 @@ const {
 const {
   POLICY_COMPARISON_MODE,
 } = require("../../utils/policyComparison/modes");
+const {
+  A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID,
+  A_DRIVEN_REFERENCE_PRODUCT_RESULT_SCHEMA_VERSION,
+} = require("../../utils/policyComparison/aDrivenReferenceProfile");
 
 function writeArtifactSet({
   root,
@@ -26,12 +30,15 @@ function writeArtifactSet({
   comparisonMode,
   sessionUuid,
   runSignature,
+  resultContractId,
+  resultSchemaVersion,
 }) {
   const directory = path.join(root, name);
   fs.mkdirSync(directory, { mode: 0o700 });
   const customerMode = comparisonMode === POLICY_COMPARISON_MODE.SYMMETRIC_A_B;
   const result = {
-    schemaVersion: customerMode ? 15 : 2,
+    schemaVersion: resultSchemaVersion ?? (customerMode ? 15 : 2),
+    ...(resultContractId ? { contractId: resultContractId } : {}),
     ...(customerMode ? {} : { comparisonMode }),
     sessionUuid,
     runSignature,
@@ -188,6 +195,40 @@ describe("policy comparison export contract", () => {
     };
     expect(() => validate(value, fixture)).toThrow(
       "COMPARISON_EXPORT_REFERENCE_CUSTOMER_CONTRACT_FORBIDDEN"
+    );
+  });
+
+  test("accepts the exact A-driven V2 result contract in the existing LF export chain", () => {
+    const fixture = writeArtifactSet({
+      root,
+      name: "lf-a-driven-v2-result",
+      comparisonMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+      sessionUuid,
+      runSignature,
+      resultContractId: A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID,
+      resultSchemaVersion: A_DRIVEN_REFERENCE_PRODUCT_RESULT_SCHEMA_VERSION,
+    });
+    const value = build(fixture, {
+      comparisonMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+    });
+
+    expect(validate(value, fixture)).toMatchObject({
+      comparisonMode: POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B,
+      customerResultRuleOutcomeContract: null,
+    });
+
+    fixture.result.contractId = "LF_A_DRIVEN_REFERENCE_A_TO_B_RESULT_V2";
+    fs.writeFileSync(
+      fixture.files["comparison.private.json"],
+      JSON.stringify(fixture.result, null, 2)
+    );
+    const rebuilt = buildArtifactSetManifest(fixture.files, fs);
+    fs.writeFileSync(
+      fixture.manifestFile,
+      JSON.stringify(rebuilt, null, 2)
+    );
+    expect(() => build(fixture)).toThrow(
+      "COMPARISON_EXPORT_REFERENCE_RESULT_SCHEMA_INVALID"
     );
   });
 

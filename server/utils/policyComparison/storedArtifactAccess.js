@@ -3,6 +3,10 @@ const path = require("path");
 const { LF_REFERENCE_PROFILE } = require("./lfReferenceProfile");
 const { LF_DYNAMIC_REFERENCE_PROFILE } = require("./lfDynamicReferenceProfile");
 const {
+  A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID,
+  LF_A_DRIVEN_REFERENCE_PROFILE,
+} = require("./aDrivenReferenceProfile");
+const {
   POLICY_COMPARISON_MODE,
   normalizePolicyComparisonMode,
 } = require("./modes");
@@ -42,6 +46,7 @@ function regularFile(file, root, fsImpl, missingCode) {
 }
 
 function sameReferenceProfile(profile) {
+  if (profile?.id === LF_A_DRIVEN_REFERENCE_PROFILE.id) return true;
   return [LF_REFERENCE_PROFILE, LF_DYNAMIC_REFERENCE_PROFILE].some(
     (expected) =>
       profile?.id === expected.id &&
@@ -52,6 +57,8 @@ function sameReferenceProfile(profile) {
 
 function strictArtifactAccessRequired(result, comparisonMode, manifestExists) {
   if (manifestExists) return true;
+  if (result?.contractId === A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID)
+    return true;
   if (comparisonMode === POLICY_COMPARISON_MODE.SYMMETRIC_A_B)
     return Number(result?.schemaVersion) >= 15;
   return sameReferenceProfile(result?.productProfile);

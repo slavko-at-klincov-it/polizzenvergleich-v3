@@ -15,6 +15,10 @@ const {
   POLICY_COMPARISON_MODE,
   normalizePolicyComparisonMode,
 } = require("./modes");
+const {
+  A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID,
+  A_DRIVEN_REFERENCE_PRODUCT_RESULT_SCHEMA_VERSION,
+} = require("./aDrivenReferenceProfile");
 
 const POLICY_COMPARISON_EXPORT_SCHEMA_VERSION = 2;
 const POLICY_COMPARISON_EXPORT_CONTRACT_ID = "POLICY_COMPARISON_EXPORT_V2";
@@ -145,6 +149,15 @@ function expectedCustomerContract() {
   };
 }
 
+function supportedLfReferenceResult(result) {
+  return (
+    LF_REFERENCE_RESULT_SCHEMA_VERSIONS.has(result?.schemaVersion) ||
+    (result?.schemaVersion ===
+      A_DRIVEN_REFERENCE_PRODUCT_RESULT_SCHEMA_VERSION &&
+      result?.contractId === A_DRIVEN_REFERENCE_PRODUCT_RESULT_CONTRACT_ID)
+  );
+}
+
 function validateResultIdentity({
   result,
   comparisonMode,
@@ -175,7 +188,7 @@ function validateResultIdentity({
     return expectedCustomerContract();
   }
 
-  if (!LF_REFERENCE_RESULT_SCHEMA_VERSIONS.has(result?.schemaVersion))
+  if (!supportedLfReferenceResult(result))
     throw exportContractError(
       "COMPARISON_EXPORT_REFERENCE_RESULT_SCHEMA_INVALID"
     );
