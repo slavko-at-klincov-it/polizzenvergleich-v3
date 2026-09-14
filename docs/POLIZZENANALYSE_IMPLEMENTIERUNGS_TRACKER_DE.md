@@ -9178,3 +9178,73 @@ die sichtbare Split-/Merge-bewusste Goldmessung.
 Status: `SUCH- UND ENTSCHEIDUNGSPFAD 364/364 BINÄR ABGESCHLOSSEN; 11 ECHTE
 VOLLKORPUS-RESCUE-TREFFER; PRODUKTINTEGRATION, INTERNE XLSX, DYNAMISCHER
 1+9-PRODUKTLAUF UND GOLD-REGRESSION NOCH OFFEN; KEIN DEPLOYMENT`.
+
+### 133.42 A-geordnete Ergebnisprojektion und interne Review-XLSX
+
+Die Commits `7d307c660`, `1e01a29dc`, `7bd528b9e`, `cc1b30097`,
+`19140e991` und `f3d42d9fa` projizieren den finalen 364er-Requirement-Stand
+in einen A-geordneten binären Ergebnisvertrag und eine interne
+Review-Arbeitsmappe. Der neue Builder arbeitet ausschließlich aus dem
+hashgebundenen dynamischen Manifest und den bereits validierten finalen
+Entscheidungen; er fügt keine B-only-Zeilen hinzu und verwendet Gold weder
+als Zeilenschema noch als Modelleingang.
+
+Das Ergebnis bleibt:
+
+```text
+dynamische A-Ergebniszeilen:      364
+GEFUNDEN:                         330
+NICHT GEFUNDEN:                    34
+UNRESOLVED:                         0
+B-only-Zeilen:                      0
+Vergleich FULL:                    232
+Vergleich PARTIAL:                  96
+Vergleich CONTRADICTED:              2
+Vergleich NO_COUNTERPART:           34
+```
+
+Privates Ergebnisartefakt:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-RESCUE-17-20260914-1DEF62FD/binary-reference-result-v2.private.json
+```
+
+Interner Ergebnishash:
+`20fb73d940f7c317444ebecfeb75af3a48bcdb2a1038db2a7015606388d92282`;
+Dateihash:
+`b2c7641bdd4656ed211649b468e55e1104e9a887fa27968a43e96e364124200f`.
+
+Die interne Review-Arbeitsmappe enthält genau ein Blatt, 364 Datenzeilen,
+keine Formeln und getrennte A-/B-Inhalte, Quellen, Werte, Abweichungen,
+binären Fundstatus und Vergleichsart. Die letzte gelb markierte Spalte
+`Fachliche Bewertung (manuell)` bleibt absichtlich leer. Der Writer ist
+fail-closed und unveränderlich: Eine bereits vorhandene Datei wird nicht
+überschrieben, sondern vollständig gegen das gebundene Ergebnis validiert.
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-RESCUE-17-20260914-1DEF62FD/LF-IMMO-A-Driven-V2-Interne-Pruefung-2026-09-14.xlsx
+```
+
+Dateihash:
+`32461c5383c6d254cb0e9157d04baa3d99c2d912c19f0ba2abae59cb1209fc6f`.
+Eine zweite Materialisierung auf dem exakten Commit
+`f3d42d9fa6195cba92bd1ccfa50eddfe663d6599` validierte die vorhandene
+Datei und lieferte denselben Hash. Quick Look erzeugte auf dem Mac Studio
+headless eine Vorschau mit 1.352 x 1.800 Pixeln; weder Arbeitsmappe noch
+Vorschau wurden auf den MacBook übertragen.
+
+Auf demselben exakten Commit bestanden Syntax, Prettier und 314/314
+fokussierte Vertragstests. Vor der Fortsetzung wurde Qwen
+`qwen/qwen3.6-35b-a3b` mit Kontext 42.496 und Parallelität 1 geladen und als
+`idle` mit leerer Warteschlange bestätigt. Es gab keinen neuen
+Reviewer-/Gold-Vollauf, kein Deployment und keine Releasefreigabe.
+
+Nächster verbindlicher Schritt: den vorhandenen V2-Vertrag ohne neue
+Nebenarchitektur in einen kontrollierten Shadow-Produktlauf integrieren,
+anschließend das echte dynamische 1+9-Ergebnis gegen die eindeutig
+zuordenbaren Goldzeilen messen. Gold-283 bleibt Regressionsevidenz und darf
+die dynamischen A-Zeilen weder erzeugen noch verändern.
+
+Status: `A-GEORDNETE BINÄRPROJEKTION UND INTERNE XLSX PASS; 364/364 ZEILEN
+TERMINAL; SHADOW-PRODUKTINTEGRATION, ECHTER DYNAMISCHER 1+9-LAUF UND
+GOLD-REGRESSION NOCH OFFEN; KEIN DEPLOYMENT`.
