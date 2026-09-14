@@ -15220,6 +15220,63 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(partitionPrompt[0].content).toContain("genau ein JSON-Objekt");
     expect(partitionPrompt[0].content).toContain("ein leeres Array");
     expect(JSON.stringify(partitionPrompt).toLowerCase()).not.toContain("gold");
+    const malformed = `${JSON.stringify(negativeResponses[0])}\n${JSON.stringify(
+      {
+        ...negativeResponses[0],
+        decision: "COUNTERPART_PRESENT",
+        candidateIds: [absencePlan.partitions[0].candidateIds[0]],
+      }
+    )}`;
+    expect(() => parseRequirementAbsenceDecision(malformed)).toThrow();
+    const retryMessages = [];
+    const repairedRun = await runRequirementAbsencePartition({
+      client: {
+        chat: {
+          completions: {
+            create: jest
+              .fn(async ({ messages }) => {
+                retryMessages.push(messages);
+                if (retryMessages.length === 1)
+                  return {
+                    model: "qwen/qwen3.6-35b-a3b",
+                    choices: [{ message: { content: malformed } }],
+                    usage: {},
+                  };
+                return {
+                  model: "qwen/qwen3.6-35b-a3b",
+                  choices: [
+                    {
+                      message: {
+                        content: JSON.stringify(negativeResponses[0]),
+                      },
+                    },
+                  ],
+                  usage: {},
+                };
+              }),
+          },
+        },
+      },
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: absencePlan,
+      partition: absencePlan.partitions[0],
+      maximumAttempts: 2,
+      requestTimeoutMs: 100,
+      abortSettlementTimeoutMs: 10,
+      recoverModelAfterAbort: jest.fn(),
+    });
+    expect(repairedRun.validation.result.status).toBe("TERMINAL");
+    expect(repairedRun.attempts).toHaveLength(2);
+    expect(repairedRun.attempts[0].errorClass).toBe("MODEL_RESPONSE_INVALID");
+    expect(retryMessages[0]).toHaveLength(2);
+    expect(retryMessages[1]).toHaveLength(3);
+    expect(retryMessages[1].at(-1).content).toContain(
+      "genau ein einziges JSON-Objekt"
+    );
+    expect(retryMessages[1].at(-1).content).toContain(
+      "Keine Analyse, Selbstkorrektur"
+    );
     expect(
       parseRequirementAbsenceDecision(JSON.stringify(negativeResponses[0]))
     ).toEqual(negativeResponses[0]);

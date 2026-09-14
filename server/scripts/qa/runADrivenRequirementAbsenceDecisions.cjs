@@ -273,7 +273,27 @@ function parseSingleDecision(value) {
   return parsed[0];
 }
 
-function prompt(plan, partition) {
+function retryInstruction(attempts) {
+  const previous = attempts.at(-1);
+  if (!previous) return null;
+  if (previous.errorClass === "MODEL_RESPONSE_INVALID")
+    return [
+      "KORREKTUR FÜR DIESEN RETRY:",
+      "Die vorige Antwort war kein einzelner gültiger JSON-Wert.",
+      "Entscheide zuerst endgültig und gib danach genau ein einziges JSON-Objekt aus.",
+      "Keine Analyse, Selbstkorrektur, Markdown-Markierung oder weitere JSON-Variante vor oder nach diesem Objekt.",
+      "Das Objekt muss ausschließlich partitionId, decision, candidateIds und rationale enthalten.",
+    ].join(" ");
+  if (previous.validation?.result?.status !== "TERMINAL")
+    return [
+      "KORREKTUR FÜR DIESEN RETRY:",
+      "Die vorige Antwort war nicht terminal vertragsgültig.",
+      "Prüfe partitionId, decision und candidateIds erneut und gib genau ein einziges finales JSON-Objekt ohne Begleittext aus.",
+    ].join(" ");
+  return null;
+}
+
+function prompt(plan, partition, repair = null) {
   const requirement = plan.requirements.find(
     ({ requirementId }) => requirementId === partition.requirementId
   );
@@ -281,7 +301,7 @@ function prompt(plan, partition) {
   const candidates = plan.candidates.filter(({ candidateId }) =>
     allowed.has(candidateId)
   );
-  return [
+  const messages = [
     {
       role: "system",
       content:
@@ -298,6 +318,8 @@ function prompt(plan, partition) {
       }),
     },
   ];
+  if (repair) messages.push({ role: "user", content: repair });
+  return messages;
 }
 
 function errorClass(error) {
@@ -345,7 +367,7 @@ async function runPartition({
 }) {
   const attempts = [];
   for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
-    const messages = prompt(plan, partition);
+    const messages = prompt(plan, partition, retryInstruction(attempts));
     const started = performance.now();
     let rawResponse = "";
     try {
@@ -687,6 +709,7 @@ module.exports = {
   preliminaryDecision,
   preliminaryDecisionArtifact,
   prompt,
+  retryInstruction,
   runPartition,
   subsetDecisionPlan,
 };
