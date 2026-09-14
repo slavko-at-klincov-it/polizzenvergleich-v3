@@ -15886,20 +15886,19 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(productArtifacts.result.resultSha256).toBe(
       productResult.resultSha256
     );
-    expect(validatePublishedComparisonArtifactSet(productArtifactDirectory))
-      .toMatchObject({
-        outputDirectory: productArtifactDirectory,
-        reused: true,
-      });
+    expect(
+      validatePublishedComparisonArtifactSet(productArtifactDirectory)
+    ).toMatchObject({
+      outputDirectory: productArtifactDirectory,
+      reused: true,
+    });
     expect(
       readValidatedComparisonResult(
         productArtifacts.jsonFile,
         POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
       )
     ).toEqual(productResult);
-    expect(fs.statSync(productArtifacts.workbookFile).mode & 0o777).toBe(
-      0o600
-    );
+    expect(fs.statSync(productArtifacts.workbookFile).mode & 0o777).toBe(0o600);
     const workbookRows = reviewWorkbookRows(binaryFound);
     expect(workbookRows).toHaveLength(1);
     expect(workbookRows[0][10]).toBe("Gefunden");

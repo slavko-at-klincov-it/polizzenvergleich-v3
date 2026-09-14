@@ -223,10 +223,7 @@ describe("policy comparison export contract", () => {
       JSON.stringify(fixture.result, null, 2)
     );
     const rebuilt = buildArtifactSetManifest(fixture.files, fs);
-    fs.writeFileSync(
-      fixture.manifestFile,
-      JSON.stringify(rebuilt, null, 2)
-    );
+    fs.writeFileSync(fixture.manifestFile, JSON.stringify(rebuilt, null, 2));
     expect(() => build(fixture)).toThrow(
       "COMPARISON_EXPORT_REFERENCE_RESULT_SCHEMA_INVALID"
     );

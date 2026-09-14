@@ -299,9 +299,7 @@ function validateADrivenReferenceProductResultEnvelope(result) {
     !/^[a-f0-9]{64}$/u.test(
       String(result?.template?.dynamicManifestSha256 || "")
     ) ||
-    !/^[a-f0-9]{64}$/u.test(
-      String(result?.sourceResult?.resultSha256 || "")
-    ) ||
+    !/^[a-f0-9]{64}$/u.test(String(result?.sourceResult?.resultSha256 || "")) ||
     !/^[a-f0-9]{64}$/u.test(
       String(result?.sourceResult?.finalRequirementDecisionSha256 || "")
     ) ||
@@ -441,11 +439,10 @@ async function writeADrivenReferenceProductArtifacts({
         `${JSON.stringify(result, null, 2)}\n`,
         { encoding: "utf8", mode: 0o600 }
       );
-      fs.writeFileSync(
-        path.join(stagingDirectory, "comparison.md"),
-        markdown,
-        { encoding: "utf8", mode: 0o600 }
-      );
+      fs.writeFileSync(path.join(stagingDirectory, "comparison.md"), markdown, {
+        encoding: "utf8",
+        mode: 0o600,
+      });
       await writeADrivenRequirementReviewWorkbook(
         binaryResult,
         path.join(stagingDirectory, "polizzenvergleich.xlsx")
