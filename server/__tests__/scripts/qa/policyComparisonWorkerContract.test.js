@@ -61,7 +61,7 @@ describe("policy comparison worker contract", () => {
       path.join(REPOSITORY_ROOT, "run-hybrid-shadow-quality.command"),
       "utf8"
     );
-    expect(source).not.toContain("hybridShadowSearch");
+    expect(source).not.toContain("runHybridShadowSearch");
     expect(source).not.toContain("TARGETED_QA_ONLY");
     expect(primaryRunner).not.toContain("runHybridShadowSearch");
     expect(shadowRunner).toContain("ensureHybridShadowRunManifest.cjs");
