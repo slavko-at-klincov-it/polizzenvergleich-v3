@@ -898,8 +898,7 @@ function buildADrivenRequirementFinalDecisions({
           resolutionPath === "FULL_CORPUS_RESCUE_COUNTERPART"
       ).length,
       rescueAbsences: results.filter(
-        ({ resolutionPath }) =>
-          resolutionPath === "FULL_CORPUS_RESCUE_ABSENCE"
+        ({ resolutionPath }) => resolutionPath === "FULL_CORPUS_RESCUE_ABSENCE"
       ).length,
       binaryCustomerStatus: true,
       sideBOnlyRows: 0,

@@ -15473,7 +15473,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       )
     ).toThrow("LF_A_DRIVEN_REQUIREMENT_DECISION_ARTIFACT_MISMATCH");
 
-    const preliminaryCandidateId = decisionPlan.rows[0].candidates[0].candidateId;
+    const preliminaryCandidateId =
+      decisionPlan.rows[0].candidates[0].candidateId;
     const preliminaryFound = validateADrivenRequirementDecisionResponses({
       plan: decisionPlan,
       responses: [
@@ -15502,11 +15503,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       completeCorpus,
       maximumPartitionCharacters: 10_000,
     });
-    const emptyAbsenceDecisions =
-      validateADrivenRequirementAbsenceResponses({
-        plan: emptyAbsencePlan,
-        responses: [],
-      });
+    const emptyAbsenceDecisions = validateADrivenRequirementAbsenceResponses({
+      plan: emptyAbsencePlan,
+      responses: [],
+    });
     const finalPreliminaryFound = buildADrivenRequirementFinalDecisions({
       decisionPlan,
       preliminaryDecisions: preliminaryFound,
@@ -15696,11 +15696,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       rationale:
         "Der Vollkorpuskandidat ist geprüft, aber kein fachliches Gegenstück.",
     };
-    const rescueNegativeDecisions =
-      validateADrivenRequirementDecisionResponses({
+    const rescueNegativeDecisions = validateADrivenRequirementDecisionResponses(
+      {
         plan: rescuePlan,
         responses: [rescueNegativeResponse],
-      });
+      }
+    );
     const finalRescueAbsence = buildADrivenRequirementFinalDecisions({
       decisionPlan,
       preliminaryDecisions,

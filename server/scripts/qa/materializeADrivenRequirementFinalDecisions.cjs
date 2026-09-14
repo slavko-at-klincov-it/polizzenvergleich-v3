@@ -101,10 +101,7 @@ function run() {
       "LF_A_DRIVEN_REQUIREMENT_FINAL_ABSENCE_DECISIONS"
     ),
     rescuePlan: args.rescuePlan
-      ? readJson(
-          args.rescuePlan,
-          "LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_PLAN"
-        )
+      ? readJson(args.rescuePlan, "LF_A_DRIVEN_REQUIREMENT_FINAL_RESCUE_PLAN")
       : null,
     rescueDecisions: args.rescueDecisions
       ? readJson(
