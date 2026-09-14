@@ -1,7 +1,5 @@
 const { sha256 } = require("../policyAnalysis/runIdentity");
-const {
-  stableStringify,
-} = require("../policyAnalysis/aDrivenSourceUnitPlan");
+const { stableStringify } = require("../policyAnalysis/aDrivenSourceUnitPlan");
 const {
   validateADrivenSemanticManifest,
 } = require("../policyAnalysis/aDrivenSemanticManifest");
@@ -136,7 +134,7 @@ function productRow(row, documentsById) {
   if (
     aEvidence.length === 0 ||
     !["FOUND", "NOT_FOUND"].includes(row.customerStatus) ||
-    found !== (bEvidence.length > 0)
+    found !== bEvidence.length > 0
   )
     throw resultError("LF_A_DRIVEN_PRODUCT_ROW_INVALID", row.requirementId);
   const aSources = unique(
