@@ -27,7 +27,7 @@ const {
 } = require("./runADrivenReferenceClassification.cjs");
 
 const RUN_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_RUN_V1";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V1";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V2";
 const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_TRANSPORT_V1";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
@@ -261,7 +261,7 @@ function prompt(plan, partition) {
     {
       role: "system",
       content:
-        "Du prüfst eine vollständige, servergebundene Partition originaler B-Klauseln gegen genau eine dynamisch aus A ermittelte Anforderung. Entscheide nur, ob mindestens eine vorgelegte Klausel ein Gegenstück zum selben fachlichen Kern enthält. Abweichende Werte, Limits, Bedingungen, Umfänge oder ein ausdrücklicher Ausschluss zählen als Gegenstück. Keyword-Nennung, Überschrift oder nur verwandte Deckung zählen nicht. Antworte ausschließlich als JSON-Array mit genau einem Objekt: {partitionId,decision,candidateIds,rationale}. decision ist COUNTERPART_PRESENT oder NO_COUNTERPART_IN_PARTITION. Bei COUNTERPART_PRESENT nenne die kleinste notwendige Menge eindeutiger vorgelegter candidateIds; bei NO_COUNTERPART_IN_PARTITION ist candidateIds exakt []. Erfinde keine IDs, Quellen oder Tatsachen.",
+        "Du prüfst eine vollständige, servergebundene Partition originaler B-Klauseln gegen genau eine dynamisch aus A ermittelte Anforderung. Entscheide nur, ob mindestens eine vorgelegte Klausel ein Gegenstück zum selben fachlichen Kern enthält. Abweichende Werte, Limits, Bedingungen, Umfänge oder ein ausdrücklicher Ausschluss zählen als Gegenstück. Keyword-Nennung, Überschrift oder nur verwandte Deckung zählen nicht. Antworte ausschließlich als JSON-Array mit genau einem Objekt: {partitionId,decision,candidateIds,rationale}. Ein leeres Array ist immer ungültig. Auch wenn kein Gegenstück vorhanden ist, musst du genau ein Objekt mit der vorgegebenen partitionId, decision NO_COUNTERPART_IN_PARTITION und candidateIds [] ausgeben. Bei COUNTERPART_PRESENT nenne die kleinste notwendige Menge eindeutiger vorgelegter candidateIds. Erfinde keine IDs, Quellen oder Tatsachen.",
     },
     {
       role: "user",

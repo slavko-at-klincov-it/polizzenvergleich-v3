@@ -14957,6 +14957,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(partitionPrompt[0].content).toContain(
       "vollständige, servergebundene Partition"
     );
+    expect(partitionPrompt[0].content).toContain(
+      "Ein leeres Array ist immer ungültig"
+    );
     expect(JSON.stringify(partitionPrompt).toLowerCase()).not.toContain("gold");
     const partitionRun = await runRequirementAbsencePartition({
       client: {
