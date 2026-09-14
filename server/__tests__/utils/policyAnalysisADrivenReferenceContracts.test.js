@@ -45,6 +45,9 @@ const {
   buildADrivenGoldRegression,
 } = require("../../utils/policyAnalysis/aDrivenGoldRegression");
 const {
+  buildADrivenRequirementPlanGoldRegression,
+} = require("../../utils/policyAnalysis/aDrivenRequirementPlanGoldRegression");
+const {
   assessADrivenManifestAtomicityRisks,
   buildADrivenAStatusAudit,
   compareADrivenManifestAtomicity,
@@ -14631,5 +14634,107 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
         expectedGoldSha256: "8".repeat(64),
       })
     ).toThrow("LF_A_DRIVEN_GOLD_INPUT_INVALID");
+  });
+
+  test("binds frozen Gold sources to retrieval by document fingerprint", () => {
+    const manifest = searchEligibleManifest();
+    const searchPlan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [{ uuid: "b-doc", position: 0, sha256: "b".repeat(64) }],
+    });
+    const exactText = "Gebäude und Nebengebäude sind versichert.";
+    const exactTextSha256 = crypto
+      .createHash("sha256")
+      .update(exactText)
+      .digest("hex");
+    const retrieval = retrievalArtifact(
+      searchPlan,
+      searchPlan.packages.map((item) => ({
+        packageId: item.packageId,
+        completedChannels: [...REQUIRED_SEARCH_CHANNELS],
+        candidates: [
+          {
+            compactCandidateId: `candidate-${item.packageId}`,
+            documentUuid: "b-doc",
+            documentSha256: "b".repeat(64),
+            clauseBoundaryId: "clause-one",
+            channels: ["DINGHY", "LEXICAL_BM25"],
+            sourceSpans: [
+              {
+                candidateId: `source-${item.packageId}`,
+                exactText,
+                exactTextSha256,
+                physicalPageNumber: 1,
+                documentStart: 0,
+                documentEnd: exactText.length,
+                channels: ["DINGHY", "LEXICAL_BM25"],
+              },
+            ],
+          },
+        ],
+      }))
+    );
+    const searchExecution = materializeADrivenCounterpartSearchExecution({
+      plan: searchPlan,
+      retrieval,
+    });
+    const gold = syntheticGold(manifest);
+    gold.sourceDocuments = [
+      {
+        uuid: "historical-uuid",
+        fingerprint: "b".repeat(64),
+        originalName: "known-b.docx",
+        role: "TERMS",
+        documentStatus: "FRAMEWORK_TERMS",
+      },
+    ];
+    gold.adjudicationScope = {
+      explicitlyAdjudicatedRows: [],
+      automaticallyAcceptedRows: ["KNOWN-01"],
+    };
+    gold.rows[0].goldDecision.sources = [
+      {
+        referenceId: "R1",
+        file: "known-b.docx",
+        exactText,
+        exactTextSha256,
+      },
+    ];
+
+    const regression = buildADrivenRequirementPlanGoldRegression({
+      manifest,
+      gold,
+      expectedGoldSha256: gold.goldSha256,
+      searchPlan,
+      searchExecution,
+    });
+
+    expect(regression).toMatchObject({
+      qaOnly: true,
+      productionRule: false,
+      generalizationProof: false,
+      summary: {
+        rows: 1,
+        positiveRows: 1,
+        goldSources: 1,
+        fullRetrievalBoundGoldSources: 1,
+        selectedBoundGoldSources: 1,
+        positiveRowsWithAllSourcesRetrieved: 1,
+        positiveRowsWithAllSourcesSelected: 1,
+        scopes: {
+          AUTOMATIC_207: {
+            rows: 1,
+            positiveRows: 1,
+            positiveRowsFullyRetrieved: 1,
+            positiveRowsFullySelected: 1,
+          },
+        },
+      },
+    });
+    expect(regression.records[0].sourceBindings[0]).toMatchObject({
+      status: "SELECTED_BOUND",
+      documentUuid: "b-doc",
+      documentPosition: 0,
+    });
   });
 });
