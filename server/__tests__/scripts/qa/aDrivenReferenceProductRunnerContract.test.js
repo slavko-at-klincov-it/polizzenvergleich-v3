@@ -63,6 +63,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
     expect(source.indexOf("load_qwen", unloadDinghy)).toBeGreaterThan(
       unloadDinghy
     );
+    expect(source).toContain('ACTIVE_CHILD_PID=""');
+    expect(source).toContain('kill -TERM "$ACTIVE_CHILD_PID"');
+    expect(source).toContain("trap stop_active_child HUP INT TERM");
+    expect(source).toContain(
+      'run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs"'
+    );
   });
 
   test("keeps completed model phases resumable without overwriting them", () => {
@@ -93,5 +99,17 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
     );
     expect(aBuilder).toContain("LF_A_SHADOW_RESUME_MISMATCH");
     expect(bBuilder).toContain("LF_A_DRIVEN_COMPLETE_B_RESUME_MISMATCH");
+  });
+
+  test("uses the validated bounded V3 evidence defaults for primary B decisions", () => {
+    expect(source).toContain(
+      '${LF_B_MAXIMUM_CORPUS_CANDIDATES_PER_DOCUMENT:-1}'
+    );
+    expect(source).toContain('${LF_B_MAXIMUM_REQUIREMENTS_PER_BATCH:-2}');
+    expect(source).toContain('${LF_B_MAXIMUM_BATCH_CHARACTERS:-70000}');
+    expect(source).not.toContain(
+      '${LF_B_MAXIMUM_CORPUS_CANDIDATES_PER_DOCUMENT:-2}'
+    );
+    expect(source).not.toContain('${LF_B_MAXIMUM_BATCH_CHARACTERS:-120000}');
   });
 });

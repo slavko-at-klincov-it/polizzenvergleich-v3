@@ -46,6 +46,30 @@ RESULT_ROOT="$RUN_ROOT/result"
 LOCK_ACQUIRED=0
 RESTORE_QWEN=0
 DINGHY_LOADED=0
+ACTIVE_CHILD_PID=""
+
+run_child() {
+  "$@" &
+  ACTIVE_CHILD_PID=$!
+  set +e
+  wait "$ACTIVE_CHILD_PID"
+  local status=$?
+  set -e
+  ACTIVE_CHILD_PID=""
+  return "$status"
+}
+
+stop_active_child() {
+  trap - HUP INT TERM
+  if [ -n "$ACTIVE_CHILD_PID" ] && kill -0 "$ACTIVE_CHILD_PID" 2>/dev/null; then
+    kill -TERM "$ACTIVE_CHILD_PID" 2>/dev/null || true
+    set +e
+    wait "$ACTIVE_CHILD_PID"
+    set -e
+  fi
+  ACTIVE_CHILD_PID=""
+  exit 130
+}
 
 verify_model_state() {
   local state_args=(
@@ -57,12 +81,12 @@ verify_model_state() {
   if [ -n "${4:-}" ]; then
     state_args+=(--context "$4")
   fi
-  "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/verifyLmStudioModelState.cjs" \
+  run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/verifyLmStudioModelState.cjs" \
     "${state_args[@]}"
 }
 
 load_qwen() {
-  "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/load-qwen36.cjs" \
+  run_child "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/load-qwen36.cjs" \
     "$LMSTUDIO_SDK" \
     "$QWEN_MODEL_KEY" \
     "$QWEN_MODEL"
@@ -81,7 +105,7 @@ cleanup() {
   local exit_code=$?
   trap - EXIT HUP INT TERM
   if [ "$DINGHY_LOADED" -eq 1 ]; then
-    "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
+    run_child "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
       "$LMSTUDIO_SDK" \
       "$DINGHY_IDENTIFIER" || exit_code=1
     DINGHY_LOADED=0
@@ -98,7 +122,7 @@ cleanup() {
 }
 
 trap cleanup EXIT
-trap 'exit 130' HUP INT TERM
+trap stop_active_child HUP INT TERM
 
 case "$RUN_ROOT:$CONTRACT_FILE" in
   /*:/*) ;;
@@ -139,11 +163,11 @@ mkdir -p "$OUTPUT_ROOT"
 "$LMS_BIN" server start >/dev/null 2>&1 || true
 ensure_qwen
 
-"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/buildADrivenReferenceShadow.cjs" \
+run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/buildADrivenReferenceShadow.cjs" \
   --runRoot "$RUN_ROOT" \
   --output "$A_PLAN_ROOT"
 
-"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceClassification.cjs" \
+run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceClassification.cjs" \
   --shadowRoot "$A_PLAN_ROOT" \
   --output "$A_CLASSIFICATION_ROOT" \
   --model "$QWEN_MODEL" \
@@ -183,31 +207,31 @@ if ! "$LMS_BIN" runtime ls | grep -F "$RUNTIME_REVISION" | grep -F '✓' >/dev/n
 fi
 
 if [ -f "$B_RETRIEVAL_ROOT/summary.private.json" ]; then
-  "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs" \
+  run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs" \
     --shadowRoot "$A_FINAL_ROOT" \
     --runRoot "$RUN_ROOT" \
     --contractFile "$CONTRACT_FILE" \
     --output "$B_RETRIEVAL_ROOT"
 else
   RESTORE_QWEN=1
-  "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
+  run_child "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
     "$LMSTUDIO_SDK" \
     "$QWEN_MODEL"
   verify_model_state "$QWEN_MODEL" llm not-loaded ""
-  "$LMS_BIN" load "$DINGHY_MODEL_KEY" \
+  DINGHY_LOADED=1
+  run_child "$LMS_BIN" load "$DINGHY_MODEL_KEY" \
     --identifier "$DINGHY_IDENTIFIER" \
     --context-length "$DINGHY_CONTEXT" \
     --yes
-  DINGHY_LOADED=1
   verify_model_state "$DINGHY_IDENTIFIER" embeddings loaded "$DINGHY_CONTEXT"
 
-  "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs" \
+  run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs" \
     --shadowRoot "$A_FINAL_ROOT" \
     --runRoot "$RUN_ROOT" \
     --contractFile "$CONTRACT_FILE" \
     --output "$B_RETRIEVAL_ROOT"
 
-  "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
+  run_child "$NODE_BIN" "$SCRIPT_DIR/scripts/macos/unload-lmstudio-model.cjs" \
     "$LMSTUDIO_SDK" \
     "$DINGHY_IDENTIFIER"
   DINGHY_LOADED=0
@@ -217,13 +241,13 @@ else
 fi
 verify_model_state "$QWEN_MODEL" llm loaded "$QWEN_CONTEXT"
 
-"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/buildADrivenCompleteBCorpus.cjs" \
+run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/buildADrivenCompleteBCorpus.cjs" \
   --runRoot "$RUN_ROOT" \
   --searchPlan "$B_RETRIEVAL_ROOT/search-plan.private.json" \
   --output "$B_COMPLETE_CORPUS"
 
 if [ ! -f "$B_DECISION_ROOT/summary.private.json" ]; then
-  "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs" \
+  run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs" \
     --manifest "$A_FINAL_ROOT/dynamic-semantic-manifest.private.json" \
     --searchPlan "$B_RETRIEVAL_ROOT/search-plan.private.json" \
     --searchExecution "$B_RETRIEVAL_ROOT/search-execution.private.json" \
@@ -233,9 +257,9 @@ if [ ! -f "$B_DECISION_ROOT/summary.private.json" ]; then
     --modelContext "$QWEN_CONTEXT" \
     --maximumAttempts "${LF_B_QWEN_MAXIMUM_ATTEMPTS:-3}" \
     --maximumCandidatesPerComponent "${LF_B_MAXIMUM_CANDIDATES_PER_COMPONENT:-4}" \
-    --maximumCompleteCorpusCandidatesPerDocument "${LF_B_MAXIMUM_CORPUS_CANDIDATES_PER_DOCUMENT:-2}" \
-    --maximumRequirementsPerBatch "${LF_B_MAXIMUM_REQUIREMENTS_PER_BATCH:-4}" \
-    --maximumBatchCharacters "${LF_B_MAXIMUM_BATCH_CHARACTERS:-120000}" \
+    --maximumCompleteCorpusCandidatesPerDocument "${LF_B_MAXIMUM_CORPUS_CANDIDATES_PER_DOCUMENT:-1}" \
+    --maximumRequirementsPerBatch "${LF_B_MAXIMUM_REQUIREMENTS_PER_BATCH:-2}" \
+    --maximumBatchCharacters "${LF_B_MAXIMUM_BATCH_CHARACTERS:-70000}" \
     --requestTimeoutMs "${LF_B_QWEN_REQUEST_TIMEOUT_MS:-180000}" \
     --abortSettlementTimeoutMs "${LF_B_QWEN_ABORT_SETTLEMENT_TIMEOUT_MS:-15000}" \
     --modelRecoveryTimeoutMs "${LF_B_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
@@ -244,7 +268,7 @@ if [ ! -f "$B_DECISION_ROOT/summary.private.json" ]; then
 fi
 
 if [ ! -f "$B_ABSENCE_ROOT/summary.private.json" ]; then
-  "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenRequirementAbsenceDecisions.cjs" \
+  run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenRequirementAbsenceDecisions.cjs" \
     --decisionPlan "$B_DECISION_ROOT/decision-plan.private.json" \
     --preliminaryDecisions "$B_DECISION_ROOT/requirement-decisions.private.json" \
     --completeCorpus "$B_COMPLETE_CORPUS" \
@@ -260,7 +284,7 @@ if [ ! -f "$B_ABSENCE_ROOT/summary.private.json" ]; then
     --qwenModelKey "$QWEN_MODEL_KEY"
 fi
 
-"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeADrivenRequirementRescueReviewPlan.cjs" \
+run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeADrivenRequirementRescueReviewPlan.cjs" \
   --decisionPlan "$B_DECISION_ROOT/decision-plan.private.json" \
   --preliminaryDecisions "$B_DECISION_ROOT/requirement-decisions.private.json" \
   --absencePlan "$B_ABSENCE_ROOT/absence-plan.private.json" \
@@ -271,7 +295,7 @@ fi
   --maximumBatchCharacters 160000
 
 if [ ! -f "$B_RESCUE_DECISION_ROOT/summary.private.json" ]; then
-  "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs" \
+  run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs" \
     --decisionPlan "$B_RESCUE_PLAN" \
     --output "$B_RESCUE_DECISION_ROOT" \
     --model "$QWEN_MODEL" \
@@ -284,7 +308,7 @@ if [ ! -f "$B_RESCUE_DECISION_ROOT/summary.private.json" ]; then
     --qwenModelKey "$QWEN_MODEL_KEY"
 fi
 
-"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeADrivenRequirementFinalDecisions.cjs" \
+run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeADrivenRequirementFinalDecisions.cjs" \
   --decisionPlan "$B_DECISION_ROOT/decision-plan.private.json" \
   --preliminaryDecisions "$B_DECISION_ROOT/requirement-decisions.private.json" \
   --absencePlan "$B_ABSENCE_ROOT/absence-plan.private.json" \
@@ -293,7 +317,7 @@ fi
   --rescueDecisions "$B_RESCUE_DECISION_ROOT/requirement-decisions.private.json" \
   --output "$FINAL_DECISIONS"
 
-"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeADrivenRequirementBinaryResult.cjs" \
+run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeADrivenRequirementBinaryResult.cjs" \
   --manifest "$A_FINAL_ROOT/dynamic-semantic-manifest.private.json" \
   --decisionPlan "$B_DECISION_ROOT/decision-plan.private.json" \
   --preliminaryDecisions "$B_DECISION_ROOT/requirement-decisions.private.json" \
@@ -304,7 +328,7 @@ fi
   --finalDecisions "$FINAL_DECISIONS" \
   --output "$BINARY_RESULT"
 
-"$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeADrivenReferenceProductResult.cjs" \
+run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeADrivenReferenceProductResult.cjs" \
   --manifest "$A_FINAL_ROOT/dynamic-semantic-manifest.private.json" \
   --decisionPlan "$B_DECISION_ROOT/decision-plan.private.json" \
   --preliminaryDecisions "$B_DECISION_ROOT/requirement-decisions.private.json" \
