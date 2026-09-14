@@ -68,6 +68,7 @@ function argumentsFrom(argv) {
     "abortSettlementTimeoutMs",
     "modelRecoveryTimeoutMs",
     "maximumNewBatches",
+    "startBatchIndex",
     "lmStudioSdk",
     "qwenModelKey",
   ]);
@@ -120,9 +121,12 @@ function argumentsFrom(argv) {
       values.maximumNewBatches === undefined
         ? null
         : integer("maximumNewBatches", null),
+    startBatchIndex: integer("startBatchIndex", 0, 0),
   };
   if (result.maximumAttempts > MAXIMUM_ATTEMPTS)
     fail(`--maximumAttempts darf höchstens ${MAXIMUM_ATTEMPTS} sein`);
+  if (result.startBatchIndex > 0 && result.maximumNewBatches === null)
+    fail("--startBatchIndex erfordert --maximumNewBatches");
   return result;
 }
 
@@ -635,6 +639,7 @@ async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
   let newBatches = 0;
   let nextBatchIndex = null;
   for (const batch of plan.batches) {
+    if (batch.batchIndex < args.startBatchIndex) continue;
     const file = batchFile(args.output, batch);
     let result;
     let reused = false;
@@ -684,7 +689,8 @@ async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
   }
   return {
     results,
-    complete: results.length === plan.batches.length,
+    complete:
+      args.startBatchIndex === 0 && results.length === plan.batches.length,
     newBatches,
     nextBatchIndex,
   };
@@ -761,6 +767,8 @@ async function run() {
     requestedModel: args.model,
     modelContext: args.modelContext,
     completedBatches: processed.results.length,
+    completedBatchesInSegment: processed.results.length,
+    startBatchIndex: args.startBatchIndex,
     totalBatches: plan.batches.length,
     newBatches: processed.newBatches,
     completedAt: new Date().toISOString(),

@@ -14460,6 +14460,58 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(decisionPlan.selection.goldInputsAllowed).toBe(false);
   });
 
+  test("adds complete-corpus rescue once per requirement and document", () => {
+    const { manifest, searchPlan, searchExecution } =
+      requirementDecisionFixture();
+    const completeCorpus = buildADrivenCompleteBCorpus({
+      documents: [
+        document(
+          "b-doc",
+          0,
+          artifact(
+            [
+              "Seite 1\nErste vollständige Klausel.",
+              "Seite 2\nZweite vollständige Klausel.",
+              "Seite 3\nDritte vollständige Klausel.",
+              "Seite 4\nVierte vollständige Klausel.",
+            ],
+            "b"
+          )
+        ),
+      ],
+    });
+    expect(completeCorpus.clauses.length).toBeGreaterThan(2);
+
+    const decisionPlan = buildADrivenRequirementDecisionPlan({
+      manifest,
+      searchPlan,
+      searchExecution,
+      completeCorpus,
+      maximumCandidatesPerComponent: 1,
+      maximumCompleteCorpusCandidatesPerDocument: 2,
+    });
+    const row = decisionPlan.rows[0];
+
+    expect(row.searchCoverage).toMatchObject({
+      candidateSelection:
+        "PER_COMPONENT_RETRIEVAL_PLUS_REQUIREMENT_DOCUMENT_RESCUE",
+      completeCorpusRescueScope: "ONE_REQUIREMENT_ONE_B_DOCUMENT",
+      completeCorpusRescueCandidatesSelected: 2,
+    });
+    expect(
+      row.candidates.filter(({ channels }) =>
+        channels.includes("COMPLETE_B_CORPUS")
+      )
+    ).toHaveLength(2);
+    expect(
+      new Set(
+        row.components.flatMap(
+          ({ navigationCandidateIds }) => navigationCandidateIds
+        )
+      ).size
+    ).toBe(row.candidates.length);
+  });
+
   test("uses a source-bound binary counterpart prompt without Gold input", () => {
     const { decisionPlan } = requirementDecisionFixture();
     const messages = requirementDecisionPrompt(decisionPlan.batches[0]);

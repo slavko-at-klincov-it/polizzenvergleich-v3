@@ -13,7 +13,7 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // decision unit is compacted to one complete A requirement so the model can
 // decide identity, partial detail support and opposite effects coherently.
 const A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID =
-  "LF_A_DRIVEN_REQUIREMENT_DECISION_PLAN_V2";
+  "LF_A_DRIVEN_REQUIREMENT_DECISION_PLAN_V3";
 const A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID =
   "LF_A_DRIVEN_REQUIREMENT_DECISION_V1";
 const COMPONENT_OUTCOMES = new Set([
@@ -276,8 +276,7 @@ function selectForComponent(
   candidates,
   component,
   requirement,
-  maximumCandidates,
-  maximumCompleteCorpusCandidatesPerDocument
+  maximumCandidates
 ) {
   const componentTokens = tokens(
     [
@@ -339,18 +338,51 @@ function selectForComponent(
     ),
     maximumCandidates
   );
-  const completeByDocument = [];
-  const completeCounts = new Map();
-  for (const item of ranked(({ completeCorpus }) => completeCorpus === true)) {
-    const count = completeCounts.get(item.candidate.documentUuid) || 0;
-    if (count >= maximumCompleteCorpusCandidatesPerDocument) continue;
-    completeByDocument.push(item.candidate);
-    completeCounts.set(item.candidate.documentUuid, count + 1);
+  return retrieved;
+}
+
+function selectCompleteCorpusForRequirement(
+  candidates,
+  requirement,
+  maximumCandidatesPerDocument
+) {
+  if (maximumCandidatesPerDocument === 0) return [];
+  const requirementTokens = tokens(
+    [
+      requirement.displayLabel,
+      ...(requirement.structurePath || []),
+      ...(requirement.sourceSpans || []).map(({ exactText }) => exactText),
+      ...requirement.components.map(({ label }) => label),
+    ].join(" ")
+  );
+  const ranked = candidates
+    .filter(({ completeCorpus }) => completeCorpus === true)
+    .map((candidate) => ({
+      candidate,
+      score:
+        compoundOverlap(
+          requirementTokens,
+          candidate.tokenSet || tokens(candidate.exactText)
+        ) *
+          20 -
+        Math.min(candidate.exactText.length, 2_000) / 20_000,
+    }))
+    .sort(
+      (left, right) =>
+        right.score - left.score ||
+        left.candidate.documentPosition - right.candidate.documentPosition ||
+        left.candidate.documentStart - right.candidate.documentStart ||
+        left.candidate.candidateId.localeCompare(right.candidate.candidateId)
+    );
+  const selected = [];
+  const counts = new Map();
+  for (const item of ranked) {
+    const count = counts.get(item.candidate.documentUuid) || 0;
+    if (count >= maximumCandidatesPerDocument) continue;
+    selected.push(item.candidate);
+    counts.set(item.candidate.documentUuid, count + 1);
   }
-  const selected = new Map();
-  for (const candidate of [...retrieved, ...completeByDocument])
-    selected.set(candidate.candidateId, candidate);
-  return [...selected.values()];
+  return selected;
 }
 
 function modelCandidate(candidate) {
@@ -388,13 +420,17 @@ function reviewRow(
       completeCorpus,
       documentsByUuid
     );
+  const completeCorpusRescue = selectCompleteCorpusForRequirement(
+    catalog,
+    requirement,
+    maximumCompleteCorpusCandidatesPerDocument
+  );
   const components = requirement.components.map((component) => {
     const selected = selectForComponent(
       catalog,
       component,
       requirement,
-      maximumCandidates,
-      maximumCompleteCorpusCandidatesPerDocument
+      maximumCandidates
     );
     return {
       componentId: component.componentId,
@@ -407,7 +443,13 @@ function reviewRow(
       ...(component.coverageEffect
         ? { coverageEffect: component.coverageEffect }
         : {}),
-      navigationCandidateIds: selected.map(({ candidateId }) => candidateId),
+      navigationCandidateIds: [
+        ...new Set(
+          [...selected, ...completeCorpusRescue].map(
+            ({ candidateId }) => candidateId
+          )
+        ),
+      ],
     };
   });
   if (!components.some(({ identityCore }) => identityCore))
@@ -449,9 +491,12 @@ function reviewRow(
         ({ searchCoverage }) =>
           searchCoverage.channelExecutionStatus === "CHANNELS_COMPLETE"
       ),
-      candidateSelection: "PER_COMPONENT_RANKED_WITH_DOCUMENT_DIVERSITY",
+      candidateSelection:
+        "PER_COMPONENT_RETRIEVAL_PLUS_REQUIREMENT_DOCUMENT_RESCUE",
+      completeCorpusRescueScope: "ONE_REQUIREMENT_ONE_B_DOCUMENT",
       maximumCandidatesPerComponent: maximumCandidates,
       maximumCompleteCorpusCandidatesPerDocument,
+      completeCorpusRescueCandidatesSelected: completeCorpusRescue.length,
       completeCorpusAvailable: Boolean(completeCorpus),
       sourceCandidatesAvailable: catalog.length,
       sourceCandidatesSelected: candidates.length,
@@ -557,7 +602,7 @@ function buildADrivenRequirementDecisionPlan({
   }
   flush();
   const payload = {
-    schemaVersion: 2,
+    schemaVersion: 3,
     contractId: A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
     dynamicManifestSha256: manifest.manifestSha256,
     searchPlanSha256: searchPlan.planSha256,
@@ -570,6 +615,7 @@ function buildADrivenRequirementDecisionPlan({
       maximumBatchCharacters,
       characterClippingAllowed: false,
       candidateAuthority: "SERVER_BOUND_NAVIGATION_ONLY",
+      completeCorpusRescueScope: "ONE_REQUIREMENT_ONE_B_DOCUMENT",
       goldInputsAllowed: false,
     },
     rows,
