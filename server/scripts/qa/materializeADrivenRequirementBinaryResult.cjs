@@ -86,7 +86,10 @@ function writeOrVerifyPrivateJson(file, value) {
 function run() {
   const args = argumentsFrom(process.argv.slice(2));
   const inputs = {
-    manifest: readJson(args.manifest, "LF_A_DRIVEN_REQUIREMENT_BINARY_MANIFEST"),
+    manifest: readJson(
+      args.manifest,
+      "LF_A_DRIVEN_REQUIREMENT_BINARY_MANIFEST"
+    ),
     decisionPlan: readJson(
       args.decisionPlan,
       "LF_A_DRIVEN_REQUIREMENT_BINARY_DECISION_PLAN"

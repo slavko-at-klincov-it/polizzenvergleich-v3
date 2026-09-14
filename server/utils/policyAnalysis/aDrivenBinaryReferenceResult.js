@@ -371,7 +371,10 @@ function requirementComponentFindings(requirement, decisionRow, finalDecision) {
     ])
   );
   const plannedComponentsById = new Map(
-    decisionRow.components.map((component) => [component.componentId, component])
+    decisionRow.components.map((component) => [
+      component.componentId,
+      component,
+    ])
   );
   const evidenceById = requirementEvidenceById(finalDecision);
   return requirement.components.map((component) => {
@@ -419,13 +422,7 @@ function requirementDimensionFindings(componentFindings, dimensions) {
   return componentFindings
     .filter(({ componentType }) => dimensions.includes(componentType))
     .map(
-      ({
-        componentId,
-        componentType,
-        componentLabel,
-        outcome,
-        evidence,
-      }) => ({
+      ({ componentId, componentType, componentLabel, outcome, evidence }) => ({
         componentId,
         dimension: componentType,
         componentLabel,
@@ -455,10 +452,7 @@ function buildADrivenRequirementBinaryReferenceResult({
     rescuePlan,
     rescueDecisions,
   };
-  validateADrivenRequirementFinalDecisionArtifact(
-    finalDecisions,
-    finalInputs
-  );
+  validateADrivenRequirementFinalDecisionArtifact(finalDecisions, finalInputs);
   if (
     manifest.contractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
     decisionPlan.contractId !==
@@ -564,8 +558,7 @@ function buildADrivenRequirementBinaryReferenceResult({
           : "Der vollständige extrahierte B-Korpus wurde geprüft; kein Gegenstück desselben fachlichen Kerns wurde bestätigt.",
         manualAssessment: "",
         componentFindings,
-        unmodeledDifferences:
-          finalDecision.assessment.unmodeledDifferences,
+        unmodeledDifferences: finalDecision.assessment.unmodeledDifferences,
         decisionRationale: finalDecision.assessment.rationale,
         resolutionPath: finalDecision.resolutionPath,
         decisionProvenance: finalDecision.decisionProvenance,
