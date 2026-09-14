@@ -9032,3 +9032,69 @@ Status: `A DYNAMISCH VOLLSTÄNDIG; B-RETRIEVAL VOLLSTÄNDIG; REQUIREMENT-PILOT
 KONTEXTFEST AUF ZWEI WORST-CASE-BATCHES BESTANDEN; QUALIFIZIERTER NULLFUND,
 PRODUKTINTEGRATION, XLSX UND VOLLSTÄNDIGER 1+9-LAUF NOCH OFFEN; KEIN
 DEPLOYMENT`.
+
+### 133.40 Erster vollständiger dynamischer Nullfund über 322/322 B-Klauseln
+
+Der bisherige Requirement-Entscheidungsvertrag konnte positive Gegenstücke
+source-bound bestätigen, durfte einen `FALLBACK_REQUIRED`-Fall aber nicht als
+`NICHT GEFUNDEN` ausgeben. Die Commits `2fc9cb944`, `ec404ff4b` und
+`9da74b176` ergänzen deshalb einen getrennten, hashgebundenen
+Vollkorpusvertrag. Er plant ausschließlich für ungelöste Requirements jede
+extrahierte B-Klausel genau einmal ein, teilt nur an vollständigen
+Klauselgrenzen und bleibt bei fehlenden oder ungültigen Partitionsantworten
+fail-closed. Erst wenn jede Partition terminal negativ ist, wird
+`customerStatus=NOT_FOUND` mit `absenceCertified=true` zulässig. Ein
+positiver Kandidat führt dagegen nur zu `COUNTERPART_REVIEW_REQUIRED` und
+nicht automatisch zu `FOUND`.
+
+Der erste reale Pilot deckte eine dynamische Fallback-Anforderung gegen alle
+neun B-Dokumente und alle 322 Klauseln ab. Der Plan bestand aus 13
+vollständigen Partitionen. Ein anfängliches technisches Stoppsignal wurde
+korrekt fail-closed behandelt: Qwen lieferte deterministisch ein einzelnes
+negatives JSON-Objekt, der Parser erwartete trotz Einzelelementvertrag noch
+ein JSON-Array. Keine dieser Antworten wurde als PASS oder fachlicher
+Nullfund gespeichert. Commit `322854aad`, formatiert in `ddbea6f43`,
+normalisiert genau eine Objektantwort und weiterhin auch ein Array mit genau
+einem Objekt; leere Arrays, mehrere Objekte und fehlende Antworten bleiben
+ungültig. Promptvertrag V3 verlangt nun explizit genau ein JSON-Objekt.
+
+Danach bestand dieselbe erste Partition im ersten neuen Versuch. Der Lauf
+wurde an der sicheren Artefaktgrenze fortgesetzt und schloss 13/13
+Partitionen mit 13 gültigen Modellversuchen, null Timeouts und null
+ungültigen neuen Antworten ab. Damit ist genau diese eine Anforderung nach
+Prüfung von 9/9 Dokumenten und 322/322 Klauseln als `NICHT GEFUNDEN`
+zertifiziert. Das ist ein technischer und empirischer Vollkorpusnachweis für
+diesen extrahierten B-Korpus, keine mathematische 100-Prozent- oder
+Generalisierungsbehauptung.
+
+Private Artefakte auf dem Mac Studio:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-ABSENCE-PILOT-B19-20260914-9DA74B17/absence-plan.private.json
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-ABSENCE-PILOT-B19-20260914-9DA74B17/absence-decisions.private.json
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-ABSENCE-PILOT-B19-20260914-9DA74B17/summary.private.json
+```
+
+Interner Plan-Hash:
+`1e70b5ad494c4d44f2cac9a1ade026ac8dd63714fc71e5e8ffe9cfbaa0c48ad3`;
+interner Entscheidungshash:
+`cb64a29983a45ed684a716cc4790fe8a69c4d2f2585a7962f9263635ce9f6c7a`;
+Dateihash der Entscheidung:
+`633575a98c6501ef08d7eb066cf28fce00e95225fcb1d049410bf1d745cd4596`.
+Der letzte Resume-Abschnitt mit zwölf neuen Partitionen dauerte 360.239 ms.
+
+Auf Commit `ddbea6f43` bestanden im isolierten Mac-Studio-Worktree zwei
+fokussierte Suites mit 330/330 Tests sowie Syntax und Prettier. Alte
+Fehlversuche und alle zuvor gültigen Requirement-Batches blieben unverändert
+erhalten. Es gab keinen Produkt- oder Reviewer-Vollauf, keine Kunden-XLSX,
+kein Deployment und keine Releasefreigabe.
+
+Nächster Schritt: den resumierbaren V3-Requirement-Lauf ab der ersten
+fehlenden Batchgrenze fortsetzen, anschließend alle real verbleibenden
+Fallback-Requirements mit diesem Vollkorpusvertrag abschließen und erst dann
+den binären dynamischen Ergebnisbuilder sowie den Produktworker integrieren.
+
+Status: `ERSTER VOLLSTÄNDIGER NULLFUND 13/13 PARTITIONEN, 322/322 KLAUSELN UND
+9/9 DOKUMENTE PASS; VOLLSTÄNDIGER 364ER-ENTSCHEIDUNGSSTAND,
+PRODUKTINTEGRATION, XLSX UND DYNAMISCHER 1+9-ENDLAUF NOCH OFFEN; KEIN
+DEPLOYMENT`.
