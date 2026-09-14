@@ -15096,8 +15096,33 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       },
     });
     expect(() => preliminaryDecisionArtifact(decisionPlan, invalid)).toThrow(
-      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_DECISIONS_INVALID"
+      "LF_A_DRIVEN_REQUIREMENT_DECISION_ARTIFACT_INVALID"
     );
+
+    const withoutFallback = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: decisionPlan.rows.map((plannedRow) => {
+        const selectedCandidateId = plannedRow.candidates[0].candidateId;
+        return {
+          requirementId: plannedRow.requirementId,
+          contextFinding: {
+            outcome: "MATCH",
+            candidateIds: [selectedCandidateId],
+          },
+          componentFindings: plannedRow.components.map((component) => ({
+            componentId: component.componentId,
+            dimension: component.dimension,
+            outcome: "MATCH",
+            candidateIds: [selectedCandidateId],
+          })),
+          unmodeledDifferences: [],
+          rationale: "Dasselbe fachliche Element ist belegt.",
+        };
+      }),
+    });
+    expect(() =>
+      preliminaryDecisionArtifact(decisionPlan, withoutFallback)
+    ).toThrow("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_DECISIONS_INVALID");
   });
 
   test("certifies NOT_FOUND only after every complete B clause partition is terminal", async () => {
