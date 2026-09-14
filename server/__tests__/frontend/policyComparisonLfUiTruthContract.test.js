@@ -18,24 +18,29 @@ describe("LF comparison UI truth contract", () => {
   const source = fs.readFileSync(PANEL, "utf8");
   const presenterSource = fs.readFileSync(PRESENTER, "utf8");
 
-  test("describes the curated topology and the runtime binding to source A", () => {
+  test("describes the dynamic topology owned by reference package A", () => {
     const mode = policyComparisonMode(
       POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
     );
 
-    expect(mode.description).toContain("kuratierte LF-Fachprofil");
-    expect(source).toContain("283 Zeilen, 13 Kategorien");
+    expect(mode.description).toContain("dynamisch und vollständig");
     expect(source).toContain(
-      "Abweichende oder fehlende Struktur stoppt den Lauf"
+      "Das Referenzpaket A bestimmt bei jedem Lauf dynamisch Kategorien, Reihenfolge und alle fachlich relevanten Ergebniszeilen"
     );
-    expect(source).toContain("LF-Profil an A binden und B prüfen");
+    expect(source).toContain("B-only-Inhalte erzeugen keine Zeile");
+    expect(source).toContain("A dynamisch erfassen und B prüfen");
   });
 
-  test("does not claim that source A freely discovers the result topology", () => {
-    expect(source).not.toContain(
-      "Dokument A bestimmt Kategorien, Unterkategorien, fachliche Zeilen"
+  test("does not expose the historical fixed LF topology as the product contract", () => {
+    const mode = policyComparisonMode(
+      POLICY_COMPARISON_MODE.LF_REFERENCE_A_TO_B
     );
-    expect(source).not.toContain("LF-Vorlage aus Dokument A wird erstellt");
+
+    expect(mode.description).not.toContain("kuratierte LF-Fachprofil");
+    expect(source).not.toContain("283 Zeilen, 13 Kategorien");
+    expect(source).not.toContain(
+      "Abweichende oder fehlende Struktur stoppt den Lauf"
+    );
   });
 
   test("shows only binary counterpart search states and keeps technical outcomes out of the LF status cell", () => {
