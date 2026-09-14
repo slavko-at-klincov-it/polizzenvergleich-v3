@@ -13319,11 +13319,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       decision: "NOT_SUPPORTED",
       selectedCandidateIds: [],
       dimensionChecks: item.semanticChecks.map(
-        ({ checkId, dimension }, index) => ({
+        ({ checkId, dimension, role }) => ({
           checkId,
           dimension,
-          outcome: index === 0 ? "MATCH" : "NOT_ESTABLISHED",
-          candidateIds: index === 0 ? ["candidate-one"] : [],
+          outcome: role === "TARGET" ? "MATCH" : "NOT_ESTABLISHED",
+          candidateIds: role === "TARGET" ? ["candidate-one"] : [],
         })
       ),
     }));
@@ -13450,11 +13450,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
           decision: "NOT_SUPPORTED",
           selectedCandidateIds: [],
           dimensionChecks: item.semanticChecks.map(
-            ({ checkId, dimension }, index) => ({
+            ({ checkId, dimension, role }) => ({
               checkId,
               dimension,
-              outcome: index === 0 ? "MATCH" : "NOT_ESTABLISHED",
-              candidateIds: index === 0 ? ["candidate-one"] : [],
+              outcome: role === "TARGET" ? "MATCH" : "NOT_ESTABLISHED",
+              candidateIds: role === "TARGET" ? ["candidate-one"] : [],
             })
           ),
         },
@@ -14273,11 +14273,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
             decision: "SUPPORTED",
             selectedCandidateIds: ["candidate-one"],
             dimensionChecks: item.semanticChecks.map(
-              ({ checkId, dimension }, checkIndex) => ({
+              ({ checkId, dimension, role }) => ({
                 checkId,
                 dimension,
-                outcome: checkIndex === 0 ? "MATCH" : "NOT_ESTABLISHED",
-                candidateIds: checkIndex === 0 ? ["candidate-one"] : [],
+                outcome: role === "TARGET" ? "MATCH" : "NOT_ESTABLISHED",
+                candidateIds: role === "TARGET" ? ["candidate-one"] : [],
               })
             ),
           }
