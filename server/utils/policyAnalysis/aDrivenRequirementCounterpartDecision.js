@@ -13,7 +13,7 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // decision unit is compacted to one complete A requirement so the model can
 // decide identity, partial detail support and opposite effects coherently.
 const A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID =
-  "LF_A_DRIVEN_REQUIREMENT_DECISION_PLAN_V1";
+  "LF_A_DRIVEN_REQUIREMENT_DECISION_PLAN_V2";
 const A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID =
   "LF_A_DRIVEN_REQUIREMENT_DECISION_V1";
 const COMPONENT_OUTCOMES = new Set([
@@ -188,6 +188,7 @@ function candidateCatalog(requirement, packages, documentsByUuid) {
           exactTextSha256: span.exactTextSha256,
           channels,
           targetComponentIds: [item.componentId],
+          tokenSet: tokens(span.exactText),
         });
       }
     }
@@ -243,6 +244,7 @@ function addCompleteCorpusCandidates(
       channels: ["COMPLETE_B_CORPUS"],
       targetComponentIds: [],
       completeCorpus: true,
+      tokenSet: tokens(clause.exactText),
     };
     catalog.push(candidate);
     byId.set(candidateId, candidate);
@@ -250,8 +252,33 @@ function addCompleteCorpusCandidates(
   return catalog;
 }
 
-function candidateScore(candidate, component, requirement) {
-  const candidateTokens = tokens(candidate.exactText);
+function candidateScore(
+  candidate,
+  componentId,
+  componentTokens,
+  requirementTokens
+) {
+  const candidateTokens = candidate.tokenSet || tokens(candidate.exactText);
+  const channelScore = candidate.channels.reduce(
+    (sum, channel) => sum + (CHANNEL_WEIGHTS[channel] || 0),
+    0
+  );
+  return (
+    compoundOverlap(componentTokens, candidateTokens) * 20 +
+    compoundOverlap(requirementTokens, candidateTokens) * 6 +
+    channelScore +
+    (candidate.targetComponentIds.includes(componentId) ? 6 : 0) -
+    Math.min(candidate.exactText.length, 2_000) / 20_000
+  );
+}
+
+function selectForComponent(
+  candidates,
+  component,
+  requirement,
+  maximumCandidates,
+  maximumCompleteCorpusCandidatesPerDocument
+) {
   const componentTokens = tokens(
     [
       component.label,
@@ -268,32 +295,17 @@ function candidateScore(candidate, component, requirement) {
       ...(requirement.sourceSpans || []).map(({ exactText }) => exactText),
     ].join(" ")
   );
-  const channelScore = candidate.channels.reduce(
-    (sum, channel) => sum + (CHANNEL_WEIGHTS[channel] || 0),
-    0
-  );
-  return (
-    compoundOverlap(componentTokens, candidateTokens) * 20 +
-    compoundOverlap(requirementTokens, candidateTokens) * 6 +
-    channelScore +
-    (candidate.targetComponentIds.includes(component.componentId) ? 6 : 0) -
-    Math.min(candidate.exactText.length, 2_000) / 20_000
-  );
-}
-
-function selectForComponent(
-  candidates,
-  component,
-  requirement,
-  maximumCandidates,
-  maximumCompleteCorpusCandidates
-) {
   const ranked = (eligible) =>
     candidates
       .filter(eligible)
       .map((candidate) => ({
         candidate,
-        score: candidateScore(candidate, component, requirement),
+        score: candidateScore(
+          candidate,
+          component.componentId,
+          componentTokens,
+          requirementTokens
+        ),
       }))
       .sort(
         (left, right) =>
@@ -327,12 +339,16 @@ function selectForComponent(
     ),
     maximumCandidates
   );
-  const complete = select(
-    ranked(({ completeCorpus }) => completeCorpus === true),
-    maximumCompleteCorpusCandidates
-  );
+  const completeByDocument = [];
+  const completeCounts = new Map();
+  for (const item of ranked(({ completeCorpus }) => completeCorpus === true)) {
+    const count = completeCounts.get(item.candidate.documentUuid) || 0;
+    if (count >= maximumCompleteCorpusCandidatesPerDocument) continue;
+    completeByDocument.push(item.candidate);
+    completeCounts.set(item.candidate.documentUuid, count + 1);
+  }
   const selected = new Map();
-  for (const candidate of [...retrieved, ...complete])
+  for (const candidate of [...retrieved, ...completeByDocument])
     selected.set(candidate.candidateId, candidate);
   return [...selected.values()];
 }
@@ -362,7 +378,7 @@ function reviewRow(
   documentsByUuid,
   completeCorpus,
   maximumCandidates,
-  maximumCompleteCorpusCandidates
+  maximumCompleteCorpusCandidatesPerDocument
 ) {
   const catalog = candidateCatalog(requirement, packages, documentsByUuid);
   if (completeCorpus)
@@ -378,7 +394,7 @@ function reviewRow(
       component,
       requirement,
       maximumCandidates,
-      maximumCompleteCorpusCandidates
+      maximumCompleteCorpusCandidatesPerDocument
     );
     return {
       componentId: component.componentId,
@@ -435,8 +451,7 @@ function reviewRow(
       ),
       candidateSelection: "PER_COMPONENT_RANKED_WITH_DOCUMENT_DIVERSITY",
       maximumCandidatesPerComponent: maximumCandidates,
-      maximumCompleteCorpusCandidatesPerComponent:
-        maximumCompleteCorpusCandidates,
+      maximumCompleteCorpusCandidatesPerDocument,
       completeCorpusAvailable: Boolean(completeCorpus),
       sourceCandidatesAvailable: catalog.length,
       sourceCandidatesSelected: candidates.length,
@@ -451,7 +466,7 @@ function buildADrivenRequirementDecisionPlan({
   searchExecution,
   completeCorpus = null,
   maximumCandidatesPerComponent = 4,
-  maximumCompleteCorpusCandidatesPerComponent = 4,
+  maximumCompleteCorpusCandidatesPerDocument = 1,
   maximumRequirementsPerBatch = 2,
   maximumBatchCharacters = 160_000,
 } = {}) {
@@ -466,8 +481,8 @@ function buildADrivenRequirementDecisionPlan({
     searchExecution.searchPlanSha256 !== searchPlan.planSha256 ||
     !Number.isInteger(maximumCandidatesPerComponent) ||
     maximumCandidatesPerComponent < 1 ||
-    !Number.isInteger(maximumCompleteCorpusCandidatesPerComponent) ||
-    maximumCompleteCorpusCandidatesPerComponent < 0 ||
+    !Number.isInteger(maximumCompleteCorpusCandidatesPerDocument) ||
+    maximumCompleteCorpusCandidatesPerDocument < 0 ||
     !Number.isInteger(maximumRequirementsPerBatch) ||
     maximumRequirementsPerBatch < 1 ||
     !Number.isInteger(maximumBatchCharacters) ||
@@ -502,7 +517,7 @@ function buildADrivenRequirementDecisionPlan({
       documentsByUuid,
       completeCorpus,
       maximumCandidatesPerComponent,
-      maximumCompleteCorpusCandidatesPerComponent
+      maximumCompleteCorpusCandidatesPerDocument
     );
   });
   const batches = [];
@@ -542,7 +557,7 @@ function buildADrivenRequirementDecisionPlan({
   }
   flush();
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
     dynamicManifestSha256: manifest.manifestSha256,
     searchPlanSha256: searchPlan.planSha256,
@@ -550,7 +565,7 @@ function buildADrivenRequirementDecisionPlan({
     completeBCorpusSha256: completeCorpus?.corpusSha256 || null,
     selection: {
       maximumCandidatesPerComponent,
-      maximumCompleteCorpusCandidatesPerComponent,
+      maximumCompleteCorpusCandidatesPerDocument,
       maximumRequirementsPerBatch,
       maximumBatchCharacters,
       characterClippingAllowed: false,

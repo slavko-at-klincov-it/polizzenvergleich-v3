@@ -365,7 +365,7 @@ function buildADrivenRequirementPlanGoldRegression({
   searchExecution,
   completeCorpus = null,
   maximumCandidatesPerComponent = 4,
-  maximumCompleteCorpusCandidatesPerComponent = 4,
+  maximumCompleteCorpusCandidatesPerDocument = 1,
   maximumRequirementsPerBatch = 4,
   maximumBatchCharacters = 120_000,
 } = {}) {
@@ -380,7 +380,7 @@ function buildADrivenRequirementPlanGoldRegression({
     searchExecution,
     completeCorpus,
     maximumCandidatesPerComponent,
-    maximumCompleteCorpusCandidatesPerComponent,
+    maximumCompleteCorpusCandidatesPerDocument,
     maximumRequirementsPerBatch,
     maximumBatchCharacters,
   });
