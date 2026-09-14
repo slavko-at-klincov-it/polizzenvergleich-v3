@@ -9351,3 +9351,54 @@ Prüfumfang nicht erweitert.
 Status: `ECHTER 1+9-V2-PRODUKT-SHADOW UND API-PROJEKTION PASS; GOLDMESSUNG
 134/144 EINDEUTIGE ZEILEN KORREKT, 10 ABWEICHUNGEN OFFEN; DETAILPRÜFUNG DIESER
 10 IDs FREIGABEPFLICHTIG; KEINE KUNDEN-XLSX, KEIN DEPLOYMENT`.
+
+### 133.44 Atomare V2-Produktartefakte und bestehende Exportkette
+
+Die Commits `802ef731c`, `aa23df3cc`, `d3eb777c9`, `fa2219b03` und
+`a45d70bdb` binden den neuen A-getriebenen Produktresultatvertrag an die
+bereits vorhandene atomare Artifact-Set-, Reader-, Export- und gespeicherte
+Downloadgrenze. Das Ergebnis wird vor Ausgabe gegen seine dynamische
+A-Topologie, binäre 364er-Entscheidungslinie, Dokumentseiten, Evidenz und den
+eigenen SHA-256-Digest validiert. Der bestehende Exportvertrag akzeptiert den
+neuen Schema-1-Vertrag nur zusammen mit seiner exakten Vertragskennung;
+historische LF-Schemata 2 und 3 bleiben unverändert lesbar. Ein neues
+V2-Ergebnis kann nicht durch Entfernen des Manifests in den schwächeren
+Legacy-Zugriff zurückfallen.
+
+Aus dem bereits abgeschlossenen 1+9-Entscheidungsstand wurde ohne Modellaufruf
+ein neuer Standard-Artefaktsatz erzeugt und unmittelbar ein zweites Mal als
+unverändertes Resume validiert:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-PRODUCT-ARTIFACTSET-20260915-A45D70BD/
+```
+
+```text
+Zeilen:                           364
+GEFUNDEN:                         330
+NICHT GEFUNDEN:                    34
+UNRESOLVED:                         0
+B-only-Zeilen:                      0
+Artifact-Set-Manifest intern:      88ddaafb7cb5ff8af459d45554c9879c87a7a0dc236df68c2902586b4ea3fc87
+comparison.private.json:           3f658fa64b2c8194715c185b3c7293c99aa1f18e6b0ac2d1c4a04f9310b62d02
+comparison.md:                     c2a0ca4be1df94fea9395f1d6205d2dd025f069eadd253198943a92e513f5e12
+polizzenvergleich.xlsx:            2a38d3cb4c50118c43a487d2887fd23317f009007cbad2c018fdddbe93cff819
+```
+
+Alle Dateien besitzen Modus `0600`. Die Arbeitsmappe ist weiterhin die
+interne Review-Ausgabe, keine freigegebene Kunden-XLSX. Auf dem exakten Commit
+`a45d70bdb7ade7aec75515d24f9bee059683b039` bestanden im isolierten
+Mac-Studio-Worktree Syntax, Prettier und 331/331 fokussierte Vertragstests.
+Qwen `qwen/qwen3.6-35b-a3b` blieb mit Kontext 42.496 und Parallelität 1
+korrekt geladen, `idle` und ohne Warteschlange. Es gab keinen Modellbatch,
+keine Worker-Umschaltung und kein Deployment.
+
+Nächster Schritt ist die zusammenhängende Integration von Queue, Modus und
+Worker-Orchestrierung. Der frische dynamische Endlauf muss Qwen für die
+A-Klassifikation, danach Dinghy exklusiv für Retrieval und anschließend Qwen
+erneut exklusiv für die Entscheidungen laden. Gold-283 bleibt dabei ein
+getrennter QA-Messwert und erzeugt keine Produktionszeile.
+
+Status: `V2-STANDARD-ARTEFAKTGRENZE PASS; 364/364 ZEILEN BINÄR UND ATOMAR
+PUBLIZIERT; WORKER-ROUTING UND FRISCHER DYNAMISCHER 1+9-ENDLAUF NOCH OFFEN;
+KEIN DEPLOYMENT`.
