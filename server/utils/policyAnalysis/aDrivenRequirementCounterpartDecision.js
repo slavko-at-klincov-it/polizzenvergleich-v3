@@ -683,7 +683,8 @@ function derivedDecision(row, response) {
   );
   const found =
     contextCompatible &&
-    coreFindings.some(({ outcome }) =>
+    coreFindings.length > 0 &&
+    coreFindings.every(({ outcome }) =>
       POSITIVE_COUNTERPART_OUTCOMES.has(outcome)
     );
   const opposite = response.componentFindings.some(

@@ -14599,6 +14599,67 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     });
   });
 
+  test("requires every identity-core component for the same fachliche element", () => {
+    const { decisionPlan: sourcePlan } = requirementDecisionFixture();
+    const decisionPlan = JSON.parse(JSON.stringify(sourcePlan));
+    const row = decisionPlan.rows[0];
+    const firstCore = row.components.find(({ identityCore }) => identityCore);
+    const secondCore = {
+      ...firstCore,
+      componentId: `${firstCore.componentId}-second-core`,
+      label: "Hausverwaltung",
+    };
+    row.components.push(secondCore);
+    const batchRow = decisionPlan.batches
+      .flatMap(({ rows }) => rows)
+      .find(({ requirementId }) => requirementId === row.requirementId);
+    batchRow.components.push(secondCore);
+    decisionPlan.summary.components += 1;
+    const { planSha256: _oldPlanSha256, ...payload } = decisionPlan;
+    decisionPlan.planSha256 = crypto
+      .createHash("sha256")
+      .update(
+        `${A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID}\u0000${stableStringify(
+          payload
+        )}`
+      )
+      .digest("hex");
+    const responses = decisionPlan.rows.map((plannedRow) => {
+      const candidateId = plannedRow.candidates[0].candidateId;
+      return {
+        requirementId: plannedRow.requirementId,
+        contextFinding: { outcome: "MATCH", candidateIds: [candidateId] },
+        componentFindings: plannedRow.components.map((component) => ({
+          componentId: component.componentId,
+          dimension: component.dimension,
+          outcome:
+            component.componentId === secondCore.componentId
+              ? "NOT_ESTABLISHED"
+              : "MATCH",
+          candidateIds:
+            component.componentId === secondCore.componentId
+              ? []
+              : [candidateId],
+        })),
+        unmodeledDifferences: [],
+        rationale: "Nur ein Teil des fachlichen Identitätskerns ist belegt.",
+      };
+    });
+
+    const result = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses,
+    });
+
+    expect(result.results[0]).toMatchObject({
+      status: "TERMINAL",
+      customerFound: null,
+      customerStatus: "FALLBACK_REQUIRED",
+      counterpartOutcome: null,
+      absenceCertified: false,
+    });
+  });
+
   test("requires exhaustive fallback for related-only or missing candidates", () => {
     const { decisionPlan } = requirementDecisionFixture();
     const responses = decisionPlan.rows.map((row) => {
