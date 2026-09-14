@@ -31,7 +31,7 @@ function normalizedText(value) {
     .trim();
 }
 
-function sourceTextMatches(source, candidate) {
+function sourceTextMatches(source, candidate, expectedNormalized) {
   if (
     typeof source?.exactText !== "string" ||
     !source.exactText ||
@@ -42,8 +42,9 @@ function sourceTextMatches(source, candidate) {
   )
     return false;
   if (source.exactTextSha256 === candidate.exactTextSha256) return true;
-  const expected = normalizedText(source.exactText);
-  const observed = normalizedText(candidate.exactText);
+  const expected = expectedNormalized || normalizedText(source.exactText);
+  const observed =
+    candidate.normalizedExactText || normalizedText(candidate.exactText);
   return (
     expected.length >= 24 &&
     (observed.includes(expected) || expected.includes(observed))
@@ -168,6 +169,7 @@ function fullCandidatesByRequirement(searchExecution) {
           physicalPageNumber: span.physicalPageNumber,
           exactText: span.exactText,
           exactTextSha256: span.exactTextSha256,
+          normalizedExactText: normalizedText(span.exactText),
         });
     result.set(item.requirementId, candidates);
   }
@@ -175,11 +177,22 @@ function fullCandidatesByRequirement(searchExecution) {
 }
 
 function matchingCandidates(source, binding, candidates) {
+  const expectedNormalized = normalizedText(source.exactText);
   return candidates.filter(
     (candidate) =>
       candidate.documentSha256 === binding.documentSha256 &&
-      sourceTextMatches(source, candidate)
+      sourceTextMatches(source, candidate, expectedNormalized)
   );
+}
+
+function uniqueCorpusCandidates(fullByRequirement) {
+  const unique = new Map();
+  for (const candidates of fullByRequirement.values())
+    for (const candidate of candidates) {
+      const key = `${candidate.documentSha256}:${candidate.exactTextSha256}`;
+      if (!unique.has(key)) unique.set(key, candidate);
+    }
+  return [...unique.values()];
 }
 
 function projectedMatches(candidates) {
@@ -343,7 +356,7 @@ function buildADrivenRequirementPlanGoldRegression({
   });
   const documentsByGoldName = goldDocumentBindings(gold, searchPlan);
   const fullByRequirement = fullCandidatesByRequirement(searchExecution);
-  const corpusCandidates = [...fullByRequirement.values()].flat();
+  const corpusCandidates = uniqueCorpusCandidates(fullByRequirement);
   const selectedByRequirement = new Map(
     decisionPlan.rows.map((row) => [row.requirementId, row.candidates])
   );
