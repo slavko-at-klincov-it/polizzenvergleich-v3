@@ -7,7 +7,7 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // Validates untrusted counterpart decisions against server-owned packages.
 // Missing, duplicate and unknown IDs are retained as diagnostics; affected
 // planned packages become UNRESOLVED instead of being guessed or repaired.
-const COUNTERPART_DECISION_CONTRACT_ID = "LF_COUNTERPART_SEMANTIC_REVIEW_V4";
+const COUNTERPART_DECISION_CONTRACT_ID = "LF_COUNTERPART_SEMANTIC_REVIEW_V5";
 const DECISIONS = new Set(["SUPPORTED", "CONTRADICTED", "NOT_SUPPORTED"]);
 const DIMENSIONS = new Set([
   "OBJECT",
@@ -143,6 +143,10 @@ function validateCounterpartDecisions({
       semanticChecks: new Map(
         semanticChecks.map((check) => [check.checkId, check])
       ),
+      targetCheck: semanticChecks.find(
+        ({ role, componentId }) =>
+          role === "TARGET" && componentId === item.componentId
+      ),
       negativeConclusionEligible:
         item.searchCoverage.absenceStatus === "CERTIFIED_COMPLETE_ABSENCE" &&
         item.searchCoverage.negativeConclusionEligible === true,
@@ -213,7 +217,9 @@ function validateCounterpartDecisions({
             ? candidateIds.length === 0
             : candidateIds.length > 0)
       );
-    const outcomes = checks.map(({ outcome }) => outcome);
+    const targetOutcome = checks.find(
+      ({ checkId }) => checkId === packageContract.targetCheck.checkId
+    )?.outcome;
     const checkCandidateIds = [
       ...new Set(checks.flatMap(({ candidateIds = [] }) => candidateIds)),
     ];
@@ -246,31 +252,23 @@ function validateCounterpartDecisions({
         expectedCandidateIds: [...checkCandidateIds].sort(),
         receivedCandidateIds: [...selected].sort(),
       });
-    if (
-      decision === "SUPPORTED" &&
-      (selected.length === 0 || outcomes.some((outcome) => outcome !== "MATCH"))
-    )
+    if (decision === "SUPPORTED" && targetOutcome !== "MATCH")
       decisionIssues.push({
         code: "SUPPORTED_OUTCOME_CONTRACT_INVALID",
-        outcomes,
+        targetOutcome,
       });
     if (
       decision === "CONTRADICTED" &&
-      (selected.length === 0 ||
-        !outcomes.includes("MISMATCH") ||
-        outcomes.includes("NOT_ESTABLISHED"))
+      (targetOutcome !== "MISMATCH" || selected.length === 0)
     )
       decisionIssues.push({
         code: "CONTRADICTED_OUTCOME_CONTRACT_INVALID",
-        outcomes,
+        targetOutcome,
       });
-    if (
-      decision === "NOT_SUPPORTED" &&
-      (!outcomes.includes("NOT_ESTABLISHED") || outcomes.includes("MISMATCH"))
-    )
+    if (decision === "NOT_SUPPORTED" && targetOutcome !== "NOT_ESTABLISHED")
       decisionIssues.push({
         code: "NOT_SUPPORTED_OUTCOME_CONTRACT_INVALID",
-        outcomes,
+        targetOutcome,
       });
     const invalid = decisionIssues.length > 0;
     if (invalid) {
@@ -299,6 +297,7 @@ function validateCounterpartDecisions({
       decision,
       selectedCandidateIds: selected,
       dimensionChecks: checks,
+      targetOutcome,
       reasonCode: null,
       decisionScope:
         decision === "NOT_SUPPORTED"
@@ -306,12 +305,11 @@ function validateCounterpartDecisions({
           : "SELECTED_SERVER_CANDIDATES",
       absenceConclusion:
         decision === "NOT_SUPPORTED" &&
-        selected.length === 0 &&
         packageContract.negativeConclusionEligible,
     };
   });
   const payload = {
-    schemaVersion: 4,
+    schemaVersion: 5,
     contractId: COUNTERPART_DECISION_CONTRACT_ID,
     searchExecutionSha256: searchExecution.executionSha256,
     results,

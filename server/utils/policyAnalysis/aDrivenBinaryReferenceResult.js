@@ -17,11 +17,20 @@ const {
 } = require("./referenceCounterpartDecisionContract");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
 
-// Projects only complete requirement-level decisions into the customer-visible
-// binary result. CONTRADICTED is still a found counterpart for its component;
-// a partial component match can never make the whole A requirement FOUND.
+// Projects requirement-level decisions into the customer-visible binary
+// result. The semantic identity core determines whether a counterpart exists;
+// differing or absent modifier details remain visible without changing a
+// source-bound FOUND into NOT_FOUND.
 const A_DRIVEN_BINARY_RESULT_CONTRACT_ID =
-  "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V4";
+  "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V5";
+const IDENTITY_CORE_COMPONENT_TYPES = new Set([
+  "OBJECT",
+  "PERIL_OR_CAUSE",
+  "DAMAGE_OR_EFFECT",
+  "FACT_ROLE",
+  "DOCUMENT_ROLE",
+  "PRECEDENCE_OR_REPLACEMENT",
+]);
 
 function sha256(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
@@ -87,6 +96,17 @@ function bDimensionFindings(componentFindings, dimensions) {
             ),
           }))
     )
+  );
+}
+
+function identityCoreComponentIds(requirement) {
+  const explicitCore = requirement.components
+    .filter(({ type }) => IDENTITY_CORE_COMPONENT_TYPES.has(type))
+    .map(({ componentId }) => componentId);
+  return new Set(
+    explicitCore.length
+      ? explicitCore
+      : requirement.components.map(({ componentId }) => componentId)
   );
 }
 
@@ -178,6 +198,14 @@ function buildADrivenBinaryReferenceResult({
       const componentFound = documentFindings.some(({ decision }) =>
         ["SUPPORTED", "CONTRADICTED"].includes(decision)
       );
+      const componentExact = documentFindings.some(
+        ({ decision, dimensionChecks }) =>
+          decision === "SUPPORTED" &&
+          dimensionChecks.every(({ outcome }) => outcome === "MATCH")
+      );
+      const componentContradicted = documentFindings.some(
+        ({ decision }) => decision === "CONTRADICTED"
+      );
       const componentAbsenceCertified = cells.every(
         ({ item, decision }) =>
           item.searchCoverage.absenceStatus === "CERTIFIED_COMPLETE_ABSENCE" &&
@@ -189,14 +217,20 @@ function buildADrivenBinaryReferenceResult({
         componentType: component.type,
         componentLabel: component.label,
         componentFound,
+        componentExact,
+        componentContradicted,
         componentAbsenceCertified,
         documentFindings,
       };
     });
-    const found = componentFindings.every(
+    const identityCoreIds = identityCoreComponentIds(requirement);
+    const identityCoreFindings = componentFindings.filter(({ componentId }) =>
+      identityCoreIds.has(componentId)
+    );
+    const found = identityCoreFindings.every(
       ({ componentFound }) => componentFound
     );
-    const notFoundCertified = componentFindings.some(
+    const notFoundCertified = identityCoreFindings.some(
       ({ componentAbsenceCertified }) => componentAbsenceCertified
     );
     if (!found && !notFoundCertified)
@@ -213,6 +247,16 @@ function buildADrivenBinaryReferenceResult({
         .filter(({ evidence }) => evidence.length > 0)
         .flatMap(({ evidence }) => evidence)
     );
+    const counterpartOutcome = !found
+      ? "NO_COUNTERPART_ESTABLISHED"
+      : componentFindings.some(
+            ({ componentType, componentContradicted }) =>
+              componentType === "COVERAGE_EFFECT" && componentContradicted
+          )
+        ? "CONTRADICTED"
+        : componentFindings.every(({ componentExact }) => componentExact)
+          ? "FULL_COUNTERPART"
+          : "PARTIAL_COUNTERPART";
     rows.push({
       rowId: `ABR-${sha256(
         `${manifest.runContractId}:${requirement.requirementId}`
@@ -230,6 +274,8 @@ function buildADrivenBinaryReferenceResult({
       aSourceSpans: requirement.sourceSpans,
       customerStatus: found ? "FOUND" : "NOT_FOUND",
       customerStatusLabel: found ? "Gefunden" : "Nicht gefunden",
+      counterpartOutcome,
+      identityCoreComponentIds: [...identityCoreIds],
       bEvidence,
       bCounterparts: bEvidence,
       bEffects: bDimensionFindings(componentFindings, ["COVERAGE_EFFECT"]),
@@ -239,7 +285,9 @@ function buildADrivenBinaryReferenceResult({
         "DEDUCTIBLE",
       ]),
       reviewHint: found
-        ? "Vollständiges Gegenstück für alle Pflichtkomponenten belegt."
+        ? counterpartOutcome === "FULL_COUNTERPART"
+          ? "Fachlicher Identitätskern und alle Detailkomponenten sind belegt."
+          : "Fachlicher Identitätskern ist belegt; Abweichungen oder fehlende Details werden separat dargestellt."
         : "Mindestens eine Pflichtkomponente ist vollständig als nicht vorhanden zertifiziert; Teilbelege bleiben dargestellt.",
       manualAssessment: "",
       componentFindings,
@@ -270,6 +318,19 @@ function buildADrivenBinaryReferenceResult({
       unresolved: 0,
       sideBOnlyRows: 0,
       binaryCustomerStatus: true,
+      outcomeCounts: Object.fromEntries(
+        [
+          "FULL_COUNTERPART",
+          "PARTIAL_COUNTERPART",
+          "CONTRADICTED",
+          "NO_COUNTERPART_ESTABLISHED",
+        ].map((outcome) => [
+          outcome,
+          rows.filter(
+            ({ counterpartOutcome }) => counterpartOutcome === outcome
+          ).length,
+        ])
+      ),
     },
   };
   return {

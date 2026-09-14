@@ -26,14 +26,16 @@ const {
   requestCompletionWithTimeout,
 } = require("./runADrivenReferenceClassification.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_RUN_V2";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_RUN_V3";
 const PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_DRIVEN_COUNTERPART_DECISION_RUN_V1",
+  "LF_A_DRIVEN_COUNTERPART_DECISION_RUN_V2",
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V3";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V4";
 const PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V1",
   "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V2",
+  "LF_A_DRIVEN_COUNTERPART_DECISION_PROMPT_V3",
 ]);
 const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_COUNTERPART_DECISION_TRANSPORT_V1";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -76,6 +78,7 @@ function argumentsFrom(argv) {
     "requestTimeoutMs",
     "abortSettlementTimeoutMs",
     "modelRecoveryTimeoutMs",
+    "maximumNewBatches",
     "lmStudioSdk",
     "qwenModelKey",
   ]);
@@ -99,6 +102,10 @@ function argumentsFrom(argv) {
     modelRecoveryTimeoutMs: Number(
       values.modelRecoveryTimeoutMs || DEFAULT_MODEL_RECOVERY_TIMEOUT_MS
     ),
+    maximumNewBatches:
+      values.maximumNewBatches === undefined
+        ? null
+        : Number(values.maximumNewBatches),
   };
   if (
     !Number.isInteger(numbers.modelContext) ||
@@ -115,7 +122,10 @@ function argumentsFrom(argv) {
     !Number.isInteger(numbers.abortSettlementTimeoutMs) ||
     numbers.abortSettlementTimeoutMs < 1 ||
     !Number.isInteger(numbers.modelRecoveryTimeoutMs) ||
-    numbers.modelRecoveryTimeoutMs < 1
+    numbers.modelRecoveryTimeoutMs < 1 ||
+    (numbers.maximumNewBatches !== null &&
+      (!Number.isInteger(numbers.maximumNewBatches) ||
+        numbers.maximumNewBatches < 1))
   )
     fail("Numerische Laufparameter sind ungültig");
   if (!values.lmStudioSdk || !values.qwenModelKey)
@@ -186,7 +196,7 @@ function prompt(batch) {
     {
       role: "system",
       content:
-        "Du prüfst kleine, servergebundene Kandidatenpakete aus Versicherungsdokumenten B gegen atomare Anforderungen aus Referenzpaket A. Antworte ausschließlich als JSON-Array mit exakt einem Objekt je expectedPackageId und keiner anderen ID. Erfinde keine Zitate, Seiten, IDs oder Tatsachen. Nutze ausschließlich compactCandidateId und die darin enthaltenen sourceSpans. Für jeden semanticCheck ist exakt ein dimensionCheck auszugeben: {checkId,dimension,outcome,candidateIds}. outcome ist MATCH, MISMATCH oder NOT_ESTABLISHED. MATCH verlangt einen ausdrücklichen, bedeutungsgleichen Beleg; ähnliche Wörter reichen nicht. Prüfe insbesondere Gegenstand, Gefahr, Wirkung/Negation, Scope, Rolle, Bedingung und Werte. MISMATCH verlangt einen ausdrücklichen Widerspruch im fachlich passenden Kontext. NOT_ESTABLISHED gilt, wenn die vorgelegten Kandidaten die Dimension nicht sicher belegen. Für jeden NOT_ESTABLISHED-Check muss candidateIds exakt [] sein; Kandidaten-IDs sind nur bei MATCH oder MISMATCH zulässig. decision ist ausschließlich SUPPORTED, CONTRADICTED oder NOT_SUPPORTED. SUPPORTED ist nur zulässig, wenn alle Checks MATCH sind. CONTRADICTED ist nur zulässig, wenn mindestens ein Check MISMATCH und kein Check NOT_ESTABLISHED ist. NOT_SUPPORTED ist zu verwenden, wenn mindestens ein Check NOT_ESTABLISHED und kein Check MISMATCH ist; vorhandene Teilbelege bleiben dabei als MATCH samt candidateIds erhalten. selectedCandidateIds ist exakt die sortierte Vereinigungsmenge aller candidateIds aus den dimensionChecks. Enthält auch nur ein MATCH oder MISMATCH Kandidaten-IDs, darf selectedCandidateIds niemals leer sein, selbst wenn decision NOT_SUPPORTED lautet. selectedCandidateIds darf nur dann [] sein, wenn ausnahmslos alle dimensionChecks NOT_ESTABLISHED mit candidateIds:[] sind. Bei vollständig fehlendem Beleg sind alle Checks NOT_ESTABLISHED, alle candidateIds [] und selectedCandidateIds []. Ausgabeform je Paket exakt: {packageId,decision,selectedCandidateIds,dimensionChecks}.",
+        "Du prüfst kleine, servergebundene Kandidatenpakete aus Versicherungsdokumenten B gegen atomare Anforderungen aus Referenzpaket A. Antworte ausschließlich als JSON-Array mit exakt einem Objekt je expectedPackageId und keiner anderen ID. Erfinde keine Zitate, Seiten, IDs oder Tatsachen. Nutze ausschließlich compactCandidateId und die darin enthaltenen sourceSpans. Für jeden semanticCheck ist exakt ein dimensionCheck auszugeben: {checkId,dimension,outcome,candidateIds}. outcome ist MATCH, MISMATCH oder NOT_ESTABLISHED. MATCH verlangt einen ausdrücklichen Beleg für dieselbe fachliche Dimension; ähnliche Wörter, Überschriften oder ein anderes Objekt, eine andere Gefahr, ein anderer Schaden oder eine andere Rolle reichen nicht. MISMATCH ist nur zulässig, wenn dasselbe fachliche Element im passenden Kontext ausdrücklich mit abweichendem Wert, Limit, Scope, Bedingung, Zeitraum oder gegenteiliger Deckungswirkung belegt ist. Ein nur verwandtes anderes Element ist NOT_ESTABLISHED, nicht MISMATCH. NOT_ESTABLISHED gilt, wenn die vorgelegten Kandidaten die Dimension nicht sicher belegen. Für jeden NOT_ESTABLISHED-Check muss candidateIds exakt [] sein; Kandidaten-IDs sind nur bei MATCH oder MISMATCH zulässig. Der mit role TARGET markierte Check bestimmt decision: TARGET MATCH ergibt SUPPORTED, TARGET MISMATCH ergibt CONTRADICTED und TARGET NOT_ESTABLISHED ergibt NOT_SUPPORTED. Abweichende oder fehlende CONTEXT-Checks werden separat erhalten und dürfen den vorhandenen TARGET-Gegenstückstatus nicht in NOT_SUPPORTED ändern. selectedCandidateIds ist exakt die sortierte Vereinigungsmenge aller candidateIds aus den dimensionChecks. Enthält auch nur ein MATCH oder MISMATCH Kandidaten-IDs, darf selectedCandidateIds niemals leer sein, selbst wenn decision NOT_SUPPORTED lautet. selectedCandidateIds darf nur dann [] sein, wenn ausnahmslos alle dimensionChecks NOT_ESTABLISHED mit candidateIds:[] sind. Bei vollständig fehlendem Beleg sind alle Checks NOT_ESTABLISHED, alle candidateIds [] und selectedCandidateIds []. Ausgabeform je Paket exakt: {packageId,decision,selectedCandidateIds,dimensionChecks}.",
     },
     {
       role: "user",
@@ -742,6 +752,8 @@ async function processCounterpartDecisionBatches({
   recoverModelAfterAbort,
 }) {
   const batchResults = [];
+  let newBatches = 0;
+  let nextBatchIndex = null;
   for (const batch of decisionPlan.batches) {
     const file = path.join(
       args.output,
@@ -774,6 +786,14 @@ async function processCounterpartDecisionBatches({
       }
     }
     if (!reused) {
+      if (
+        args.maximumNewBatches !== null &&
+        args.maximumNewBatches !== undefined &&
+        newBatches >= args.maximumNewBatches
+      ) {
+        nextBatchIndex = batch.batchIndex;
+        break;
+      }
       const journalResponses = acceptedResponsesFromAttemptJournal({
         output: args.output,
         searchExecution,
@@ -814,13 +834,41 @@ async function processCounterpartDecisionBatches({
         throw failure;
       }
       writePrivateJson(file, result);
+      newBatches += 1;
     }
     batchResults.push(result);
     console.log(
       `[lf-a-driven-decisions] Batch ${batch.batchIndex + 1}/${decisionPlan.batches.length}: PASS${reused ? " (wiederverwendet)" : ""}`
     );
   }
+  Object.defineProperties(batchResults, {
+    complete: {
+      value: batchResults.length === decisionPlan.batches.length,
+      enumerable: false,
+    },
+    newBatches: { value: newBatches, enumerable: false },
+    nextBatchIndex: { value: nextBatchIndex, enumerable: false },
+  });
   return batchResults;
+}
+
+function writeOrVerifyPrivateJson(file, value, mismatchCode) {
+  const bytes = `${JSON.stringify(value, null, 2)}\n`;
+  if (fs.existsSync(file)) {
+    if (fs.readFileSync(file, "utf8") !== bytes) throw new Error(mismatchCode);
+    return;
+  }
+  writePrivateJson(file, value);
+}
+
+function writeCheckpoint(file, value) {
+  const temporary = `${file}.tmp-${process.pid}`;
+  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  fs.renameSync(temporary, file);
+  fs.chmodSync(file, 0o600);
 }
 
 async function run() {
@@ -839,6 +887,11 @@ async function run() {
     if (!stat.isDirectory() || stat.isSymbolicLink())
       throw new Error("LF_A_DRIVEN_DECISION_OUTPUT_INVALID");
   } else fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });
+  writeOrVerifyPrivateJson(
+    path.join(args.output, "decision-plan.private.json"),
+    decisionPlan,
+    "LF_A_DRIVEN_DECISION_PLAN_RESUME_MISMATCH"
+  );
   const baseUrl = process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
   const loadedModel = await verifyModel({
     baseUrl,
@@ -867,6 +920,32 @@ async function run() {
     client,
     recoverModelAfterAbort,
   });
+  if (!batchResults.complete) {
+    const checkpoint = {
+      schemaVersion: 1,
+      contractId: RUN_CONTRACT_ID,
+      status: "CONTROLLED_PARTIAL",
+      searchExecutionSha256: searchExecution.executionSha256,
+      decisionPlanSha256: decisionPlan.planSha256,
+      promptContractId: PROMPT_CONTRACT_ID,
+      requestedModel: args.model,
+      modelContext: args.modelContext,
+      completedBatches: batchResults.length,
+      totalBatches: decisionPlan.batches.length,
+      newBatches: batchResults.newBatches,
+      nextBatchIndex: batchResults.nextBatchIndex,
+      resumable: true,
+      completedAt: new Date().toISOString(),
+    };
+    writeCheckpoint(
+      path.join(args.output, "checkpoint.private.json"),
+      checkpoint
+    );
+    console.log(
+      `[lf-a-driven-decisions] KONTROLLIERTER STOP: ${checkpoint.completedBatches}/${checkpoint.totalBatches} Batches, Resume ab ${checkpoint.nextBatchIndex + 1}`
+    );
+    return;
+  }
   const modelResponses = batchResults.flatMap(({ responses }) => responses);
   const responseByPackage = new Map(
     [...decisionPlan.deterministicResponses, ...modelResponses].map(
@@ -914,16 +993,38 @@ async function run() {
     unresolvedPackages: decisions.summary.unresolvedPackages,
     decisionSha256: decisions.decisionSha256,
   };
-  writePrivateJson(
-    path.join(args.output, "decision-plan.private.json"),
-    decisionPlan
+  writeOrVerifyPrivateJson(
+    path.join(args.output, "responses.private.json"),
+    responses,
+    "LF_A_DRIVEN_DECISION_RESPONSES_RESUME_MISMATCH"
   );
-  writePrivateJson(path.join(args.output, "responses.private.json"), responses);
-  writePrivateJson(
+  writeOrVerifyPrivateJson(
     path.join(args.output, "counterpart-decisions.private.json"),
-    decisions
+    decisions,
+    "LF_A_DRIVEN_DECISIONS_RESUME_MISMATCH"
   );
-  writePrivateJson(path.join(args.output, "summary.private.json"), summary);
+  writeOrVerifyPrivateJson(
+    path.join(args.output, "summary.private.json"),
+    summary,
+    "LF_A_DRIVEN_DECISION_SUMMARY_RESUME_MISMATCH"
+  );
+  writeCheckpoint(path.join(args.output, "checkpoint.private.json"), {
+    schemaVersion: 1,
+    contractId: RUN_CONTRACT_ID,
+    status: "COMPLETE",
+    searchExecutionSha256: searchExecution.executionSha256,
+    decisionPlanSha256: decisionPlan.planSha256,
+    promptContractId: PROMPT_CONTRACT_ID,
+    requestedModel: args.model,
+    modelContext: args.modelContext,
+    completedBatches: batchResults.length,
+    totalBatches: decisionPlan.batches.length,
+    newBatches: batchResults.newBatches,
+    nextBatchIndex: null,
+    resumable: false,
+    decisionSha256: decisions.decisionSha256,
+    completedAt: summary.completedAt,
+  });
 }
 
 if (require.main === module)

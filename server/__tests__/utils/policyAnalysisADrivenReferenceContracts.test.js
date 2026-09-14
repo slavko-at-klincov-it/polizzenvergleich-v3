@@ -13245,7 +13245,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 B candidate and decision contracts", () => {
       issues: [
         {
           code: "NOT_SUPPORTED_OUTCOME_CONTRACT_INVALID",
-          outcomes: ["MISMATCH", "MATCH"],
+          targetOutcome: "MISMATCH",
         },
       ],
     });
@@ -13353,6 +13353,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
                           );
                           return {
                             ...original,
+                            decision: "SUPPORTED",
                             selectedCandidateIds: ["candidate-one"],
                           };
                         })
@@ -13473,7 +13474,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
                 packageId === batch.expectedPackageIds[0] ? 3 : 2;
               return count < requiredCount
                 ? original
-                : { ...original, selectedCandidateIds: ["candidate-one"] };
+                : {
+                    ...original,
+                    decision: "SUPPORTED",
+                    selectedCandidateIds: ["candidate-one"],
+                  };
             });
             return Promise.resolve({
               model: "qwen/qwen3.6-35b-a3b",
@@ -14040,6 +14045,68 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     expect(
       fs.readdirSync(path.join(output, "superseded-batches"))
     ).toHaveLength(1);
+
+    const limitedOutput = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-b-decision-limited-resume-")
+    );
+    const limitedArgs = {
+      ...args,
+      output: limitedOutput,
+      maximumNewBatches: 1,
+    };
+    const limitedClient = {
+      chat: {
+        completions: {
+          create: jest.fn(async (payload) => ({
+            model: args.model,
+            choices: [
+              {
+                message: { content: JSON.stringify(validForPayload(payload)) },
+              },
+            ],
+            usage: {},
+          })),
+        },
+      },
+    };
+    const limited = await processCounterpartDecisionBatches({
+      args: limitedArgs,
+      searchExecution,
+      decisionPlan,
+      client: limitedClient,
+      recoverModelAfterAbort: jest.fn(),
+    });
+    expect(limited).toHaveLength(1);
+    expect(limited.complete).toBe(false);
+    expect(limited.newBatches).toBe(1);
+    expect(limited.nextBatchIndex).toBe(1);
+    expect(limitedClient.chat.completions.create).toHaveBeenCalledTimes(1);
+
+    const limitedResumeClient = {
+      chat: {
+        completions: {
+          create: jest.fn(async (payload) => ({
+            model: args.model,
+            choices: [
+              {
+                message: { content: JSON.stringify(validForPayload(payload)) },
+              },
+            ],
+            usage: {},
+          })),
+        },
+      },
+    };
+    const limitedResumed = await processCounterpartDecisionBatches({
+      args: limitedArgs,
+      searchExecution,
+      decisionPlan,
+      client: limitedResumeClient,
+      recoverModelAfterAbort: jest.fn(),
+    });
+    expect(limitedResumed[0]).toEqual(limited[0]);
+    expect(limitedResumed.newBatches).toBe(1);
+    expect(limitedResumeClient.chat.completions.create).toHaveBeenCalledTimes(1);
   });
 
   test("plans every A component against every B document without B-only rows", () => {
@@ -14201,7 +14268,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
       index === 0
         ? {
             packageId: item.packageId,
-            decision: "NOT_SUPPORTED",
+            decision: "SUPPORTED",
             selectedCandidateIds: ["candidate-one"],
             dimensionChecks: item.semanticChecks.map(
               ({ checkId, dimension }, checkIndex) => ({
@@ -14221,19 +14288,21 @@ describe("LF_REFERENCE_A_DRIVEN_V2 search matrix and binary result", () => {
     expect(partial.summary.unresolvedPackages).toBe(0);
     expect(partial.results[0]).toMatchObject({
       status: "TERMINAL",
-      decision: "NOT_SUPPORTED",
+      decision: "SUPPORTED",
       selectedCandidateIds: ["candidate-one"],
       absenceConclusion: false,
     });
-    expect(() =>
-      buildADrivenBinaryReferenceResult({
-        manifest,
-        searchPlan,
-        retrieval,
-        searchExecution,
-        decisions: partial,
-      })
-    ).toThrow("LF_A_DRIVEN_BINARY_NOT_FOUND_REQUIRES_CERTIFIED_ABSENCE");
+    const partialResult = buildADrivenBinaryReferenceResult({
+      manifest,
+      searchPlan,
+      retrieval,
+      searchExecution,
+      decisions: partial,
+    });
+    expect(partialResult.rows[0]).toMatchObject({
+      customerStatus: "FOUND",
+      counterpartOutcome: "PARTIAL_COUNTERPART",
+    });
     const boundedMisses = validateCounterpartDecisions({
       searchExecution,
       responses: searchExecution.packages.map((item) => ({
