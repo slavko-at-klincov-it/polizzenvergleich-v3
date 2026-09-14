@@ -251,11 +251,26 @@ function repairInstruction(batch, diagnostics = []) {
         .map(({ componentId, dimension }) => `${componentId}:${dimension}`)
         .join(", ")}.`
     : "";
+  const candidateIdInvalid = diagnostics
+    .flatMap(({ issues = [] }) => issues)
+    .some(({ code }) =>
+      ["COMPONENT_FINDING_INVALID", "CONTEXT_FINDING_INVALID"].includes(code)
+    );
+  const allowedCandidateHint = candidateIdInvalid
+    ? ` Erlaubte candidateIds je Requirement: ${batch.rows
+        .map(
+          ({ requirementId, candidates }) =>
+            `${requirementId}=[${candidates
+              .map(({ candidateId }) => candidateId)
+              .join(",")}]`
+        )
+        .join("; ")}. Verwende in contextFinding, componentFindings und unmodeledDifferences ausschließlich eine Teilmenge dieser IDs und kopiere jede verwendete ID exakt; entferne jede andere oder erfundene ID.`
+    : "";
   return `Die vorige Antwort war serverseitig ungültig (${[
     ...new Set(diagnostics.map(({ code }) => code)),
   ].join(
     ", "
-  )}). Korrigiere nur die angeforderten Requirements und halte alle IDs unverändert.${componentHint} COUNTERPART_WITH_DIFFERENCE ist ausschließlich für SCOPE, CONDITION, VALUE_AND_UNIT, LIMIT_BASIS, DEDUCTIBLE oder TEMPORAL_VALIDITY erlaubt. Für OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, FACT_ROLE, DOCUMENT_ROLE oder PRECEDENCE_OR_REPLACEMENT verwende MATCH bei demselben fachlichen Kern, OPPOSITE bei einem ausdrücklichen Gegenteil, RELATED_ONLY bei einem bloß verwandten anderen Kern oder NOT_ESTABLISHED ohne Beleg. Gib erneut ausschließlich das vollständige JSON-Array aus.`;
+  )}). Korrigiere nur die angeforderten Requirements und halte alle IDs unverändert.${componentHint}${allowedCandidateHint} COUNTERPART_WITH_DIFFERENCE ist ausschließlich für SCOPE, CONDITION, VALUE_AND_UNIT, LIMIT_BASIS, DEDUCTIBLE oder TEMPORAL_VALIDITY erlaubt. Für OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, FACT_ROLE, DOCUMENT_ROLE oder PRECEDENCE_OR_REPLACEMENT verwende MATCH bei demselben fachlichen Kern, OPPOSITE bei einem ausdrücklichen Gegenteil, RELATED_ONLY bei einem bloß verwandten anderen Kern oder NOT_ESTABLISHED ohne Beleg. Gib erneut ausschließlich das vollständige JSON-Array aus.`;
 }
 
 function prompt(batch, diagnostics = []) {

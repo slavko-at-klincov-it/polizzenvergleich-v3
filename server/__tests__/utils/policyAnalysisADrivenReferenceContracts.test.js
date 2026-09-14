@@ -14748,6 +14748,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       "COUNTERPART_WITH_DIFFERENCE ist ausschließlich"
     );
     expect(instruction).toContain("RELATED_ONLY bei einem bloß verwandten");
+    expect(instruction).toContain("Erlaubte candidateIds je Requirement");
+    for (const { candidateId } of batch.rows[0].candidates)
+      expect(instruction).toContain(candidateId);
+    expect(instruction).toContain(
+      "entferne jede andere oder erfundene ID"
+    );
     expect(requirementDecisionPrompt(batch)).toHaveLength(2);
     expect(
       requirementDecisionPrompt(batch, [
