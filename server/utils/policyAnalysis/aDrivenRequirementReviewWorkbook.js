@@ -149,19 +149,18 @@ function styleWorkbook(sheet, dataRows) {
     { state: "frozen", xSplit: 4, ySplit: HEADER_ROW, zoomScale: 80 },
   ];
   sheet.autoFilter = `A${HEADER_ROW}:M${HEADER_ROW + dataRows.length}`;
-  sheet.columns = [
-    8, 28, 22, 42, 58, 28, 38, 58, 44, 38, 18, 32, 42,
-  ].map((width) => ({ width }));
+  sheet.columns = [8, 28, 22, 42, 58, 28, 38, 58, 44, 38, 18, 32, 42].map(
+    (width) => ({ width })
+  );
 
   sheet.getCell("A1").value = "LF-Dokumentvergleich A nach B";
   sheet.getCell("A2").value =
     "A bestimmt Reihenfolge und Prüfpunkte. B liefert ausschließlich Gegenstücke und Fundstellen.";
-  sheet.getCell("A3").value =
-    `${dataRows.length} Prüfpunkte · ${
-      dataRows.filter((row) => row[10] === "Gefunden").length
-    } gefunden · ${
-      dataRows.filter((row) => row[10] === "Nicht gefunden").length
-    } nicht gefunden`;
+  sheet.getCell("A3").value = `${dataRows.length} Prüfpunkte · ${
+    dataRows.filter((row) => row[10] === "Gefunden").length
+  } gefunden · ${
+    dataRows.filter((row) => row[10] === "Nicht gefunden").length
+  } nicht gefunden`;
   sheet.getCell("A1").font = {
     name: "Aptos Display",
     size: 16,
@@ -271,8 +270,9 @@ async function writeADrivenRequirementReviewWorkbook(result, file) {
       JSON.stringify(HEADERS) ||
     rows.some(
       (expected, index) =>
-        JSON.stringify(persistedValues(persistedSheet, HEADER_ROW + 1 + index)) !==
-        JSON.stringify(expected)
+        JSON.stringify(
+          persistedValues(persistedSheet, HEADER_ROW + 1 + index)
+        ) !== JSON.stringify(expected)
     )
   )
     throw workbookError("LF_A_DRIVEN_REQUIREMENT_REVIEW_ROUNDTRIP_INVALID");

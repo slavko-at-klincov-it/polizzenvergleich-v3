@@ -71,7 +71,10 @@ function readJson(file, code) {
 }
 
 function sha256File(file) {
-  return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(fs.readFileSync(file))
+    .digest("hex");
 }
 
 async function run() {
@@ -98,10 +101,7 @@ async function run() {
       ? readJson(args.rescuePlan, "LF_A_DRIVEN_WORKBOOK_RESCUE_PLAN")
       : null,
     rescueDecisions: args.rescueDecisions
-      ? readJson(
-          args.rescueDecisions,
-          "LF_A_DRIVEN_WORKBOOK_RESCUE_DECISIONS"
-        )
+      ? readJson(args.rescueDecisions, "LF_A_DRIVEN_WORKBOOK_RESCUE_DECISIONS")
       : null,
     finalDecisions: readJson(
       args.finalDecisions,
