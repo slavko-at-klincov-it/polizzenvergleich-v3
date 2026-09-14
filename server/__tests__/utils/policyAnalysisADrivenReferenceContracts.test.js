@@ -14701,12 +14701,52 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
           legacyRequirements: 1,
           legacyRequirementsSourceCovered: 1,
           legacyRequirementsMissing: 0,
+          measurementEligibleRequirements: 1,
+          ambiguousMeasurementRequirements: 0,
           legacyComponents: 1,
           legacyComponentsRoleCovered: 1,
         },
       },
       resultRegression: null,
     });
+  });
+
+  test("does not score rows whose shared A block creates an ambiguous Gold mapping", () => {
+    const manifest = searchEligibleManifest();
+    const gold = syntheticGold(manifest);
+    gold.summary.rows = 2;
+    gold.rows.push({
+      ...JSON.parse(JSON.stringify(gold.rows[0])),
+      analysisRowId: "LR01-002",
+      requirementId: "KNOWN-02",
+      components: [
+        {
+          componentId: "known-component-two",
+          factRole: gold.rows[0].components[0].factRole,
+        },
+      ],
+    });
+
+    const regression = buildADrivenGoldRegression({
+      manifest,
+      gold,
+      expectedGoldSha256: gold.goldSha256,
+    });
+
+    expect(regression.crosswalk.summary).toMatchObject({
+      legacyRequirements: 2,
+      measurementEligibleRequirements: 0,
+      ambiguousMeasurementRequirements: 2,
+      mergedDynamicRequirements: 1,
+    });
+    expect(regression.crosswalk.records).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          measurementEligible: false,
+          measurementEligibility: "MERGED_OR_SHARED_SOURCE_CONTEXT",
+        }),
+      ])
+    );
   });
 
   test("rejects a different Gold identity before evaluation", () => {

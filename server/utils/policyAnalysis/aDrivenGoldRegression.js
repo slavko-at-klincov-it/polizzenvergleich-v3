@@ -12,7 +12,7 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // fixture. Gold can measure regressions, but it can neither create production
 // rows nor change the dynamic manifest.
 const A_DRIVEN_GOLD_REGRESSION_CONTRACT_ID =
-  "LF_A_DRIVEN_GOLD_283_REGRESSION_V1";
+  "LF_A_DRIVEN_GOLD_283_REGRESSION_V2";
 const GOLD_CONTRACT_ID = "LF_1PLUS9_GOLD_283_V1";
 const GOLD_STATUS = "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS";
 
@@ -121,7 +121,7 @@ function buildCrosswalk(manifest, rows) {
   const dynamicOwners = new Map(
     manifest.requirements.map(({ requirementId }) => [requirementId, []])
   );
-  const records = rows.map((row) => {
+  const candidateRecords = rows.map((row) => {
     const goldBlocks = new Set(rowBlockIds(row));
     const candidateRequirements = dynamic.filter(({ blockIds }) =>
       overlaps([...blockIds], goldBlocks)
@@ -161,6 +161,32 @@ function buildCrosswalk(manifest, rows) {
       components,
     };
   });
+  const ownerCounts = new Map(
+    [...dynamicOwners.entries()].map(([requirementId, owners]) => [
+      requirementId,
+      new Set(owners).size,
+    ])
+  );
+  const records = candidateRecords.map((record) => {
+    const sharedDynamicRequirementIds = record.dynamicRequirementIds.filter(
+      (requirementId) => (ownerCounts.get(requirementId) || 0) > 1
+    );
+    const measurementEligible =
+      record.dynamicRequirementIds.length === 1 &&
+      sharedDynamicRequirementIds.length === 0;
+    return {
+      ...record,
+      sharedDynamicRequirementIds,
+      measurementEligibility: measurementEligible
+        ? "UNIQUE_SOURCE_MAPPING"
+        : record.dynamicRequirementIds.length === 0
+          ? "NO_DYNAMIC_REQUIREMENT"
+          : record.dynamicRequirementIds.length > 1
+            ? "SPLIT_OR_SHARED_SOURCE_CONTEXT"
+            : "MERGED_OR_SHARED_SOURCE_CONTEXT",
+      measurementEligible,
+    };
+  });
   const extraDynamicRequirementIds = [...dynamicOwners.entries()]
     .filter(([, owners]) => owners.length === 0)
     .map(([requirementId]) => requirementId);
@@ -183,6 +209,12 @@ function buildCrosswalk(manifest, rows) {
       ).length,
       splitCandidates: records.filter(
         ({ relationShape }) => relationShape === "SPLIT_CANDIDATE"
+      ).length,
+      measurementEligibleRequirements: records.filter(
+        ({ measurementEligible }) => measurementEligible
+      ).length,
+      ambiguousMeasurementRequirements: records.filter(
+        ({ measurementEligible }) => !measurementEligible
       ).length,
       legacyComponents: components.length,
       legacyComponentsRoleCovered: components.filter(
@@ -277,6 +309,18 @@ function buildResultRegression(rows, crosswalk, resultRows) {
   );
   const records = rows.map((row) => {
     const mapping = crosswalkById.get(row.requirementId);
+    if (!mapping.measurementEligible)
+      return {
+        legacyRequirementId: row.requirementId,
+        dynamicRequirementIds: mapping.dynamicRequirementIds,
+        measurementEligibility: mapping.measurementEligibility,
+        predictionResolved: false,
+        predictedCustomerFound: null,
+        goldCustomerFound: row.goldDecision?.customerFound === true,
+        binaryMatch: null,
+        goldOutcome: row.goldDecision?.outcome || null,
+        sourceBindings: [],
+      };
     const mappedRows = mapping.dynamicRequirementIds
       .map((requirementId) => resultRows.get(requirementId))
       .filter(Boolean);
@@ -298,6 +342,7 @@ function buildResultRegression(rows, crosswalk, resultRows) {
     return {
       legacyRequirementId: row.requirementId,
       dynamicRequirementIds: mapping.dynamicRequirementIds,
+      measurementEligibility: mapping.measurementEligibility,
       predictionResolved,
       predictedCustomerFound: predictionResolved
         ? predictedCustomerFound
@@ -313,6 +358,14 @@ function buildResultRegression(rows, crosswalk, resultRows) {
     records,
     summary: {
       rows: records.length,
+      measurementEligibleRows: records.filter(
+        ({ measurementEligibility }) =>
+          measurementEligibility === "UNIQUE_SOURCE_MAPPING"
+      ).length,
+      ambiguousCrosswalkRows: records.filter(
+        ({ measurementEligibility }) =>
+          measurementEligibility !== "UNIQUE_SOURCE_MAPPING"
+      ).length,
       resolved: records.filter(({ predictionResolved }) => predictionResolved)
         .length,
       binaryMatches: records.filter(({ binaryMatch }) => binaryMatch).length,
@@ -359,7 +412,7 @@ function buildADrivenGoldRegression({
   const resultRows = validateBinaryResult(result, manifest);
   const resultRegression = buildResultRegression(rows, crosswalk, resultRows);
   const payload = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     contractId: A_DRIVEN_GOLD_REGRESSION_CONTRACT_ID,
     qaOnly: true,
     productionRule: false,
@@ -371,7 +424,7 @@ function buildADrivenGoldRegression({
     crosswalk,
     resultRegression,
     proofLimit:
-      "Regression gegen das bekannte LF-1+9-Gold. SourceBlock- und Rollen-Crosswalk sind diagnostische Kandidaten und keine Produktionszeilenquelle, fachliche Adjudikation oder Generalisierungsbehauptung.",
+      "Regression gegen das bekannte LF-1+9-Gold. Nur eine bijektive SourceBlock-Zuordnung ist ohne weitere semantische Adjudikation ergebnismessbar; geteilte oder gesplittete Blockkontexte bleiben diagnostisch. Gold ist keine Produktionszeilenquelle, fachliche Adjudikation oder Generalisierungsbehauptung.",
   };
   return {
     ...payload,
