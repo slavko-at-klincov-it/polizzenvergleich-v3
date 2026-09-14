@@ -130,7 +130,10 @@ try {
     manifest: readJson(args.manifest, "LF_A_DRIVEN_REQUIREMENT_MANIFEST"),
     gold: JSON.parse(goldBytes.toString("utf8")),
     expectedGoldSha256: args.expectedGoldSha256,
-    searchPlan: readJson(args.searchPlan, "LF_A_DRIVEN_REQUIREMENT_SEARCH_PLAN"),
+    searchPlan: readJson(
+      args.searchPlan,
+      "LF_A_DRIVEN_REQUIREMENT_SEARCH_PLAN"
+    ),
     searchExecution: readJson(
       args.searchExecution,
       "LF_A_DRIVEN_REQUIREMENT_SEARCH_EXECUTION"

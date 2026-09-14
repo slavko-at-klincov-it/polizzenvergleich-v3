@@ -1,7 +1,5 @@
 const crypto = require("crypto");
-const {
-  buildADrivenGoldRegression,
-} = require("./aDrivenGoldRegression");
+const { buildADrivenGoldRegression } = require("./aDrivenGoldRegression");
 const {
   buildADrivenRequirementDecisionPlan,
 } = require("./aDrivenRequirementCounterpartDecision");
@@ -90,7 +88,10 @@ function goldDocumentBindings(gold, searchPlan) {
     byGoldName.set(document.originalName, binding);
     return binding;
   });
-  if (new Set(records.map(({ documentUuid }) => documentUuid)).size !== records.length)
+  if (
+    new Set(records.map(({ documentUuid }) => documentUuid)).size !==
+    records.length
+  )
     throw regressionError("LF_A_DRIVEN_REQUIREMENT_GOLD_DOCUMENTS_AMBIGUOUS");
   return byGoldName;
 }
@@ -159,9 +160,13 @@ function bindingRecord(source, binding, fullCandidates, selectedCandidates) {
 }
 
 function scopeName(requirementId, gold) {
-  if (gold.adjudicationScope?.explicitlyAdjudicatedRows?.includes(requirementId))
+  if (
+    gold.adjudicationScope?.explicitlyAdjudicatedRows?.includes(requirementId)
+  )
     return "EXPLICIT_76";
-  if (gold.adjudicationScope?.automaticallyAcceptedRows?.includes(requirementId))
+  if (
+    gold.adjudicationScope?.automaticallyAcceptedRows?.includes(requirementId)
+  )
     return "AUTOMATIC_207";
   return "UNCLASSIFIED";
 }
@@ -194,7 +199,8 @@ function summarize(records) {
     negativeRows: records.length - positive.length,
     goldSources: sources.length,
     fullRetrievalBoundGoldSources: sources.filter(
-      ({ status }) => status !== "NOT_RETRIEVED" && status !== "GOLD_DOCUMENT_UNMAPPED"
+      ({ status }) =>
+        status !== "NOT_RETRIEVED" && status !== "GOLD_DOCUMENT_UNMAPPED"
     ).length,
     selectedBoundGoldSources: sources.filter(
       ({ status }) => status === "SELECTED_BOUND"
@@ -272,12 +278,14 @@ function buildADrivenRequirementPlanGoldRegression({
       goldOutcome: row.goldDecision.outcome,
       sourceBindings,
       anyGoldSourceInFullRetrieval: sourceStatuses.some(
-        (status) => status === "SELECTED_BOUND" || status === "FULL_RETRIEVAL_ONLY"
+        (status) =>
+          status === "SELECTED_BOUND" || status === "FULL_RETRIEVAL_ONLY"
       ),
       allGoldSourcesInFullRetrieval:
         sourceStatuses.length > 0 &&
         sourceStatuses.every(
-          (status) => status === "SELECTED_BOUND" || status === "FULL_RETRIEVAL_ONLY"
+          (status) =>
+            status === "SELECTED_BOUND" || status === "FULL_RETRIEVAL_ONLY"
         ),
       anyGoldSourceSelected: sourceStatuses.includes("SELECTED_BOUND"),
       allGoldSourcesSelected:
