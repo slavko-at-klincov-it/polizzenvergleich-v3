@@ -60,9 +60,17 @@ function readJson(file, code) {
 
 function writePrivateJson(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
-  if (fs.existsSync(file)) throw new Error(`LF_A_SHADOW_OUTPUT_EXISTS:${file}`);
+  const bytes = `${JSON.stringify(value, null, 2)}\n`;
+  if (fs.existsSync(file)) {
+    const stat = fs.lstatSync(file);
+    if (!stat.isFile() || stat.isSymbolicLink())
+      throw new Error(`LF_A_SHADOW_EXISTING_OUTPUT_INVALID:${file}`);
+    if (fs.readFileSync(file, "utf8") !== bytes)
+      throw new Error(`LF_A_SHADOW_RESUME_MISMATCH:${file}`);
+    return;
+  }
   const temporary = `${file}.tmp-${process.pid}`;
-  fs.writeFileSync(temporary, `${JSON.stringify(value, null, 2)}\n`, {
+  fs.writeFileSync(temporary, bytes, {
     encoding: "utf8",
     mode: 0o600,
   });
@@ -106,8 +114,11 @@ function loadADocuments(runRoot) {
 
 try {
   const args = argumentsFrom(process.argv.slice(2));
-  if (fs.existsSync(args.output))
-    fail(`Ausgabe existiert bereits: ${args.output}`);
+  if (fs.existsSync(args.output)) {
+    const stat = fs.lstatSync(args.output);
+    if (!stat.isDirectory() || stat.isSymbolicLink())
+      throw new Error("LF_A_SHADOW_EXISTING_OUTPUT_INVALID");
+  }
   const sourceDocuments = loadADocuments(args.runRoot);
   const plan = buildADrivenSourceUnitPlan({ documents: sourceDocuments });
   const classificationBatches = buildADrivenClassificationBatches(plan);
