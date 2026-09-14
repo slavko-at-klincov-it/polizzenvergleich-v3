@@ -4630,3 +4630,40 @@ erneut aufzurufen.
 **Beweist nicht:** Dass Gold-283 bereits vollständig ist, dass eine
 Modellmehrheit fachliche Wahrheit darstellt oder dass das bekannte 1+9-Set
 Generalisierung beziehungsweise 99 Prozent belegt.
+
+## 83. Gold-283 braucht typgerechte Quellenbindung und Gold-30-Präzedenz
+
+Am 14. September wurde der vollständige blinde Astra-283-Bestand gefunden
+und ohne erneuten Modelllauf hashgebunden. Ein erster Validator hatte PDF-
+Seitenlogik fälschlich auch auf Markdown- und DOCX-Quellen angewendet und
+dadurch alle 254 gemeinsamen Positivzeilen markiert. Der korrigierte Vertrag
+validiert PDF über Seiten, Markdown über Zeilen und DOCX über strukturelle
+Fundstellen. Ergebnis: 727/727 Quellenverwendungen technisch gültig, 207
+gemeinsame Positivzeilen vollständig sauber und 47 fachlich begrenzt zu
+prüfen.
+
+Mit 29 primären Fällen blieb die Quellenadjudikation exakt auf 76 IDs
+begrenzt. Sie ergab 13 `FULL_COUNTERPART`, 45 `PARTIAL_COUNTERPART`, 8
+`CONTRADICTED` und 10 `NO_COUNTERPART_ESTABLISHED`. Die restlichen 207 Zeilen
+ergaben 138 `FULL_COUNTERPART` und 69 `PARTIAL_COUNTERPART`. Bei acht dieser
+Automatikzeilen hätte ein naives Mapping die bereits source-bound geprüfte
+Gold-30-Klasse von PARTIAL auf FULL angehoben. Der endgültige Generator lässt
+deshalb unverändertes Gold-30 bei nicht neu adjudizierten Zeilen vorgehen.
+
+Das finale Gold-283-V1 enthält 273 gefundene und 10 nicht gefundene Elemente,
+0 ungültige Entscheidungsbindungen und 0 ungültige ausgewählte Quellen. Der
+interne Gold-Hash ist
+`d9475c0e8145b5f326ae54ffaab58e5b2c2d154521837452993fc72712257179`,
+die Datei-SHA-256
+`9ed4ab6ba3dbd896de48ecf94e6874881391600ef2cc027afae5af5d21123a55`.
+
+**Beweist:** Für das exakt hashgebundene LF-1+9-Set existiert nun ein
+zeilenweises, source-bound Regression-Oracle mit binärem Fundstatus und
+getrennter FULL/PARTIAL/CONTRADICTED-Wirkung. Ausschlüsse in B bleiben gemäß
+Produktregel gefundene Gegenstücke; nur ihre Wirkung ist gegensätzlich.
+
+**Beweist nicht:** Dass 283 Zeilen Produktionsstruktur sind, dass künftige
+A-Dokumente dieselben Zeilen haben oder dass das Produkt generalisiert
+beziehungsweise 99 Prozent erreicht. Nächster Schritt ist ausschließlich der
+dynamische Produktpfad `LF_REFERENCE_A_DRIVEN_V2`, gemessen gegen dieses Gold
+als bekanntes Fixture.
