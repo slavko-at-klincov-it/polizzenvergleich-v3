@@ -15874,7 +15874,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         tamperedProductResult,
         productInputs
       )
-    ).toThrow("LF_A_DRIVEN_PRODUCT_RESULT_INVALID");
+    ).toThrow("LF_A_DRIVEN_PRODUCT_RESULT_DIGEST_INVALID");
     const productArtifactRoot = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-driven-product-artifacts-")
     );
