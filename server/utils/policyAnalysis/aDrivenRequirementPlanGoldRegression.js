@@ -50,6 +50,15 @@ function sourceTextMatches(source, candidate) {
   );
 }
 
+function normalizedFileIdentity(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .replace(/\.[^.]+$/u, "")
+    .toLocaleLowerCase("de-AT")
+    .replace(/[^\p{L}\p{N}]+/gu, "");
+}
+
 function goldDocumentBindings(gold, searchPlan) {
   if (
     !Array.isArray(gold?.sourceDocuments) ||
@@ -65,13 +74,11 @@ function goldDocumentBindings(gold, searchPlan) {
       throw regressionError("LF_A_DRIVEN_REQUIREMENT_PLAN_DOCUMENTS_INVALID");
     planByFingerprint.set(document.documentSha256, document);
   }
-  const byGoldName = new Map();
   const records = gold.sourceDocuments.map((document) => {
     if (
       typeof document.originalName !== "string" ||
       !document.originalName ||
-      typeof document.fingerprint !== "string" ||
-      byGoldName.has(document.originalName)
+      typeof document.fingerprint !== "string"
     )
       throw regressionError("LF_A_DRIVEN_REQUIREMENT_GOLD_DOCUMENTS_INVALID");
     const target = planByFingerprint.get(document.fingerprint);
@@ -79,21 +86,73 @@ function goldDocumentBindings(gold, searchPlan) {
       throw regressionError(
         "LF_A_DRIVEN_REQUIREMENT_GOLD_DOCUMENT_NOT_IN_SEARCH_PLAN"
       );
-    const binding = {
+    return {
+      goldOriginalName: document.originalName,
+      normalizedGoldName: normalizedFileIdentity(document.originalName),
       goldFingerprint: document.fingerprint,
       documentUuid: target.documentUuid,
       documentSha256: target.documentSha256,
       documentPosition: target.documentPosition,
     };
-    byGoldName.set(document.originalName, binding);
-    return binding;
   });
   if (
     new Set(records.map(({ documentUuid }) => documentUuid)).size !==
     records.length
   )
     throw regressionError("LF_A_DRIVEN_REQUIREMENT_GOLD_DOCUMENTS_AMBIGUOUS");
-  return byGoldName;
+  const sourceFiles = [
+    ...new Set(
+      gold.rows.flatMap((row) =>
+        (row.goldDecision?.sources || []).map(({ file }) => file)
+      )
+    ),
+  ];
+  if (
+    sourceFiles.some((file) => typeof file !== "string" || !file) ||
+    sourceFiles.length !== records.length
+  )
+    throw regressionError("LF_A_DRIVEN_REQUIREMENT_GOLD_SOURCE_FILES_INVALID");
+  const bySourceFile = new Map();
+  const usedDocuments = new Set();
+  const unresolvedFiles = [];
+  for (const file of sourceFiles) {
+    const normalizedFile = normalizedFileIdentity(file);
+    const matches = records.filter(
+      ({ goldOriginalName, normalizedGoldName }) =>
+        goldOriginalName === file ||
+        normalizedGoldName === normalizedFile ||
+        (normalizedGoldName.length >= 8 &&
+          normalizedFile.length >= 8 &&
+          (normalizedGoldName.includes(normalizedFile) ||
+            normalizedFile.includes(normalizedGoldName)))
+    );
+    if (matches.length > 1)
+      throw regressionError(
+        "LF_A_DRIVEN_REQUIREMENT_GOLD_SOURCE_FILE_AMBIGUOUS"
+      );
+    if (matches.length === 0) {
+      unresolvedFiles.push(file);
+      continue;
+    }
+    const [binding] = matches;
+    if (usedDocuments.has(binding.documentUuid))
+      throw regressionError(
+        "LF_A_DRIVEN_REQUIREMENT_GOLD_SOURCE_FILE_AMBIGUOUS"
+      );
+    usedDocuments.add(binding.documentUuid);
+    bySourceFile.set(file, binding);
+  }
+  const unusedDocuments = records.filter(
+    ({ documentUuid }) => !usedDocuments.has(documentUuid)
+  );
+  if (
+    unresolvedFiles.length !== unusedDocuments.length ||
+    unresolvedFiles.length > 1
+  )
+    throw regressionError("LF_A_DRIVEN_REQUIREMENT_GOLD_SOURCE_FILE_UNMAPPED");
+  if (unresolvedFiles.length === 1)
+    bySourceFile.set(unresolvedFiles[0], unusedDocuments[0]);
+  return bySourceFile;
 }
 
 function fullCandidatesByRequirement(searchExecution) {

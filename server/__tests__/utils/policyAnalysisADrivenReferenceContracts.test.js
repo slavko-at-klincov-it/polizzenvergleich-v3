@@ -14695,7 +14695,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
     gold.rows[0].goldDecision.sources = [
       {
         referenceId: "R1",
-        file: "known-b.docx",
+        file: "known-b.pdf",
         exactText,
         exactTextSha256,
       },
