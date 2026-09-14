@@ -4667,3 +4667,49 @@ A-Dokumente dieselben Zeilen haben oder dass das Produkt generalisiert
 beziehungsweise 99 Prozent erreicht. Nächster Schritt ist ausschließlich der
 dynamische Produktpfad `LF_REFERENCE_A_DRIVEN_V2`, gemessen gegen dieses Gold
 als bekanntes Fixture.
+
+## 84. Der integrierte A-getriebene Produktpfad ist resumierbar, aber die bekannte Goldqualität blieb unverändert
+
+Am 15. September wurde `LF_REFERENCE_A_DRIVEN_V2` auf dem Mac Studio bis zur
+bestehenden atomaren Ergebnis- und XLSX-Grenze integriert. Ein erster echter
+Fortsetzungsversuch zeigte, dass zwei vollständige Korpuskandidaten pro
+Requirement und B-Dokument den primären Qwen-Prompt unnötig aufblähen: 7.413
+Kandidaten, 178 Batches und durchschnittlich 91.778 JSON-Zeichen pro Batch.
+Der erste Batch benötigte nach einem harten Timeout einen zweiten Versuch.
+
+Der bereits früher validierte V3-Vertrag mit einem Korpus-Backstop pro
+B-Dokument reduzierte denselben 364er-Plan auf 4.488 Kandidaten und 201
+Batches. Ein begrenzter Drei-Batch-Pilot bestand ohne Timeout oder Retry in
+312,728 Sekunden. Die Mehrkanalsuche bleibt vollständig; für einen Nullfund
+bleibt die getrennte Prüfung des gesamten 322-Klausel-Korpus zwingend.
+
+Da A-Manifest, Suchplan, Suchausführung und B-Korpus exakt mit dem bereits
+abgeschlossenen 364er-Entscheidungsstand übereinstimmten, wurden vorhandene
+Primär-, Abwesenheits- und Rescue-Entscheidungen hashgebunden wiederverwendet.
+Der integrierte Runner validierte die gesamte Kette und erzeugte 364 terminale
+Zeilen: 330 `GEFUNDEN`, 34 `NICHT GEFUNDEN`, null `UNRESOLVED` und keine
+B-only-Zeile. Der Artefaktsatz einschließlich XLSX wurde bei einem zweiten
+Resume-Lauf bytegleich wiederverwendet.
+
+Die Gold-283-Regression änderte sich erwartungsgemäß nicht: 283/283
+A-Quellenabdeckung, 144 eindeutig messbare Zeilen, 139 Split-/Merge-mehrdeutige
+Zeilen, 134/144 binäre Übereinstimmungen, ein False Positive und neun False
+Negatives. Die zehn privaten Abweichungsfälle wurden nicht geöffnet. Der neue
+Lauf ist daher ein Integrations- und Wiederverwendungsnachweis, keine
+Suchqualitätssteigerung, kein frischer vollständiger Modelllauf und kein
+Generalisierungsbeweis.
+
+Commit `d139eda853976263c03403cb4c87f46f4e83e150` korrigiert die
+Produktdefaults und leitet SIGTERM an das aktive Kind weiter. Ein realer
+Abbruchtest endete mit Status 130, null Kindprozessen, freigegebener globaler
+Modellsperre und Qwen weiterhin `idle`. Auf dem Mac Studio bestanden
+Shellsyntax, Prettier und 17/17 fokussierte Runner-/Worker-Vertragstests.
+
+**Beweist:** Der neue A-getriebene Pfad erreicht mit exakt gebundenen
+Zwischenartefakten die bestehende Ergebnis-/Exportgrenze, bleibt resumierbar
+und gibt ausschließlich binäre Kundenstati aus.
+
+**Beweist nicht:** Dass die zehn eindeutig messbaren Goldabweichungen behoben
+sind, dass die 139 nicht-bijektiven Crosswalk-Fälle korrekt bewertet wurden,
+dass zukünftige Policen generalisiert werden oder dass das private QA-XLSX
+bereits als Kundenrelease freigegeben ist.
