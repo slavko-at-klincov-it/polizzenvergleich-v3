@@ -103,13 +103,13 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
 
   test("uses the validated bounded V3 evidence defaults for primary B decisions", () => {
     expect(source).toContain(
-      '${LF_B_MAXIMUM_CORPUS_CANDIDATES_PER_DOCUMENT:-1}'
+      "${LF_B_MAXIMUM_CORPUS_CANDIDATES_PER_DOCUMENT:-1}"
     );
-    expect(source).toContain('${LF_B_MAXIMUM_REQUIREMENTS_PER_BATCH:-2}');
-    expect(source).toContain('${LF_B_MAXIMUM_BATCH_CHARACTERS:-70000}');
+    expect(source).toContain("${LF_B_MAXIMUM_REQUIREMENTS_PER_BATCH:-2}");
+    expect(source).toContain("${LF_B_MAXIMUM_BATCH_CHARACTERS:-70000}");
     expect(source).not.toContain(
-      '${LF_B_MAXIMUM_CORPUS_CANDIDATES_PER_DOCUMENT:-2}'
+      "${LF_B_MAXIMUM_CORPUS_CANDIDATES_PER_DOCUMENT:-2}"
     );
-    expect(source).not.toContain('${LF_B_MAXIMUM_BATCH_CHARACTERS:-120000}');
+    expect(source).not.toContain("${LF_B_MAXIMUM_BATCH_CHARACTERS:-120000}");
   });
 });
