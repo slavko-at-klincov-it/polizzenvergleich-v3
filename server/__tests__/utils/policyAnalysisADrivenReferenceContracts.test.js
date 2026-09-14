@@ -14957,9 +14957,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(partitionPrompt[0].content).toContain(
       "vollständige, servergebundene Partition"
     );
-    expect(JSON.stringify(partitionPrompt).toLowerCase()).not.toContain(
-      "gold"
-    );
+    expect(JSON.stringify(partitionPrompt).toLowerCase()).not.toContain("gold");
     const partitionRun = await runRequirementAbsencePartition({
       client: {
         chat: {

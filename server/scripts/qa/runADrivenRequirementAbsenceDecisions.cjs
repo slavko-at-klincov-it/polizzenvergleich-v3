@@ -231,9 +231,7 @@ function preliminaryDecision(plan, batch) {
     decisions.summary.unresolvedRequirements !== 0 ||
     decisions.summary.fallbackRequiredRequirements !== decisions.results.length
   )
-    throw new Error(
-      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_NOT_FALLBACK"
-    );
+    throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_NOT_FALLBACK");
   return { subset, decisions };
 }
 
