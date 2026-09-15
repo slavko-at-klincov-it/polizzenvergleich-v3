@@ -4771,3 +4771,36 @@ zu lockern. Bereits gültige Batches und Unitantworten bleiben wiederverwendbar.
 gelöst sind, dass die noch laufende B-Gegenstückprüfung das Goldresultat
 verbessert oder dass der bekannte 1+9-Test Generalisierung beziehungsweise
 99 Prozent nachweist.
+
+## 86. Transport-Retries müssen pro fachlicher Einheit Fortschritt ermöglichen
+
+Ein statischer Retry desselben Mehr-Requirement-Prompts ist kein wirksamer
+Recoverypfad, wenn der Request wiederholt ohne Antwort an derselben harten
+Zeitgrenze endet. Im frischen LF-1+9-Lauf reproduzierte Batch 38 diesen Fall
+dreimal: zwei Requirements zusammen ergaben 66.984 serialisierte Zeichen und
+jeweils einen sicheren 180-Sekunden-Timeout. Die zwei vollständigen
+Einzelzeilen waren mit 35.971 beziehungsweise 30.856 Zeichen deutlich kleiner
+und fachlich unabhängig validierbar.
+
+Der allgemeine Fix in
+`c87aadf9d483d72ddce0bc67aacd529c19b54788` führt deshalb
+Requirement-bezogene Versuchsbudgets und eine adaptive Einzelanfrage nach
+sicherem Gruppen-Timeout ein. Eine technische Timeouttelemetrie bleibt reine
+Transportevidenz. Erst source-bound validierte Modellantworten werden
+übernommen; der ursprüngliche Batch wird erst nach Vollständigkeit erneut
+validiert und gespeichert. Bereits vorhandene PASS-Batches und gültige
+Einzelantworten werden nicht neu berechnet.
+
+Auf dem Mac Studio bestanden Syntax/Format, 321/321 fokussierte sowie
+1.981/1.981 breite Policy-Tests. Beim echten Resume wurden 37/37 Batches
+wiederverwendet. Batch 38 startete unmittelbar mit der ersten Einzelzeile und
+bestand nach 88.914 ms plus 47.588 ms für die zweite Zeile 2/2 ohne Diagnose.
+Kein vierter Gruppenrequest wurde erzeugt.
+
+**Beweist:** Ein sicherer Zero-Response-Timeout kann ohne Lockerung des
+fachlichen oder Quellenvertrags in kleinere, einzeln validierte Arbeit
+partitioniert und crash-resumierbar zusammengeführt werden.
+
+**Beweist nicht:** Dass jeder große Einzel-Requirement-Prompt unter 180
+Sekunden bleibt, dass die fachlichen Ergebnisse Gold-283 entsprechen oder
+dass der vollständige 1+9-Produktlauf bereits terminal ist.
