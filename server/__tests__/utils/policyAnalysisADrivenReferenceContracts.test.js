@@ -8835,9 +8835,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     expect(result.validation.passed).toBe(true);
     expect(temperatures).toEqual([0, 0, 0.1]);
-    expect(result.attempts.map(({ requestTemperature }) => requestTemperature)).toEqual(
-      temperatures
-    );
+    expect(
+      result.attempts.map(({ requestTemperature }) => requestTemperature)
+    ).toEqual(temperatures);
   });
 
   test("keeps homogeneous classification-envelope repairs grouped", async () => {
