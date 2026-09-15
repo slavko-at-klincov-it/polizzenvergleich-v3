@@ -4935,3 +4935,39 @@ Ursachen trennen und unnötige Stundenläufe vermeiden.
 **Beweist nicht:** Dass `VS-15` ein tatsächlicher Systemfehler ist, dass die
 Gold-Korrekturvorschläge `AV-06` und `AV-22` bereits angenommen sind oder dass
 die 1+9-Regression Generalisierung auf ungesehene Versicherer nachweist.
+
+## 90. Schemafester B-Repair nach fail-closed Batch 50
+
+Der neue dynamische 1+9-Primärlauf stoppte nach 49 gültigen Batches an einer
+semantisch ungültigen Modellantwort. Transport, Timeout und Modellzustand waren
+gesund. Zwei unveränderte Zyklen reproduzierten dieselben Antwort-Hashes:
+ungültiges JSON, danach eine falsche Komponenten-Dimension und anschließend
+eine nicht erlaubte Kandidaten-ID. Weitere identische Blind-Retries waren daher
+keine sinnvolle Reparatur.
+
+Change-Set `LF-V2-REPAIR-SCHEMA-20260915-001` adaptiert den bestehenden
+Einzel-Requirement-Repair aus `CAP-B-006`. Der Reparaturhinweis wiederholt nun
+das vollständige serverseitige Komponenten-ID-/Dimensionsschema, die exakt
+zulässigen Kandidaten-IDs und `NOT_ESTABLISHED` als konservative Antwort für
+nicht direkt belegte Komponenten. Validator und Basisprompt wurden nicht
+abgeschwächt; bestehende 49 PASS-Batches blieben wiederverwendbar.
+
+Mac-Studio, Commit `5bc7aacdba008c10de69a7bf669c4cf92721fd7e`, isolierter
+Worktree `/private/tmp/lf-repair-5bc7aacdb`:
+
+```text
+Gezielter B-Repair-Vertragstest: PASS (1/1; 328 nicht ausgewählt)
+Prettier geänderte Dateien:      PASS
+Realbatch 50:                    PASS
+Resume:                          50/204 wiederverwendet, ab Batch 51 aktiv
+Modell:                          qwen/qwen3.6-35b-a3b
+Kontext:                         42.496
+Maximale Versuche:               4, weiterhin fail-closed
+```
+
+Positive Erkenntnis: Exaktes Schemafeedback kann einen deterministischen
+Format-/ID-Fehler reparieren, ohne gültige Arbeit neu zu berechnen. Negative
+Erkenntnis: Ein unveränderter Temperatur-0-Aufruf reproduziert denselben Fehler;
+ein bloßer Neustart ist daher kein Root-Cause-Fix. Beweisgrenze: Das bestandene
+Einzelbatch belegt weder 204/204 noch fachliche Gold-Qualität, Holdout-Leistung
+oder Produktfreigabe. Kein Deployment.

@@ -2698,14 +2698,15 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-15
 - Typ: `BEOBACHTUNG`
-- Status: `IN_PRÜFUNG`
+- Status: `PROMOTED`
 - Aussage: Wiederholt identische, semantisch ungültige Modellantworten sollen
   nicht durch weitere blinde Laufzyklen behandelt werden. Der bestehende
   Einzel-Requirement-Reparaturpfad soll für beanstandete Komponenten deren
   exakte serverseitige ID, Dimension und zulässige Kandidaten sowie den
   konservativen `NOT_ESTABLISHED`-Fallback ausdrücklich vorgeben.
-- Ist-Wahrheit: `NEIN` für die Wirksamkeit der Präzisierung; bestätigt ist nur
-  der fail-closed Stopp nach zwei Laufzyklen mit identischen Antwort-Hashes.
+- Ist-Wahrheit: `JA` für den gezielten Reparaturtest und das bestandene
+  Realbatch-Gate; `NEIN` für einen bereits vollständig abgeschlossenen
+  204-Batch-Lauf.
 - Quelle: aggregierter Mac-Studio-Transport- und Validatorbefund eines
   unvollständigen Shadow-Batches; keine Kundentexte oder privaten IDs.
 - Gewünschter Kundennutzen und sichtbares Ergebnis: Der dynamische Vergleich
@@ -2716,8 +2717,10 @@ Vollständigkeitsbehauptung erzeugen.
   Abschwächen der Validatoren und kein Deployment.
 - Evidenz und Beweisgrenze: Der technische Befund zeigt wiederholte ungültige
   Komponenten-Dimensionen beziehungsweise nicht zugelassene Kandidaten-IDs.
-  Er beweist noch nicht, dass der präzisierte Reparaturhinweis Qwen erfolgreich
-  korrigiert.
+  Auf dem exakten Mac-Studio-Commit bestand danach ein fokussierter
+  Vertragstest; derselbe unvollständige Realbatch wurde ohne Änderung alter
+  PASS-Batches schema- und ID-konform abgeschlossen. Das beweist noch nicht
+  den vollständigen 204-Batch-Lauf oder fachliche Gold-Übereinstimmung.
 - Systembezug: Modell, B-Semantik, Append-only-Attempts, Resume und
   Quellenbindung; `CAP-B-006`, `CAP-MODEL-001`, `CAP-CACHE-001`, `ADR-031`.
 - Beziehungen:
@@ -2732,13 +2735,16 @@ Vollständigkeitsbehauptung erzeugen.
   - Datenschutz/Betrieb: Nur aggregierte Fehlerklassen werden dokumentiert.
   - Kritik/Test: Ein gezielter Vertragstest und derselbe unvollständige
     Realbatch müssen bestehen, bevor der Vollresume fortgesetzt wird.
-- Hard-Gates: `OFFEN`
-- Bewertung: kleine, konservative Präzisierung des vorhandenen Pfads.
+- Hard-Gates: `BEGRENZT`; gezielter Vertragstest, Prettier und Realbatch PASS,
+  vollständiger Lauf noch aktiv.
+- Bewertung: kleine, konservative Präzisierung des vorhandenen Pfads; am
+  beobachteten Fehler wirksam.
 - Evidenzqualität: `GEMESSEN_KUNDENHARDWARE` plus `BEOBACHTET_CODE`
 - Riskanteste Annahme: Das Modell befolgt die zusätzliche exakte
   Komponentenstruktur, ohne neue semantische Behauptungen zu erzeugen.
-- Nächster Prüfschritt: Präzisierung implementieren, fokussierten Vertragstest
-  auf dem exakten Mac-Studio-Commit ausführen und nur Batch 50 resumieren.
+- Nächster Prüfschritt: Vollresume ab Batch 51 abschließen und danach die
+  unveränderte Abwesenheits-/Rescue-/Ergebnis-Pipeline ausführen.
 - Entscheidung: `ADAPT_EXISTING`; keine zweite Architektur.
-- Kanonischer Ausgang: noch keiner; Change-Set
-  `LF-V2-REPAIR-SCHEMA-20260915-001`.
+- Kanonischer Ausgang: Change-Set `LF-V2-REPAIR-SCHEMA-20260915-001`,
+  Implementierungscommits `49e56cbe8`, `69879c78f`, `5bc7aacdb` und
+  Implementierungstracker Abschnitt 133.51.
