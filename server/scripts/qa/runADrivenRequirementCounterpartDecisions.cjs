@@ -247,7 +247,7 @@ function normalizeRepeatedCandidateIds(responses) {
   return { responses: normalizedResponses, duplicateCandidateIdsRemoved };
 }
 
-function repairInstruction(batch, diagnostics = []) {
+function repairInstruction(batch, diagnostics = [], previousResponses = []) {
   if (!Array.isArray(diagnostics) || diagnostics.length === 0) return null;
   const componentsById = new Map(
     batch.rows.flatMap((row) =>
@@ -301,14 +301,28 @@ function repairInstruction(batch, diagnostics = []) {
           "; "
         )}. Verwende in contextFinding, componentFindings und unmodeledDifferences ausschließlich eine Teilmenge dieser IDs. Kopiere jede verwendete candidateId Zeichen für Zeichen aus der Liste; bilde keine ID aus Text, Klauselgrenze oder Präfix nach und entferne jede andere oder erfundene ID.`
     : "";
+  const previousResponseHint = Array.isArray(previousResponses)
+    ? previousResponses
+        .filter((response) =>
+          affectedRequirementIds.has(response?.requirementId)
+        )
+        .map(
+          ({ requirementId, contextFinding, componentFindings }) =>
+            ` Vorige ungültige Struktur für ${requirementId}: ${JSON.stringify({
+              contextFinding,
+              componentFindings,
+            })}. Repariere diese Struktur gezielt nach dem verbindlichen Schema; wiederhole nicht den beanstandeten outcome, die falsche dimension oder eine nicht erlaubte candidateId.`
+        )
+        .join("")
+    : "";
   return `Die vorige Antwort war serverseitig ungültig (${[
     ...new Set(diagnostics.map(({ code }) => code)),
   ].join(
     ", "
-  )}). Korrigiere nur die angeforderten Requirements und halte alle IDs unverändert.${componentHint}${allowedCandidateHint} COUNTERPART_WITH_DIFFERENCE ist ausschließlich für SCOPE, CONDITION, VALUE_AND_UNIT, LIMIT_BASIS, DEDUCTIBLE oder TEMPORAL_VALIDITY erlaubt. Für OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, FACT_ROLE, DOCUMENT_ROLE oder PRECEDENCE_OR_REPLACEMENT verwende MATCH bei demselben fachlichen Kern, OPPOSITE bei einem ausdrücklichen Gegenteil, RELATED_ONLY bei einem bloß verwandten anderen Kern oder NOT_ESTABLISHED ohne Beleg. Ein positives Kernergebnis braucht eine direkt ausgesprochene oder sprachlogisch zwingende Verbindung von Gegenstand, Rolle und vertraglicher Wirkung. Erfinde keine ungeschriebene Ausnahme, Auffangdeckung, Rangfolge, Freistellung oder sonstige Rechtsfolge aus benachbarten Klauseln oder Branchenüblichkeit. Gib erneut ausschließlich das vollständige JSON-Array aus.`;
+  )}). Korrigiere nur die angeforderten Requirements und halte alle IDs unverändert.${componentHint}${allowedCandidateHint}${previousResponseHint} COUNTERPART_WITH_DIFFERENCE ist ausschließlich für SCOPE, CONDITION, VALUE_AND_UNIT, LIMIT_BASIS, DEDUCTIBLE oder TEMPORAL_VALIDITY erlaubt. Für OBJECT, PERIL_OR_CAUSE, DAMAGE_OR_EFFECT, FACT_ROLE, DOCUMENT_ROLE oder PRECEDENCE_OR_REPLACEMENT verwende MATCH bei demselben fachlichen Kern, OPPOSITE bei einem ausdrücklichen Gegenteil, RELATED_ONLY bei einem bloß verwandten anderen Kern oder NOT_ESTABLISHED ohne Beleg. Ein positives Kernergebnis braucht eine direkt ausgesprochene oder sprachlogisch zwingende Verbindung von Gegenstand, Rolle und vertraglicher Wirkung. Erfinde keine ungeschriebene Ausnahme, Auffangdeckung, Rangfolge, Freistellung oder sonstige Rechtsfolge aus benachbarten Klauseln oder Branchenüblichkeit. Gib erneut ausschließlich das vollständige JSON-Array aus.`;
 }
 
-function prompt(batch, diagnostics = []) {
+function prompt(batch, diagnostics = [], previousResponses = []) {
   const messages = [
     {
       role: "system",
@@ -326,7 +340,7 @@ function prompt(batch, diagnostics = []) {
       }),
     },
   ];
-  const correction = repairInstruction(batch, diagnostics);
+  const correction = repairInstruction(batch, diagnostics, previousResponses);
   if (correction) messages.push({ role: "user", content: correction });
   return messages;
 }
@@ -461,6 +475,7 @@ async function runBatch({
       ? batch
       : repairBatch(batch, initiallyPendingRequirementIds, 0);
   let repairDiagnostics = [];
+  let repairResponses = [];
   let lastRawText = "";
   let lastError = null;
   const maximumRequestCalls =
@@ -479,7 +494,7 @@ async function runBatch({
         requirementId,
         (attemptsByRequirement.get(requirementId) || 0) + 1
       );
-    const messages = prompt(workingBatch, repairDiagnostics);
+    const messages = prompt(workingBatch, repairDiagnostics, repairResponses);
     const started = performance.now();
     let observedRawText = "";
     try {
@@ -570,6 +585,11 @@ async function runBatch({
       repairDiagnostics = rotatesToFreshRequirement
         ? []
         : currentValidation.diagnostics;
+      repairResponses = rotatesToFreshRequirement
+        ? []
+        : parsed.filter(({ requirementId }) =>
+            retryablePending.includes(requirementId)
+          );
       workingBatch = retryBatch;
     } catch (error) {
       const pending = batch.expectedRequirementIds.filter(

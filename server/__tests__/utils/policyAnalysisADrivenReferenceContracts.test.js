@@ -15265,17 +15265,38 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     const component = batch.rows[0].components.find(({ identityCore }) =>
       Boolean(identityCore)
     );
-    const instruction = requirementDecisionRepairInstruction(batch, [
-      {
-        code: "INVALID_REQUIREMENT_RESPONSE",
-        issues: [
-          {
-            code: "COMPONENT_FINDING_INVALID",
-            componentId: component.componentId,
-          },
-        ],
+    const invalidResponse = {
+      requirementId: batch.rows[0].requirementId,
+      contextFinding: {
+        outcome: "MATCH",
+        candidateIds: [batch.rows[0].candidates[0].candidateId],
       },
-    ]);
+      componentFindings: batch.rows[0].components.map((item) => ({
+        componentId: item.componentId,
+        dimension: item.dimension,
+        outcome:
+          item.componentId === component.componentId
+            ? "COUNTERPART_WITH_DIFFERENCE"
+            : "MATCH",
+        candidateIds: [batch.rows[0].candidates[0].candidateId],
+      })),
+    };
+    const instruction = requirementDecisionRepairInstruction(
+      batch,
+      [
+        {
+          requirementId: batch.rows[0].requirementId,
+          code: "INVALID_REQUIREMENT_RESPONSE",
+          issues: [
+            {
+              code: "COMPONENT_FINDING_INVALID",
+              componentId: component.componentId,
+            },
+          ],
+        },
+      ],
+      [invalidResponse]
+    );
 
     expect(instruction).toContain(
       `${component.componentId}:${component.dimension}`
@@ -15297,6 +15318,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       expect(instruction).toContain(candidateId);
     expect(instruction).toContain("Zeichen für Zeichen aus der Liste");
     expect(instruction).toContain("entferne jede andere oder erfundene ID");
+    expect(instruction).toContain("Vorige ungültige Struktur");
+    expect(instruction).toContain(
+      JSON.stringify(invalidResponse.componentFindings)
+    );
     expect(requirementDecisionPrompt(batch)).toHaveLength(2);
     expect(
       requirementDecisionPrompt(batch, [
