@@ -9796,3 +9796,96 @@ reale Qualitätsverbesserung dieses Fixtures, aber keinen Holdout- oder
 Status: `LF_REFERENCE_A_DRIVEN_V2 V62 363/363 TERMINAL; 343 FOUND / 20
 NOT_FOUND; GOLD EINDEUTIG 137/144; 7 BELEGTE QUALITÄTSABWEICHUNGEN VERBLEIBEN;
 INTERNE XLSX VALID; KEIN DEPLOYMENT`.
+
+### 133.50 Gezielte Fehlerzerlegung vor dem nächsten vollständigen V2-Lauf
+
+Die sieben eindeutigen Gold-Abweichungen aus Abschnitt 133.49 wurden nicht
+blind durch weitere Volläufe bearbeitet, sondern an den bereits gespeicherten
+A-Komponenten, B-Kandidaten und Modellantworten getrennt untersucht.
+
+Die Primärprompt-Präzisierung V2 beseitigte `HP-24`, ließ `AV-30` aber
+unverändert falsch positiv. Eine noch engere Promptvariante V3 änderte
+`AV-30` ebenfalls nicht und wurde vollständig revertiert. Die
+Vollkorpus-Abwesenheitsprüfung V4 hob `ST-18` zu
+`COUNTERPART_REVIEW_REQUIRED`, weil die EABS-Schadenminderungsklausel ein
+fachlich relevantes Gegenstück enthält. Eine weitere Parent-/Subtype-Regel
+V5 änderte `VS-14` und `VS-15` nicht und wurde ebenfalls revertiert.
+`AV-06` und `AV-22` sind nach erneuter Originalquellenprüfung keine belegten
+System-Fehlnegativen: Bestklausel und Günstigkeitsklausel sind nicht dasselbe;
+die Erlaubnis eigener Mitarbeiter belegt keine Erstattung ihrer Lohn- oder
+Gemeinkosten. Beide Fälle bleiben deshalb Gold-Korrekturvorschläge, ohne das
+eingefrorene Gold-283 zu überschreiben.
+
+Die A-Klassifikation wurde anschließend aus den unveränderten, hashgleichen
+58/58 PASS-Batches ohne Modellaufruf neu materialisiert. Commit `b7d6e4ed6`
+trennt ausschließlich selbstständig suchbare koordinierte `OBJECT`-Nomen und
+bewahrt elliptische Komposita wie „Heizungs- und Klimaanlagen“. Betroffen
+sind vier Requirements; die Requirementzahl bleibt 363, die
+Komponentenzahl steigt von 1.274 auf 1.278, `UNRESOLVED` bleibt null.
+Seedquelle und Batches wurden bytegleich verifiziert. Das neue Manifest liegt
+unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-FRESH-1PLUS9-20260915-001743EE/a-driven-v2-a-atomization-c48fc1588/a-classification/
+```
+
+Manifest-SHA-256:
+`bb87772549a77522147b059b7cb51a003881706cef9250c39da582b091e10050`.
+Die fokussierte Mac-Studio-Suite bestand auf dem exakten Commit
+`c48fc1588` mit 329/329 Tests.
+
+Der erste Zielbatch zeigte danach: Die korrekte Atomisierung allein genügt
+nicht, weil die AW03-Quelle „überdachte Abstellplätze“ für das A-Kompositum
+„Autoabstellplätze“ nicht in den begrenzten Kandidatensatz gelangte. Commit
+`c370428e5` ergänzt deshalb eine konservative, rein navigierende
+Kompositum-Erweiterung. Sie gilt nur für `OBJECT`, nur für großgeschriebene
+deutsche A-Nomen, nur vom längeren A-Kompositum zum mindestens zehn Zeichen
+langen B-Nomenkopf, bei mindestens 70 Prozent Wortlängenanteil und
+korpusweiter Seltenheit. Sie besitzt ausdrücklich keine semantische
+Entscheidungsautorität.
+
+Die 11.502/11.502 vorhandenen Dinghy-Rankings wurden hashgebunden und ohne
+Modellaufruf wiederverwendet. Die endgültige Retrieval-Matrix verändert nur
+16/11.502 Pakete und 15/363 Requirements; die Kandidatenzahl ändert sich von
+60.681 auf 60.682 und die Batchzahl bleibt 204. Artefaktpfad und Hash:
+
+```text
+.../a-driven-v2-a-atomization-c48fc1588/b-retrieval-compound-v2/
+retrievalSha256: 2c568929d4d0470671a2b4fca693460586aefae9db32b8752eef1eeb1e1f5608
+executionSha256: e089565436b0834fa17d49a8b3c5bce16d8d7e2209b9ce7a2c066504fa1385de
+```
+
+Der einzelne VS-14/15-Zielbatch bestand auf Anhieb. `VS-14` besitzt nun für
+die Komponente `Autoabstellplätze` ein source-bound `MATCH` gegen AW03,
+Seite 10; `Tiefgaragen` bleibt nicht etabliert. Nach der bestätigten
+Teilkernregel ist die dynamische Zeile damit `FOUND / PARTIAL_COUNTERPART`.
+`VS-15` bleibt unverändert negativ. Batchartefakt-SHA-256:
+`20c54ac80e1794710a928902b6fc33b9522e84a4e03e9c53a401f1da1503db3a`.
+
+`AV-30` war ein anderer Fehlertyp: Qwen setzte eine fehlende Anzeigepflicht
+bei Betriebsverlegung einer fehlenden Obliegenheitsverletzung bei temporärer
+Abweichung von Sicherheitsvorschriften gleich. Commit `476177d97` ergänzt
+für positive administrative `FACT_ROLE`-Entscheidungen einen eng begrenzten
+source-bound Anzeige-/Meldepflichtanker. Belegte Synonyme werden akzeptiert;
+ohne einen solchen Begriff in den ausgewählten Originalquellen wird nur auf
+`FALLBACK_REQUIRED` zurückgestuft, niemals direkt auf `NOT_FOUND`.
+Die rein deterministische Nevalidierung des gespeicherten AV-30-Responses
+weist exakt die falsche FACT_ROLE-Komponente zurück.
+
+Mac-Studio-Nachweise auf Commit `476177d97` im isolierten Worktree
+`/private/tmp/lf-fact-role-guard-476177d97`:
+
+```text
+Prettier:                                      PASS
+A-driven Mutation + Reference Contracts:      351/351 PASS
+Qwen: qwen/qwen3.6-35b-a3b, Kontext 42.496, Parallelität 1, IDLE
+```
+
+Der vollständige 204-Batch-Primärlauf wurde auf dieser Basis gestartet. Der
+bereits bestandene Batch 12 wird unverändert wiederverwendet. Abwesenheit,
+Rescue, binäres Ergebnis, Gold-Regression und interne XLSX folgen erst nach
+204/204 PASS. Kein Deployment und keine Kundenfreigabe.
+
+Status: `A 363/363 REQUIREMENTS, 1.278 COMPONENTS, 0 UNRESOLVED; RETRIEVAL
+11.502/11.502; VS-14 TARGET PASS; AV-30 GUARD PASS; PRIMÄRER 204-BATCH-LAUF
+LÄUFT; KEIN DEPLOYMENT`.
