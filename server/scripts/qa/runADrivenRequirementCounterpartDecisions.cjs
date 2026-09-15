@@ -254,6 +254,12 @@ function repairInstruction(batch, diagnostics = []) {
       row.components.map((component) => [component.componentId, component])
     )
   );
+  const affectedRequirementIds = new Set(
+    diagnostics.map(({ requirementId }) => requirementId).filter(Boolean)
+  );
+  const affectedRows = batch.rows.filter(({ requirementId }) =>
+    affectedRequirementIds.has(requirementId)
+  );
   const invalidComponents = diagnostics
     .flatMap(({ issues = [] }) => issues)
     .filter(({ code, componentId }) =>
@@ -264,7 +270,17 @@ function repairInstruction(batch, diagnostics = []) {
   const componentHint = invalidComponents.length
     ? ` Beanstandete Komponenten: ${invalidComponents
         .map(({ componentId, dimension }) => `${componentId}:${dimension}`)
-        .join(", ")}.`
+        .join(
+          ", "
+        )}. Verbindliches Komponentenschema je Requirement: ${JSON.stringify(
+          affectedRows.map(({ requirementId, components }) => ({
+            requirementId,
+            components: components.map(({ componentId, dimension }) => ({
+              componentId,
+              dimension,
+            })),
+          }))
+        )}. Kopiere componentId und dimension für jede Komponente exakt aus diesem Schema; ändere keine Dimension und lasse keine Komponente aus. Wenn keine der erlaubten candidateIds die konkrete Komponente direkt belegt, verwende für genau diese Komponente outcome NOT_ESTABLISHED und candidateIds [].`
     : "";
   const candidateIdInvalid = diagnostics
     .flatMap(({ issues = [] }) => issues)
@@ -281,7 +297,7 @@ function repairInstruction(batch, diagnostics = []) {
         )
         .join(
           "; "
-        )}. Verwende in contextFinding, componentFindings und unmodeledDifferences ausschließlich eine Teilmenge dieser IDs und kopiere jede verwendete ID exakt; entferne jede andere oder erfundene ID.`
+        )}. Verwende in contextFinding, componentFindings und unmodeledDifferences ausschließlich eine Teilmenge dieser IDs. Kopiere jede verwendete candidateId Zeichen für Zeichen aus der Liste; bilde keine ID aus Text, Klauselgrenze oder Präfix nach und entferne jede andere oder erfundene ID.`
     : "";
   return `Die vorige Antwort war serverseitig ungültig (${[
     ...new Set(diagnostics.map(({ code }) => code)),

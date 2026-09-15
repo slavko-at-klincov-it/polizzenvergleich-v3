@@ -15280,6 +15280,14 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(instruction).toContain(
       `${component.componentId}:${component.dimension}`
     );
+    expect(instruction).toContain("Verbindliches Komponentenschema");
+    for (const expected of batch.rows[0].components) {
+      expect(instruction).toContain(expected.componentId);
+      expect(instruction).toContain(`\"dimension\":\"${expected.dimension}\"`);
+    }
+    expect(instruction).toContain(
+      "outcome NOT_ESTABLISHED und candidateIds []"
+    );
     expect(instruction).toContain(
       "COUNTERPART_WITH_DIFFERENCE ist ausschließlich"
     );
@@ -15287,6 +15295,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(instruction).toContain("Erlaubte candidateIds je Requirement");
     for (const { candidateId } of batch.rows[0].candidates)
       expect(instruction).toContain(candidateId);
+    expect(instruction).toContain("Zeichen für Zeichen aus der Liste");
     expect(instruction).toContain("entferne jede andere oder erfundene ID");
     expect(requirementDecisionPrompt(batch)).toHaveLength(2);
     expect(
