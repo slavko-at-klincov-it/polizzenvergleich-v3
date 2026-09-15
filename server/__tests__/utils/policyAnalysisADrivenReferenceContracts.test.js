@@ -15150,6 +15150,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(system).toContain("Abweichende Werte, Limits, Bedingungen");
     expect(system).toContain("bloße Keyword-Nennung");
     expect(system).toContain("sprachlogisch zwingende Verbindung");
+    expect(system).toContain(
+      "konkreten Gegenstand, Vorgang oder Auslöser gebunden"
+    );
+    expect(system).toContain(
+      "Freistellung von einer Pflicht für einen anderen Vorgang"
+    );
     expect(system).toContain("keine ungeschriebene Ausnahme");
     expect(system).toContain("ausdrücklich umfassender Oberbegriff");
     expect(system).toContain(
@@ -15453,7 +15459,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
           schemaVersion: 1,
           contractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_TRANSPORT_V1",
           decisionPlanSha256: decisionPlan.planSha256,
-          promptContractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V2",
+          promptContractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V3",
           promptSha256: crypto
             .createHash("sha256")
             .update(JSON.stringify(requirementDecisionPrompt(batch)))
