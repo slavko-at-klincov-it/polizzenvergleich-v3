@@ -150,7 +150,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 
 - Erfasst: 2026-08-24
 - Typ: `ZIEL`
-- Status: `IN_PRÜFUNG`
+- Status: `PROMOTED`
 - Aussage: Aus den nacheinander übermittelten Ideen, Beobachtungen und
   Anforderungen soll eine begründete Strategie für die bestmögliche lokale
   KI-Variante des Kunden entstehen.
@@ -2625,3 +2625,70 @@ Vollständigkeitsbehauptung erzeugen.
 - Entscheidung: akzeptieren und im Shadow implementieren.
 - Kanonischer Ausgang: [ADR-031](./POLIZZENVERGLEICH_ENTSCHEIDUNGEN.md#adr-031-das-referenzpaket-a-erzeugt-das-lf-zeilenuniversum-dynamisch),
   Architektur Abschnitt 24 und aktualisierter Produktcharter.
+
+## INT-20260915-036 — Kanonisches Capability-Inventar verbindet KB, Code und Laufzeitevidenz
+
+- Erfasst: 2026-09-15
+- Typ: `ZIEL`
+- Status: `IN_PRÜFUNG`
+- Aussage: Ein einziges kanonisches, maschinenlesbares Capability-Inventar
+  soll die bestehende Knowledge Base mit den tatsächlich erreichbaren
+  LF-/A/B-Workflows, ihren Modulgrenzen, Callern, Tests, Laufbelegen,
+  Aktivierungszuständen und verworfenen beziehungsweise reaktivierbaren
+  Ansätzen verbinden.
+- Ist-Wahrheit: `JA` für das strukturell validierte Inventar und seine zwei
+  Workflow-Maps auf Commit `4fb2aec73429b712deb04c82642b69d007c9031d`;
+  `NEIN` für eine fachliche Qualitäts- oder Generalisierungsaussage allein aus
+  diesem Navigationsindex.
+- Quelle: Nutzerkorrektur zur ungenutzten Parallelzeit während eines langen,
+  lokal modellgebundenen B-Laufs; ohne Kundentext oder private Artefakte.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Künftige Änderungen sollen
+  bestehende Fähigkeiten nachweisbar wiederverwenden, frühere Fehlwege nicht
+  wiederholen und den schnellsten belegten Produktpfad sichtbar machen.
+- Scope und ausdrückliche Nicht-Ziele: Navigations- und Wiederverwendungsindex
+  für `polizzenvergleich-v3`, zwei getrennte Statusachsen, Workflow-Maps und
+  statischer Validator. Keine zweite Knowledge Base, keine neue
+  Produktarchitektur, kein Modelllauf und kein Deployment durch diesen
+  Arbeitsschritt.
+- Evidenz und Beweisgrenze: Das aktuelle V3-Repository besitzt die aktiven
+  LF-/A/B-Pfade und Vertragstests; die KB dokumentiert ADR-, FAIL- und
+  Run-Evidenz. Ob jede inventarisierte Caller-/Vertragsbindung korrekt ist,
+  muss der neue Validator auf einem exakten Mac-Studio-Commit prüfen.
+- Systembezug: Entwicklungsprozess, Wissenspflege, Architektur, Tests,
+  Worker/Queue, Modellbetrieb und Releasewahrheit; `INV-001` bis `INV-012`,
+  `FAIL-001` bis `FAIL-005`, `ADR-005`, `ADR-009`, `ADR-017`, `ADR-025`,
+  `ADR-027`, `ADR-031` und `ADR-032`.
+- Beziehungen:
+  - `REFINES` -> Pflicht-Preflight im KB-Index
+  - `REUSES` -> bestehende Architektur-, Entscheidungen-, Test- und
+    Trackerdokumentation
+  - `DERIVED_FROM` -> `INT-20260910-035`
+  - verhindert -> konkurrierende Wissensablage und unbewiesene
+    `ACTIVE_*`-Kennzeichnungen
+- Spezialistenurteil:
+  - Local-AI/RAG: Modell-, Embedding- und Retrievalfähigkeiten müssen getrennt
+    von ihrer tatsächlichen Verdrahtung und Messung erfasst werden.
+  - Kunde/Versicherung: Das Inventar ist kein Qualitäts- oder
+    Generalisierungsnachweis und darf fachliche Ergebnisgates nicht ersetzen.
+  - Datenschutz/Betrieb: Nur Codepfade, Verträge und aggregierte Laufbelege;
+    keine privaten Dokumentpassagen oder Kundendaten.
+  - Kritik/Test: `ACTIVE_*` erfordert einen belegten Caller; Dateipfade,
+    Einstiegspunkte, Vertrags-IDs, Tests und Workflowreferenzen müssen
+    maschinell validiert werden.
+- Hard-Gates: `BESTANDEN` für 25 Capability-, zwei Workflow- und 20
+  Vertragsbindungen sowie drei fail-closed Negativfälle auf dem Mac Studio.
+- Bewertung: als kanonischer Navigations- und Wiederverwendungsindex
+  akzeptiert; fachliche Produktgates bleiben unverändert.
+- Evidenzqualität: `NUTZERANGABE` plus `BEOBACHTET_CODE` plus
+  `GEMESSEN_KUNDENHARDWARE`
+- Riskanteste Annahme: Eine manuell gepflegte Statusbeschreibung könnte
+  veralten; deshalb muss der Validator strukturelle Drift früh sichtbar
+  machen, ohne private Hilfsfunktionen vollständig zu katalogisieren.
+- Nächster Prüfschritt: Bei der nächsten relevanten Capability-Änderung die
+  Status-/Evidenzfelder im selben Change-Set aktualisieren und den Validator
+  erneut auf dem Mac Studio ausführen.
+- Entscheidung: `ADAPT_EXISTING`; bestehende KB-Struktur ergänzen, keine neue
+  Knowledge Base anlegen.
+- Kanonischer Ausgang: KB-Index,
+  `POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1.json`,
+  `POLIZZENVERGLEICH_WORKFLOW_MAPS_DE.md` und Tests Abschnitt 87.

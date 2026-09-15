@@ -1,6 +1,6 @@
 # Polizzenvergleich – KB-Index und Arbeitsmatrix
 
-Stand: 12. September 2026
+Stand: 15. September 2026
 
 Dieser Index ist der kurze Einstieg vor jeder projektbezogenen Antwort,
 Diagnose, Planung oder Änderung. Er ersetzt weder Quellcode und Tests noch die
@@ -31,6 +31,40 @@ zu lesen. Er legt verbindlich fest:
 Der Vertrag beschreibt das Ziel und die Abnahmebedingungen. Implementierter
 Iststand bleibt durch aktuellen V3-Code und Tests zu verifizieren; datierte
 Läufe beweisen nur ihre jeweilige Umgebung und ihren tatsächlich aktiven Pfad.
+
+## 0.1 Kanonisches Capability-Inventar und Wiederverwendungs-Preflight
+
+Das maschinenlesbare
+[Capability-Inventar](../polizzenvergleich-v3/docs/POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1.json)
+ist der verbindliche Navigations- und Wiederverwendungsindex zwischen dieser
+Knowledge Base, aktuellem V3-Code, Callern, Tests und Laufzeitevidenz. Die
+lesbaren
+[Workflow-Maps](../polizzenvergleich-v3/docs/POLIZZENVERGLEICH_WORKFLOW_MAPS_DE.md)
+zeigen den tatsächlich verdrahteten LF-V2- und A/B-Pfad. Beide Dateien
+ergänzen diese KB und bilden keine zweite Knowledge Base.
+
+Vor jeder substanziellen Analyse, Empfehlung oder Codeänderung gilt:
+
+1. Produktvertrag lesen und diesen KB-Index abfragen.
+2. Capability-Inventar nach aktiven, inaktiven, QA-only, nicht verdrahteten
+   und verworfenen Lösungen durchsuchen.
+3. Aktuelle Implementierung, öffentliche Einstiegspunkte, tatsächliche Caller
+   und Tests prüfen.
+4. Ähnliche frühere Ansätze und ihre positiven wie negativen Ergebnisse über
+   ADR-/FAIL-/INT-/Run-Belege identifizieren.
+5. Die Arbeit als `DIRECT_REUSE`, `ADAPT_EXISTING`, `EXTRACT_SHARED_CORE`,
+   `REACTIVATE` oder `NEW_REQUIRED` klassifizieren. Bei `NEW_REQUIRED` ist
+   konkret zu belegen, warum keine vorhandene Capability geeignet ist.
+6. Jede neue substanzielle Idee, Hypothese oder Alternative erhält zuerst eine
+   stabile `INT-*`-ID im bestehenden Wissens-Intake.
+7. Nach Experiment oder Änderung werden Reife-, Aktivierungsstatus, Messwerte,
+   positive und negative Erkenntnisse, Beweisgrenze sowie Reaktivierungs- oder
+   Verwerfungskriterien im selben logischen Change-Set aktualisiert.
+
+Da V3- und Knowledge-Repository getrennte Git-Historien besitzen, bedeutet
+„selbes Change-Set“: dieselbe stabile Change-Set-ID und zwei gegenseitig
+referenzierte Commits. Ein einzelner Git-Commit kann beide Repositories nicht
+atomar enthalten.
 
 ## 1. Zustands-Lock
 

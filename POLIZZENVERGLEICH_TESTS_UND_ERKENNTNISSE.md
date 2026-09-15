@@ -4804,3 +4804,56 @@ partitioniert und crash-resumierbar zusammengeführt werden.
 **Beweist nicht:** Dass jeder große Einzel-Requirement-Prompt unter 180
 Sekunden bleibt, dass die fachlichen Ergebnisse Gold-283 entsprechen oder
 dass der vollständige 1+9-Produktlauf bereits terminal ist.
+
+## 87. Ein Capability-Inventar muss Aktivierung und Reife getrennt belegen
+
+Die bisherige Projektkenntnis war über Produktvertrag, KB-Index,
+Wissensintake, Architektur, ADRs, Testbefunde, Implementierungstracker und
+Quellcode verteilt. Dadurch war eine einzelne Methode zwar auffindbar, aber
+nicht zuverlässig mit ihrem tatsächlichen Caller, Aktivierungsstatus,
+Vorgänger, Testbeleg und ihrer Wiederverwendungsgrenze verbunden.
+
+Change-Set `CAPABILITY-INVENTORY-20260915-001` ergänzt deshalb keine neue
+Produktarchitektur, sondern einen maschinenlesbaren Navigationsindex in
+`polizzenvergleich-v3`. Das Inventar trennt Reife-/Erkenntnisstatus von
+Aktivierungsstatus und enthält zwei aktuelle Workflow-Maps für
+`LF_REFERENCE_A_DRIVEN_V2` und `SYMMETRIC_A_B_CORE5_V1`.
+
+Der erste Mac-Studio-Validatorlauf fand einen ungenauen Resume-Caller-Beleg.
+Nach der Korrektur auf den tatsächlich im Runner vorhandenen fail-closed
+Batchvertrag bestand Commit
+`4fb2aec73429b712deb04c82642b69d007c9031d` im sauberen isolierten Worktree
+mit Node `v22.23.2`:
+
+```text
+Capabilities:              25/25 strukturell gültig
+Workflow-Maps:              2/2 gültig
+Vertragsbindungen:         20/20 im gebundenen Quellcode vorhanden
+fail-closed Negativfälle:   3/3 PASS
+```
+
+Die Negativfälle entfernen den Caller einer aktiven Capability, fügen einen
+unbekannten Workflowknoten ein und binden eine nicht vorhandene Vertrags-ID.
+Alle drei Änderungen werden erwartungsgemäß abgewiesen. Inventar-SHA-256:
+`1f623b7c2ee0110b5121223ef7e800849373ba1694f97ff6f1f2974a7ee6a215`;
+Workflow-SHA-256:
+`3f5c48394605a0f2db2b2d8ab545915b563197cc56902a8cbb7a35cf36c131f0`.
+
+Der 204-Batch-Befund bleibt bewusst vom Inventar getrennt: Für den bereits
+gestarteten V62-Vertrag sind die Batches unverändert notwendig. Deterministisch
+sind Suchmatrix, BM25, Synonyme, Struktur, Dinghy, Kandidatenunion,
+Kompaktierung und Quellen-/PASS-Validierung. Nicht ersetzt ist die fachliche
+Entscheidung bei abweichendem Wortlaut. Ein gemeinsamer A/B-Retrievalkern ist
+eine spätere `EXTRACT_SHARED_CORE`-Option, kein Grund für einen Abbruch oder
+eine rückwirkende Vertragsänderung.
+
+**Beweist:** Das Inventar verweist strukturell gültig auf aktuelle Dateien,
+Einstiegspunkte, Caller, Tests, Vertrags-IDs und Workflowknoten. Es macht
+aktive, Shadow-, QA-only, nicht verdrahtete und verworfene Verfahren
+unterscheidbar.
+
+**Beweist nicht:** Dass jede fachliche Capability korrekt oder vollständig
+ist, dass `ACTIVE_SHADOW` produktionsreif ist, dass der laufende 1+9-Lauf Gold
+verbessert oder dass bekannte Fixtures Generalisierung beziehungsweise 99
+Prozent belegen. Der bereits autorisierte B-Lauf wurde durch diese
+Konsolidierung weder gestartet noch verändert; es gab kein Deployment.
