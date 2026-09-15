@@ -9522,3 +9522,55 @@ Status: `LF_REFERENCE_A_DRIVEN_V2 WORKER-/RUNNER-INTEGRATION PASS;
 HASHGEBUNDENER 1+9-PRODUKTLAUF 364/364 TERMINAL UND RESUMIERBAR; SUCHQUALITÄT
 GEGEN GOLD UNVERÄNDERT 134/144 AUF EINDEUTIGEN MAPPINGS; 139 CROSSWALK-FÄLLE
 NICHT BINÄR MESSBAR; KEIN DEPLOYMENT`.
+
+### 133.46 Frischer V62-Lauf: mehrblockige Listenprovenienz und Vertragsupgrade
+
+Der frische 1+9-Lauf
+`LF-A-DRIVEN-V2-FRESH-1PLUS9-20260915-001743EE` stoppte nach zehn
+vollständigen Batches an einer Listen-Unit. Qwen erkannte deren zwei
+fachlichen Segmente und die richtigen Komponenten, band bei einer langen
+Klausel aber drei reine `BODY_LINE`-Fortsetzungsblöcke nicht an die kurzen
+wörtlichen Gefahr-/Schadensanker. Fünf weitere Modellzyklen reproduzierten
+denselben Fehler timeout- und abortfrei. Transport, Modellladung und
+Retry-Scheduler waren damit nicht die Ursache.
+
+Commit `0b2054a9132911b6ac20af429cb860f74a4b76af` ergänzt ausschließlich bei
+strukturell eindeutigen `LIST_ITEM_WITH_CONTINUATIONS`-Segmenten die
+Quellenblockspanne zwischen geordneten, wörtlich im Segment vorhandenen
+Komponentenankern. Labels, Komponententypen, Coverage-Wirkung und Anzahl der
+Komponenten bleiben unverändert. Fehlt ein erster Anker oder ist die Struktur
+mehrdeutig, bleibt die Unit fail-closed. Der echte Batch 11 wurde dadurch aus
+dem unveränderten Attemptjournal 6/6 valide; ein neuer Modellaufruf war nicht
+nötig.
+
+Die Anhebung des dynamischen Manifestvertrags von V13 auf V14 deckte danach
+eine getrennte Resume-Lücke im deterministischen A-Plan-Builder auf. Commit
+`866416d0550c1c6140a4cec394cf9eb9045e31d8` erlaubt ausschließlich ein
+digestgültiges V13-Platzhaltermanifest, dessen gesamter Payload bis auf
+Vertragskennung und Selbsthash exakt dem neu berechneten V14-Payload
+entspricht. Manifest und gebundene Summary werden vor der V14-Materialisierung
+versioniert unter `a-plan/superseded/` erhalten. Jede fachliche oder
+strukturelle Planabweichung stoppt weiterhin mit Resume-Mismatch.
+
+Mac-Studio-Nachweise auf dem exakten finalen Commit:
+
+```text
+Syntax und Prettier:                    PASS
+fokussierte A-/Runner-Vertragstests:    324/324 PASS
+angrenzende Policy-Comparison-Suites:   32/32 Suites, 722/722 Tests PASS
+alter V13-Manifesthash:                 f6527b3ecbe75ae25e121774aa03a2e155db2d0f4ae2780b2d90333433751931
+neuer V14-Manifesthash:                 9b28c37e5637fe407668f280fdfdef4a78f364cee7d540b7c25ff65ad3112d5f
+Batch 11:                               V62, 6/6 journalisiert, PASS
+Batch 12:                               drei timeoutfreie Aufrufe, 6/6, PASS
+aktueller sicherer Laufstand:           12/58 A-Batches PASS
+```
+
+Der Produkt-Runner arbeitet auf dem Mac Studio seriell weiter; Qwen ist mit
+Kontext 42.496 und Parallelität 1 das einzige geladene Modell. Dinghy wird erst
+nach vollständiger A-Klassifikation exklusiv geladen. Es gibt weiterhin kein
+Deployment und keine freigegebene Kunden-XLSX. Dieser Zwischenstand belegt
+den allgemeinen Listen-/Resume-Fix und einen neuen Batch, aber noch keinen
+vollständigen 1+9-Endlauf, Holdout oder Generalisierung.
+
+Status: `V62-LISTENPROVENIENZ UND V13→V14-RESUME REAL PASS; 12/58 FRISCHE
+A-BATCHES TERMINAL; PRODUKTLAUF AKTIV; KEIN DEPLOYMENT`.
