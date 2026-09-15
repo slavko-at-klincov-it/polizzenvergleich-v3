@@ -25,6 +25,10 @@ const {
   buildADrivenCounterpartDecisionPlan,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartDecisionPlan");
 const {
+  bm25Index,
+  corpusCompoundLexicalVariants,
+} = require("../../utils/policyAnalysis/counterpartRetrievalPrimitives");
+const {
   controlledQueryVariants,
 } = require("../../utils/policyAnalysis/counterpartQueryVariants");
 
@@ -346,6 +350,71 @@ describe("LF_REFERENCE_A_DRIVEN_V2 A mutation contracts", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
+  test("derives only long corpus-bound compound navigation variants", () => {
+    const candidates = [
+      { text: "Überdachte Abstellplätze sind mitversichert." },
+      { text: "Garagen fallen unter den Gebäudebegriff." },
+      { text: "Die Versicherung gilt für das versicherte Objekt." },
+      { text: "Die Versicherung umfasst vereinbarte Gefahren." },
+    ];
+    const index = bm25Index(candidates);
+
+    expect(
+      corpusCompoundLexicalVariants({
+        focalTokens: ["autoabstellplatze", "tiefgaragen"],
+        index,
+      })
+    ).toEqual(["abstellplatze", "garagen"]);
+    expect(
+      corpusCompoundLexicalVariants({
+        focalTokens: ["feuerversicherung", "hagelschaden"],
+        index,
+      })
+    ).toEqual([]);
+  });
+
+  test("finds a corpus compound counterpart without granting semantic authority", () => {
+    const { manifest } = completeManifest([
+      "Seite 1\nDECKUNG\nAutoabstellplätze sind versichert.\n",
+    ]);
+    const bArtifact = artifact([
+      "Seite 1\nDECKUNG\nÜberdachte Abstellplätze sind mitversichert.\n",
+    ]);
+    const plan = buildADrivenCounterpartSearchPlan({
+      manifest,
+      documents: [
+        { uuid: "b-doc", position: 0, sha256: bArtifact.fingerprint },
+      ],
+    });
+    const retrieval = retrieveADrivenCounterpartCandidates({
+      plan,
+      documents: [
+        {
+          document: { uuid: "b-doc", sha256: bArtifact.fingerprint },
+          artifact: bArtifact,
+        },
+      ],
+    });
+    const objectResult = retrieval.packageResults.find(({ packageId }) => {
+      const packageItem = plan.packages.find(
+        (candidatePackage) => candidatePackage.packageId === packageId
+      );
+      return packageItem.componentType === "OBJECT";
+    });
+
+    expect(objectResult.channelProvenance.LEXICAL_BM25).toEqual({
+      compoundVariants: ["abstellplatze"],
+      semanticAuthority: false,
+    });
+    expect(
+      objectResult.candidates.some(
+        ({ exactText, channels }) =>
+          exactText.includes("Überdachte Abstellplätze") &&
+          channels.includes("LEXICAL_BM25")
+      )
+    ).toBe(true);
+  });
+
   test("expands only controlled retrieval terminology families", () => {
     expect(controlledQueryVariants(["Selbstbehalt"])).toEqual(
       expect.arrayContaining(["eigenbehalt", "franchise"])

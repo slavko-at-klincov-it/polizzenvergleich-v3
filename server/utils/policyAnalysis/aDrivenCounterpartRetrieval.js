@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   bm25Index,
+  corpusCompoundLexicalVariants,
   normalize,
   rankLexicalCandidates,
   tokens,
@@ -309,19 +310,29 @@ function retrieveADrivenCounterpartCandidates({
         (value) => value.length >= 8
       ),
     };
+    const lexicalCompoundVariants = corpusCompoundLexicalVariants({
+      focalTokens: tokens(packageItem.query.focalText),
+      index: index.clauseIndex,
+    });
+    const lexicalTarget = {
+      ...target,
+      queryTokens: [
+        ...new Set([...target.queryTokens, ...lexicalCompoundVariants]),
+      ],
+    };
     const current = index.clauses
       .filter(({ normalizedText }) =>
         normalizedText.includes(normalize(packageItem.query.focalText))
       )
       .slice(0, topK);
     const lexical = rankLexicalCandidates({
-      target,
+      target: lexicalTarget,
       candidates: index.clauses,
       index: index.clauseIndex,
       topK,
     });
     const structural = rankLexicalCandidates({
-      target,
+      target: lexicalTarget,
       candidates: index.structures,
       index: index.structureIndex,
       topK,
@@ -408,6 +419,10 @@ function retrieveADrivenCounterpartCandidates({
         ])
       ),
       channelProvenance: {
+        LEXICAL_BM25: {
+          compoundVariants: lexicalCompoundVariants,
+          semanticAuthority: false,
+        },
         ...(hasDinghyResult
           ? {
               DINGHY: {

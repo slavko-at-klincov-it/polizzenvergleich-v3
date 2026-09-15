@@ -42,6 +42,59 @@ function bm25Index(candidates) {
   };
 }
 
+// German insurance terminology frequently joins a descriptive prefix with a
+// stable noun head (for example a narrower A term versus the same noun used
+// independently in B). Derive only long, rare suffix relations from the
+// actual B corpus. These terms widen navigation; the source-bound semantic
+// reviewer remains the sole authority for counterpart decisions.
+function corpusCompoundLexicalVariants({
+  focalTokens,
+  index,
+  minimumTokenLength = 7,
+  minimumAffixLength = 3,
+  minimumLengthRatio = 0.6,
+} = {}) {
+  if (
+    !Array.isArray(focalTokens) ||
+    !index?.documentFrequency ||
+    !Number.isInteger(index.candidateCount) ||
+    index.candidateCount < 1
+  )
+    return [];
+  const corpusTokens = [...index.documentFrequency.keys()];
+  return [
+    ...new Set(
+      focalTokens.flatMap((focalToken) =>
+        corpusTokens.filter((corpusToken) => {
+          if (
+            focalToken === corpusToken ||
+            Math.min(focalToken.length, corpusToken.length) <
+              minimumTokenLength ||
+            Math.abs(focalToken.length - corpusToken.length) <
+              minimumAffixLength
+          )
+            return false;
+          const shorter =
+            focalToken.length < corpusToken.length ? focalToken : corpusToken;
+          const longer =
+            focalToken.length < corpusToken.length ? corpusToken : focalToken;
+          if (
+            !longer.endsWith(shorter) ||
+            shorter.length / longer.length < minimumLengthRatio
+          )
+            return false;
+          const documentFrequency =
+            index.documentFrequency.get(corpusToken) || 0;
+          return (
+            documentFrequency === 1 ||
+            documentFrequency / index.candidateCount <= 0.2
+          );
+        })
+      )
+    ),
+  ].sort();
+}
+
 function rankLexicalCandidates({
   target,
   candidates,
@@ -107,6 +160,7 @@ function rankLexicalCandidates({
 
 module.exports = {
   bm25Index,
+  corpusCompoundLexicalVariants,
   normalize,
   rankLexicalCandidates,
   tokens,
