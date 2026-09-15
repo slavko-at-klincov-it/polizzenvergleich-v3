@@ -15895,6 +15895,18 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     );
     expect(partitionPrompt[0].content).toContain("genau ein JSON-Objekt");
     expect(partitionPrompt[0].content).toContain("ein leeres Array");
+    expect(partitionPrompt[0].content).toContain(
+      "ausdrücklich umfassender Oberbegriff"
+    );
+    expect(partitionPrompt[0].content).toContain(
+      "funktional gleiche Vertragswirkung"
+    );
+    expect(partitionPrompt[0].content).toContain(
+      "anderen Gegenstand, Vorgang oder Auslöser"
+    );
+    expect(partitionPrompt[0].content).toContain(
+      "Konstruiere keine ungeschriebene Ausnahme"
+    );
     expect(JSON.stringify(partitionPrompt).toLowerCase()).not.toContain("gold");
     const malformed = `${JSON.stringify(negativeResponses[0])}\n${JSON.stringify(
       {
@@ -16081,6 +16093,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         id: "qwen/qwen3.6-35b-a3b",
         loadedContextLength: 42_496,
       },
+      promptContractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V4",
       unresolved: 0,
       terminalPartitions: absencePlan.partitions.length,
       plannedPartitions: absencePlan.partitions.length,
@@ -16133,6 +16146,21 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         seedPlan: absencePlan,
         seedDecisions: certified,
         seedSummary: { ...seedSummary, absenceDecisionSha256: "0".repeat(64) },
+        plan: absencePlan,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        requestTimeoutMs: 180_000,
+        abortSettlementTimeoutMs: 15_000,
+      })
+    ).toThrow("LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_INVALID");
+    expect(() =>
+      compatibleSeedPartitionResponses({
+        seedPlan: absencePlan,
+        seedDecisions: certified,
+        seedSummary: {
+          ...seedSummary,
+          promptContractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V3",
+        },
         plan: absencePlan,
         model: "qwen/qwen3.6-35b-a3b",
         modelContext: 42_496,

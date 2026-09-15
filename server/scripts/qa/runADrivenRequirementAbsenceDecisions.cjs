@@ -30,7 +30,7 @@ const {
 } = require("./runADrivenReferenceClassification.cjs");
 
 const RUN_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_RUN_V1";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V3";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V4";
 const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_TRANSPORT_V1";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
@@ -146,6 +146,7 @@ function compatibleSeedPartitionResponses({
   modelContext,
   requestTimeoutMs,
   abortSettlementTimeoutMs,
+  promptContractId = PROMPT_CONTRACT_ID,
 } = {}) {
   validateADrivenRequirementAbsencePlan(seedPlan);
   validateADrivenRequirementAbsenceDecisionArtifact(seedDecisions, seedPlan, {
@@ -158,6 +159,7 @@ function compatibleSeedPartitionResponses({
     seedSummary.absenceDecisionSha256 !== seedDecisions.decisionSha256 ||
     seedSummary.model?.id !== model ||
     seedSummary.model?.loadedContextLength !== modelContext ||
+    seedSummary.promptContractId !== promptContractId ||
     seedSummary.unresolved !== 0 ||
     seedSummary.terminalPartitions !== seedPlan.partitions.length ||
     seedSummary.plannedPartitions !== seedPlan.partitions.length ||
@@ -243,6 +245,7 @@ function compatibleSeedPartitionResponses({
         sourceAbsencePlanSha256: seedPlan.planSha256,
         sourceAbsenceDecisionSha256: seedDecisions.decisionSha256,
         sourceRunContractId: seedSummary.contractId,
+        sourcePromptContractId: seedSummary.promptContractId,
       },
     });
   }
@@ -527,7 +530,7 @@ function prompt(plan, partition, repair = null) {
     {
       role: "system",
       content:
-        "Du prüfst eine vollständige, servergebundene Partition originaler B-Klauseln gegen genau eine dynamisch aus A ermittelte Anforderung. Entscheide nur, ob mindestens eine vorgelegte Klausel ein Gegenstück zum selben fachlichen Kern enthält. Abweichende Werte, Limits, Bedingungen, Umfänge oder ein ausdrücklicher Ausschluss zählen als Gegenstück. Keyword-Nennung, Überschrift oder nur verwandte Deckung zählen nicht. Antworte ausschließlich als genau ein JSON-Objekt: {partitionId,decision,candidateIds,rationale}. Eine fehlende Antwort, ein leeres Array oder mehrere Objekte sind immer ungültig. Auch wenn kein Gegenstück vorhanden ist, musst du genau ein Objekt mit der vorgegebenen partitionId, decision NO_COUNTERPART_IN_PARTITION und candidateIds [] ausgeben. Bei COUNTERPART_PRESENT nenne die kleinste notwendige Menge eindeutiger vorgelegter candidateIds. Erfinde keine IDs, Quellen oder Tatsachen.",
+        "Du prüfst eine vollständige, servergebundene Partition originaler B-Klauseln gegen genau eine dynamisch aus A ermittelte Anforderung. Entscheide nur, ob mindestens eine vorgelegte Klausel ein Gegenstück zum selben fachlichen Kern enthält. Abweichende Werte, Limits, Bedingungen, Umfänge oder ein ausdrücklicher Ausschluss zählen als Gegenstück. Ein ausdrücklich umfassender Oberbegriff kann den enger benannten Unterfall aus A abdecken, wenn Kontext und fachliche Rolle übereinstimmen; verlange dann nicht den identischen Spezialwortlaut. Eine funktional gleiche Vertragswirkung zählt ebenfalls, auch wenn Maßnahme oder Formulierung abweichen: Eine allgemein versicherte sinnvolle Maßnahme zur Abwendung eines unmittelbar drohenden Schadens kann beispielsweise Gegenstück zu einer enger benannten Präventionsmaßnahme sein. Dagegen genügt eine gleiche allgemeine Rechtsfolge nicht, wenn sie an einen anderen Gegenstand, Vorgang oder Auslöser gebunden ist. Konstruiere keine ungeschriebene Ausnahme, Deckung oder Rechtsfolge aus Branchenwissen oder nur benachbarten Klauseln. Keyword-Nennung, Überschrift, ähnlicher wirtschaftlicher Zweck oder nur verwandte Deckung zählen nicht. Antworte ausschließlich als genau ein JSON-Objekt: {partitionId,decision,candidateIds,rationale}. Eine fehlende Antwort, ein leeres Array oder mehrere Objekte sind immer ungültig. Auch wenn kein Gegenstück vorhanden ist, musst du genau ein Objekt mit der vorgegebenen partitionId, decision NO_COUNTERPART_IN_PARTITION und candidateIds [] ausgeben. Bei COUNTERPART_PRESENT nenne die kleinste notwendige Menge eindeutiger vorgelegter candidateIds. Erfinde keine IDs, Quellen oder Tatsachen.",
     },
     {
       role: "user",
@@ -927,6 +930,7 @@ async function run() {
     contractId: RUN_CONTRACT_ID,
     absencePlanSha256: plan.planSha256,
     absenceDecisionSha256: decisions.decisionSha256,
+    promptContractId: PROMPT_CONTRACT_ID,
     model: loadedModel,
     startedAt,
     completedAt: new Date().toISOString(),
