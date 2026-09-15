@@ -712,7 +712,7 @@
       "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/validatedModelResponseCache.js", "symbol": "readValidatedCachedResponse" }],
       "callers": [
         { "path": "server/scripts/policyComparisonWorker.cjs", "contains": "seedResponseCacheFromRunHistory" },
-        { "path": "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs", "contains": "batch-pass.private.json" }
+        { "path": "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs", "contains": "LF_A_DRIVEN_REQUIREMENT_BATCH_RESULT_NOT_PASS" }
       ],
       "inputs": ["phase/model/context/prompt identity", "existing batch artifacts"],
       "outputs": ["validated cache hit", "resume start at first incomplete batch"],
