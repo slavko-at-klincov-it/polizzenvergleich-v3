@@ -275,14 +275,14 @@ function repairInstruction(batch, diagnostics = []) {
         .join(
           ", "
         )}. Verbindliches Komponentenschema je Requirement: ${JSON.stringify(
-          affectedRows.map(({ requirementId, components }) => ({
-            requirementId,
-            components: components.map(({ componentId, dimension }) => ({
-              componentId,
-              dimension,
-            })),
-          }))
-        )}. Kopiere componentId und dimension für jede Komponente exakt aus diesem Schema; ändere keine Dimension und lasse keine Komponente aus. Wenn keine der erlaubten candidateIds die konkrete Komponente direkt belegt, verwende für genau diese Komponente outcome NOT_ESTABLISHED und candidateIds [].`
+        affectedRows.map(({ requirementId, components }) => ({
+          requirementId,
+          components: components.map(({ componentId, dimension }) => ({
+            componentId,
+            dimension,
+          })),
+        }))
+      )}. Kopiere componentId und dimension für jede Komponente exakt aus diesem Schema; ändere keine Dimension und lasse keine Komponente aus. Wenn keine der erlaubten candidateIds die konkrete Komponente direkt belegt, verwende für genau diese Komponente outcome NOT_ESTABLISHED und candidateIds [].`
     : "";
   const candidateIdInvalid = diagnostics
     .flatMap(({ issues = [] }) => issues)
