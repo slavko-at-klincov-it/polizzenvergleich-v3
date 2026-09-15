@@ -15964,6 +15964,15 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       "ausdrücklich umfassender Oberbegriff"
     );
     expect(partitionPrompt[0].content).toContain(
+      "Ein Unterfall muss nicht wörtlich aufgezählt sein"
+    );
+    expect(partitionPrompt[0].content).toContain(
+      "ausdrücklich genannten Merkmale einer versicherten Oberklasse"
+    );
+    expect(partitionPrompt[0].content).toContain(
+      "bloße Branchenannahme nicht"
+    );
+    expect(partitionPrompt[0].content).toContain(
       "funktional gleiche Vertragswirkung"
     );
     expect(partitionPrompt[0].content).toContain(
@@ -16158,7 +16167,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         id: "qwen/qwen3.6-35b-a3b",
         loadedContextLength: 42_496,
       },
-      promptContractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V4",
+      promptContractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V5",
       unresolved: 0,
       terminalPartitions: absencePlan.partitions.length,
       plannedPartitions: absencePlan.partitions.length,
@@ -16224,7 +16233,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         seedDecisions: certified,
         seedSummary: {
           ...seedSummary,
-          promptContractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V3",
+          promptContractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V4",
         },
         plan: absencePlan,
         model: "qwen/qwen3.6-35b-a3b",
