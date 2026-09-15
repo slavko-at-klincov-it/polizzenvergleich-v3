@@ -364,7 +364,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
         focalTokens: ["autoabstellplatze", "tiefgaragen"],
         index,
       })
-    ).toEqual(["abstellplatze", "garagen"]);
+    ).toEqual(["abstellplatze"]);
     expect(
       corpusCompoundLexicalVariants({
         focalTokens: ["feuerversicherung", "hagelschaden"],

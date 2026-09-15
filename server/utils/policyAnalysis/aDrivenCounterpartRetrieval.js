@@ -1,6 +1,7 @@
 const crypto = require("crypto");
 const {
   bm25Index,
+  capitalizedGermanTokens,
   corpusCompoundLexicalVariants,
   normalize,
   rankLexicalCandidates,
@@ -299,6 +300,9 @@ function retrieveADrivenCounterpartCandidates({
       ),
     });
   }
+  const corpusClauseIndex = bm25Index(
+    [...documentIndexes.values()].flatMap(({ clauses }) => clauses)
+  );
   const packageResults = plan.packages.map((packageItem) => {
     const index = documentIndexes.get(packageItem.documentUuid);
     if (!index || index.document.sha256 !== packageItem.documentSha256)
@@ -310,10 +314,15 @@ function retrieveADrivenCounterpartCandidates({
         (value) => value.length >= 8
       ),
     };
-    const lexicalCompoundVariants = corpusCompoundLexicalVariants({
-      focalTokens: tokens(packageItem.query.focalText),
-      index: index.clauseIndex,
-    });
+    const lexicalCompoundVariants =
+      packageItem.componentType === "OBJECT"
+        ? corpusCompoundLexicalVariants({
+            focalTokens: capitalizedGermanTokens(
+              packageItem.query.focalText
+            ),
+            index: corpusClauseIndex,
+          }).filter((variant) => !target.queryTokens.includes(variant))
+        : [];
     const lexicalTarget = {
       ...target,
       queryTokens: [

@@ -21,6 +21,12 @@ function tokens(value) {
     .filter((token) => token.length >= 3 && !STOPWORDS.has(token));
 }
 
+function capitalizedGermanTokens(value) {
+  return [...String(value ?? "").matchAll(/\b[\p{Lu}][\p{L}]+/gu)]
+    .map(([token]) => normalize(token))
+    .filter((token) => token.length >= 3 && !STOPWORDS.has(token));
+}
+
 function bm25Index(candidates) {
   const documentFrequency = new Map();
   let totalLength = 0;
@@ -50,9 +56,10 @@ function bm25Index(candidates) {
 function corpusCompoundLexicalVariants({
   focalTokens,
   index,
-  minimumTokenLength = 7,
+  minimumTokenLength = 10,
   minimumAffixLength = 3,
-  minimumLengthRatio = 0.6,
+  minimumLengthRatio = 0.7,
+  maximumDocumentFrequencyRatio = 0.02,
 } = {}) {
   if (
     !Array.isArray(focalTokens) ||
@@ -74,11 +81,10 @@ function corpusCompoundLexicalVariants({
               minimumAffixLength
           )
             return false;
-          const shorter =
-            focalToken.length < corpusToken.length ? focalToken : corpusToken;
-          const longer =
-            focalToken.length < corpusToken.length ? corpusToken : focalToken;
+          const shorter = corpusToken;
+          const longer = focalToken;
           if (
+            longer.length <= shorter.length ||
             !longer.endsWith(shorter) ||
             shorter.length / longer.length < minimumLengthRatio
           )
@@ -87,7 +93,8 @@ function corpusCompoundLexicalVariants({
             index.documentFrequency.get(corpusToken) || 0;
           return (
             documentFrequency === 1 ||
-            documentFrequency / index.candidateCount <= 0.2
+            documentFrequency / index.candidateCount <=
+              maximumDocumentFrequencyRatio
           );
         })
       )
@@ -160,6 +167,7 @@ function rankLexicalCandidates({
 
 module.exports = {
   bm25Index,
+  capitalizedGermanTokens,
   corpusCompoundLexicalVariants,
   normalize,
   rankLexicalCandidates,
