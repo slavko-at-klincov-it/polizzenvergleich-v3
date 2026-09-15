@@ -18,6 +18,7 @@ const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -36,7 +37,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V61";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V62";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -87,11 +88,13 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V58",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V59",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V60",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V61",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -2958,6 +2961,148 @@ function completeSingleListContinuationComponentSources(requirements, unit) {
   };
 }
 
+function completeBoundedListSegmentComponentSources(requirements, unit) {
+  if (
+    unit?.unitKind !== "LIST" ||
+    !Array.isArray(unit.logicalSourceSegments) ||
+    !Array.isArray(requirements)
+  )
+    return { requirements, repairs: [] };
+  const comparable = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim()
+      .replace(/^[•▪–—-]\s*/u, "");
+  const sourceBlocksById = new Map(
+    (unit.source?.blocks || []).map((block) => [block.blockId, block])
+  );
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const matchingSegments = unit.logicalSourceSegments.filter(
+        (segment) =>
+          segment?.type === "LIST_ITEM_WITH_CONTINUATIONS" &&
+          comparable(requirement?.displayLabel) ===
+            comparable(segment.combinedText)
+      );
+      if (matchingSegments.length !== 1) return requirement;
+      const segment = matchingSegments[0];
+      if (!Array.isArray(segment.blockIds) || segment.blockIds.length < 2)
+        return requirement;
+      const segmentBlocks = segment.blockIds.map((blockId) =>
+        sourceBlocksById.get(blockId)
+      );
+      if (
+        segmentBlocks.some((block) => !block) ||
+        !["LIST_ITEM", "LIST_GOVERNOR"].includes(
+          segmentBlocks[0].structuralKind
+        ) ||
+        segmentBlocks
+          .slice(1)
+          .some(({ structuralKind }) => structuralKind !== "BODY_LINE")
+      )
+        return requirement;
+      const segmentIndexByBlockId = new Map(
+        segment.blockIds.map((blockId, index) => [blockId, index])
+      );
+      const components = Array.isArray(requirement?.components)
+        ? requirement.components
+        : [];
+      const localComponents = components.flatMap((component, componentIndex) => {
+        if (component?.type === "COVERAGE_EFFECT") return [];
+        const declaredIds = Array.isArray(component?.sourceBlockIds)
+          ? component.sourceBlockIds
+          : [];
+        const localIds = declaredIds.filter((blockId) =>
+          segmentIndexByBlockId.has(blockId)
+        );
+        if (
+          localIds.length === 0 ||
+          localIds.length !== declaredIds.length ||
+          new Set(localIds).size !== localIds.length
+        )
+          return [];
+        const declaredText = comparable(
+          localIds
+            .map((blockId) => sourceBlocksById.get(blockId)?.exactText)
+            .join("\n")
+        );
+        const componentLabel = comparable(component.label);
+        if (!componentLabel || !declaredText.includes(componentLabel)) return [];
+        const indexes = localIds.map((blockId) =>
+          segmentIndexByBlockId.get(blockId)
+        );
+        return [
+          {
+            component,
+            componentIndex,
+            declaredIds,
+            firstIndex: Math.min(...indexes),
+            lastIndex: Math.max(...indexes),
+          },
+        ];
+      });
+      if (localComponents.length === 0) return requirement;
+      const ordered = [...localComponents].sort(
+        (left, right) =>
+          left.firstIndex - right.firstIndex ||
+          left.lastIndex - right.lastIndex ||
+          left.componentIndex - right.componentIndex
+      );
+      if (
+        ordered[0].firstIndex !== 0 ||
+        new Set(ordered.map(({ firstIndex }) => firstIndex)).size !==
+          ordered.length ||
+        ordered.some(
+          (entry, index) =>
+            index < ordered.length - 1 &&
+            entry.lastIndex > ordered[index + 1].firstIndex
+        )
+      )
+        return requirement;
+      const replacements = new Map();
+      for (const [index, entry] of ordered.entries()) {
+        const endIndex =
+          index < ordered.length - 1
+            ? ordered[index + 1].firstIndex
+            : segment.blockIds.length - 1;
+        const desiredIds = segment.blockIds.slice(entry.firstIndex, endIndex + 1);
+        const desiredSet = new Set([...entry.declaredIds, ...desiredIds]);
+        const completedIds = segment.blockIds.filter((blockId) =>
+          desiredSet.has(blockId)
+        );
+        replacements.set(entry.componentIndex, completedIds);
+      }
+      const coveredIds = new Set(
+        [...replacements.values()].flatMap((blockIds) => blockIds)
+      );
+      if (segment.blockIds.some((blockId) => !coveredIds.has(blockId)))
+        return requirement;
+      const normalizedComponents = components.map((component, componentIndex) => {
+        const completedIds = replacements.get(componentIndex);
+        if (
+          !completedIds ||
+          stableStringify(completedIds) ===
+            stableStringify(component.sourceBlockIds || [])
+        )
+          return component;
+        repairs.push({
+          requirementIndex,
+          componentIndex,
+          action: "COMPLETE_BOUNDED_LIST_SEGMENT_COMPONENT_SOURCE_IDS",
+          segmentId: segment.segmentId,
+          fromSourceBlockIds: component.sourceBlockIds || [],
+          toSourceBlockIds: completedIds,
+        });
+        return { ...component, sourceBlockIds: completedIds };
+      });
+      return { ...requirement, components: normalizedComponents };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -3955,8 +4100,21 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     polarityNormalized,
     units
   );
+  const boundedListSegmentResponses = listGovernorNormalization.responses.map(
+    (response) => {
+      const completed = completeBoundedListSegmentComponentSources(
+        response?.requirements,
+        unitsById.get(response?.unitId)
+      );
+      for (const repair of completed.repairs)
+        repairs.push({ unitId: response?.unitId, ...repair });
+      return completed.repairs.length > 0
+        ? { ...response, requirements: completed.requirements }
+        : response;
+    }
+  );
   return {
-    responses: listGovernorNormalization.responses,
+    responses: boundedListSegmentResponses,
     componentRepairs: [...repairs, ...listGovernorNormalization.repairs],
   };
 }

@@ -11636,6 +11636,262 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test("completes typed component provenance across one bounded multi-block list segment", () => {
+    const exactBlock = (blockId, exactText, ordinal, structuralKind) => ({
+      blockId,
+      ordinal,
+      structuralKind,
+      physicalPageNumber: 7,
+      documentStart: ordinal * 200,
+      documentEnd: ordinal * 200 + exactText.length,
+      exactText,
+      exactTextSha256: crypto
+        .createHash("sha256")
+        .update(exactText)
+        .digest("hex"),
+    });
+    const blocks = [
+      exactBlock(
+        "smoke",
+        "• Rauchspuren, auch wenn sie durch Schwelbrand entstehen;",
+        20,
+        "LIST_GOVERNOR"
+      ),
+      exactBlock(
+        "electric-lead",
+        "• Elektrische Energie (Überspannung,",
+        21,
+        "LIST_GOVERNOR"
+      ),
+      exactBlock(
+        "electric-causes",
+        "Kurzschluss, Erdschluss), insbesondere Schäden an Leitungen,",
+        22,
+        "BODY_LINE"
+      ),
+      exactBlock(
+        "electric-damage",
+        "die durch Überlastung entstehen und keinen Brand",
+        23,
+        "BODY_LINE"
+      ),
+      exactBlock(
+        "electric-tail",
+        "im Sinn der Bedingungen darstellen;",
+        24,
+        "BODY_LINE"
+      ),
+    ];
+    const governor = exactBlock(
+      "coverage-governor",
+      "Zusätzlich versichert sind Schäden durch",
+      19,
+      "LIST_GOVERNOR"
+    );
+    const firstText = blocks[0].exactText;
+    const secondText = blocks
+      .slice(1)
+      .map(({ exactText }) => exactText)
+      .join("\n");
+    const combinedText = `${firstText}\n${secondText}`;
+    const unit = {
+      unitId: "bounded-multi-component-list",
+      unitOrder: 0,
+      packageOrder: [0, 0],
+      unitKind: "LIST",
+      structurePath: ["Zusatzdeckung"],
+      source: {
+        documentUuid: "doc",
+        documentSha256: "d".repeat(64),
+        documentPosition: 0,
+        documentRole: "MAIN_POLICY",
+        documentStatus: "ACTIVE",
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+        physicalPages: [7],
+        documentStart: blocks[0].documentStart,
+        documentEnd: blocks.at(-1).documentEnd,
+        combinedText,
+        combinedTextSha256: crypto
+          .createHash("sha256")
+          .update(combinedText)
+          .digest("hex"),
+        contiguous: true,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "smoke-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["smoke"],
+          combinedText: firstText,
+        },
+        {
+          segmentId: "electric-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: blocks.slice(1).map(({ blockId }) => blockId),
+          combinedText: secondText,
+        },
+      ],
+      semanticAuthority: false,
+      initialDisposition: "PENDING_CLASSIFICATION",
+      governingContext: {
+        relationType: "GOVERNS_FOLLOWING_LIST",
+        unitIds: ["coverage-governor-unit"],
+        blockIds: [governor.blockId],
+        blocks: [governor],
+        combinedText: governor.exactText,
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: [
+        "OPERATIVE_COVERAGE_STATEMENT",
+        "PERIL_OR_DAMAGE",
+      ],
+      requirements: [
+        {
+          displayLabel: firstText,
+          components: [
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Rauchspuren",
+              sourceBlockIds: ["smoke"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Zusätzlich versichert sind",
+              sourceBlockIds: [governor.blockId],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+        {
+          displayLabel: secondText,
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Elektrische Energie",
+              sourceBlockIds: ["electric-lead"],
+            },
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Schäden an Leitungen",
+              sourceBlockIds: ["electric-causes"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Zusätzlich versichert sind",
+              sourceBlockIds: [governor.blockId],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const secondComponents = normalized.responses[0].requirements[1].components;
+
+    expect(secondComponents[0].sourceBlockIds).toEqual([
+      "electric-lead",
+      "electric-causes",
+    ]);
+    expect(secondComponents[1].sourceBlockIds).toEqual([
+      "electric-causes",
+      "electric-damage",
+      "electric-tail",
+    ]);
+    expect(normalized.componentRepairs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          unitId: unit.unitId,
+          action: "COMPLETE_BOUNDED_LIST_SEGMENT_COMPONENT_SOURCE_IDS",
+          segmentId: "electric-segment",
+        }),
+      ])
+    );
+
+    const plan = {
+      schemaVersion: 2,
+      contractId: A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+      runContractId: A_DRIVEN_RUN_CONTRACT_ID,
+      planSha256: "a".repeat(64),
+      documents: [{ documentUuid: "doc" }],
+      units: [unit],
+      relations: [],
+      summary: { sourceBlocks: blocks.length },
+    };
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: normalized.responses,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+    });
+    expect(manifest.summary).toMatchObject({
+      unresolvedUnits: 0,
+      reviewRequiredBlocks: 0,
+      allBlocksTerminal: true,
+      responseIntegrityStatus: "VALID",
+    });
+    expect(
+      manifest.requirements
+        .find(({ displayLabel }) => displayLabel === firstText)
+        .components.some(({ type }) => type === "CONDITION")
+    ).toBe(true);
+  });
+
+  test("keeps a bounded continuation fail-closed when no component anchors its first block", () => {
+    const lead = {
+      blockId: "unmapped-lead",
+      structuralKind: "LIST_GOVERNOR",
+      exactText: "• Elektrische Energie sowie",
+    };
+    const tail = {
+      blockId: "mapped-tail",
+      structuralKind: "BODY_LINE",
+      exactText: "Schäden an Leitungen;",
+    };
+    const combinedText = `${lead.exactText}\n${tail.exactText}`;
+    const unit = {
+      unitId: "unanchored-list-lead",
+      unitKind: "LIST",
+      source: {
+        blockIds: [lead.blockId, tail.blockId],
+        blocks: [lead, tail],
+        combinedText,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "unanchored-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: [lead.blockId, tail.blockId],
+          combinedText,
+        },
+      ],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: combinedText,
+          components: [
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Schäden an Leitungen",
+              sourceBlockIds: [tail.blockId],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
   test("materializes a source-bound supplemental document relationship", () => {
     const intro =
       "In Ergänzung bestehender, dem Vertrag zugrunde liegender einschlägiger Bestimmungen in ";
