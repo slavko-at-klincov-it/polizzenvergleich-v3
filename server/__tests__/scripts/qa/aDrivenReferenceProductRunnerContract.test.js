@@ -1,5 +1,17 @@
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
+const {
+  archivedCompatiblePredecessorManifest,
+  compatiblePredecessorShadowSummary,
+  compatiblePredecessorUnclassifiedManifest,
+  manifestDigest,
+  writePrivateJson,
+} = require("../../../scripts/qa/buildADrivenReferenceShadow.cjs");
+const {
+  A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
+} = require("../../../utils/policyAnalysis/aDrivenSemanticManifest");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../../../..");
 const RUNNER = path.join(
@@ -99,6 +111,118 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
     );
     expect(aBuilder).toContain("LF_A_SHADOW_RESUME_MISMATCH");
     expect(bBuilder).toContain("LF_A_DRIVEN_COMPLETE_B_RESUME_MISMATCH");
+  });
+
+  test("archives only an integrity-valid, payload-identical V13 placeholder during the V14 resume upgrade", () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-shadow-resume-upgrade-")
+    );
+    try {
+      const file = path.join(
+        temporary,
+        "dynamic-semantic-manifest.private.json"
+      );
+      const archiveDirectory = path.join(temporary, "superseded");
+      const payload = {
+        schemaVersion: 1,
+        sourceUnitPlanSha256: "a".repeat(64),
+        requirements: [],
+        unitTerminals: [],
+        blockTerminals: [],
+        summary: {
+          semanticRequirements: 0,
+          semanticComponents: 0,
+          unresolvedUnits: 1,
+        },
+      };
+      const current = {
+        contractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
+        ...payload,
+      };
+      current.manifestSha256 = manifestDigest(current);
+      const predecessor = {
+        contractId: A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
+        ...payload,
+      };
+      predecessor.manifestSha256 = manifestDigest(predecessor);
+      fs.writeFileSync(file, `${JSON.stringify(predecessor, null, 2)}\n`);
+
+      const manifestWrite = writePrivateJson(file, current, {
+        compatibleExisting: compatiblePredecessorUnclassifiedManifest,
+        archiveDirectory,
+      });
+      expect(manifestWrite.predecessor).toEqual(predecessor);
+      const archivedPredecessor = archivedCompatiblePredecessorManifest(
+        archiveDirectory,
+        current
+      );
+      expect(archivedPredecessor).toEqual(predecessor);
+
+      const summaryFile = path.join(temporary, "summary.private.json");
+      const currentSummary = {
+        contractId: "LF_REFERENCE_A_DRIVEN_SHADOW_V1",
+        sourceUnitPlanSha256: payload.sourceUnitPlanSha256,
+        dynamicManifestSha256: current.manifestSha256,
+        semanticRequirements: 0,
+      };
+      const predecessorSummary = {
+        ...currentSummary,
+        dynamicManifestSha256: predecessor.manifestSha256,
+      };
+      fs.writeFileSync(
+        summaryFile,
+        `${JSON.stringify(predecessorSummary, null, 2)}\n`
+      );
+      writePrivateJson(summaryFile, currentSummary, {
+        compatibleExisting: (existing, candidate) =>
+          compatiblePredecessorShadowSummary(
+            existing,
+            candidate,
+            archivedPredecessor
+          ),
+        archiveDirectory,
+      });
+
+      expect(JSON.parse(fs.readFileSync(file, "utf8"))).toEqual(current);
+      expect(JSON.parse(fs.readFileSync(summaryFile, "utf8"))).toEqual(
+        currentSummary
+      );
+      const archives = fs.readdirSync(archiveDirectory);
+      expect(archives).toHaveLength(2);
+      const manifestArchive = archives.find((name) =>
+        name.startsWith("dynamic-semantic-manifest.")
+      );
+      expect(
+        JSON.parse(
+          fs.readFileSync(path.join(archiveDirectory, manifestArchive), "utf8")
+        )
+      ).toEqual(predecessor);
+      for (const archive of archives)
+        expect(
+          fs.statSync(path.join(archiveDirectory, archive)).mode & 0o777
+        ).toBe(0o600);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
+  test("rejects a V13 placeholder whose payload differs from the current plan", () => {
+    const current = {
+      contractId: A_DYNAMIC_MANIFEST_CONTRACT_ID,
+      sourceUnitPlanSha256: "a".repeat(64),
+      requirements: [],
+    };
+    current.manifestSha256 = manifestDigest(current);
+    const predecessor = {
+      contractId: A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
+      sourceUnitPlanSha256: "b".repeat(64),
+      requirements: [],
+    };
+    predecessor.manifestSha256 = manifestDigest(predecessor);
+
+    expect(
+      compatiblePredecessorUnclassifiedManifest(predecessor, current)
+    ).toBe(false);
   });
 
   test("uses the validated bounded V3 evidence defaults for primary B decisions", () => {

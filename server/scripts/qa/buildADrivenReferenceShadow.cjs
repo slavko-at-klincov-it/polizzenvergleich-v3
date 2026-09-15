@@ -4,8 +4,10 @@ process.umask(0o077);
 
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const {
   buildADrivenSourceUnitPlan,
+  stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 const {
   buildSourceBlockLedger,
@@ -14,6 +16,8 @@ const {
   buildADrivenClassificationBatches,
 } = require("../../utils/policyAnalysis/aDrivenClassificationContract");
 const {
+  A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
   buildADrivenSemanticManifest,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
@@ -58,16 +62,123 @@ function readJson(file, code) {
   }
 }
 
-function writePrivateJson(file, value) {
+function manifestDigest(manifest) {
+  const { manifestSha256: _manifestSha256, ...payload } = manifest;
+  return crypto
+    .createHash("sha256")
+    .update(`${manifest.contractId}\u0000${stableStringify(payload)}`)
+    .digest("hex");
+}
+
+function compatiblePredecessorUnclassifiedManifest(existing, current) {
+  if (
+    existing?.contractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID_V13 ||
+    current?.contractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID ||
+    existing?.manifestSha256 !== manifestDigest(existing)
+  )
+    return false;
+  const stripVersion = (manifest) => {
+    const {
+      contractId: _contractId,
+      manifestSha256: _manifestSha256,
+      ...payload
+    } = manifest;
+    return payload;
+  };
+  return (
+    stableStringify(stripVersion(existing)) ===
+    stableStringify(stripVersion(current))
+  );
+}
+
+function compatiblePredecessorShadowSummary(
+  existing,
+  current,
+  predecessorManifest
+) {
+  if (
+    !predecessorManifest ||
+    existing?.contractId !== current?.contractId ||
+    existing?.sourceUnitPlanSha256 !== current?.sourceUnitPlanSha256 ||
+    existing?.dynamicManifestSha256 !== predecessorManifest.manifestSha256
+  )
+    return false;
+  const withoutManifestDigest = (summary) => {
+    const { dynamicManifestSha256: _dynamicManifestSha256, ...payload } =
+      summary;
+    return payload;
+  };
+  return (
+    stableStringify(withoutManifestDigest(existing)) ===
+    stableStringify(withoutManifestDigest(current))
+  );
+}
+
+function archivedCompatiblePredecessorManifest(archiveDirectory, current) {
+  if (!fs.existsSync(archiveDirectory)) return null;
+  const matches = fs
+    .readdirSync(archiveDirectory)
+    .filter((name) => name.startsWith("dynamic-semantic-manifest."))
+    .map((name) => path.join(archiveDirectory, name))
+    .filter((file) => {
+      const stat = fs.lstatSync(file);
+      return stat.isFile() && !stat.isSymbolicLink();
+    })
+    .map((file) => readJson(file, "LF_A_SHADOW_PREDECESSOR_MANIFEST"))
+    .filter((existing) =>
+      compatiblePredecessorUnclassifiedManifest(existing, current)
+    );
+  if (matches.length > 1)
+    throw new Error("LF_A_SHADOW_PREDECESSOR_ARCHIVE_AMBIGUOUS");
+  return matches[0] || null;
+}
+
+function writePrivateJson(
+  file,
+  value,
+  { compatibleExisting = null, archiveDirectory = null } = {}
+) {
   fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   const bytes = `${JSON.stringify(value, null, 2)}\n`;
   if (fs.existsSync(file)) {
     const stat = fs.lstatSync(file);
     if (!stat.isFile() || stat.isSymbolicLink())
       throw new Error(`LF_A_SHADOW_EXISTING_OUTPUT_INVALID:${file}`);
-    if (fs.readFileSync(file, "utf8") !== bytes)
+    const existingBytes = fs.readFileSync(file, "utf8");
+    if (existingBytes === bytes)
+      return { status: "REUSED_IDENTICAL", predecessor: null };
+    let existing = null;
+    try {
+      existing = JSON.parse(existingBytes);
+    } catch {
+      // The regular fail-closed mismatch below intentionally handles this.
+    }
+    if (!compatibleExisting?.(existing, value) || !archiveDirectory)
       throw new Error(`LF_A_SHADOW_RESUME_MISMATCH:${file}`);
-    return;
+    fs.mkdirSync(archiveDirectory, { recursive: true, mode: 0o700 });
+    const existingIdentity =
+      existing.manifestSha256 ||
+      crypto.createHash("sha256").update(existingBytes).digest("hex");
+    const archiveFile = path.join(
+      archiveDirectory,
+      `${path.basename(file, ".private.json")}.${existing.contractId}.${existingIdentity}.private.json`
+    );
+    if (fs.existsSync(archiveFile))
+      throw new Error(`LF_A_SHADOW_PREDECESSOR_ARCHIVE_EXISTS:${archiveFile}`);
+    fs.renameSync(file, archiveFile);
+    fs.chmodSync(archiveFile, 0o600);
+    const temporary = `${file}.tmp-${process.pid}`;
+    fs.writeFileSync(temporary, bytes, {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+    fs.renameSync(temporary, file);
+    fs.chmodSync(file, 0o600);
+    return {
+      status: "UPGRADED_COMPATIBLE_PREDECESSOR",
+      predecessor: existing,
+      archiveFile,
+    };
   }
   const temporary = `${file}.tmp-${process.pid}`;
   fs.writeFileSync(temporary, bytes, {
@@ -76,6 +187,7 @@ function writePrivateJson(file, value) {
   });
   fs.renameSync(temporary, file);
   fs.chmodSync(file, 0o600);
+  return { status: "WRITTEN_NEW", predecessor: null };
 }
 
 function documentDirectory(runRoot, document) {
@@ -112,7 +224,7 @@ function loadADocuments(runRoot) {
   return documents;
 }
 
-try {
+function run() {
   const args = argumentsFrom(process.argv.slice(2));
   if (fs.existsSync(args.output)) {
     const stat = fs.lstatSync(args.output);
@@ -160,10 +272,20 @@ try {
     path.join(args.output, "classification-batches.private.json"),
     classificationBatches
   );
-  writePrivateJson(
+  const dynamicManifestWrite = writePrivateJson(
     path.join(args.output, "dynamic-semantic-manifest.private.json"),
-    dynamicManifest
+    dynamicManifest,
+    {
+      compatibleExisting: compatiblePredecessorUnclassifiedManifest,
+      archiveDirectory: path.join(args.output, "superseded"),
+    }
   );
+  const predecessorManifest =
+    dynamicManifestWrite.predecessor ||
+    archivedCompatiblePredecessorManifest(
+      path.join(args.output, "superseded"),
+      dynamicManifest
+    );
   if (legacyCrosswalkDraft)
     writePrivateJson(
       path.join(args.output, "legacy-283-crosswalk-draft.private.json"),
@@ -192,10 +314,32 @@ try {
     proofLimit:
       "Shadow-Artefakt. Ohne validierte bounded Modellantworten, getrennte A-Block-, Segmentierungs- und Atomizitätsgates, vollständige B-Suche und Gegenstückprüfung, Mutations-, symmetrische Nichtregressions- und Holdout-Gates keine Produkt- oder Vollständigkeitsfreigabe. Der 283/631-Crosswalk ist ausschließlich Regressionsevidenz.",
   };
-  writePrivateJson(path.join(args.output, "summary.private.json"), summary);
+  writePrivateJson(path.join(args.output, "summary.private.json"), summary, {
+    compatibleExisting: (existing, current) =>
+      compatiblePredecessorShadowSummary(
+        existing,
+        current,
+        predecessorManifest
+      ),
+    archiveDirectory: path.join(args.output, "superseded"),
+  });
   console.log(
     `[lf-a-driven-shadow] ${summary.sourceBlocks} Blöcke, ${summary.plannedUnits} Units, ${summary.semanticRequirements} Requirements, ${summary.unresolvedUnits} Units ungeklärt`
   );
-} catch (error) {
-  fail(error.stack || error.message);
 }
+
+if (require.main === module) {
+  try {
+    run();
+  } catch (error) {
+    fail(error.stack || error.message);
+  }
+}
+
+module.exports = {
+  archivedCompatiblePredecessorManifest,
+  compatiblePredecessorShadowSummary,
+  compatiblePredecessorUnclassifiedManifest,
+  manifestDigest,
+  writePrivateJson,
+};
