@@ -8790,9 +8790,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
   test("uses a focused full-boundary repair after repeated source-bound atomization failures", async () => {
     const source = artifact(
-      [
-        "Seite 1\nDEFINITION\nProdukt gilt für\nVersicherungsmakler GmbH.\n",
-      ],
+      ["Seite 1\nDEFINITION\nProdukt gilt für\nVersicherungsmakler GmbH.\n"],
       "d"
     );
     const plan = buildADrivenSourceUnitPlan({
@@ -8877,9 +8875,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(repairPrompts[2]).toContain(
       "vollständigen wörtlichen Satz-, Klausel-, Listen- oder Tabellenpunkt"
     );
-    expect(result.attempts.map(({ validationPassed }) => validationPassed)).toEqual(
-      [false, false, true]
-    );
+    expect(
+      result.attempts.map(({ validationPassed }) => validationPassed)
+    ).toEqual([false, false, true]);
   });
 
   test("keeps homogeneous classification-envelope repairs grouped", async () => {
