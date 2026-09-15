@@ -9889,3 +9889,32 @@ Rescue, binäres Ergebnis, Gold-Regression und interne XLSX folgen erst nach
 Status: `A 363/363 REQUIREMENTS, 1.278 COMPONENTS, 0 UNRESOLVED; RETRIEVAL
 11.502/11.502; VS-14 TARGET PASS; AV-30 GUARD PASS; PRIMÄRER 204-BATCH-LAUF
 LÄUFT; KEIN DEPLOYMENT`.
+
+### 133.51 Fail-closed Batch 50 und schemafeste Reparatur
+
+Der Primärlauf stoppte nach 49/204 gültigen Batches korrekt fail-closed an
+Batch 50. Es lag kein Timeout und kein Modelltransportfehler vor. Qwen lieferte
+bei deterministisch identischen Aufrufen zunächst ungültiges JSON und danach
+Komponenten mit falscher Dimension beziehungsweise nicht zugelassener
+Kandidaten-ID. Zwei unveränderte Laufzyklen erzeugten dieselben Antwort-Hashes;
+weitere blinde Wiederholungen wurden deshalb beendet. Alle 49 PASS-Batches und
+ihre privaten Append-only-Attempts blieben unverändert erhalten.
+
+Change-Set `LF-V2-REPAIR-SCHEMA-20260915-001` klassifiziert die Korrektur als
+`ADAPT_EXISTING` von `CAP-B-006`. Commit `5bc7aacdba008c10de69a7bf669c4cf92721fd7e`
+präzisiert ausschließlich den bereits vorhandenen semantischen
+Einzel-Requirement-Reparaturhinweis: Für beanstandete Antworten werden das
+vollständige serverseitige Komponenten-ID-/Dimensionsschema, die exakte
+Kandidatenliste und der konservative `NOT_ESTABLISHED`-Fallback wiederholt.
+Basisprompt, Validator, Entscheidungsplan und bestehende PASS-Batch-Identität
+bleiben unverändert; es gibt keine automatische semantische Korrektur.
+
+Auf dem exakten Mac-Studio-Commit im isolierten Worktree
+`/private/tmp/lf-repair-5bc7aacdb` bestanden der gezielte Vertragstest und
+Prettier. Das anschließende Realbatch-Gate bestand mit einem auf vier weiterhin
+begrenzten Versuchskontingent. Die vorher falschen Komponenten wurden
+schema- und ID-konform repariert; Batch 50 wurde als PASS gespeichert. Der
+vollständige Lauf wurde danach gestartet und verwendet 50/204 Batches wieder.
+
+Status: `BATCH 50 ROOT-CAUSE REPAIR PASS; 50/204 WIEDERVERWENDET; PRIMÄRLAUF
+AB BATCH 51 LÄUFT; KEIN DEPLOYMENT`.

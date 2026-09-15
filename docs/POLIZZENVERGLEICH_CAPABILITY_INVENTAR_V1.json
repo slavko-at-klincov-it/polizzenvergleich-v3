@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "CAPABILITY-INVENTORY-20260915-001",
+  "changeSetId": "LF-V2-REPAIR-SCHEMA-20260915-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -627,14 +627,14 @@
       "dependencies": ["CAP-B-004", "CAP-B-005", "CAP-MODEL-001"],
       "qualityImpact": { "recall": "PRIMARY_DECISION_GATE", "precision": "PRIMARY_DECISION_GATE", "sourceBinding": "SERVER_VALIDATED", "generalization": "NOT_YET_END_TO_END_PROVEN" },
       "resourceImpact": { "runtime": "HIGH: 204 planned batches on current fixture", "ram": "Qwen model footprint", "gpu": "Qwen bursts" },
-      "knownLimitsRisks": ["The active 204-batch run is not complete.", "A PASS batch proves contract validity, not agreement with Gold."],
+      "knownLimitsRisks": ["The active 204-batch run is not complete.", "A PASS batch proves contract validity, not agreement with Gold.", "Deterministic local-model output can repeat the same malformed or schema-invalid answer; bounded schema-specific repair must remain fail-closed."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tracker 133.47", "fresh 1+9 run in progress on 2026-09-15"],
+        "runs": ["Tracker 133.47", "Tracker 133.51", "fresh 1+9 run in progress on 2026-09-15"],
         "adrs": ["ADR-031"],
-        "failures": []
+        "failures": ["INT-20260915-037"]
       },
-      "lastVerifiedCommit": "c87aadf9d483d72ddce0bc67aacd529c19b54788",
+      "lastVerifiedCommit": "5bc7aacdba008c10de69a7bf669c4cf92721fd7e",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Reachable from the V2 runner and currently executing in the private 1+9 shadow.",
       "reactivationCriteria": "Not applicable while active."
