@@ -8753,7 +8753,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       "SINGLE_UNIT_REPAIR",
       "NEXT_PENDING_UNIT",
       "NEXT_PENDING_UNIT",
-      "ALL_PENDING",
+      "EXHAUSTED",
     ]);
 
     const resumedRequested = [];

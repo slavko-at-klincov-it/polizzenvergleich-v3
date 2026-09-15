@@ -5320,6 +5320,15 @@ async function runBatch({
       const rotatesToFreshUnit = semanticRetryUnitIds.some(
         (unitId) => !workingBatch.expectedUnitIds.includes(unitId)
       );
+      let semanticRetryStrategy = "ALL_PENDING";
+      if (semanticRetryUnitIds.length === 0 && pendingUnitIds.length > 0)
+        semanticRetryStrategy = "EXHAUSTED";
+      else if (groupedEnvelopeRepair)
+        semanticRetryStrategy = "GROUPED_ENVELOPE_REPAIR";
+      else if (rotatesToFreshUnit)
+        semanticRetryStrategy = "NEXT_PENDING_UNIT";
+      else if (semanticRetryUnitIds.length < pendingUnitIds.length)
+        semanticRetryStrategy = "SINGLE_UNIT_REPAIR";
       const attemptRecord = {
         attempt,
         requestedUnitIds: workingBatch.expectedUnitIds,
@@ -5348,13 +5357,7 @@ async function runBatch({
         acceptedUnits: acceptedResponses.size,
         pendingUnits: pendingUnitIds.length,
         semanticRetryUnitIds,
-        semanticRetryStrategy: groupedEnvelopeRepair
-          ? "GROUPED_ENVELOPE_REPAIR"
-          : rotatesToFreshUnit
-              ? "NEXT_PENDING_UNIT"
-              : semanticRetryUnitIds.length < pendingUnitIds.length
-                ? "SINGLE_UNIT_REPAIR"
-                : "ALL_PENDING",
+        semanticRetryStrategy,
         validationPassed: validation.passed,
         diagnostics: validation.diagnostics,
       };
