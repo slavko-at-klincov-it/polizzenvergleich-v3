@@ -5291,6 +5291,9 @@ async function runBatch({
       const pendingUnitIds = batch.expectedUnitIds.filter(
         (unitId) => !acceptedResponses.has(unitId)
       );
+      const retryablePendingUnitIds = pendingUnitIds.filter(
+        (unitId) => (attemptsByUnit.get(unitId) || 0) < maximumAttempts
+      );
       const pendingResponses = responses.filter(({ unitId }) =>
         pendingUnitIds.includes(unitId)
       );
@@ -5302,16 +5305,21 @@ async function runBatch({
         );
       });
       const validation = validateBatchResponses(plan, batch, mergedResponses);
-      const groupedEnvelopeRepair = envelopeRepairCanStayGrouped(
-        validation.diagnostics,
-        pendingUnitIds
-      );
+      const groupedEnvelopeRepair =
+        retryablePendingUnitIds.length > 0 &&
+        envelopeRepairCanStayGrouped(
+          validation.diagnostics,
+          retryablePendingUnitIds
+        );
       const semanticRetryUnitIds =
-        pendingUnitIds.length > 1 &&
+        retryablePendingUnitIds.length > 1 &&
         !workingBatch.batchId.includes("-timeout-split-") &&
         !groupedEnvelopeRepair
-          ? [pendingUnitIds[0]]
-          : pendingUnitIds;
+          ? [retryablePendingUnitIds[0]]
+          : retryablePendingUnitIds;
+      const rotatesToFreshUnit = semanticRetryUnitIds.some(
+        (unitId) => !workingBatch.expectedUnitIds.includes(unitId)
+      );
       const attemptRecord = {
         attempt,
         requestedUnitIds: workingBatch.expectedUnitIds,
@@ -5342,6 +5350,8 @@ async function runBatch({
         semanticRetryUnitIds,
         semanticRetryStrategy: groupedEnvelopeRepair
           ? "GROUPED_ENVELOPE_REPAIR"
+          : rotatesToFreshUnit
+            ? "NEXT_PENDING_UNIT"
           : semanticRetryUnitIds.length < pendingUnitIds.length
             ? "SINGLE_UNIT_REPAIR"
             : "ALL_PENDING",
@@ -5352,12 +5362,7 @@ async function runBatch({
       await onAttempt(attemptRecord);
       last = { responses: mergedResponses, validation, rawText, error: null };
       if (validation.passed) break;
-      if (
-        semanticRetryUnitIds.some(
-          (unitId) => (attemptsByUnit.get(unitId) || 0) >= maximumAttempts
-        )
-      )
-        break;
+      if (semanticRetryUnitIds.length === 0) break;
       workingBatch = {
         ...batch,
         batchId: `${batch.batchId}-retry-${attempt + 1}`,
@@ -5366,6 +5371,10 @@ async function runBatch({
           semanticRetryUnitIds.includes(unitId)
         ),
       };
+      if (rotatesToFreshUnit) {
+        messages = prompt(workingBatch);
+        continue;
+      }
       const repairDiagnostics = validation.diagnostics.filter(
         ({ unitId }) => !unitId || semanticRetryUnitIds.includes(unitId)
       );

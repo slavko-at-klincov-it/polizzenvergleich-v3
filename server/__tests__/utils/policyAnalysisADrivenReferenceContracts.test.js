@@ -8677,6 +8677,118 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("continues with untouched units after one semantic repair exhausts and resumes only the remainder", async () => {
+    const source = artifact(
+      [
+        "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Garagen.\n\nVersichert sind Nebengebäude.\n",
+      ],
+      "4a"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const batch = buildADrivenClassificationBatches(plan).batches[0];
+    expect(batch.expectedUnitIds).toHaveLength(3);
+    const valid = batch.expectedUnitIds.map((unitId) =>
+      validResponse(plan.units.find((unit) => unit.unitId === unitId))
+    );
+    const invalid = valid.map((response) => {
+      const copy = JSON.parse(JSON.stringify(response));
+      copy.requirements[0].components[0].label = "";
+      return copy;
+    });
+    const requested = [];
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async ({ messages }) => {
+            const input = JSON.parse(
+              messages.find(({ role }) => role === "user").content
+            );
+            requested.push(input.expectedUnitIds);
+            const requestedUnitId = input.expectedUnitIds[0];
+            const responseIndex = batch.expectedUnitIds.indexOf(requestedUnitId);
+            const responses =
+              requested.length === 1
+                ? invalid
+                : requestedUnitId === batch.expectedUnitIds[0]
+                  ? [invalid[0]]
+                  : [valid[responseIndex]];
+            return {
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [{ message: { content: JSON.stringify(responses) } }],
+              usage: {},
+            };
+          }),
+        },
+      },
+    };
+
+    const result = await runBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 3,
+    });
+
+    expect(result.validation.passed).toBe(false);
+    expect(requested).toEqual([
+      batch.expectedUnitIds,
+      [batch.expectedUnitIds[0]],
+      [batch.expectedUnitIds[0]],
+      [batch.expectedUnitIds[1]],
+      [batch.expectedUnitIds[2]],
+    ]);
+    expect(result.responses.map(({ unitId }) => unitId)).toEqual([
+      batch.expectedUnitIds[1],
+      batch.expectedUnitIds[2],
+    ]);
+    expect(
+      result.attempts.map(({ semanticRetryStrategy }) => semanticRetryStrategy)
+    ).toEqual([
+      "SINGLE_UNIT_REPAIR",
+      "SINGLE_UNIT_REPAIR",
+      "NEXT_PENDING_UNIT",
+      "NEXT_PENDING_UNIT",
+      "ALL_PENDING",
+    ]);
+
+    const resumedRequested = [];
+    const resumed = await runBatch({
+      client: {
+        chat: {
+          completions: {
+            create: jest.fn(async ({ messages }) => {
+              const input = JSON.parse(
+                messages.find(({ role }) => role === "user").content
+              );
+              resumedRequested.push(input.expectedUnitIds);
+              return {
+                model: "qwen/qwen3.6-35b-a3b",
+                choices: [
+                  { message: { content: JSON.stringify([valid[0]]) } },
+                ],
+                usage: {},
+              };
+            }),
+          },
+        },
+      },
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan,
+      batch,
+      maximumAttempts: 3,
+      initialAcceptedResponses: result.responses,
+    });
+
+    expect(resumed.validation.passed).toBe(true);
+    expect(resumed.resumedAcceptedUnits).toBe(2);
+    expect(resumedRequested).toEqual([[batch.expectedUnitIds[0]]]);
+  });
+
   test("keeps homogeneous classification-envelope repairs grouped", async () => {
     const source = artifact(
       ["Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Garagen.\n"],
