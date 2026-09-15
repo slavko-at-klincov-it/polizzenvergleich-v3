@@ -4894,3 +4894,44 @@ Fehlnegativen gelöst sind oder dass 137/144 eine Generalisierungs- oder
 Produktionsfreigabe darstellt. 139 Gold-Zeilen bleiben wegen echter
 Split-/Merge-Beziehungen getrennt diagnostisch und dürfen nicht durch eine
 blinde OR-Zuordnung künstlich als richtig gezählt werden.
+
+## 89. Atomisierung, Retrieval und semantische Fundentscheidung sind drei getrennte Fehlerklassen
+
+Die Analyse der sieben eindeutigen Gold-Abweichungen nach V62 zeigt drei
+unterschiedliche Ursachen, die nicht mit demselben Prompt-Fix behandelt
+werden dürfen:
+
+1. `VS-14` enthielt zwei selbstständig suchbare Objekte in einer Komponente.
+   Eine allgemeine koordinierte OBJECT-Atomisierung trennte sie korrekt, ohne
+   Requirementzahl oder Quellenbesitz zu verändern.
+2. Trotz korrekter Trennung fehlte die richtige B-Klausel weiterhin im
+   begrenzten Modellinput. Erst eine korpusabgeleitete, lange und seltene
+   Nomenkopf-Variante brachte „überdachte Abstellplätze“ für
+   „Autoabstellplätze“ in den Kandidatensatz. Das Modell bestätigte danach die
+   B-Quelle korrekt.
+3. `AV-30` hatte die Quelle bereits im Input, aber Qwen erklärte zwei nur
+   thematisch ähnliche administrative Ausnahmen fälschlich für äquivalent.
+   Ein weiterer Prompt änderte das nicht. Ein source-bound Konzeptanker für
+   Anzeige-/Meldepflichten verhindert nun, dass eine positive FACT_ROLE ohne
+   entsprechenden Begriff in der ausgewählten Originalquelle zum Kundentreffer
+   wird; der Fall geht fail-closed in die vorhandene Fallbackprüfung.
+
+Die endgültige Kompositumregel verändert 16 von 11.502 Suchpaketen und 15 von
+363 Requirements. Sie erhöht die kompaktierte Kandidatenmenge nur von 60.681
+auf 60.682, während der belegte VS-14-Zielbatch von negativ auf
+`FOUND / PARTIAL_COUNTERPART` wechselt. Die vorherige breitere Fassung hätte
+1.465 Pakete und 267 Requirements verändert und wurde deshalb nicht als
+Produktregel akzeptiert.
+
+Auf dem Mac Studio bestanden für den finalen Stand Prettier sowie 351/351
+A-driven Mutation-/Reference-Vertragstests. Commit `476177d97`; Retrieval:
+`2c568929d4d0470671a2b4fca693460586aefae9db32b8752eef1eeb1e1f5608`.
+
+**Beweist:** Ein Fehler kann vor der Modellentscheidung (Atomisierung), bei
+der Kandidatenzufuhr (Retrieval) oder trotz vorhandener Quelle in der
+semantischen Entscheidung liegen. Kleine source-bound Zielgates können diese
+Ursachen trennen und unnötige Stundenläufe vermeiden.
+
+**Beweist nicht:** Dass `VS-15` ein tatsächlicher Systemfehler ist, dass die
+Gold-Korrekturvorschläge `AV-06` und `AV-22` bereits angenommen sind oder dass
+die 1+9-Regression Generalisierung auf ungesehene Versicherer nachweist.
