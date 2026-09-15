@@ -135,6 +135,7 @@ const {
   compatibleSeedPartitionResponses,
   parseSingleDecision: parseRequirementAbsenceDecision,
   positiveCandidateSignals: requirementAbsencePositiveCandidateSignals,
+  preliminaryDecision: preliminaryRequirementAbsenceDecision,
   preliminaryDecisionArtifact,
   prompt: requirementAbsencePrompt,
   runPartition: runRequirementAbsencePartition,
@@ -15799,6 +15800,70 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(() =>
       preliminaryDecisionArtifact(decisionPlan, withoutFallback)
     ).toThrow("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_DECISIONS_INVALID");
+  });
+
+  test("selects only fallback rows from a validated mixed preliminary batch", () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const mixedBatch = twoRequirementBatch(decisionPlan);
+    const payload = JSON.parse(JSON.stringify(decisionPlan));
+    delete payload.planSha256;
+    payload.rows = mixedBatch.rows;
+    payload.batches = [{ ...mixedBatch, batchIndex: 0 }];
+    payload.summary.requirements = mixedBatch.rows.length;
+    payload.summary.components = mixedBatch.rows.reduce(
+      (sum, row) => sum + row.components.length,
+      0
+    );
+    payload.summary.selectedCandidates = mixedBatch.rows.reduce(
+      (sum, row) => sum + row.candidates.length,
+      0
+    );
+    payload.summary.batches = 1;
+    const plan = {
+      ...payload,
+      planSha256: digest(
+        A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
+        payload
+      ),
+    };
+    const found = validRequirementResponse(plan.rows[0]);
+    const fallbackRow = plan.rows[1];
+    const fallbackCandidateId = fallbackRow.candidates[0].candidateId;
+    const fallback = {
+      requirementId: fallbackRow.requirementId,
+      contextFinding: {
+        outcome: "RELATED_ONLY",
+        candidateIds: [fallbackCandidateId],
+      },
+      componentFindings: fallbackRow.components.map((component) => ({
+        componentId: component.componentId,
+        dimension: component.dimension,
+        outcome: "RELATED_ONLY",
+        candidateIds: [fallbackCandidateId],
+      })),
+      unmodeledDifferences: [],
+      rationale: "Nur thematische Nähe.",
+    };
+    const rawResponse = JSON.stringify([found, fallback]);
+    const selected = preliminaryRequirementAbsenceDecision(plan, {
+      decisionPlanSha256: plan.planSha256,
+      validation: { passed: true },
+      responses: [found, fallback],
+      rawResponse,
+      rawResponseSha256: crypto
+        .createHash("sha256")
+        .update(rawResponse)
+        .digest("hex"),
+    });
+
+    expect(selected.subset.rows.map(({ requirementId }) => requirementId)).toEqual([
+      fallbackRow.requirementId,
+    ]);
+    expect(selected.decisions.summary).toMatchObject({
+      terminalRequirements: 1,
+      fallbackRequiredRequirements: 1,
+      unresolvedRequirements: 0,
+    });
   });
 
   test("certifies NOT_FOUND only after every complete B clause partition is terminal", async () => {

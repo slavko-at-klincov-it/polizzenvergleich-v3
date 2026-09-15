@@ -374,13 +374,28 @@ function preliminaryDecision(plan, batch) {
     batch.rawResponseSha256 !== sha256(batch.rawResponse)
   )
     throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_INVALID");
-  const subset = subsetDecisionPlan(
+  const batchSubset = subsetDecisionPlan(
     plan,
     batch.responses.map(({ requirementId }) => requirementId)
   );
+  const batchDecisions = validateADrivenRequirementDecisionResponses({
+    plan: batchSubset,
+    responses: batch.responses,
+  });
+  if (batchDecisions.summary.unresolvedRequirements !== 0)
+    throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_NOT_FALLBACK");
+  const fallbackRequirementIds = batchDecisions.results
+    .filter(({ customerStatus }) => customerStatus === "FALLBACK_REQUIRED")
+    .map(({ requirementId }) => requirementId);
+  if (fallbackRequirementIds.length === 0)
+    throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PRELIMINARY_NOT_FALLBACK");
+  const fallbackIds = new Set(fallbackRequirementIds);
+  const subset = subsetDecisionPlan(plan, fallbackRequirementIds);
   const decisions = validateADrivenRequirementDecisionResponses({
     plan: subset,
-    responses: batch.responses,
+    responses: batch.responses.filter(({ requirementId }) =>
+      fallbackIds.has(requirementId)
+    ),
   });
   if (
     decisions.summary.unresolvedRequirements !== 0 ||
