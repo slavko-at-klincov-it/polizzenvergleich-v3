@@ -148,11 +148,9 @@ function compatibleSeedPartitionResponses({
   abortSettlementTimeoutMs,
 } = {}) {
   validateADrivenRequirementAbsencePlan(seedPlan);
-  validateADrivenRequirementAbsenceDecisionArtifact(
-    seedDecisions,
-    seedPlan,
-    { requireComplete: true }
-  );
+  validateADrivenRequirementAbsenceDecisionArtifact(seedDecisions, seedPlan, {
+    requireComplete: true,
+  });
   validateADrivenRequirementAbsencePlan(plan);
   if (
     seedSummary?.contractId !== RUN_CONTRACT_ID ||
@@ -192,7 +190,8 @@ function compatibleSeedPartitionResponses({
     if (
       !seedPartition ||
       stableStringify(seedPartition) !== stableStringify(partition) ||
-      stableStringify(seedRequirement) !== stableStringify(currentRequirement) ||
+      stableStringify(seedRequirement) !==
+        stableStringify(currentRequirement) ||
       partition.candidateIds.some((candidateId) => {
         const currentCandidate = plan.candidates.find(
           ({ candidateId: currentId }) => currentId === candidateId
@@ -221,9 +220,7 @@ function compatibleSeedPartitionResponses({
       response,
     });
     if (validation.result.status !== "TERMINAL")
-      throw new Error(
-        "LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_PARTITION_INVALID"
-      );
+      throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_PARTITION_INVALID");
     const rawResponse = JSON.stringify(response);
     responses.set(partition.partitionId, {
       schemaVersion: 1,
