@@ -15856,9 +15856,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         .digest("hex"),
     });
 
-    expect(selected.subset.rows.map(({ requirementId }) => requirementId)).toEqual([
-      fallbackRow.requirementId,
-    ]);
+    expect(
+      selected.subset.rows.map(({ requirementId }) => requirementId)
+    ).toEqual([fallbackRow.requirementId]);
     expect(selected.decisions.summary).toMatchObject({
       terminalRequirements: 1,
       fallbackRequiredRequirements: 1,
