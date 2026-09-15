@@ -145,6 +145,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260901-032` | Jede Zeile entscheidet und einseitig belegter Schutz kann gewinnen       | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG`  | durch den bestätigten Paketvergleichsvertrag `INT-20260902-033` konkretisieren                                          |
 | `INT-20260902-033` | Paketmitgliedschaft und vollständiger Nullfund bestimmen den Vergleich   | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | Vergleichsvertrag V8 schrittweise implementieren und auf dem Mac Studio abnehmen                                        |
 | `INT-20260904-034` | Zwei Workspace-Verfahren: gerichtetes LF A→B und vollständiges A/B       | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | beide Laufverträge getrennt versionieren; LF-Katalog nach dem 35-Zeilen-Startprofil vollständig erweitern               |
+| `INT-20260915-037` | Schemafeste semantische Reparatur ohne Verlust gültiger Batches         | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | Reparaturhinweis präzisieren und am ersten unvollständigen Batch resumieren                                               |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -2692,3 +2693,52 @@ Vollständigkeitsbehauptung erzeugen.
 - Kanonischer Ausgang: KB-Index,
   `POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1.json`,
   `POLIZZENVERGLEICH_WORKFLOW_MAPS_DE.md` und Tests Abschnitt 87.
+
+## INT-20260915-037 — Schemafeste semantische Reparatur ohne Verlust gültiger Batches
+
+- Erfasst: 2026-09-15
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Wiederholt identische, semantisch ungültige Modellantworten sollen
+  nicht durch weitere blinde Laufzyklen behandelt werden. Der bestehende
+  Einzel-Requirement-Reparaturpfad soll für beanstandete Komponenten deren
+  exakte serverseitige ID, Dimension und zulässige Kandidaten sowie den
+  konservativen `NOT_ESTABLISHED`-Fallback ausdrücklich vorgeben.
+- Ist-Wahrheit: `NEIN` für die Wirksamkeit der Präzisierung; bestätigt ist nur
+  der fail-closed Stopp nach zwei Laufzyklen mit identischen Antwort-Hashes.
+- Quelle: aggregierter Mac-Studio-Transport- und Validatorbefund eines
+  unvollständigen Shadow-Batches; keine Kundentexte oder privaten IDs.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Der dynamische Vergleich
+  bleibt quellengebunden und resumierbar, während ein Format-/ID-Fehler des
+  Modells nicht alle bereits gültigen Batches erneut berechnen lässt.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-B-006`; keine
+  neue Architektur, keine automatische semantische Korrektur, kein
+  Abschwächen der Validatoren und kein Deployment.
+- Evidenz und Beweisgrenze: Der technische Befund zeigt wiederholte ungültige
+  Komponenten-Dimensionen beziehungsweise nicht zugelassene Kandidaten-IDs.
+  Er beweist noch nicht, dass der präzisierte Reparaturhinweis Qwen erfolgreich
+  korrigiert.
+- Systembezug: Modell, B-Semantik, Append-only-Attempts, Resume und
+  Quellenbindung; `CAP-B-006`, `CAP-MODEL-001`, `CAP-CACHE-001`, `ADR-031`.
+- Beziehungen:
+  - `REFINES` -> `INT-20260910-035`
+  - `REUSES` -> bestehender Einzel-Requirement-Reparaturpfad
+  - verhindert -> unbeschränkte identische Retries und Verlust gültiger Batches
+- Spezialistenurteil:
+  - Local-AI/RAG: Nur der Reparaturhinweis wird präzisiert; der unveränderte
+    Basisprompt und bestehende PASS-Batch-Hashes bleiben wiederverwendbar.
+  - Kunde/Versicherung: Nicht belegte Komponenten bleiben
+    `NOT_ESTABLISHED`; es wird kein Fund konstruiert.
+  - Datenschutz/Betrieb: Nur aggregierte Fehlerklassen werden dokumentiert.
+  - Kritik/Test: Ein gezielter Vertragstest und derselbe unvollständige
+    Realbatch müssen bestehen, bevor der Vollresume fortgesetzt wird.
+- Hard-Gates: `OFFEN`
+- Bewertung: kleine, konservative Präzisierung des vorhandenen Pfads.
+- Evidenzqualität: `GEMESSEN_KUNDENHARDWARE` plus `BEOBACHTET_CODE`
+- Riskanteste Annahme: Das Modell befolgt die zusätzliche exakte
+  Komponentenstruktur, ohne neue semantische Behauptungen zu erzeugen.
+- Nächster Prüfschritt: Präzisierung implementieren, fokussierten Vertragstest
+  auf dem exakten Mac-Studio-Commit ausführen und nur Batch 50 resumieren.
+- Entscheidung: `ADAPT_EXISTING`; keine zweite Architektur.
+- Kanonischer Ausgang: noch keiner; Change-Set
+  `LF-V2-REPAIR-SCHEMA-20260915-001`.
