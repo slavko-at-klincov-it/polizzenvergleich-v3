@@ -8768,9 +8768,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
               resumedRequested.push(input.expectedUnitIds);
               return {
                 model: "qwen/qwen3.6-35b-a3b",
-                choices: [
-                  { message: { content: JSON.stringify([valid[0]]) } },
-                ],
+                choices: [{ message: { content: JSON.stringify([valid[0]]) } }],
                 usage: {},
               };
             }),

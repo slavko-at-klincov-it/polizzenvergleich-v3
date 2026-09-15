@@ -5325,8 +5325,7 @@ async function runBatch({
         semanticRetryStrategy = "EXHAUSTED";
       else if (groupedEnvelopeRepair)
         semanticRetryStrategy = "GROUPED_ENVELOPE_REPAIR";
-      else if (rotatesToFreshUnit)
-        semanticRetryStrategy = "NEXT_PENDING_UNIT";
+      else if (rotatesToFreshUnit) semanticRetryStrategy = "NEXT_PENDING_UNIT";
       else if (semanticRetryUnitIds.length < pendingUnitIds.length)
         semanticRetryStrategy = "SINGLE_UNIT_REPAIR";
       const attemptRecord = {
