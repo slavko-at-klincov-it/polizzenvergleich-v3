@@ -257,9 +257,11 @@ function repairInstruction(batch, diagnostics = []) {
   const affectedRequirementIds = new Set(
     diagnostics.map(({ requirementId }) => requirementId).filter(Boolean)
   );
-  const affectedRows = batch.rows.filter(({ requirementId }) =>
-    affectedRequirementIds.has(requirementId)
-  );
+  const affectedRows = affectedRequirementIds.size
+    ? batch.rows.filter(({ requirementId }) =>
+        affectedRequirementIds.has(requirementId)
+      )
+    : batch.rows;
   const invalidComponents = diagnostics
     .flatMap(({ issues = [] }) => issues)
     .filter(({ code, componentId }) =>
