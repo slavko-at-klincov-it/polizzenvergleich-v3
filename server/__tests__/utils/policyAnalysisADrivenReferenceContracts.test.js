@@ -7711,7 +7711,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V61");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V62");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -11745,10 +11745,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const response = {
       unitId: unit.unitId,
       primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
-      semanticClasses: [
-        "OPERATIVE_COVERAGE_STATEMENT",
-        "PERIL_OR_DAMAGE",
-      ],
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "PERIL_OR_DAMAGE"],
       requirements: [
         {
           displayLabel: firstText,
