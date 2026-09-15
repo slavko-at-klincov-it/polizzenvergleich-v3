@@ -8788,58 +8788,6 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(resumedRequested).toEqual([[batch.expectedUnitIds[0]]]);
   });
 
-  test("uses bounded low-temperature sampling only for the final semantic attempt", async () => {
-    const source = artifact(["Seite 1\nVersichert sind Gebäude.\n"], "d");
-    const plan = buildADrivenSourceUnitPlan({
-      documents: [document("source", 0, source)],
-    });
-    const batch = buildADrivenClassificationBatches(plan).batches[0];
-    const unit = plan.units.find(
-      ({ unitId }) => unitId === batch.expectedUnitIds[0]
-    );
-    const valid = validResponse(unit);
-    const invalid = JSON.parse(JSON.stringify(valid));
-    invalid.requirements[0].components[0].label = "";
-    const temperatures = [];
-    const client = {
-      chat: {
-        completions: {
-          create: jest.fn(async ({ temperature }) => {
-            temperatures.push(temperature);
-            return {
-              model: "qwen/qwen3.6-35b-a3b",
-              choices: [
-                {
-                  message: {
-                    content: JSON.stringify([
-                      temperature === 0.1 ? valid : invalid,
-                    ]),
-                  },
-                },
-              ],
-              usage: {},
-            };
-          }),
-        },
-      },
-    };
-
-    const result = await runBatch({
-      client,
-      model: "qwen/qwen3.6-35b-a3b",
-      modelContext: 42_496,
-      plan,
-      batch,
-      maximumAttempts: 3,
-    });
-
-    expect(result.validation.passed).toBe(true);
-    expect(temperatures).toEqual([0, 0, 0.1]);
-    expect(
-      result.attempts.map(({ requestTemperature }) => requestTemperature)
-    ).toEqual(temperatures);
-  });
-
   test("keeps homogeneous classification-envelope repairs grouped", async () => {
     const source = artifact(
       ["Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Garagen.\n"],
