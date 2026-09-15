@@ -411,8 +411,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
         ({ sourceSpans, channels }) =>
           sourceSpans.some(({ exactText }) =>
             exactText.includes("Überdachte Abstellplätze")
-          ) &&
-          channels.includes("LEXICAL_BM25")
+          ) && channels.includes("LEXICAL_BM25")
       )
     ).toBe(true);
   });
