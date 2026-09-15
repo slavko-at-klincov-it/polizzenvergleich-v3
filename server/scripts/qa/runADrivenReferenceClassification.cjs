@@ -5235,6 +5235,13 @@ async function runBatch({
       break;
     for (const unitId of workingBatch.expectedUnitIds)
       attemptsByUnit.set(unitId, (attemptsByUnit.get(unitId) || 0) + 1);
+    const requestTemperature =
+      maximumAttempts > 1 &&
+      workingBatch.expectedUnitIds.every(
+        (unitId) => (attemptsByUnit.get(unitId) || 0) >= maximumAttempts
+      )
+        ? 0.1
+        : 0;
     const started = performance.now();
     let observedRawText = "";
     let observedResponses = [];
@@ -5245,7 +5252,7 @@ async function runBatch({
         payload: {
           model,
           messages,
-          temperature: 0,
+          temperature: requestTemperature,
           max_tokens: 12_000,
         },
         requestTimeoutMs,
@@ -5338,6 +5345,7 @@ async function runBatch({
           ])
         ),
         messagesSha256,
+        requestTemperature,
         durationMs: Math.round(performance.now() - started),
         errorClass: null,
         timedOut: false,
@@ -5439,6 +5447,7 @@ async function runBatch({
           ])
         ),
         messagesSha256: sha256(JSON.stringify(messages)),
+        requestTemperature,
         durationMs: Math.round(performance.now() - started),
         errorClass: errorClass(error),
         timedOut: error?.telemetry?.timedOut === true,
