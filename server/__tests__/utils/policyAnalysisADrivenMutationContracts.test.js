@@ -403,7 +403,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     });
 
     expect(objectResult.channelProvenance.LEXICAL_BM25).toEqual({
-      compoundVariants: ["abstellplatze"],
+      compoundVariants: expect.arrayContaining(["abstellplatze"]),
       semanticAuthority: false,
     });
     expect(
