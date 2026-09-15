@@ -9562,15 +9562,33 @@ alter V13-Manifesthash:                 f6527b3ecbe75ae25e121774aa03a2e155db2d0f
 neuer V14-Manifesthash:                 9b28c37e5637fe407668f280fdfdef4a78f364cee7d540b7c25ff65ad3112d5f
 Batch 11:                               V62, 6/6 journalisiert, PASS
 Batch 12:                               drei timeoutfreie Aufrufe, 6/6, PASS
-aktueller sicherer Laufstand:           12/58 A-Batches PASS
+A-Klassifikation:                       58/58 Batches PASS
+dynamische Requirements/Komponenten:   363/1.274
+ungeklärte Units/Review-Blöcke:         0/0
+aus V61 source-identisch übernommen:    267 Units
+Dinghy-Retrieval:                       9 Dokumente, 322 Klauseln,
+                                        1.274 Queries, 11.466 Rankings PASS
+Qwen-B-Entscheidungen:                  4/204 Batches PASS, aktiv
 ```
 
-Der Produkt-Runner arbeitet auf dem Mac Studio seriell weiter; Qwen ist mit
-Kontext 42.496 und Parallelität 1 das einzige geladene Modell. Dinghy wird erst
-nach vollständiger A-Klassifikation exklusiv geladen. Es gibt weiterhin kein
-Deployment und keine freigegebene Kunden-XLSX. Dieser Zwischenstand belegt
-den allgemeinen Listen-/Resume-Fix und einen neuen Batch, aber noch keinen
-vollständigen 1+9-Endlauf, Holdout oder Generalisierung.
+Der Produkt-Runner arbeitet auf dem Mac Studio seriell weiter. Nach 58/58
+A-Batches wurde Qwen vollständig entladen, Dinghy exklusiv geladen, die
+Mehrkanalsuche terminalisiert, Dinghy wieder entladen und Qwen mit Kontext
+42.496/Parallelität 1 exakt wiederhergestellt. Die verbleibenden A-Units wurden
+nicht unnötig neu berechnet: Der vollständige V61-Integritätssnapshot bestand
+den existierenden Seedvertrag mit 376/376 source-identischen Units und allen
+58 hashgebundenen Batches; 267 Antworten wurden tatsächlich übernommen.
 
-Status: `V62-LISTENPROVENIENZ UND V13→V14-RESUME REAL PASS; 12/58 FRISCHE
-A-BATCHES TERMINAL; PRODUKTLAUF AKTIV; KEIN DEPLOYMENT`.
+Das V14-A-Manifest besitzt Hash
+`e6965f3121b763a59c5f2c48553fd37e45bca4a51edea9b5b8e8a3b2c0330483`.
+Der neue Suchplan enthält 363 Requirements, 1.274 Komponenten, 4.511
+selektierte Kandidaten und 204 Qwen-Batches. Die ersten vier Batches bestanden
+timeout- und abortfrei; Batch 4 benötigte zwei semantische Versuche. Es gibt
+weiterhin kein
+Deployment und keine freigegebene Kunden-XLSX. Dieser Zwischenstand belegt
+die terminale A- und Retrievalphase, aber noch keinen vollständigen
+1+9-Endlauf, Holdout oder Generalisierung.
+
+Status: `V62-LISTENPROVENIENZ UND V13→V14-RESUME REAL PASS; A 58/58 UND
+DINGHY-RETRIEVAL TERMINAL; QWEN-B-ENTSCHEIDUNGEN 4/204 AKTIV; KEIN
+DEPLOYMENT`.
