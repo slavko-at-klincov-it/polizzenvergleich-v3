@@ -25,6 +25,9 @@ const {
   buildADrivenCounterpartDecisionPlan,
 } = require("../../utils/policyAnalysis/aDrivenCounterpartDecisionPlan");
 const {
+  criticalFactRoleConceptEvidenceBound,
+} = require("../../utils/policyAnalysis/aDrivenRequirementCounterpartDecision");
+const {
   bm25Index,
   corpusCompoundLexicalVariants,
 } = require("../../utils/policyAnalysis/counterpartRetrievalPrimitives");
@@ -350,6 +353,29 @@ describe("LF_REFERENCE_A_DRIVEN_V2 A mutation contracts", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
+  test("requires notification evidence for a positive notification fact role", () => {
+    expect(
+      criticalFactRoleConceptEvidenceBound({
+        componentLabel: "gilt nicht als anzeigepflichtig",
+        candidateTexts: [
+          "Vorübergehende Abweichungen von Sicherheitsvorschriften gelten nicht als Obliegenheitsverletzung.",
+        ],
+      })
+    ).toBe(false);
+    expect(
+      criticalFactRoleConceptEvidenceBound({
+        componentLabel: "gilt nicht als anzeigepflichtig",
+        candidateTexts: ["Eine Anzeige beim Versicherer ist nicht erforderlich."],
+      })
+    ).toBe(true);
+    expect(
+      criticalFactRoleConceptEvidenceBound({
+        componentLabel: "Neuwertentschädigung",
+        candidateTexts: ["Die Entschädigung erfolgt zum Neuwert."],
+      })
+    ).toBe(true);
+  });
+
   test("derives only long corpus-bound compound navigation variants", () => {
     const candidates = [
       { text: "Überdachte Abstellplätze sind mitversichert." },

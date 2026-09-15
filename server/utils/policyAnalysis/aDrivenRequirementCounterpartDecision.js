@@ -57,6 +57,21 @@ const CHANNEL_WEIGHTS = Object.freeze({
   STRUCTURAL: 1,
   COMPLETE_B_CORPUS: 0,
 });
+const CRITICAL_FACT_ROLE_CONCEPT_FAMILIES = Object.freeze([
+  Object.freeze([
+    "anzeigepflicht",
+    "anzeigepflichtig",
+    "anzeige",
+    "anzeigen",
+    "anzuzeigen",
+    "meldepflicht",
+    "meldepflichtig",
+    "meldung",
+    "melden",
+    "mitteilungspflicht",
+    "mitteilungspflichtig",
+  ]),
+]);
 
 function sha256(value) {
   return crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -106,6 +121,24 @@ function compoundOverlap(query, candidate) {
       matched += 1;
   }
   return matched / query.size;
+}
+
+function criticalFactRoleConceptEvidenceBound({
+  componentLabel,
+  candidateTexts,
+} = {}) {
+  const normalizedLabel = normalizedText(componentLabel).replace(/ /gu, "");
+  const triggeredFamilies = CRITICAL_FACT_ROLE_CONCEPT_FAMILIES.filter(
+    (family) => family.some((term) => normalizedLabel.includes(term))
+  );
+  if (!triggeredFamilies.length) return true;
+  const normalizedEvidence = normalizedText(candidateTexts?.join(" ")).replace(
+    / /gu,
+    ""
+  );
+  return triggeredFamilies.every((family) =>
+    family.some((term) => normalizedEvidence.includes(term))
+  );
 }
 
 function orderedRequirements(manifest) {
@@ -724,13 +757,35 @@ function derivedDecision(row, response) {
   const coreFindings = response.componentFindings.filter(
     ({ componentId }) => componentsById.get(componentId).identityCore
   );
+  const candidatesById = new Map(
+    row.candidates.map((candidate) => [candidate.candidateId, candidate])
+  );
+  const groundingGuardRejectedComponentIds = coreFindings
+    .filter(({ componentId, outcome, candidateIds }) => {
+      const component = componentsById.get(componentId);
+      return (
+        component.dimension === "FACT_ROLE" &&
+        POSITIVE_COUNTERPART_OUTCOMES.has(outcome) &&
+        !criticalFactRoleConceptEvidenceBound({
+          componentLabel: component.label,
+          candidateTexts: candidateIds.map(
+            (candidateId) => candidatesById.get(candidateId)?.exactText || ""
+          ),
+        })
+      );
+    })
+    .map(({ componentId }) => componentId);
+  const sourceBoundCoreFindings = coreFindings.filter(
+    ({ componentId }) =>
+      !groundingGuardRejectedComponentIds.includes(componentId)
+  );
   const contextCompatible = POSITIVE_COUNTERPART_OUTCOMES.has(
     response.contextFinding.outcome
   );
   const found =
     contextCompatible &&
-    coreFindings.length > 0 &&
-    coreFindings.some(({ outcome }) =>
+    sourceBoundCoreFindings.length > 0 &&
+    sourceBoundCoreFindings.some(({ outcome }) =>
       POSITIVE_COUNTERPART_OUTCOMES.has(outcome)
     );
   const opposite = response.componentFindings.some(
@@ -739,6 +794,7 @@ function derivedDecision(row, response) {
   const full =
     found &&
     response.contextFinding.outcome === "MATCH" &&
+    groundingGuardRejectedComponentIds.length === 0 &&
     response.componentFindings.every(({ outcome }) => outcome === "MATCH") &&
     response.unmodeledDifferences.length === 0;
   return {
@@ -752,6 +808,7 @@ function derivedDecision(row, response) {
           : "PARTIAL_COUNTERPART"
       : null,
     absenceCertified: false,
+    groundingGuardRejectedComponentIds,
   };
 }
 
@@ -930,9 +987,11 @@ module.exports = {
   A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID,
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
   COMPONENT_OUTCOMES,
+  CRITICAL_FACT_ROLE_CONCEPT_FAMILIES,
   DIFFERENCE_DIMENSIONS,
   IDENTITY_CORE_TYPES,
   buildADrivenRequirementDecisionPlan,
+  criticalFactRoleConceptEvidenceBound,
   validateADrivenRequirementDecisionArtifact,
   validateADrivenRequirementDecisionPlan,
   validateADrivenRequirementDecisionResponses,
