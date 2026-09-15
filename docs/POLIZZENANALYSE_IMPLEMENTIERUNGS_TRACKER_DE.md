@@ -9708,3 +9708,91 @@ ausgeführt; es wurde keine Abhängigkeit nachinstalliert.
 Der bereits zuvor autorisierte, isolierte V62-B-Lauf wurde durch diese
 Konsolidierung weder neu gestartet noch verändert. Kein zusätzlicher
 Modelllauf, kein Produkt-Routing und kein Deployment.
+
+### 133.49 Vollständiger V62-Endlauf und partielle Identitätskernregel
+
+Der frische Lauf
+`LF-A-DRIVEN-V2-FRESH-1PLUS9-20260915-001743EE` wurde unter dem dynamischen
+V14-A-Manifest vollständig abgeschlossen. Die Primärprüfung endete mit
+204/204 PASS-Batches. Die anschließende Vollkorpus-Abwesenheitsprüfung
+terminalisierte 330/330 Partitionen; 176 davon wurden über den exakten,
+hashgebundenen Seedvertrag übernommen, die übrigen 154 waren bereits im
+aktuellen Lauf berechnet. Der Rescue-Plan umfasste neun Requirements und
+bestand 9/9 Batches. Daraus entstand zunächst ein vollständig validiertes
+privates Ergebnis mit 363/363 terminalen Zeilen, 337 `FOUND`, 26 `NOT_FOUND`
+und null `UNRESOLVED`.
+
+Die getrennte Gold-283-Regression zeigte auf den 144 eindeutig zuordenbaren
+Gold-Zeilen 134 Übereinstimmungen, zwei False Positives und acht False
+Negatives. Eine source-bound Prüfung der zehn Abweichungen belegte einen
+allgemeinen Aggregationsfehler: Bei passendem fachlichem Kontext verlangte die
+Primärentscheidung bisher, dass jede als Identitätskern typisierte Komponente
+positiv ist. Dadurch wurden Zeilen trotz belegtem Teilgegenstück als
+Fallback/Abwesenheit behandelt. Das widerspricht der bestätigten Fachregel,
+dass ein quellengebundenes Gegenstück zum selben fachlichen Element
+`GEFUNDEN` ist und fehlende Teile, Bedingungen, Werte oder Limits getrennt als
+Abweichung erscheinen.
+
+Commit `237cb785a` ändert ausschließlich diese Aggregation von `every` auf
+`some`; Kontextbindung und mindestens ein positiver Identitätskern bleiben
+Pflicht. Eine rein deterministische Vorabmessung auf allen vorhandenen 363
+Modellantworten änderte fünf Zeilen. Auf den 144 eindeutigen Gold-Mappings
+verbesserte sie 134/144 auf 137/144, reduzierte False Negatives von acht auf
+fünf und erzeugte kein zusätzliches False Positive. Eine pauschale Begrenzung
+der Evidenzanzahl wurde ausdrücklich verworfen: 161/363 legitime Fundzeilen
+besitzen mehr als acht zusammengeführte B-Fundstellen, sodass ein solcher
+Grenzwert echte Treffer beschädigen würde.
+
+Mac-Studio-Nachweise auf dem exakten Commit im isolierten Worktree
+`/private/tmp/lf-partial-core-237cb785a`:
+
+```text
+Syntax und Prettier:                    PASS
+fokussierter A-driven-Vertragstest:     321/321 PASS
+Primärantworten:                        204/204 Batches wiederverwendet
+neue Primärverteilung:                  338 FOUND / 25 Fallback / 0 unresolved
+Vollkorpusprüfung:                      275/275 Partitionen wiederverwendet
+neue Modellaufrufe Abwesenheit:         0
+Rescue:                                 6/6 Batches, 9 Versuche, PASS
+finale dynamische Zeilen:               363/363 terminal
+FOUND / NOT_FOUND / UNRESOLVED:         343 / 20 / 0
+FULL / PARTIAL / CONTRADICTED / NO:     240 / 102 / 1 / 20
+```
+
+Die revidierte private Artefaktkette liegt unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/at.klincov.polizzenvergleich-v3/QA/LF-A-DRIVEN-V2-FRESH-1PLUS9-20260915-001743EE/a-driven-v2-revision-237cb785a/
+```
+
+Zentrale Hashes:
+
+```text
+Primärentscheidung:     e9f2d0e1a71e67ebc6a3e763648ddcbb016b5172e5a972c850b974580dedf558
+Abwesenheitsplan:       bad0af5f084a639ba8226040a605dd3f3683aa48e94ea4ad908cefa940f44035
+Abwesenheitsentscheidung: b02050b35574d7bd38078dd8afa69db260ebe026e07b864676b902094c5bbd66
+Rescue-Entscheidung:    1105861e2a3e47d7eb2633c42c92bfea57d3a962a9ba464360bb9e87b83b89e6
+finale Entscheidung:    3521d363e9663ccf7da398254ec6cb26d2970bafc0e3f46679985a8602a01eaf
+binäres Ergebnis:       e1f7770833a9a2ea0451064db3a61d3de8200cb987d82238f034eb868b8ebed5
+comparison.private:     344ba569500411666ccaf3808cf199aa98f1fc97f8e95f07cab56e4f45b12659
+polizzenvergleich.xlsx: ab46c15a451196f4ebffe467bb64f35b7ed840ae1bd98e757ed9af4e1fba6ee3
+```
+
+Die erneute Produktmaterialisierung und eine zweite unveränderte
+Artefakt-/XLSX-Validierung bestanden. Gold-283 blieb unverändert und war kein
+Produktionseingang. Der Crosswalk deckt 283/283 Legacy-Anforderungen ab; 144
+sind bijektiv messbar, 139 bleiben wegen echter Split-/Merge-Zuordnungen
+nicht ohne semantische Adjudikation zeilenbinär messbar. Auf den 144
+eindeutigen Fällen verbleiben sieben Abweichungen: zwei False Positives
+(`HP-24`, `AV-30`) und fünf False Negatives (`VS-14`, `VS-15`, `ST-18`,
+`AV-06`, `AV-22`). Die revidierte Regression besitzt Hash
+`4fc7047788ce44f57318d4bef77d00fb32432f0f0f14280a34e24e0bb547777f`.
+
+Der XLSX ist weiterhin ein internes QA-/Review-Artefakt. Es erfolgte weder
+Kundendeployment noch Releasefreigabe. Der bekannte 1+9-Lauf belegt eine
+reale Qualitätsverbesserung dieses Fixtures, aber keinen Holdout- oder
+99-Prozent-Generalisierungsnachweis.
+
+Status: `LF_REFERENCE_A_DRIVEN_V2 V62 363/363 TERMINAL; 343 FOUND / 20
+NOT_FOUND; GOLD EINDEUTIG 137/144; 7 BELEGTE QUALITÄTSABWEICHUNGEN VERBLEIBEN;
+INTERNE XLSX VALID; KEIN DEPLOYMENT`.
