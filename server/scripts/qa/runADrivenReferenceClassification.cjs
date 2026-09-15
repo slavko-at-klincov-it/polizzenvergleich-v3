@@ -563,6 +563,28 @@ function listSegmentRepairSkeletons(batch, diagnostics) {
   );
 }
 
+function focusedSourceBoundAtomizationRepair(diagnostics) {
+  const supportedCodes = new Set([
+    "INVALID_UNIT_ATOMIZATION",
+    "REQUIREMENT_OWNED_BLOCKS_UNCITED",
+    "REQUIREMENT_SOURCE_TEXT_INVALID",
+  ]);
+  if (
+    diagnostics.length === 0 ||
+    diagnostics.some(({ code }) => !supportedCodes.has(code)) ||
+    !diagnostics.some(({ code }) =>
+      [
+        "REQUIREMENT_OWNED_BLOCKS_UNCITED",
+        "REQUIREMENT_SOURCE_TEXT_INVALID",
+      ].includes(code)
+    )
+  )
+    return null;
+  return `FOKUSREPARATUR_SOURCE_BOUND_ATOMIZATION. Die vorige Antwort ist ausschließlich wegen dieser Diagnosen ungültig: ${JSON.stringify(
+    diagnostics
+  )}. Gib genau ein vollständiges JSON-Array mit jeder expectedUnitId einmal und ohne Markdown aus. Korrigiere nur die beanstandeten Requirements; erhalte bereits gültige Klassen, Komponenten und Quellen unverändert. Jedes displayLabel muss ein wörtlicher zusammenhängender Ausschnitt aus der Vereinigungsmenge seiner components.sourceBlockIds sein. Bei requiredSourceBlockIds verwende alle notwendigen Blöcke gemeinsam: Ergänze für jeden fachlich relevanten unzitierten ownedSourceBlock eine eigene semantisch passende Komponente mit wörtlichem label oder erweitere eine bestehende Komponente nur dann, wenn auch deren label, rawValue, unit und qualifier im vollständigen Quellenbereich wörtlich belegt bleiben. Alternativ darfst du das displayLabel auf den vollständigen wörtlichen Satz-, Klausel-, Listen- oder Tabellenpunkt verkürzen, den die Komponenten tatsächlich gemeinsam belegen. Verwende niemals eine feste Zeichenzahl, verliere keinen operativen ownedSourceBlock, paraphrasiere nicht und erfinde weder Text noch Source-ID.`;
+}
+
 function normalizationEvidenceBlocks(unit) {
   return [
     ...(unit?.source?.blocks || []),
@@ -5420,6 +5442,11 @@ async function runBatch({
           ` Verbindliche serverseitige Requirement-Skelette: ${JSON.stringify(
             segmentSkeletons
           )}. Erzeuge für jedes Skelett genau einen getrennten Eintrag innerhalb des requirements-Arrays des zugehörigen unitId-Objekts. exactDisplayLabel ist wörtlich zu übernehmen; requiredBlockIds müssen gemeinsam von dessen Komponenten zitiert werden. Gib niemals eine Requirement als eigenes Top-Level-Arrayobjekt aus und vereinige niemals zwei segmentIds.`;
+      const focusedRepair =
+        attempt >= 2
+          ? focusedSourceBoundAtomizationRepair(repairDiagnostics)
+          : null;
+      if (focusedRepair) messages.at(-1).content = focusedRepair;
     } catch (error) {
       const partition =
         errorClass(error) === "MODEL_REQUEST_TIMEOUT" &&
