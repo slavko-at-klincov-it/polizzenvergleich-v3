@@ -15653,7 +15653,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     });
   });
 
-  test("requires every identity-core component for the same fachliche element", () => {
+  test("keeps a partially established identity core found", () => {
     const { decisionPlan: sourcePlan } = requirementDecisionFixture();
     const decisionPlan = JSON.parse(JSON.stringify(sourcePlan));
     const row = decisionPlan.rows[0];
@@ -15707,9 +15707,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
 
     expect(result.results[0]).toMatchObject({
       status: "TERMINAL",
-      customerFound: null,
-      customerStatus: "FALLBACK_REQUIRED",
-      counterpartOutcome: null,
+      customerFound: true,
+      customerStatus: "FOUND",
+      counterpartOutcome: "PARTIAL_COUNTERPART",
       absenceCertified: false,
     });
   });
