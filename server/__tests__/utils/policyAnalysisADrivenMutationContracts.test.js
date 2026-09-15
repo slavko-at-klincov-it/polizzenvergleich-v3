@@ -408,8 +408,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     });
     expect(
       objectResult.candidates.some(
-        ({ exactText, channels }) =>
-          exactText.includes("Überdachte Abstellplätze") &&
+        ({ sourceSpans, channels }) =>
+          sourceSpans.some(({ exactText }) =>
+            exactText.includes("Überdachte Abstellplätze")
+          ) &&
           channels.includes("LEXICAL_BM25")
       )
     ).toBe(true);
