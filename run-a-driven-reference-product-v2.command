@@ -267,6 +267,11 @@ if [ ! -f "$B_DECISION_ROOT/summary.private.json" ]; then
     --qwenModelKey "$QWEN_MODEL_KEY"
 fi
 
+ABSENCE_SEED_ARGS=()
+if [ -n "${LF_B_ABSENCE_SEED_ROOT:-}" ]; then
+  ABSENCE_SEED_ARGS=(--seedOutput "$LF_B_ABSENCE_SEED_ROOT")
+fi
+
 if [ ! -f "$B_ABSENCE_ROOT/summary.private.json" ]; then
   run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenRequirementAbsenceDecisions.cjs" \
     --decisionPlan "$B_DECISION_ROOT/decision-plan.private.json" \
@@ -281,7 +286,8 @@ if [ ! -f "$B_ABSENCE_ROOT/summary.private.json" ]; then
     --abortSettlementTimeoutMs "${LF_B_QWEN_ABORT_SETTLEMENT_TIMEOUT_MS:-15000}" \
     --modelRecoveryTimeoutMs "${LF_B_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
     --lmStudioSdk "$LMSTUDIO_SDK" \
-    --qwenModelKey "$QWEN_MODEL_KEY"
+    --qwenModelKey "$QWEN_MODEL_KEY" \
+    "${ABSENCE_SEED_ARGS[@]}"
 fi
 
 run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeADrivenRequirementRescueReviewPlan.cjs" \

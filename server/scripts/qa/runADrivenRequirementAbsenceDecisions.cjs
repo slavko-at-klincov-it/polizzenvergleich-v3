@@ -16,6 +16,8 @@ const {
   A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_CONTRACT_ID,
   A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_CONTRACT_ID,
   buildADrivenRequirementAbsencePlan,
+  validateADrivenRequirementAbsenceDecisionArtifact,
+  validateADrivenRequirementAbsencePlan,
   validateADrivenRequirementAbsencePartitionResponse,
   validateADrivenRequirementAbsenceResponses,
 } = require("../../utils/policyAnalysis/aDrivenRequirementAbsenceCertification");
@@ -71,6 +73,7 @@ function argumentsFrom(argv) {
     "abortSettlementTimeoutMs",
     "modelRecoveryTimeoutMs",
     "maximumNewPartitions",
+    "seedOutput",
     "lmStudioSdk",
     "qwenModelKey",
   ]);
@@ -104,6 +107,7 @@ function argumentsFrom(argv) {
       : null,
     completeCorpus: path.resolve(values.completeCorpus),
     output: path.resolve(values.output),
+    seedOutput: values.seedOutput ? path.resolve(values.seedOutput) : null,
     lmStudioSdk: path.resolve(values.lmStudioSdk),
     qwenModelKey: values.qwenModelKey,
     model: values.model || DEFAULT_MODEL,
@@ -131,6 +135,147 @@ function argumentsFrom(argv) {
   if (result.maximumAttempts > MAXIMUM_ATTEMPTS)
     fail(`--maximumAttempts darf höchstens ${MAXIMUM_ATTEMPTS} sein`);
   return result;
+}
+
+function compatibleSeedPartitionResponses({
+  seedPlan,
+  seedDecisions,
+  seedSummary,
+  plan,
+  model,
+  modelContext,
+  requestTimeoutMs,
+  abortSettlementTimeoutMs,
+} = {}) {
+  validateADrivenRequirementAbsencePlan(seedPlan);
+  validateADrivenRequirementAbsenceDecisionArtifact(
+    seedDecisions,
+    seedPlan,
+    { requireComplete: true }
+  );
+  validateADrivenRequirementAbsencePlan(plan);
+  if (
+    seedSummary?.contractId !== RUN_CONTRACT_ID ||
+    seedSummary.absencePlanSha256 !== seedPlan.planSha256 ||
+    seedSummary.absenceDecisionSha256 !== seedDecisions.decisionSha256 ||
+    seedSummary.model?.id !== model ||
+    seedSummary.model?.loadedContextLength !== modelContext ||
+    seedSummary.unresolved !== 0 ||
+    seedSummary.terminalPartitions !== seedPlan.partitions.length ||
+    seedSummary.plannedPartitions !== seedPlan.partitions.length ||
+    seedPlan.completeBCorpusSha256 !== plan.completeBCorpusSha256
+  )
+    throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_INVALID");
+
+  const seedRequirements = new Map(
+    seedPlan.requirements.map((requirement) => [
+      requirement.requirementId,
+      requirement,
+    ])
+  );
+  const seedCandidates = new Map(
+    seedPlan.candidates.map((candidate) => [candidate.candidateId, candidate])
+  );
+  const seedPartitions = new Map(
+    seedPlan.partitions.map((partition) => [partition.partitionId, partition])
+  );
+  const seedResults = new Map(
+    seedDecisions.partitionResults.map((result) => [result.partitionId, result])
+  );
+  const responses = new Map();
+  for (const partition of plan.partitions) {
+    const seedPartition = seedPartitions.get(partition.partitionId);
+    const currentRequirement = plan.requirements.find(
+      ({ requirementId }) => requirementId === partition.requirementId
+    );
+    const seedRequirement = seedRequirements.get(partition.requirementId);
+    if (
+      !seedPartition ||
+      stableStringify(seedPartition) !== stableStringify(partition) ||
+      stableStringify(seedRequirement) !== stableStringify(currentRequirement) ||
+      partition.candidateIds.some((candidateId) => {
+        const currentCandidate = plan.candidates.find(
+          ({ candidateId: currentId }) => currentId === candidateId
+        );
+        return (
+          stableStringify(seedCandidates.get(candidateId)) !==
+          stableStringify(currentCandidate)
+        );
+      })
+    )
+      continue;
+    const seedResult = seedResults.get(partition.partitionId);
+    if (seedResult?.status !== "TERMINAL")
+      throw new Error(
+        "LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_PARTITION_NOT_TERMINAL"
+      );
+    const response = {
+      partitionId: seedResult.partitionId,
+      decision: seedResult.decision,
+      candidateIds: seedResult.selectedCandidateIds,
+      rationale: seedResult.rationale,
+    };
+    const validation = validateADrivenRequirementAbsencePartitionResponse({
+      plan,
+      partitionId: partition.partitionId,
+      response,
+    });
+    if (validation.result.status !== "TERMINAL")
+      throw new Error(
+        "LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_PARTITION_INVALID"
+      );
+    const rawResponse = JSON.stringify(response);
+    responses.set(partition.partitionId, {
+      schemaVersion: 1,
+      contractId: RUN_CONTRACT_ID,
+      absencePlanSha256: plan.planSha256,
+      promptContractId: PROMPT_CONTRACT_ID,
+      transportContractId: TRANSPORT_CONTRACT_ID,
+      requestedModel: model,
+      modelContext,
+      requestTimeoutMs,
+      abortSettlementTimeoutMs,
+      partitionId: partition.partitionId,
+      response,
+      validation,
+      rawResponse,
+      rawResponseSha256: sha256(rawResponse),
+      attempts: [],
+      reuse: {
+        contractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_VALIDATED_SEED_V1",
+        sourceAbsencePlanSha256: seedPlan.planSha256,
+        sourceAbsenceDecisionSha256: seedDecisions.decisionSha256,
+        sourceRunContractId: seedSummary.contractId,
+      },
+    });
+  }
+  return responses;
+}
+
+function compatibleSeedFromOutput({ seedOutput, plan, args }) {
+  if (!seedOutput) return new Map();
+  const stat = fs.lstatSync(seedOutput);
+  if (!stat.isDirectory() || stat.isSymbolicLink())
+    throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_OUTPUT_INVALID");
+  return compatibleSeedPartitionResponses({
+    seedPlan: readJson(
+      path.join(seedOutput, "absence-plan.private.json"),
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_PLAN"
+    ),
+    seedDecisions: readJson(
+      path.join(seedOutput, "absence-decisions.private.json"),
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_DECISIONS"
+    ),
+    seedSummary: readJson(
+      path.join(seedOutput, "summary.private.json"),
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_SUMMARY"
+    ),
+    plan,
+    model: args.model,
+    modelContext: args.modelContext,
+    requestTimeoutMs: args.requestTimeoutMs,
+    abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+  });
 }
 
 function readJson(file, code) {
@@ -672,6 +817,11 @@ async function run() {
     plan,
     "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_RESUME_MISMATCH"
   );
+  const seedResponses = compatibleSeedFromOutput({
+    seedOutput: args.seedOutput,
+    plan,
+    args,
+  });
   const baseUrl = process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
   const loadedModel = await verifyModel({
     baseUrl,
@@ -693,6 +843,7 @@ async function run() {
   });
   const results = [];
   let newPartitions = 0;
+  let seededPartitions = 0;
   let nextPartitionIndex = null;
   const startedAt = new Date().toISOString();
   const started = performance.now();
@@ -703,6 +854,11 @@ async function run() {
     if (fs.existsSync(file)) {
       result = existingResult(file, plan, partition, args);
       reused = true;
+    } else if (seedResponses.has(partition.partitionId)) {
+      result = seedResponses.get(partition.partitionId);
+      writePrivateJson(file, result);
+      reused = true;
+      seededPartitions += 1;
     } else {
       if (
         args.maximumNewPartitions !== null &&
@@ -748,6 +904,7 @@ async function run() {
     completedPartitions: results.length,
     totalPartitions: plan.partitions.length,
     newPartitions,
+    seededPartitions,
     completedAt: new Date().toISOString(),
   };
   if (!complete) {
@@ -781,6 +938,11 @@ async function run() {
       (sum, result) => sum + result.attempts.length,
       0
     ),
+    seededPartitions: results.filter(
+      ({ reuse }) =>
+        reuse?.contractId ===
+        "LF_A_DRIVEN_REQUIREMENT_ABSENCE_VALIDATED_SEED_V1"
+    ).length,
     ...decisions.summary,
   };
   writeOrVerifyPrivateJson(
@@ -806,6 +968,7 @@ if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
 module.exports = {
+  compatibleSeedPartitionResponses,
   jsonObjectsFromText,
   parseSingleDecision,
   positiveCandidateSignals,

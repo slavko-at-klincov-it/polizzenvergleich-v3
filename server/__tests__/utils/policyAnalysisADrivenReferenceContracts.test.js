@@ -100,6 +100,7 @@ const {
   buildADrivenRequirementSegmentedPlan,
 } = require("../../utils/policyAnalysis/aDrivenRequirementSegmentedPlan");
 const {
+  A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_CONTRACT_ID,
   buildADrivenRequirementAbsencePlan,
   buildADrivenRequirementFinalDecisions,
   buildADrivenRequirementRescueReviewPlan,
@@ -131,6 +132,7 @@ const {
   presentReferenceCustomerResult,
 } = require("../../utils/policyComparison/referenceCustomerPresentation");
 const {
+  compatibleSeedPartitionResponses,
   parseSingleDecision: parseRequirementAbsenceDecision,
   positiveCandidateSignals: requirementAbsencePositiveCandidateSignals,
   preliminaryDecisionArtifact,
@@ -16064,6 +16066,73 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       plan: absencePlan,
       responses: negativeResponses,
     });
+    const seedSummary = {
+      contractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_RUN_V1",
+      absencePlanSha256: absencePlan.planSha256,
+      absenceDecisionSha256: certified.decisionSha256,
+      model: {
+        id: "qwen/qwen3.6-35b-a3b",
+        loadedContextLength: 42_496,
+      },
+      unresolved: 0,
+      terminalPartitions: absencePlan.partitions.length,
+      plannedPartitions: absencePlan.partitions.length,
+    };
+    const seeded = compatibleSeedPartitionResponses({
+      seedPlan: absencePlan,
+      seedDecisions: certified,
+      seedSummary,
+      plan: absencePlan,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      requestTimeoutMs: 180_000,
+      abortSettlementTimeoutMs: 15_000,
+    });
+    expect(seeded.size).toBe(absencePlan.partitions.length);
+    expect(seeded.get(absencePlan.partitions[0].partitionId)).toMatchObject({
+      absencePlanSha256: absencePlan.planSha256,
+      attempts: [],
+      reuse: {
+        contractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_VALIDATED_SEED_V1",
+        sourceAbsenceDecisionSha256: certified.decisionSha256,
+      },
+      validation: { result: { status: "TERMINAL" } },
+    });
+    const { planSha256: _planSha256, ...changedPayload } = JSON.parse(
+      JSON.stringify(absencePlan)
+    );
+    changedPayload.requirements[0].displayLabel += " verändert";
+    const changedPlan = {
+      ...changedPayload,
+      planSha256: digest(
+        A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_CONTRACT_ID,
+        changedPayload
+      ),
+    };
+    expect(
+      compatibleSeedPartitionResponses({
+        seedPlan: absencePlan,
+        seedDecisions: certified,
+        seedSummary,
+        plan: changedPlan,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        requestTimeoutMs: 180_000,
+        abortSettlementTimeoutMs: 15_000,
+      }).size
+    ).toBe(0);
+    expect(() =>
+      compatibleSeedPartitionResponses({
+        seedPlan: absencePlan,
+        seedDecisions: certified,
+        seedSummary: { ...seedSummary, absenceDecisionSha256: "0".repeat(64) },
+        plan: absencePlan,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        requestTimeoutMs: 180_000,
+        abortSettlementTimeoutMs: 15_000,
+      })
+    ).toThrow("LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_INVALID");
     expect(certified.summary).toMatchObject({
       requirements: 1,
       terminalNotFound: 1,
