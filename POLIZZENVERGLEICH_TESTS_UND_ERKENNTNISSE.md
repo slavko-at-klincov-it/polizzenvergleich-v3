@@ -4717,3 +4717,40 @@ und gibt ausschließlich binäre Kundenstati aus.
 sind, dass die 139 nicht-bijektiven Crosswalk-Fälle korrekt bewertet wurden,
 dass zukünftige Policen generalisiert werden oder dass das private QA-XLSX
 bereits als Kundenrelease freigegeben ist.
+
+## 85. Mehrblockige Komponenten brauchen vollständige Provenienz ohne semantische Erfindung
+
+Im frischen `LF_REFERENCE_A_DRIVEN_V2`-Lauf blieb Batch 11 trotz mehrerer
+timeoutfreier Qwen-Zyklen an derselben Unit offen. Die Segmentierung war
+fachlich richtig: zwei Listensegmente und die passenden Gefahr-, Schaden- und
+Deckungskomponenten. Der Fehler lag in der doppelten Verwendung kurzer
+Komponentenlabels als Semantik und als Nachweis der vollständigen physischen
+Quellspanne. Drei reine Fortsetzungsblöcke der langen Klausel blieben dadurch
+unzitiert, obwohl sie innerhalb einer eindeutigen Segmentgrenze lagen.
+
+Der V62-Vertrag ergänzt SourceBlock-IDs nur dann, wenn ein
+`LIST_ITEM_WITH_CONTINUATIONS`-Segment aus einem Listeneinstieg und reinen
+`BODY_LINE`-Fortsetzungen besteht, alle vorhandenen Komponentenanker wörtlich
+im Segment liegen, geordnet und eindeutig sind und der erste Block verankert
+ist. Die Spannen reichen jeweils vom eigenen Anker bis zum nächsten Anker und
+dürfen sich am Grenzblock überlappen. Es werden weder Texte, Rollen noch
+Komponenten erzeugt. Ein unanchored lead bleibt fail-closed.
+
+Auf dem Mac Studio bestanden am finalen Commit
+`866416d0550c1c6140a4cec394cf9eb9045e31d8` 324/324 fokussierte sowie 722/722
+angrenzende Tests. Der ursprüngliche Batch 11 wurde aus seinem unveränderten
+Journal 6/6 valide und ohne neuen Modellaufruf materialisiert. Der unmittelbar
+folgende neue Batch 12 bestand mit drei timeoutfreien progressiven Aufrufen.
+Zusätzlich wird ein payload-identischer V13-A-Plan-Platzhalter beim
+V14-Resume digestgebunden archiviert; jede tatsächliche Planabweichung bleibt
+ein Fehler.
+
+**Beweist:** Strukturell eindeutige physische Listenfortsetzungen können
+vollständig an bereits source-bound erkannte Komponenten gebunden werden,
+ohne den semantischen Output zu erfinden oder die Fail-closed-Grenze allgemein
+zu lockern. Bereits gültige Batches und Unitantworten bleiben wiederverwendbar.
+
+**Beweist nicht:** Dass alle Klausel-, Tabellen- oder Listenformen damit
+gelöst sind, dass die B-Gegenstücksuche besser geworden ist oder dass der noch
+laufende bekannte 1+9-Test Generalisierung beziehungsweise 99 Prozent
+nachweist.
