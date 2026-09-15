@@ -365,7 +365,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 adversarial B contracts", () => {
     expect(
       criticalFactRoleConceptEvidenceBound({
         componentLabel: "gilt nicht als anzeigepflichtig",
-        candidateTexts: ["Eine Anzeige beim Versicherer ist nicht erforderlich."],
+        candidateTexts: [
+          "Eine Anzeige beim Versicherer ist nicht erforderlich.",
+        ],
       })
     ).toBe(true);
     expect(
