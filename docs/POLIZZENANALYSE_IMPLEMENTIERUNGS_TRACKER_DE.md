@@ -9683,7 +9683,28 @@ die fachliche Identitätskernentscheidung bei abweichendem Wortlaut. Ein
 späterer gemeinsamer A/B-Retrievalkern ist `EXTRACT_SHARED_CORE`, aber weder
 Voraussetzung noch zulässiger Ersatz für den laufenden 204er-Vertrag.
 
-Validierungsstatus beim Anlegen dieses Eintrags: lokale Quellinspektion
-abgeschlossen; Mac-Studio-Validator und fokussierte Tests noch ausstehend.
-Der bereits zuvor autorisierte, isolierte V62-B-Lauf wurde durch diese lokale
-Konsolidierung weder neu gestartet noch verändert. Kein Deployment.
+Mac-Studio-Validierung auf dem exakten, sauberen Commit
+`4fb2aec73429b712deb04c82642b69d007c9031d` im isolierten Worktree
+`/private/tmp/capability-inventory-4d5d76144` mit Node `v22.23.2`:
+
+```text
+Inventarvalidator:                         PASS
+Capabilities:                             25
+Workflow-Maps:                             2
+Vertragsbindungen:                        20
+fail-closed Negativfälle:                3/3 PASS
+ACTIVE_PRODUCTION / ACTIVE_SHADOW / QA:  9 / 13 / 1
+Inventar SHA-256: 1f623b7c2ee0110b5121223ef7e800849373ba1694f97ff6f1f2974a7ee6a215
+Workflow SHA-256: 3f5c48394605a0f2db2b2d8ab545915b563197cc56902a8cbb7a35cf36c131f0
+```
+
+Der erste Validatorlauf fand eine ungenaue Resume-Callerbeschreibung. Commit
+`4fb2aec73` korrigiert sie auf den tatsächlich im Runner vorhandenen
+fail-closed Batchvertrag; die Wiederholung bestand. Ein Jest-Vertragstest ist
+zusätzlich eingecheckt. Da im isolierten Worktree keine Jest-Dev-Abhängigkeit
+vorlag, wurden die drei zentralen Negativfälle direkt mit der Node-22-Runtime
+ausgeführt; es wurde keine Abhängigkeit nachinstalliert.
+
+Der bereits zuvor autorisierte, isolierte V62-B-Lauf wurde durch diese
+Konsolidierung weder neu gestartet noch verändert. Kein zusätzlicher
+Modelllauf, kein Produkt-Routing und kein Deployment.
