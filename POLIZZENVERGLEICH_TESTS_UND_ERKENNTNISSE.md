@@ -4857,3 +4857,40 @@ ist, dass `ACTIVE_SHADOW` produktionsreif ist, dass der laufende 1+9-Lauf Gold
 verbessert oder dass bekannte Fixtures Generalisierung beziehungsweise 99
 Prozent belegen. Der bereits autorisierte B-Lauf wurde durch diese
 Konsolidierung weder gestartet noch verändert; es gab kein Deployment.
+
+## 88. Ein belegtes Teilgegenstück darf nicht als Vollkorpus-Abwesenheit enden
+
+Der vollständige V62-Lauf zeigte einen fachlichen Aggregationsfehler, der
+weder aus Retrieval noch aus Modelltransport stammte. Bei fünf von 363
+Requirements waren Kontext und mindestens eine Identitätskernkomponente
+quellengebunden positiv, weitere Identitätskernkomponenten aber nur verwandt
+oder nicht belegt. Die bisherige `every`-Aggregation schickte diese Zeilen
+trotz Teilgegenstück in die Vollkorpus-Abwesenheitsprüfung.
+
+Die bestätigte Kundenregel verlangt hier ein binäres `GEFUNDEN`; die nicht
+belegten Teile bleiben als Komponentenabweichung sichtbar. Commit
+`237cb785a` verwendet deshalb bei weiterhin positivem Kontext mindestens eine
+positive Identitätskernkomponente als Fundkriterium. Die Änderung wurde vor
+der Umsetzung auf allen vorhandenen Antworten simuliert: fünf Zeilen änderten
+sich, auf 144 eindeutigen Gold-Mappings stieg die Übereinstimmung von 134 auf
+137, False Negatives sanken von acht auf fünf und False Positives blieben bei
+zwei.
+
+Auf dem Mac Studio bestanden Syntax, Prettier und 321/321 fokussierte Tests.
+204/204 Primärbatches und 275/275 weiterhin benötigte
+Vollkorpuspartitionen wurden wiederverwendet. Nur sechs Rescue-Fälle mussten
+wegen planabhängig geänderter Kandidaten-IDs erneut geprüft werden; sie
+bestanden mit neun Modellversuchen. Das neue Ergebnis ist 363/363 terminal,
+343 `FOUND`, 20 `NOT_FOUND`, null `UNRESOLVED` und intern als XLSX validiert.
+
+**Beweist:** Eine allgemeine, dokumentunabhängige Teilkernaggregation behebt
+drei eindeutig gemessene Fehlnegative, ohne auf diesem Gate neue
+Fehlpositive zu erzeugen. Bereits gültige Modell- und Vollkorpusartefakte
+lassen sich dabei weitgehend weiterverwenden.
+
+**Beweist nicht:** Dass jedes teilweise überlappende Element tatsächlich ein
+Gegenstück ist, dass die zwei verbleibenden Fehlpositiven oder fünf
+Fehlnegativen gelöst sind oder dass 137/144 eine Generalisierungs- oder
+Produktionsfreigabe darstellt. 139 Gold-Zeilen bleiben wegen echter
+Split-/Merge-Beziehungen getrennt diagnostisch und dürfen nicht durch eine
+blinde OR-Zuordnung künstlich als richtig gezählt werden.
