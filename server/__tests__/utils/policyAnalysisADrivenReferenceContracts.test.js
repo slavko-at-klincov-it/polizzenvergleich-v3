@@ -15151,7 +15151,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(system).toContain("sprachlogisch zwingende Verbindung");
     expect(system).toContain("keine ungeschriebene Ausnahme");
     expect(system).toContain("ausdrücklich umfassender Oberbegriff");
-    expect(system).toContain("nur ähnlicher wirtschaftlicher Zweck genügt nicht");
+    expect(system).toContain(
+      "nur ähnlicher wirtschaftlicher Zweck genügt nicht"
+    );
     expect(system).toContain("kleinste Menge von candidateIds");
     expect(request.expectedRequirementIds).toEqual(
       decisionPlan.batches[0].expectedRequirementIds
