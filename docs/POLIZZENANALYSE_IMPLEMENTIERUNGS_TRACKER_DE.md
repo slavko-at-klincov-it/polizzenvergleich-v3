@@ -9592,3 +9592,56 @@ die terminale A- und Retrievalphase, aber noch keinen vollständigen
 Status: `V62-LISTENPROVENIENZ UND V13→V14-RESUME REAL PASS; A 58/58 UND
 DINGHY-RETRIEVAL TERMINAL; QWEN-B-ENTSCHEIDUNGEN 4/204 AKTIV; KEIN
 DEPLOYMENT`.
+
+### 133.47 Adaptiver, resume-sicherer Timeout-Split für B-Requirements
+
+Der frische Lauf stoppte später kontrolliert an Planbatch 38. Dieser Batch
+enthielt zwei fachlich unabhängige Requirements, 14 Komponenten, 24
+Kandidaten und 66.984 serialisierte Zeichen. Alle drei zulässigen
+Gruppenrequests endeten nach der harten Grenze von 180 Sekunden ohne
+Modellantwort. Jeder Request wurde abgebrochen, vollständig gesettelt und
+Qwen vor dem nächsten Versuch als exakt `qwen/qwen3.6-35b-a3b` mit Kontext
+42.496 sicher neu geladen. Es gab weder eine Teilantwort noch ein
+Batch-PASS-Artefakt; 37 Vorgängerbatches blieben gültig.
+
+Commit `c87aadf9d483d72ddce0bc67aacd529c19b54788` übernimmt für den
+Requirement-Runner das bereits im A-Klassifikationspfad bewährte allgemeine
+Schedulerprinzip. Nach einem sicher abgewickelten Timeout eines
+Mehr-Requirement-Requests wird deterministisch genau ein ausstehendes
+Requirement angefragt. Retrybudgets gelten pro Requirement. Terminale
+Einzelantworten werden einzeln gegen ihre vollständigen Komponenten und
+Kandidaten validiert, im Speicher zusammengeführt und erst nach erneuter
+Validierung des unveränderten Originalbatches als PASS persistiert. Unsafe
+Recovery, ausgeschöpfte Budgets und unvollständige Merges bleiben
+fail-closed. Attemptjournale sind weiterhin append-only.
+
+Ein gebundenes, sicheres Gruppen-Timeoutjournal setzt beim Resume die
+Startstrategie auf ein Einzel-Requirement. Es gilt nicht als semantische
+Antwort und verbraucht im neuen, geänderten Resume-Zyklus kein
+Einzel-Requirement-Budget. Ungültige oder nicht vollständig gebundene
+Journale beeinflussen diese Strategie nicht.
+
+Mac-Studio-Nachweise auf dem exakten Commit:
+
+```text
+isolierter Worktree:                    /private/tmp/lf-reference-a-driven-v2-c87aad
+Syntax und Prettier:                    PASS
+fokussierter A-driven-Vertragstest:     321/321 PASS
+breite Policy-Regression:               102/102 Suites, 1.981/1.981 PASS
+alte PASS-Batches wiederverwendet:      37/37
+Batch 38, Requirement 1:                88.914 ms, terminal
+Batch 38, Requirement 2:                47.588 ms, terminal
+Batch 38 gesamt:                        2/2, null Diagnosen, PASS
+neuer Gruppenrequest beim Resume:       0
+Checkpoint:                             38/204, Resume ab Batch 39
+```
+
+Die Änderung erhöht weder den Request-Timeout noch verkleinert sie jeden
+Batch pauschal. Kleine Gruppen bleiben für die Laufzeitoptimierung erlaubt;
+nur ein real sicher gesettelter Timeout löst die adaptive Verkleinerung aus.
+Sie verändert weder Retrieval, Kandidaten, Quellen, fachlichen Prompt noch
+Gold-283. Der restliche Primär-B-Lauf wurde nach bestandenem Ein-Batch-Gate
+ab Batch 39 fortgesetzt.
+
+Status: `B-TIMEOUT-SPLIT SYNTHETISCH UND REAL PASS; BATCH 38 TERMINAL;
+PRIMÄR-B AB 39 AKTIV; KEIN DEPLOYMENT`.
