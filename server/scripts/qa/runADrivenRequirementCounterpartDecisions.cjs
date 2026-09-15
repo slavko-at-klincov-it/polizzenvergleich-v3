@@ -420,6 +420,7 @@ async function runBatch({
   recoverModelAfterAbort = async () => ({ status: "SAFE_TEST_DOUBLE" }),
   onAttempt = async () => {},
   initialAcceptedResponses = [],
+  resumeAfterSafeGroupedTimeout = false,
 }) {
   const accepted = new Map(
     initialAcceptedResponses.map((response) => [
@@ -427,18 +428,39 @@ async function runBatch({
       response,
     ])
   );
-  const attempts = [];
-  let workingBatch = repairBatch(
-    batch,
-    batch.expectedRequirementIds.filter((id) => !accepted.has(id)),
-    0
+  const initiallyPendingRequirementIds = batch.expectedRequirementIds.filter(
+    (requirementId) => !accepted.has(requirementId)
   );
-  if (accepted.size === 0) workingBatch = batch;
+  const attemptsByRequirement = new Map(
+    initiallyPendingRequirementIds.map((requirementId) => [requirementId, 0])
+  );
+  const attempts = [];
+  let workingBatch =
+    accepted.size === 0 &&
+    !(
+      resumeAfterSafeGroupedTimeout && initiallyPendingRequirementIds.length > 1
+    )
+      ? batch
+      : repairBatch(batch, initiallyPendingRequirementIds, 0);
   let repairDiagnostics = [];
   let lastRawText = "";
   let lastError = null;
-  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+  const maximumRequestCalls =
+    initiallyPendingRequirementIds.length * maximumAttempts;
+  for (let attempt = 1; attempt <= maximumRequestCalls; attempt += 1) {
     if (accepted.size === batch.expectedRequirementIds.length) break;
+    if (
+      workingBatch.expectedRequirementIds.some(
+        (requirementId) =>
+          (attemptsByRequirement.get(requirementId) || 0) >= maximumAttempts
+      )
+    )
+      break;
+    for (const requirementId of workingBatch.expectedRequirementIds)
+      attemptsByRequirement.set(
+        requirementId,
+        (attemptsByRequirement.get(requirementId) || 0) + 1
+      );
     const messages = prompt(workingBatch, repairDiagnostics);
     const started = performance.now();
     let observedRawText = "";
@@ -474,9 +496,26 @@ async function runBatch({
       const pending = batch.expectedRequirementIds.filter(
         (requirementId) => !accepted.has(requirementId)
       );
+      const retryablePending = pending.filter(
+        (requirementId) =>
+          (attemptsByRequirement.get(requirementId) || 0) < maximumAttempts
+      );
+      const retryBatch = retryablePending.length
+        ? repairBatch(batch, retryablePending, attempt + 1)
+        : null;
+      const rotatesToFreshRequirement = retryBatch?.expectedRequirementIds.some(
+        (requirementId) =>
+          !workingBatch.expectedRequirementIds.includes(requirementId)
+      );
       const attemptRecord = {
         attempt,
         requestedRequirementIds: workingBatch.expectedRequirementIds,
+        requirementAttempts: Object.fromEntries(
+          workingBatch.expectedRequirementIds.map((requirementId) => [
+            requirementId,
+            attemptsByRequirement.get(requirementId),
+          ])
+        ),
         messagesSha256: sha256(JSON.stringify(messages)),
         durationMs: Math.round(performance.now() - started),
         errorClass: null,
@@ -493,6 +532,14 @@ async function runBatch({
           parsedResponse.duplicateCandidateIdsRemoved,
         acceptedRequirements: accepted.size,
         pendingRequirements: pending.length,
+        semanticRetryRequirementIds: retryBatch?.expectedRequirementIds || [],
+        semanticRetryStrategy: retryBatch
+          ? rotatesToFreshRequirement
+            ? "NEXT_PENDING_REQUIREMENT"
+            : "SINGLE_REQUIREMENT_REPAIR"
+          : pending.length
+            ? "EXHAUSTED"
+            : "COMPLETE",
         requestValidationPassed: currentValidation.passed,
         diagnostics: currentValidation.diagnostics,
       };
@@ -501,12 +548,49 @@ async function runBatch({
       lastRawText = observedRawText;
       lastError = null;
       if (!pending.length) break;
-      repairDiagnostics = currentValidation.diagnostics;
-      workingBatch = repairBatch(batch, pending, attempt + 1);
+      if (!retryBatch) break;
+      repairDiagnostics = rotatesToFreshRequirement
+        ? []
+        : currentValidation.diagnostics;
+      workingBatch = retryBatch;
     } catch (error) {
+      const pending = batch.expectedRequirementIds.filter(
+        (requirementId) => !accepted.has(requirementId)
+      );
+      const retryablePending = pending.filter(
+        (requirementId) =>
+          (attemptsByRequirement.get(requirementId) || 0) < maximumAttempts
+      );
+      const retryBatch = retryablePending.length
+        ? repairBatch(batch, retryablePending, attempt + 1)
+        : null;
+      const safeTimeoutPartition =
+        errorClass(error) === "MODEL_REQUEST_TIMEOUT" &&
+        error.retrySafe !== false &&
+        workingBatch.expectedRequirementIds.length > 1 &&
+        retryBatch
+          ? {
+              strategy: "SINGLE_REQUIREMENT_AFTER_SAFE_TIMEOUT",
+              retryRequirementIds: retryBatch.expectedRequirementIds,
+              deferredRequirementIds: retryablePending.filter(
+                (requirementId) =>
+                  !retryBatch.expectedRequirementIds.includes(requirementId)
+              ),
+            }
+          : null;
+      const rotatesToFreshRequirement = retryBatch?.expectedRequirementIds.some(
+        (requirementId) =>
+          !workingBatch.expectedRequirementIds.includes(requirementId)
+      );
       const attemptRecord = {
         attempt,
         requestedRequirementIds: workingBatch.expectedRequirementIds,
+        requirementAttempts: Object.fromEntries(
+          workingBatch.expectedRequirementIds.map((requirementId) => [
+            requirementId,
+            attemptsByRequirement.get(requirementId),
+          ])
+        ),
         messagesSha256: sha256(JSON.stringify(messages)),
         durationMs: Math.round(performance.now() - started),
         errorClass: errorClass(error),
@@ -521,8 +605,8 @@ async function runBatch({
         rawResponse: observedRawText,
         responses: [],
         acceptedRequirements: accepted.size,
-        pendingRequirements:
-          batch.expectedRequirementIds.length - accepted.size,
+        pendingRequirements: pending.length,
+        timeoutRetryPartition: safeTimeoutPartition,
         error: error.message,
       };
       attempts.push(attemptRecord);
@@ -530,7 +614,12 @@ async function runBatch({
       lastRawText = observedRawText;
       lastError = error.message;
       if (error.retrySafe === false) break;
-      repairDiagnostics = [{ code: "MODEL_RESPONSE_INVALID", issues: [] }];
+      if (!retryBatch) break;
+      workingBatch = retryBatch;
+      repairDiagnostics =
+        safeTimeoutPartition || rotatesToFreshRequirement
+          ? []
+          : [{ code: "MODEL_RESPONSE_INVALID", issues: [] }];
     }
   }
   const responses = batch.expectedRequirementIds
@@ -559,6 +648,7 @@ async function runBatch({
     error: lastError,
     attempts,
     resumedAcceptedRequirements: initialAcceptedResponses.length,
+    resumeAfterSafeGroupedTimeout,
   };
 }
 
@@ -662,14 +752,16 @@ function attemptRecorder({ output, plan, batch, args }) {
   };
 }
 
-function journalResponses({ output, plan, batch, args }) {
+function journalState({ output, plan, batch, args }) {
   const directory = path.join(
     output,
     "attempts",
     `${String(batch.batchIndex).padStart(5, "0")}-${batch.batchId}`
   );
-  if (!fs.existsSync(directory)) return [];
+  if (!fs.existsSync(directory))
+    return { acceptedResponses: [], resumeAfterSafeGroupedTimeout: false };
   const responses = [];
+  let resumeAfterSafeGroupedTimeout = false;
   for (const name of fs.readdirSync(directory).sort()) {
     if (!/^cycle-\d+-attempt-\d+\.private\.json$/u.test(name)) continue;
     const artifact = readJson(
@@ -694,8 +786,22 @@ function journalResponses({ output, plan, batch, args }) {
     )
       continue;
     responses.push(...artifact.attempt.responses);
+    if (
+      artifact.attempt.errorClass === "MODEL_REQUEST_TIMEOUT" &&
+      artifact.attempt.timedOut === true &&
+      artifact.attempt.abortTriggered === true &&
+      artifact.attempt.requestSettledAfterAbort === true &&
+      artifact.attempt.recovery?.status === "SAFE_RELOADED" &&
+      artifact.attempt.responses.length === 0 &&
+      Array.isArray(artifact.attempt.requestedRequirementIds) &&
+      artifact.attempt.requestedRequirementIds.length > 1
+    )
+      resumeAfterSafeGroupedTimeout = true;
   }
-  return validResponses(plan, batch, responses);
+  return {
+    acceptedResponses: validResponses(plan, batch, responses),
+    resumeAfterSafeGroupedTimeout,
+  };
 }
 
 async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
@@ -718,6 +824,12 @@ async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
         nextBatchIndex = batch.batchIndex;
         break;
       }
+      const resumeState = journalState({
+        output: args.output,
+        plan,
+        batch,
+        args,
+      });
       result = await runBatch({
         client,
         model: args.model,
@@ -728,12 +840,9 @@ async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
         requestTimeoutMs: args.requestTimeoutMs,
         abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
         recoverModelAfterAbort,
-        initialAcceptedResponses: journalResponses({
-          output: args.output,
-          plan,
-          batch,
-          args,
-        }),
+        initialAcceptedResponses: resumeState.acceptedResponses,
+        resumeAfterSafeGroupedTimeout:
+          resumeState.resumeAfterSafeGroupedTimeout,
         onAttempt: attemptRecorder({ output: args.output, plan, batch, args }),
       });
       if (!result.validation.passed) {
@@ -921,6 +1030,7 @@ if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
 module.exports = {
+  journalState,
   normalizeRepeatedCandidateIds,
   parseJsonArray,
   processBatches,

@@ -76,6 +76,7 @@ const {
   runBatch: runCounterpartDecisionBatch,
 } = require("../../scripts/qa/runADrivenReferenceCounterpartDecisions.cjs");
 const {
+  journalState: requirementDecisionJournalState,
   normalizeRepeatedCandidateIds,
   prompt: requirementDecisionPrompt,
   repairInstruction: requirementDecisionRepairInstruction,
@@ -14845,6 +14846,38 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     return { manifest, searchPlan, searchExecution, decisionPlan };
   }
 
+  function twoRequirementBatch(decisionPlan) {
+    const first = decisionPlan.rows[0];
+    const second = JSON.parse(JSON.stringify(first));
+    second.requirementId = `${first.requirementId}-second`;
+    second.reviewId = `${first.reviewId}-second`;
+    second.components = second.components.map((component) => ({
+      ...component,
+      componentId: `${component.componentId}-second`,
+    }));
+    return {
+      ...decisionPlan.batches[0],
+      expectedRequirementIds: [first.requirementId, second.requirementId],
+      rows: [first, second],
+    };
+  }
+
+  function validRequirementResponse(row) {
+    const candidateId = row.candidates[0].candidateId;
+    return {
+      requirementId: row.requirementId,
+      contextFinding: { outcome: "MATCH", candidateIds: [candidateId] },
+      componentFindings: row.components.map((component) => ({
+        componentId: component.componentId,
+        dimension: component.dimension,
+        outcome: "MATCH",
+        candidateIds: [candidateId],
+      })),
+      unmodeledDifferences: [],
+      rationale: "Dasselbe fachliche Element ist quellengebunden belegt.",
+    };
+  }
+
   test("keeps the complete retrieval matrix but reviews one coherent A requirement", () => {
     const { manifest, searchExecution, decisionPlan } =
       requirementDecisionFixture();
@@ -15257,6 +15290,245 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       acceptedRequirements: 1,
       pendingRequirements: 0,
     });
+  });
+
+  test("splits a safely timed-out requirement batch and passes only after every requirement is merged", async () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const batch = twoRequirementBatch(decisionPlan);
+    const requested = [];
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(({ messages }) => {
+            const input = JSON.parse(
+              messages.find(({ role }) => role === "user").content
+            );
+            requested.push(input.expectedRequirementIds);
+            if (requested.length === 1) return new Promise(() => {});
+            return Promise.resolve({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify(
+                      input.expectedRequirementIds.map((requirementId) =>
+                        validRequirementResponse(
+                          batch.rows.find(
+                            (row) => row.requirementId === requirementId
+                          )
+                        )
+                      )
+                    ),
+                  },
+                },
+              ],
+              usage: {},
+            });
+          }),
+        },
+      },
+    };
+
+    const result = await runRequirementDecisionBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: decisionPlan,
+      batch,
+      maximumAttempts: 2,
+      requestTimeoutMs: 10,
+      abortSettlementTimeoutMs: 5,
+      recoverModelAfterAbort: jest.fn(async () => ({
+        status: "SAFE_RELOADED",
+      })),
+    });
+
+    expect(result.validation.passed).toBe(true);
+    expect(result.responses).toHaveLength(2);
+    expect(requested).toEqual([
+      batch.expectedRequirementIds,
+      [batch.expectedRequirementIds[0]],
+      [batch.expectedRequirementIds[1]],
+    ]);
+    expect(result.attempts[0].timeoutRetryPartition).toEqual({
+      strategy: "SINGLE_REQUIREMENT_AFTER_SAFE_TIMEOUT",
+      retryRequirementIds: [batch.expectedRequirementIds[0]],
+      deferredRequirementIds: [batch.expectedRequirementIds[1]],
+    });
+    expect(result.attempts.at(-1).semanticRetryStrategy).toBe("COMPLETE");
+  });
+
+  test("keeps an exhausted timed-out requirement fail-closed while completing deferred work", async () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const batch = twoRequirementBatch(decisionPlan);
+    const requested = [];
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(({ messages }) => {
+            const input = JSON.parse(
+              messages.find(({ role }) => role === "user").content
+            );
+            requested.push(input.expectedRequirementIds);
+            if (
+              requested.length < 3 ||
+              input.expectedRequirementIds[0] ===
+                batch.expectedRequirementIds[0]
+            )
+              return new Promise(() => {});
+            const row = batch.rows.find(
+              ({ requirementId }) =>
+                requirementId === input.expectedRequirementIds[0]
+            );
+            return Promise.resolve({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify([validRequirementResponse(row)]),
+                  },
+                },
+              ],
+              usage: {},
+            });
+          }),
+        },
+      },
+    };
+
+    const result = await runRequirementDecisionBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: decisionPlan,
+      batch,
+      maximumAttempts: 2,
+      requestTimeoutMs: 10,
+      abortSettlementTimeoutMs: 5,
+      recoverModelAfterAbort: jest.fn(async () => ({
+        status: "SAFE_RELOADED",
+      })),
+    });
+
+    expect(requested).toEqual([
+      batch.expectedRequirementIds,
+      [batch.expectedRequirementIds[0]],
+      [batch.expectedRequirementIds[1]],
+    ]);
+    expect(result.validation.passed).toBe(false);
+    expect(result.responses.map(({ requirementId }) => requirementId)).toEqual([
+      batch.expectedRequirementIds[1],
+    ]);
+  });
+
+  test("resumes a safely journaled grouped timeout at a single requirement", async () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const batch = twoRequirementBatch(decisionPlan);
+    const output = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-requirement-timeout-resume-")
+    );
+    const args = {
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      requestTimeoutMs: 180_000,
+      abortSettlementTimeoutMs: 15_000,
+      modelRecoveryTimeoutMs: 180_000,
+    };
+    try {
+      const directory = path.join(output, "attempts", `00000-${batch.batchId}`);
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(
+        path.join(directory, "cycle-001-attempt-001.private.json"),
+        `${JSON.stringify({
+          schemaVersion: 1,
+          contractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_TRANSPORT_V1",
+          decisionPlanSha256: decisionPlan.planSha256,
+          promptContractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V1",
+          promptSha256: crypto
+            .createHash("sha256")
+            .update(JSON.stringify(requirementDecisionPrompt(batch)))
+            .digest("hex"),
+          requestedModel: args.model,
+          modelContext: args.modelContext,
+          requestTimeoutMs: args.requestTimeoutMs,
+          abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+          modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
+          batchId: batch.batchId,
+          batchIndex: batch.batchIndex,
+          expectedRequirementIds: batch.expectedRequirementIds,
+          attempt: {
+            requestedRequirementIds: batch.expectedRequirementIds,
+            errorClass: "MODEL_REQUEST_TIMEOUT",
+            timedOut: true,
+            abortTriggered: true,
+            requestSettledAfterAbort: true,
+            recovery: { status: "SAFE_RELOADED" },
+            responses: [],
+          },
+        })}\n`
+      );
+      const resumeState = requirementDecisionJournalState({
+        output,
+        plan: decisionPlan,
+        batch,
+        args,
+      });
+      expect(resumeState).toEqual({
+        acceptedResponses: [],
+        resumeAfterSafeGroupedTimeout: true,
+      });
+
+      const requested = [];
+      const result = await runRequirementDecisionBatch({
+        client: {
+          chat: {
+            completions: {
+              create: jest.fn(async ({ messages }) => {
+                const input = JSON.parse(
+                  messages.find(({ role }) => role === "user").content
+                );
+                requested.push(input.expectedRequirementIds);
+                return {
+                  model: args.model,
+                  choices: [
+                    {
+                      message: {
+                        content: JSON.stringify(
+                          input.expectedRequirementIds.map((requirementId) =>
+                            validRequirementResponse(
+                              batch.rows.find(
+                                (row) => row.requirementId === requirementId
+                              )
+                            )
+                          )
+                        ),
+                      },
+                    },
+                  ],
+                  usage: {},
+                };
+              }),
+            },
+          },
+        },
+        model: args.model,
+        modelContext: args.modelContext,
+        plan: decisionPlan,
+        batch,
+        maximumAttempts: 2,
+        initialAcceptedResponses: resumeState.acceptedResponses,
+        resumeAfterSafeGroupedTimeout:
+          resumeState.resumeAfterSafeGroupedTimeout,
+      });
+
+      expect(result.validation.passed).toBe(true);
+      expect(requested).toEqual([
+        [batch.expectedRequirementIds[0]],
+        [batch.expectedRequirementIds[1]],
+      ]);
+    } finally {
+      fs.rmSync(output, { recursive: true, force: true });
+    }
   });
 
   test("accepts a source-bound response after removing duplicate candidate references", async () => {
