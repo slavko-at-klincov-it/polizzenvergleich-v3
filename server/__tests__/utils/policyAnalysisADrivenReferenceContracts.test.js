@@ -15969,9 +15969,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(partitionPrompt[0].content).toContain(
       "ausdrücklich genannten Merkmale einer versicherten Oberklasse"
     );
-    expect(partitionPrompt[0].content).toContain(
-      "bloße Branchenannahme nicht"
-    );
+    expect(partitionPrompt[0].content).toContain("bloße Branchenannahme nicht");
     expect(partitionPrompt[0].content).toContain(
       "funktional gleiche Vertragswirkung"
     );
