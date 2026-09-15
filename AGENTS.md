@@ -25,6 +25,20 @@ Before substantive work, read completely:
    relevant knowledge documents selected by its router;
 4. the affected current source, callers, schemas, and tests.
 
+Then inspect
+`docs/POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1.json` for existing active,
+shadow, QA-only, unwired and rejected capabilities. Before implementing,
+classify the work as `DIRECT_REUSE`, `ADAPT_EXISTING`,
+`EXTRACT_SHARED_CORE`, `REACTIVATE` or `NEW_REQUIRED`; `NEW_REQUIRED` needs a
+concrete source-backed explanation. Record every new substantive idea or
+hypothesis as a stable `INT-*` entry in the existing knowledge intake before a
+larger implementation. Never create a competing knowledge base.
+
+The product and knowledge repositories cannot share one physical Git commit.
+Use a shared change-set ID and paired commits, and update capability status,
+measurements, proof limits and positive/negative findings in that same logical
+change-set.
+
 If the external knowledge repository is unavailable, the product charter in
 this repository remains the minimum binding context. Never infer current V3
 behavior from a historical repository.

@@ -9645,3 +9645,45 @@ ab Batch 39 fortgesetzt.
 
 Status: `B-TIMEOUT-SPLIT SYNTHETISCH UND REAL PASS; BATCH 38 TERMINAL;
 PRIMÄR-B AB 39 AKTIV; KEIN DEPLOYMENT`.
+
+### 133.48 Kanonisches Capability-Inventar und Workflow-Wiederverwendungsindex
+
+Change-Set `CAPABILITY-INVENTORY-20260915-001` konsolidiert die bisher über
+Produktvertrag, KB, Architektur, Entscheidungen, Tests, Tracker und Quellcode
+verteilte Methodenwahrheit. Die Arbeit ist als `ADAPT_EXISTING` klassifiziert:
+Es entsteht keine zweite Knowledge Base und keine neue Produktarchitektur.
+
+Neu vorbereitet sind:
+
+```text
+docs/POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1.json
+docs/POLIZZENVERGLEICH_WORKFLOW_MAPS_DE.md
+server/scripts/qa/validateCapabilityInventory.cjs
+server/__tests__/scripts/qa/validateCapabilityInventory.test.js
+```
+
+Das Inventar trennt Reife-/Erkenntnisstatus von Aktivierungsstatus, bindet
+fachlich relevante Modulgrenzen an Implementierungsdateien, öffentliche
+Einstiegspunkte, tatsächliche Caller, Inputs/Outputs, Seiteneffekte,
+Abhängigkeiten, Qualitäts-/Ressourcenwirkung, Risiken, Tests, Runs, ADR-/FAIL-
+Evidenz, letzten verifizierten Commit und Reaktivierungskriterien. Zwei
+Workflow-Maps beschreiben den tatsächlich verdrahteten
+`LF_REFERENCE_A_DRIVEN_V2`-Pfad und den vollständigen symmetrischen A/B-Pfad.
+
+Der statische Validator prüft Dateipfade, Einstiegspunktsymbole,
+Callerbindungen, referenzierte Tests, Vertrags-IDs, stabile Capability-IDs,
+Statuswerte, Relationen und Workflowknoten. `ACTIVE_*` ohne nachweisbaren
+Caller ist fail-closed ungültig.
+
+Der 204-Batch-Befund lautet vorläufig: Die primären Entscheidungen bleiben für
+den bereits hashgebunden gestarteten V62-Lauf unverändert notwendig. Suchplan,
+BM25, Synonyme, Struktur, Dinghy, Kandidatenunion, Kompaktierung, Quellen- und
+PASS-Prüfung sind bereits deterministisch. Nicht deterministisch ersetzt ist
+die fachliche Identitätskernentscheidung bei abweichendem Wortlaut. Ein
+späterer gemeinsamer A/B-Retrievalkern ist `EXTRACT_SHARED_CORE`, aber weder
+Voraussetzung noch zulässiger Ersatz für den laufenden 204er-Vertrag.
+
+Validierungsstatus beim Anlegen dieses Eintrags: lokale Quellinspektion
+abgeschlossen; Mac-Studio-Validator und fokussierte Tests noch ausstehend.
+Der bereits zuvor autorisierte, isolierte V62-B-Lauf wurde durch diese lokale
+Konsolidierung weder neu gestartet noch verändert. Kein Deployment.
