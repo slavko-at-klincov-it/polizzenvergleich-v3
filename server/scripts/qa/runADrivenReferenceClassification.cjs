@@ -5351,10 +5351,10 @@ async function runBatch({
         semanticRetryStrategy: groupedEnvelopeRepair
           ? "GROUPED_ENVELOPE_REPAIR"
           : rotatesToFreshUnit
-            ? "NEXT_PENDING_UNIT"
-          : semanticRetryUnitIds.length < pendingUnitIds.length
-            ? "SINGLE_UNIT_REPAIR"
-            : "ALL_PENDING",
+              ? "NEXT_PENDING_UNIT"
+              : semanticRetryUnitIds.length < pendingUnitIds.length
+                ? "SINGLE_UNIT_REPAIR"
+                : "ALL_PENDING",
         validationPassed: validation.passed,
         diagnostics: validation.diagnostics,
       };

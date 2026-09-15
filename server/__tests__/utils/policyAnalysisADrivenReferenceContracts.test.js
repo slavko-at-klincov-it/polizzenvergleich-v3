@@ -8682,7 +8682,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       [
         "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Garagen.\n\nVersichert sind Nebengebäude.\n",
       ],
-      "4a"
+      "c"
     );
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
@@ -8707,7 +8707,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
             );
             requested.push(input.expectedUnitIds);
             const requestedUnitId = input.expectedUnitIds[0];
-            const responseIndex = batch.expectedUnitIds.indexOf(requestedUnitId);
+            const responseIndex =
+              batch.expectedUnitIds.indexOf(requestedUnitId);
             const responses =
               requested.length === 1
                 ? invalid
