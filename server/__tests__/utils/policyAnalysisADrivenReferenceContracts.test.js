@@ -4372,6 +4372,103 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     });
   });
 
+  test.each([
+    {
+      label: "- Tiefgaragen und Autoabstellplätze;",
+      expected: ["Tiefgaragen", "Autoabstellplätze"],
+    },
+    {
+      label: "Gebäude und Nebengebäude",
+      expected: ["Gebäude", "Nebengebäude"],
+    },
+    {
+      label: "Adaptierungen und Investitionen der Bewohner",
+      expected: ["Adaptierungen", "Investitionen der Bewohner"],
+    },
+    {
+      label: "Erdkabel und Hauswasserpumpen am Versicherungsgrundstück",
+      expected: [
+        "Erdkabel",
+        "Hauswasserpumpen am Versicherungsgrundstück",
+      ],
+    },
+  ])("atomizes a simple independent object pair: $label", ({ label, expected }) => {
+    const source = `${label} sind versichert.`;
+    const unit = {
+      unitId: "independent-object-pair",
+      source: {
+        blockIds: ["statement"],
+        combinedText: source,
+        blocks: [{ blockId: "statement", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                { type: "OBJECT", label, sourceBlockIds: ["statement"] },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label: componentLabel }) => [type, componentLabel]
+      )
+    ).toEqual(expected.map((componentLabel) => ["OBJECT", componentLabel]));
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      componentIndex: 0,
+      action: "ATOMIZE_COORDINATED_OBJECT_ENUMERATION",
+      objectComponents: 2,
+    });
+  });
+
+  test.each([
+    "Schäden an den angeschlossenen Einrichtungen und Armaturen",
+    "ständig instandgehaltene Gebäude und Betriebseinrichtungen",
+    "Die Erfüllung von Verträgen und die an die Stelle tretende Ersatzleistung",
+  ])("does not split a dependent or clausal object phrase: %s", (label) => {
+    const source = `${label}.`;
+    const unit = {
+      unitId: "dependent-object-pair",
+      source: {
+        blockIds: ["statement"],
+        combinedText: source,
+        blocks: [{ blockId: "statement", exactText: source }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: source,
+          components: [
+            { type: "OBJECT", label, sourceBlockIds: ["statement"] },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
   test("types list items governed by insured damages as causes or damages", () => {
     const source = "Verrußung\ndie Energie des elektrischen Stromes";
     const unit = {

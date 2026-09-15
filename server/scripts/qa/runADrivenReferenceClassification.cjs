@@ -1554,9 +1554,31 @@ function normalizeLiabilityActivityEnumerations(requirements, unit) {
 }
 
 function coordinatedObjectLabels(value) {
+  const simpleBinaryValue = String(value || "")
+    .trim()
+    .replace(/^[•*-]\s*/u, "")
+    .replace(/[.;:]\s*$/u, "")
+    .trim();
+  const simpleBinaryParts = simpleBinaryValue.split(/\s+und\s+/iu);
+  const simpleBinaryEnumeration =
+    simpleBinaryParts.length === 2 &&
+    !/[,;:()\n\r]/u.test(simpleBinaryValue) &&
+    !/-/u.test(simpleBinaryValue) &&
+    simpleBinaryParts.every((part) => {
+      const words = part.trim().split(/\s+/u);
+      return (
+        words.length >= 1 &&
+        words.length <= 3 &&
+        /^\p{Lu}/u.test(words[0]) &&
+        !/\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|leistet|leisten|ersetzt|ersetzen|erstattet|erstatten|wenn|sofern|falls|soweit|wobei|obwohl|weil|dass|welche[snmr]?)\b/iu.test(
+          part
+        )
+      );
+    });
   if (
     !/,/u.test(value) &&
-    !/\bwie\s+(?:z\.\s*B\.|beispielsweise|etwa)\b/iu.test(value)
+    !/\bwie\s+(?:z\.\s*B\.|beispielsweise|etwa)\b/iu.test(value) &&
+    !simpleBinaryEnumeration
   )
     return [];
   if (
@@ -1566,7 +1588,9 @@ function coordinatedObjectLabels(value) {
     )
   )
     return [];
-  const groups = value.split(/\s+wie\s+(?:z\.\s*B\.|beispielsweise|etwa)\s+/iu);
+  const groups = simpleBinaryEnumeration
+    ? [simpleBinaryValue]
+    : value.split(/\s+wie\s+(?:z\.\s*B\.|beispielsweise|etwa)\s+/iu);
   const labels = groups.flatMap((group) =>
     group.split(/,\s*/u).flatMap((part) => {
       const conjunction = /\s+und\s+/iu.exec(part);
