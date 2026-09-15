@@ -4745,12 +4745,29 @@ Zusätzlich wird ein payload-identischer V13-A-Plan-Platzhalter beim
 V14-Resume digestgebunden archiviert; jede tatsächliche Planabweichung bleibt
 ein Fehler.
 
+Nach einem weiteren semantischen fail-closed Stopp wurde nicht erneut
+stundenlang Modellroulette betrieben. Der vollständige V61-Integritätslauf
+bestand den schon vorhandenen Seedvertrag einschließlich 58 Batchdateien,
+Raw-Digests, Summary-, Modell-, Prompt-, Validator- und Source-Unit-Bindungen;
+376/376 Units waren source-identisch. Die 13 bereits vorhandenen V62-Batches
+blieben bestehen, 267 fehlende gültige Antworten wurden übernommen. Damit
+endete A bei 58/58 PASS, 363 dynamischen Requirements, 1.274 Komponenten und
+null ungeklärten Units.
+
+Anschließend lief der exklusive Modellwechsel real durch: Qwen entladen,
+Dinghy mit Kontext 2.048 geladen, 1.274 Queries gegen 322 Klauseln aus neun
+B-Dokumenten vollständig gerankt, Dinghy entladen und Qwen mit Kontext 42.496
+wiederhergestellt. Der daraus erzeugte Qwen-Plan enthält 4.511 Kandidaten und
+204 Batches; die ersten vier Batches bestanden ohne Timeout oder Abort. Batch
+4 benötigte zwei semantische Versuche, blieb aber innerhalb des vorgesehenen
+fail-closed Retryvertrags.
+
 **Beweist:** Strukturell eindeutige physische Listenfortsetzungen können
 vollständig an bereits source-bound erkannte Komponenten gebunden werden,
 ohne den semantischen Output zu erfinden oder die Fail-closed-Grenze allgemein
 zu lockern. Bereits gültige Batches und Unitantworten bleiben wiederverwendbar.
 
 **Beweist nicht:** Dass alle Klausel-, Tabellen- oder Listenformen damit
-gelöst sind, dass die B-Gegenstücksuche besser geworden ist oder dass der noch
-laufende bekannte 1+9-Test Generalisierung beziehungsweise 99 Prozent
-nachweist.
+gelöst sind, dass die noch laufende B-Gegenstückprüfung das Goldresultat
+verbessert oder dass der bekannte 1+9-Test Generalisierung beziehungsweise
+99 Prozent nachweist.
