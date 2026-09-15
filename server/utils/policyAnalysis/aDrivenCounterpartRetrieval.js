@@ -317,9 +317,7 @@ function retrieveADrivenCounterpartCandidates({
     const lexicalCompoundVariants =
       packageItem.componentType === "OBJECT"
         ? corpusCompoundLexicalVariants({
-            focalTokens: capitalizedGermanTokens(
-              packageItem.query.focalText
-            ),
+            focalTokens: capitalizedGermanTokens(packageItem.query.focalText),
             index: corpusClauseIndex,
           }).filter((variant) => !target.queryTokens.includes(variant))
         : [];
