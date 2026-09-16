@@ -32,6 +32,35 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
 const DEFAULT_ABORT_SETTLEMENT_TIMEOUT_MS = 15_000;
 const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
 const MAXIMUM_ATTEMPTS = 8;
+const EXPLICIT_EXCLUSION_MARKERS = [
+  "nicht versichert",
+  "nicht gedeckt",
+  "ausgeschlossen",
+  "ausschluss",
+  "ausgenommen",
+  "excluded",
+  "not insured",
+  "not covered",
+];
+const SEMANTIC_PERIL_EQUIVALENCE_GROUPS = [
+  {
+    id: "CIVIL_UNREST",
+    terms: [
+      "demonstration",
+      "zusammenrottung",
+      "krawall",
+      "tumult",
+      "innere unruhe",
+      "innere unruhen",
+      "aufruhr",
+      "aufstand",
+      "rebellion",
+      "revolution",
+      "riot",
+      "civil unrest",
+    ],
+  },
+];
 
 function sha256(value) {
   return crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -344,6 +373,111 @@ function normalizeRepeatedCandidateIds(responses) {
   return { responses: normalizedResponses, duplicateCandidateIdsRemoved };
 }
 
+function semanticText(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/gu, " ")
+    .trim();
+}
+
+function matchingSemanticPerilGroups(value) {
+  const text = ` ${semanticText(value)} `;
+  return SEMANTIC_PERIL_EQUIVALENCE_GROUPS.filter(({ terms }) =>
+    terms.some((term) => text.includes(` ${semanticText(term)} `))
+  );
+}
+
+function normalizeExplicitExclusionCounterparts(batch, responses) {
+  const rowsById = new Map(batch.rows.map((row) => [row.requirementId, row]));
+  const normalizations = [];
+  const normalizedResponses = (Array.isArray(responses) ? responses : []).map(
+    (response) => {
+      const row = rowsById.get(response?.requirementId);
+      const identityComponents = row?.components?.filter(
+        ({ identityCore }) => identityCore
+      );
+      const coverageComponents = row?.components?.filter(
+        ({ dimension }) => dimension === "COVERAGE_EFFECT"
+      );
+      if (
+        !row ||
+        response?.contextFinding?.outcome !== "NOT_ESTABLISHED" ||
+        !Array.isArray(response.componentFindings) ||
+        identityComponents?.length !== 1 ||
+        identityComponents[0].dimension !== "PERIL_OR_CAUSE" ||
+        !coverageComponents?.length ||
+        typeof response.rationale !== "string"
+      )
+        return response;
+      const groups = matchingSemanticPerilGroups(identityComponents[0].label);
+      if (groups.length !== 1) return response;
+      const rationale = semanticText(response.rationale);
+      const matchingCandidates = row.candidates.filter((candidate) => {
+        if (!response.rationale.includes(candidate.candidateId)) return false;
+        const source = semanticText(candidate.exactText);
+        return (
+          EXPLICIT_EXCLUSION_MARKERS.some((marker) =>
+            ` ${source} `.includes(` ${semanticText(marker)} `)
+          ) &&
+          matchingSemanticPerilGroups(candidate.exactText).some(
+            ({ id }) => id === groups[0].id
+          )
+        );
+      });
+      if (
+        matchingCandidates.length !== 1 ||
+        !/(keine|kein|fehlt|without|no) .*?(deckung|deckungswirkung|coverage)/u.test(
+          rationale
+        )
+      )
+        return response;
+      const candidateIds = [matchingCandidates[0].candidateId];
+      const identityId = identityComponents[0].componentId;
+      const coverageIds = new Set(
+        coverageComponents.map(({ componentId }) => componentId)
+      );
+      const componentFindings = response.componentFindings.map((finding) => {
+        if (finding.componentId === identityId)
+          return { ...finding, outcome: "MATCH", candidateIds };
+        if (coverageIds.has(finding.componentId))
+          return { ...finding, outcome: "OPPOSITE", candidateIds };
+        return finding;
+      });
+      if (
+        !componentFindings.some(
+          ({ componentId, outcome }) =>
+            componentId === identityId && outcome === "MATCH"
+        ) ||
+        !componentFindings.some(
+          ({ componentId, outcome }) =>
+            coverageIds.has(componentId) && outcome === "OPPOSITE"
+        )
+      )
+        return response;
+      normalizations.push({
+        requirementId: row.requirementId,
+        semanticGroup: groups[0].id,
+        candidateIds,
+        identityComponentId: identityId,
+        coverageComponentIds: [...coverageIds].sort(),
+        effect: "FOUND_CONTRADICTED",
+      });
+      return {
+        ...response,
+        contextFinding: {
+          outcome: "COUNTERPART_WITH_DIFFERENCE",
+          candidateIds,
+        },
+        componentFindings,
+        rationale: `${response.rationale} Systemnormalisierung: Die zitierte Originalquelle schließt dieselbe fachliche Gefahr ausdrücklich aus; nach dem Laufvertrag bleibt sie deshalb ein Gegenstück mit gegenteiliger Deckungswirkung.`,
+      };
+    }
+  );
+  return { responses: normalizedResponses, normalizations };
+}
+
 function normalizeIdentityCoreModifierDifferences(batch, responses) {
   const rowsById = new Map(batch.rows.map((row) => [row.requirementId, row]));
   const normalizations = [];
@@ -611,6 +745,7 @@ function compatibleSeedResponses({
   );
   const compatible = new Map();
   const incompatibleRequirementIds = [];
+  const explicitExclusionCounterpartNormalizations = [];
   for (const row of plan.rows) {
     const seedRow = seedRows.get(row.requirementId);
     const response = responses.get(row.requirementId);
@@ -632,11 +767,24 @@ function compatibleSeedResponses({
       expectedRequirementIds: [row.requirementId],
       rows: [row],
     };
-    if (!validateBatchResponses(plan, single, [response]).passed)
+    const exclusionNormalization = normalizeExplicitExclusionCounterparts(
+      single,
+      [response]
+    );
+    if (
+      !validateBatchResponses(
+        plan,
+        single,
+        exclusionNormalization.responses
+      ).passed
+    )
       throw new Error(
         `LF_A_DRIVEN_REQUIREMENT_SEED_RESPONSE_INVALID:${row.requirementId}`
       );
-    compatible.set(row.requirementId, response);
+    compatible.set(row.requirementId, exclusionNormalization.responses[0]);
+    explicitExclusionCounterpartNormalizations.push(
+      ...exclusionNormalization.normalizations
+    );
   }
   return {
     responsesByRequirement: compatible,
@@ -647,6 +795,7 @@ function compatibleSeedResponses({
       compatibleRequirements: compatible.size,
       incompatibleRequirements: incompatibleRequirementIds.length,
       incompatibleRequirementIds,
+      explicitExclusionCounterpartNormalizations,
     },
   };
 }
@@ -745,6 +894,7 @@ async function runBatch({
   onAttempt = async () => {},
   initialAcceptedResponses = [],
   initialIdentityCoreModifierNormalizations = [],
+  initialExplicitExclusionCounterpartNormalizations = [],
   initialUniqueRescueCandidateAliasNormalizations = [],
   resumeAfterSafeGroupedTimeout = false,
 }) {
@@ -813,10 +963,15 @@ async function runBatch({
       const parsedResponse = normalizeRepeatedCandidateIds(
         rescueCandidateAliasNormalization.responses
       );
+      const explicitExclusionNormalization =
+        normalizeExplicitExclusionCounterparts(
+          workingBatch,
+          parsedResponse.responses
+        );
       const identityCoreNormalization =
         normalizeIdentityCoreModifierDifferences(
           workingBatch,
-          parsedResponse.responses
+          explicitExclusionNormalization.responses
         );
       const parsed = identityCoreNormalization.responses;
       const currentValidation = validateBatchResponses(
@@ -869,6 +1024,8 @@ async function runBatch({
           parsedResponse.duplicateCandidateIdsRemoved,
         uniqueRescueCandidateAliasNormalizations:
           rescueCandidateAliasNormalization.normalizations,
+        explicitExclusionCounterpartNormalizations:
+          explicitExclusionNormalization.normalizations,
         identityCoreModifierNormalizations:
           identityCoreNormalization.normalizations,
         acceptedRequirements: accepted.size,
@@ -996,6 +1153,8 @@ async function runBatch({
     resumedAcceptedRequirements: initialAcceptedResponses.length,
     resumedIdentityCoreModifierNormalizations:
       initialIdentityCoreModifierNormalizations,
+    resumedExplicitExclusionCounterpartNormalizations:
+      initialExplicitExclusionCounterpartNormalizations,
     resumedUniqueRescueCandidateAliasNormalizations:
       initialUniqueRescueCandidateAliasNormalizations,
     resumeAfterSafeGroupedTimeout,
@@ -1112,6 +1271,7 @@ function journalState({ output, plan, batch, args }) {
     return {
       acceptedResponses: [],
       identityCoreModifierNormalizations: [],
+      explicitExclusionCounterpartNormalizations: [],
       uniqueRescueCandidateAliasNormalizations: [],
       resumeAfterSafeGroupedTimeout: false,
     };
@@ -1158,9 +1318,13 @@ function journalState({ output, plan, batch, args }) {
   const repeatedCandidateNormalization = normalizeRepeatedCandidateIds(
     rescueCandidateAliasNormalization.responses
   );
-  const identityCoreNormalization = normalizeIdentityCoreModifierDifferences(
+  const explicitExclusionNormalization = normalizeExplicitExclusionCounterparts(
     batch,
     repeatedCandidateNormalization.responses
+  );
+  const identityCoreNormalization = normalizeIdentityCoreModifierDifferences(
+    batch,
+    explicitExclusionNormalization.responses
   );
   return {
     acceptedResponses: validResponses(
@@ -1170,6 +1334,8 @@ function journalState({ output, plan, batch, args }) {
     ),
     identityCoreModifierNormalizations:
       identityCoreNormalization.normalizations,
+    explicitExclusionCounterpartNormalizations:
+      explicitExclusionNormalization.normalizations,
     uniqueRescueCandidateAliasNormalizations:
       rescueCandidateAliasNormalization.normalizations,
     resumeAfterSafeGroupedTimeout,
@@ -1242,6 +1408,14 @@ async function processBatches({
           .map((requirementId) => acceptedByRequirement.get(requirementId)),
         initialIdentityCoreModifierNormalizations:
           resumeState.identityCoreModifierNormalizations,
+        initialExplicitExclusionCounterpartNormalizations: [
+          ...(resumeState.explicitExclusionCounterpartNormalizations || []),
+          ...(
+            seed?.audit?.explicitExclusionCounterpartNormalizations || []
+          ).filter(({ requirementId }) =>
+            batch.expectedRequirementIds.includes(requirementId)
+          ),
+        ],
         initialUniqueRescueCandidateAliasNormalizations:
           resumeState.uniqueRescueCandidateAliasNormalizations,
         resumeAfterSafeGroupedTimeout:
@@ -1447,6 +1621,7 @@ module.exports = {
   journalState,
   loadCompatibleSeed,
   normalizeIdentityCoreModifierDifferences,
+  normalizeExplicitExclusionCounterparts,
   normalizeRepeatedCandidateIds,
   normalizeUniqueRescueCandidateAliases,
   parseJsonArray,

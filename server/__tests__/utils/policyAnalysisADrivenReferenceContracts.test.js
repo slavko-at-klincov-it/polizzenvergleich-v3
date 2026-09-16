@@ -78,6 +78,7 @@ const {
 const {
   compatibleSeedResponses: compatibleRequirementDecisionSeedResponses,
   journalState: requirementDecisionJournalState,
+  normalizeExplicitExclusionCounterparts,
   normalizeIdentityCoreModifierDifferences,
   normalizeRepeatedCandidateIds,
   normalizeUniqueRescueCandidateAliases,
@@ -15734,6 +15735,159 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       ]);
     }
   );
+
+  function explicitExclusionDecisionFixture() {
+    const { decisionPlan: sourcePlan } = requirementDecisionFixture();
+    const decisionPlan = JSON.parse(JSON.stringify(sourcePlan));
+    const row = decisionPlan.rows[0];
+    const batchRow = decisionPlan.batches
+      .flatMap(({ rows }) => rows)
+      .find(({ requirementId }) => requirementId === row.requirementId);
+    const components = [
+      {
+        componentId: "coverage-effect",
+        dimension: "COVERAGE_EFFECT",
+        label: "ist versichert",
+        identityCore: false,
+        navigationCandidateIds: [row.candidates[0].candidateId],
+      },
+      {
+        componentId: "civil-unrest-peril",
+        dimension: "PERIL_OR_CAUSE",
+        label: "Demonstration, Zusammenrottung, Krawall oder Tumult",
+        identityCore: true,
+        navigationCandidateIds: [row.candidates[0].candidateId],
+      },
+    ];
+    const exactText =
+      "Nicht versichert sind Schäden durch innere Unruhen, Aufruhr, Aufstand oder Rebellion.";
+    for (const plannedRow of [row, batchRow]) {
+      plannedRow.components = JSON.parse(JSON.stringify(components));
+      plannedRow.candidates[0].exactText = exactText;
+      plannedRow.candidates[0].exactTextSha256 = crypto
+        .createHash("sha256")
+        .update(exactText)
+        .digest("hex");
+    }
+    decisionPlan.summary.components = decisionPlan.rows.reduce(
+      (sum, plannedRow) => sum + plannedRow.components.length,
+      0
+    );
+    const { planSha256: _oldPlanSha256, ...payload } = decisionPlan;
+    decisionPlan.planSha256 = crypto
+      .createHash("sha256")
+      .update(
+        `${A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID}\u0000${stableStringify(
+          payload
+        )}`
+      )
+      .digest("hex");
+    const candidateId = row.candidates[0].candidateId;
+    return {
+      decisionPlan,
+      batch: decisionPlan.batches[0],
+      response: {
+        requirementId: row.requirementId,
+        contextFinding: { outcome: "NOT_ESTABLISHED", candidateIds: [] },
+        componentFindings: components.map((component) => ({
+          componentId: component.componentId,
+          dimension: component.dimension,
+          outcome: "NOT_ESTABLISHED",
+          candidateIds: [],
+        })),
+        unmodeledDifferences: [],
+        rationale: `Der Kandidat ${candidateId} schließt innere Unruhen und Aufruhr explizit aus. Es fehlt eine positive Deckungswirkung.`,
+      },
+    };
+  }
+
+  test("normalizes a cited explicit exclusion of the same peril into a contradicted counterpart", () => {
+    const { decisionPlan, batch, response } =
+      explicitExclusionDecisionFixture();
+    const normalized = normalizeExplicitExclusionCounterparts(batch, [
+      response,
+    ]);
+
+    expect(normalized.normalizations).toEqual([
+      expect.objectContaining({
+        requirementId: response.requirementId,
+        semanticGroup: "CIVIL_UNREST",
+        effect: "FOUND_CONTRADICTED",
+      }),
+    ]);
+    expect(normalized.responses[0]).toMatchObject({
+      contextFinding: { outcome: "COUNTERPART_WITH_DIFFERENCE" },
+      componentFindings: expect.arrayContaining([
+        expect.objectContaining({
+          componentId: "civil-unrest-peril",
+          outcome: "MATCH",
+        }),
+        expect.objectContaining({
+          componentId: "coverage-effect",
+          outcome: "OPPOSITE",
+        }),
+      ]),
+    });
+    const validated = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: normalized.responses,
+    });
+    expect(validated.diagnostics).toEqual([]);
+    expect(validated.results[0]).toMatchObject({
+      customerFound: true,
+      counterpartOutcome: "CONTRADICTED",
+    });
+  });
+
+  test.each([
+    [
+      "an unrelated exclusion",
+      "Nicht versichert sind Schäden durch Lawinen.",
+      false,
+    ],
+    [
+      "more than one identity core",
+      "Nicht versichert sind Schäden durch innere Unruhen und Aufruhr.",
+      true,
+    ],
+  ])("does not normalize %s", (_name, exactText, addIdentityCore) => {
+    const { batch, response } = explicitExclusionDecisionFixture();
+    batch.rows[0].candidates[0].exactText = exactText;
+    if (addIdentityCore)
+      batch.rows[0].components.push({
+        ...batch.rows[0].components.find(({ identityCore }) => identityCore),
+        componentId: "second-identity-core",
+      });
+
+    const normalized = normalizeExplicitExclusionCounterparts(batch, [
+      response,
+    ]);
+
+    expect(normalized.normalizations).toEqual([]);
+    expect(normalized.responses).toEqual([response]);
+  });
+
+  test("revalidates and normalizes a completed compatible seed without a model call", () => {
+    const { decisionPlan, response } = explicitExclusionDecisionFixture();
+    const seedSummary = completedRequirementSeed(decisionPlan, [response]);
+    const compatible = compatibleRequirementDecisionSeedResponses({
+      plan: decisionPlan,
+      seedPlan: decisionPlan,
+      seedResponses: [response],
+      seedSummary,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+    });
+
+    expect(compatible.responsesByRequirement.get(response.requirementId)).toMatchObject(
+      {
+        contextFinding: { outcome: "COUNTERPART_WITH_DIFFERENCE" },
+      }
+    );
+    expect(
+      compatible.audit.explicitExclusionCounterpartNormalizations
+    ).toHaveLength(1);
+  });
 
   test("normalizes an identity-core difference only when every candidate has bound modifier evidence", () => {
     const { decisionPlan } = requirementDecisionFixture();
