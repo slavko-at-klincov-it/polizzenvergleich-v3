@@ -5155,3 +5155,65 @@ Kundenstatus ohne unklare Zwischenklasse.
 End-to-End-Laufzeitwert, Generalisierung auf ungesehene Versicherer oder
 99-Prozent-Qualität. Die nächsten fachlichen Arbeiten sind die sieben
 eindeutig messbaren False Negatives und die 68 Rollenlücken. Kein Deployment.
+
+## 95. Ein ausdrücklicher Ausschluss desselben Elements ist kein Nullfund
+
+Die abschließende Zerlegung der verbliebenen B-Fehler zeigte erneut, dass
+Retrievaltreffer und semantische Fundentscheidung getrennt bewertet werden
+müssen. Für `GL-17` enthielt der Rescue-Input bereits eine Originalklausel,
+welche innere Unruhen und Aufruhr ausdrücklich ausschließt. Qwen zitierte
+diese Quelle korrekt, verwarf sie jedoch allein wegen der fehlenden positiven
+Deckungswirkung als Nullfund. Das widerspricht dem bestätigten Produktvertrag:
+Dasselbe fachliche Element bleibt auch mit gegenteiliger Wirkung ein
+Gegenstück.
+
+Change-Set `LF-V2-SEMANTIC-B-CONFLICTS-20260916-001` adaptiert den bestehenden
+Komponenten- und Rescue-Vertrag. Die Korrektur greift nur bei genau einem
+`PERIL_OR_CAUSE`-Identitätskern, vorhandener `COVERAGE_EFFECT`, expliziter
+Ausschlusssprache in einer vom Modell zitierten servergebundenen Quelle und
+genau einer allgemeinen Gefahrenäquivalenz. Der Gefahrenkern wird `MATCH`,
+die Deckungswirkung `OPPOSITE`; andere Ausschlüsse, mehrere Kerne und bloß
+verwandte Klauseln bleiben unverändert fail-closed.
+
+Mac Studio, Commit `ac3ce5631cd062143f70188c33f5c28baa25f8cb`:
+
+```text
+Syntax / Prettier:                       PASS / PASS
+gesamte A-driven-Vertragssuite:          351/351 PASS
+Rescue:                                  15/15 PASS
+Seed übernommen / Modellaufrufe:         15 / 0
+Rescue-Wandzeit:                         24 ms
+```
+
+Die finale, ausschließlich aus gültigen Artefakten rematerialisierte
+Projektion besitzt 363/363 binäre Zeilen: 322 `FOUND`, 41 `NOT_FOUND`, null
+unklar; davon 199 vollständig, 118 teilweise und fünf mit gegenteiliger
+Wirkung. Die bekannte Gold-283-Regression steigt von 138/144 auf 141/144
+eindeutig messbare Übereinstimmungen. Es verbleiben null False Positives und
+drei False Negatives (`VS-15`, `AV-06`, `AV-22`).
+
+`AV-06` und `AV-22` bleiben belegte Gold-Korrekturvorschläge; die
+Originalquellen tragen die im eingefrorenen Gold behauptete Äquivalenz nicht.
+`VS-15` ist trotz atomisierter A-Komponenten und erweitertem Retrieval nicht
+als Systemfehler bewiesen. Es wurde deshalb keine bekannte Zeile hart
+codiert und Gold-283 nicht überschrieben.
+
+Die interne Review-XLSX wurde nach dem Schreiben vollständig zurückgelesen
+und gegen das Binärartefakt geprüft. Sie enthält 363 Zeilen, 322/41
+Statuswerte, keine Formeln, Filter, Freeze-Panes und eine leere manuelle
+Bewertungsspalte. Datei-SHA-256:
+`70d5ecb6e26b278e01c17f1bfcf85e1e1eccddc6fee2dcb7f59b2282f3194243`.
+
+**Positive Erkenntnis:** Source-bound semantische Vertragskonflikte lassen
+sich ohne einen weiteren Vollkorpus- oder Modelllauf korrigieren, wenn die
+bereits gespeicherte Originalquelle und der zulässige semantische Vertrag
+gemeinsam eindeutig sind.
+
+**Negative Schranke:** Die Normalisierung darf weder eine Quelle auswählen,
+die das Modell nicht zitiert hat, noch bloße Keyword-Nähe, mehrere
+Identitätskerne oder einen anderen Ausschluss als Gegenstück umdeuten.
+
+**Beweisgrenze:** 141/144 misst nur das bekannte LF-1+9-Set. Die drei
+verbleibenden Gold-/Crosswalk-Fälle, 68 nicht rollengedeckte
+Legacy-Komponenten, kalte Laufzeit und ungesehene Versicherer bleiben
+außerhalb dieses Nachweises. Kein Deployment.

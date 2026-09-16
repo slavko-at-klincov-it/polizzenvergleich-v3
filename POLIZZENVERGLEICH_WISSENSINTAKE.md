@@ -2929,3 +2929,145 @@ Vollständigkeitsbehauptung erzeugen.
 - Kanonischer Ausgang: Change-Set
   `LF-V2-B-DECISION-SEED-REVALIDATION-20260916-001`, Implementierungsstand
   `fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33`, Tracker 133.55 und Tests 94.
+
+## INT-20260916-041 — Semantisch widersprüchliche B-Negativantworten fail-closed behandeln
+
+- Erfasst: 2026-09-16
+- Typ: `BEOBACHTUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Eine formal gültige Modellantwort darf keinen qualifizierten
+  Vergleichs-Nullfund erzeugen, wenn ihre eigene Begründung zugleich ein
+  Gegenstück bestätigt, einen ausdrücklichen Ausschluss entgegen dem
+  Laufvertrag als Nicht-Gegenstück behandelt oder dasselbe fachliche Element
+  ausschließlich wegen abweichender Werte, Limits, Bedingungen, Umfänge oder
+  zeitlicher Geltung verwirft. Solche Antworten müssen als semantischer
+  Vertragskonflikt fail-closed werden und dürfen erst nach einer expliziten,
+  source-bound Korrektur terminal werden.
+- Ist-Wahrheit: `JA`; die Konflikterkennung und source-bound Weiterleitung in
+  den bestehenden Komponenten-Rescue sind umgesetzt. Bereits gültige
+  Partitionen wurden wiederverwendet; nur widersprüchliche Fälle erhielten
+  die zusätzliche semantische Prüfung.
+- Quelle: hashgebundene B-Primär-, Vollkorpus-Abwesenheits- und
+  Gold-Regressionsartefakte des dynamischen LF-1+9-Laufs auf dem Mac Studio;
+  keine Kundentexte oder privaten IDs in der Knowledge Base.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Ein ausdrücklich
+  ausgeschlossener oder anders bedingter identischer Fachpunkt erscheint als
+  `GEFUNDEN` mit sichtbarer Abweichung, statt fälschlich als `NICHT GEFUNDEN`.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-B-006` und
+  `CAP-B-007`; keine neue Sucharchitektur, keine automatische Umdeutung bloß
+  verwandter Klauseln, keine zeilenspezifische Produktionsregel und keine
+  Veränderung des eingefrorenen Gold-283.
+- Evidenz und Beweisgrenze: Die betreffenden B-Passagen waren bereits im
+  vollständigen Korpus und teilweise schon unter den Primärkandidaten. Der
+  Fehler liegt in der semantischen Modellentscheidung beziehungsweise ihrer
+  zu schwachen terminalen Prüfung, nicht im Retrieval. Das beweist weder, dass
+  jede Gold-Abweichung ein Systemfehler ist, noch Generalisierung.
+- Systembezug: Komponentenentscheidung, Vollkorpus-Abwesenheit, Rescue,
+  validierte Seed-Wiederverwendung, binärer Kundenstatus und private
+  Abweichungsdarstellung; `CAP-B-006`, `CAP-B-007`, `INV-002`, `ADR-031`,
+  `INT-20260916-040`.
+- Beziehungen:
+  - `REFINES` -> verbindliche Regel „gleiches Element trotz anderer Wirkung
+    oder Bedingung ist ein Gegenstück“
+  - `REUSES` -> bestehende Responsevalidierung, Retry und hashgebundene
+    Seed-Revalidierung
+  - verhindert -> widersprüchliche Nullfundzertifizierung und unnötige
+    vollständige Wiederholung unveränderter Partitionen
+- Hard-Gates: positive Konfliktmuster, zulässige echte Negativantworten,
+  Seed-Ausschluss nur betroffener Partitionen, fail-closed bei erschöpften
+  Retries sowie gezielter Real-Resume und erneute Gold-Regression auf dem Mac
+  Studio.
+- Bewertung: kleinste allgemeine Root-Cause-Korrektur innerhalb des
+  bestehenden Entscheidungs- und Resume-Vertrags; keine zweite Architektur.
+- Evidenzqualität: `BEOBACHTET_ARTEFAKT` und
+  `GEMESSEN_KUNDENHARDWARE`.
+- Riskanteste Annahme: Die Konflikterkennung identifiziert nur echte
+  Widersprüche im eigenen Modelloutput und erzwingt eine erneute Prüfung,
+  ohne bloße Keyword-Nennungen automatisch als Gegenstück zu akzeptieren.
+- Nächster Prüfschritt: Auf ungesehenen Versichererformulierungen beobachten;
+  widerspruchsfreie Negativantworten und bloß verwandte Klauseln bleiben als
+  negative Regression erhalten.
+- Entscheidung: `ADAPT_EXISTING`; keine neue Architektur.
+- Kanonischer Ausgang: Change-Set
+  `LF-V2-SEMANTIC-B-CONFLICTS-20260916-001`, Implementierungsstand
+  `ac3ce5631cd062143f70188c33f5c28baa25f8cb`, Tracker 133.56 und Tests 95.
+
+## INT-20260916-042 — Eindeutige Rescue-Kandidaten-ID bei Modellvermischung normalisieren
+
+- Erfasst: 2026-09-16
+- Typ: `BEOBACHTUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Wenn eine B-Rescue-Antwort eine unbekannte `RCR-*`-ID ausgibt,
+  obwohl die aktuelle servergebundene Requirement-Zeile exakt einen erlaubten
+  `RCR-*`-Kandidaten enthält, darf ausschließlich diese eindeutige Alias-ID
+  deterministisch auf den vorhandenen Rescue-Kandidaten normalisiert werden.
+  Mehrere mögliche Rescue-Kandidaten, unbekannte normale `RCE-*`-IDs oder
+  andere erfundene Quellen müssen unverändert fail-closed bleiben.
+- Ist-Wahrheit: `JA` für den beobachteten Fehler; Qwen erkannte das
+  source-bound Gegenstück fachlich, vermischte aber in drei Versuchen den
+  Präfix des einzigen Rescue-Kandidaten mit dem Suffix eines vorhandenen
+  Primärkandidaten. Der Validator verwarf die Antworten korrekt.
+- Quelle: hashgebundene Attempt-Journale des gezielten B-Rescue-Laufs auf dem
+  Mac Studio; keine Kundentexte oder privaten IDs in der Knowledge Base.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Ein eindeutig belegtes
+  Gegenstück geht nicht wegen eines mechanischen ID-Kopierfehlers verloren,
+  ohne die Quellenbindung oder den Fail-closed-Vertrag abzuschwächen.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-B-006`; keine
+  fuzzy Quellenauswahl, keine Korrektur fachlicher Entscheidungen, keine
+  Auswahl zwischen mehreren Rescue-Kandidaten und keine Änderung an Gold.
+- Evidenz und Beweisgrenze: Die Normalisierung ist nur bei exakt einem
+  erlaubten `RCR-*`-Kandidaten zulässig und beweist weder die fachliche
+  Richtigkeit der Modellantwort noch Generalisierung.
+- Systembezug: Requirement-Response-Normalisierung, strikte
+  Kandidatenvalidierung, Attempt-Journal, Resume und Rescue; `CAP-B-006`,
+  `INV-004`, `INT-20260916-041`.
+- Hard-Gates: eindeutiger positiver Fall, zwei mehrdeutige Rescue-Kandidaten,
+  unbekannte `RCE-*`-ID, unveränderte vollständige Vertragssuite und gezielter
+  Mac-Studio-Resume ab dem ersten unvollständigen Rescue-Batch.
+- Entscheidung: `ADAPT_EXISTING`; keine neue Architektur.
+- Kanonischer Ausgang: Commit `49b1b9ef6`; der vollständige Rescue schloss
+  12/12 und der nachfolgende 15-Zeilen-Rescue 15/15 terminal ab. Mehrdeutige
+  und normale unbekannte Kandidaten-IDs bleiben fail-closed. Tracker 133.56,
+  Tests 95.
+
+## INT-20260916-043 — Ausdrücklichen Ausschluss derselben Gefahr als Gegenstück mit Gegenwirkung binden
+
+- Erfasst: 2026-09-16
+- Typ: `IMPLEMENTIERUNGSHYPOTHESE`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Verwirft eine B-Entscheidung ein bereits quellengebundenes
+  Gegenstück allein deshalb, weil die B-Klausel dieselbe fachliche Gefahr
+  ausdrücklich ausschließt statt positiv zu decken, darf der Nullfund nur
+  dann deterministisch korrigiert werden, wenn genau eine allgemeine
+  Gefahrenäquivalenz zwischen A-Kern und Originalquelle belegt ist. Der
+  Gefahrenkern wird dann `MATCH`, die Deckungswirkung `OPPOSITE` und das
+  Requirement `GEFUNDEN/CONTRADICTED`; bloß verwandte oder mehrdeutige
+  Klauseln bleiben unverändert fail-closed.
+- Ist-Wahrheit: `JA` für den beobachteten Fall; die vollständige B-Suche
+  lieferte eine Originalklausel, welche die in A benannte Unruhe-/Aufruhrgefahr
+  ausdrücklich ausschließt. Qwen zitierte diese Quelle, bewertete sie jedoch
+  entgegen dem verbindlichen Produktvertrag als fehlende positive Deckung
+  und damit als Nullfund.
+- Quelle: hashgebundener Rescue-Entscheidungslauf des dynamischen
+  LF-1+9-Laufs auf dem Mac Studio; keine Kundentexte oder privaten IDs in der
+  Knowledge Base.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Dasselbe fachliche
+  Element wird zuverlässig gefunden, während die gegenteilige Wirkung
+  sichtbar und getrennt ausgewiesen wird.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-B-006`; keine
+  neue Architektur, keine Gold- oder zeilenspezifische Regel, keine
+  Umdeutung bloßer Keyword-Treffer und kein Deployment.
+- Hard-Gates: genau eine passende Gefahrenäquivalenz, explizite
+  Ausschlusssprache in der Originalquelle, Deckungswirkungskomponente und
+  vom Modell zitierte erlaubte Kandidaten-ID; negative Tests für andere
+  Ausschlüsse, mehrere Identitätskerne und fehlende Quellenevidenz;
+  vollständige Vertragssuite und gezielte Gold-Regression auf dem Mac Studio.
+- Bewertung: kleinste source-bound Korrektur innerhalb des bestehenden
+  B-Entscheidungsvertrags; keine zweite Architektur.
+- Entscheidung: `ADAPT_EXISTING`; keine neue Architektur.
+- Kanonischer Ausgang: Commit
+  `ac3ce5631cd062143f70188c33f5c28baa25f8cb`; Mac Studio Syntax und Prettier
+  PASS, 351/351 Vertragstests PASS, 15/15 Rescue-Zeilen ohne Modellaufruf
+  rematerialisiert. `GL-17` ist `FOUND/CONTRADICTED`; das bekannte
+  LF-1+9-Gold verbessert sich auf 141/144 eindeutig messbare
+  Übereinstimmungen. Tracker 133.56, Tests 95.
