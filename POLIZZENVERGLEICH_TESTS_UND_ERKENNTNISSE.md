@@ -5016,3 +5016,42 @@ Verdrahtungsproblem vor Produktfreigabe.
 **Beweisgrenze:** Batch 117 und die Vertragssuite beweisen weder 204/204,
 Gold-Qualität, fachlich perfekte A-Atomisierung noch Holdout-Generalisierung.
 Der restliche Primärlauf wurde ab Batch 118 fortgesetzt. Kein Deployment.
+
+## 92. Ein positiver Differenzkontext bleibt ein Gegenstückkontext
+
+Batch 118 und 119 bestanden. Batch 120 stoppte danach fail-closed, obwohl die
+vier gespeicherten Antworten strukturell denselben gebundenen Kernvertrag wie
+Batch 117 zeigten: ein servergebundener Kandidat, positiver Kontext, dieselbe
+OBJECT-Kernkomponente und ausschließlich `SCOPE`- beziehungsweise teilweise
+`CONDITION`-Abweichungen. Der einzige neue Aspekt war, dass der Kontext selbst
+als `COUNTERPART_WITH_DIFFERENCE` statt `MATCH` ausgegeben wurde.
+
+Die Normalisierung akzeptiert deshalb nun beide bereits fachlich positiven
+Kontext-Outcomes. Sie bleibt für `RELATED_ONLY` gesperrt und verlangt weiterhin
+für jede Kandidaten-ID vollständige, ausschließlich modifierbezogene Evidenz.
+Der streng validierte Ergebnisvertrag wurde nicht geändert.
+
+Mac Studio, Commit
+`938ab782948b2c44ac4d846122cc0797a706a43e`, Node `v22.23.2`:
+
+```text
+Prettier:                                  PASS
+gezielte positive/negative/Resume-Tests:   5/5 PASS
+gesamte A-driven-Vertragssuite:            335/335 PASS
+Batch 120 aus Journal:                     PASS
+neue Modellaufrufe für Batch 120:          0
+journalisierte Requirements übernommen:   2/2
+Batch-Artefakte nach Gate:                 120/204
+```
+
+**Positive Erkenntnis:** `COUNTERPART_WITH_DIFFERENCE` beschreibt einen
+positiven Gegenstückfund mit Modifierabweichung und darf deshalb nicht allein
+wegen desselben Outcomes am breiten Identitätskern verloren gehen.
+
+**Negative Schranke:** Ein lediglich verwandter Kontext, fehlende
+Modifier-Evidenz oder eine ausdrückliche Kerndifferenz darf diese
+Normalisierung nicht passieren.
+
+**Beweisgrenze:** Das Gate beweist die sichere Wiederverwendung dieses
+Fehlertyps, nicht die fachliche Qualität aller 204 Batches oder die spätere
+Gold-Qualität. Der Primärlauf wurde ab Batch 121 fortgesetzt. Kein Deployment.

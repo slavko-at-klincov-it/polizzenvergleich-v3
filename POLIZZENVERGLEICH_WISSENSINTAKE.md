@@ -289,7 +289,7 @@ Tabellen-/Fortsetzungsrelation -> Heading/Variante` folgen; ein kleines
 
 - Erfasst: 2026-08-24
 - Typ: `IDEE`
-- Status: `IN_PRÜFUNG`
+- Status: `PROMOTED`
 - Aussage: Unterschiedliche Dokumentcharakteristiken brauchen typisierte
   Beziehungen zwischen Klauselabschnitten, Überschriften, Tabellen,
   Seitenfortsetzungen, Varianten und Querverweisen.
@@ -2755,7 +2755,8 @@ Vollständigkeitsbehauptung erzeugen.
 - Erfasst: 2026-09-16
 - Typ: `BEOBACHTUNG`
 - Status: `IN_PRÜFUNG`
-- Aussage: Wenn eine B-Modellantwort denselben quellengebundenen
+- Aussage: Wenn eine B-Modellantwort in einem positiven `MATCH`- oder
+  `COUNTERPART_WITH_DIFFERENCE`-Kontext denselben quellengebundenen
   Identitätskern und dieselben Kandidaten nennt, aber den Kern irrtümlich als
   `COUNTERPART_WITH_DIFFERENCE` ausgibt, darf der bestehende Runner diesen
   Strukturfehler nur dann deterministisch zu `MATCH` normalisieren, wenn alle
@@ -2797,9 +2798,19 @@ Vollständigkeitsbehauptung erzeugen.
   `GEMESSEN_KUNDENHARDWARE`.
 - Riskanteste Annahme: Die separat ausgewiesene Modifier-Evidenz genügt, um
   auszuschließen, dass der eigentliche Identitätskern verschieden ist.
-- Nächster Prüfschritt: Primärlauf ab Batch 118 abschließen und danach
+- Ergänzender Realbefund: Batch 120 wiederholte denselben Fehlertyp bei einem
+  positiven `COUNTERPART_WITH_DIFFERENCE`-Kontext und ausschließlich
+  gebundenen Scope-/Bedingungsunterschieden. Commit
+  `938ab782948b2c44ac4d846122cc0797a706a43e` erweitert deshalb nur den
+  zugelassenen positiven Kontext. `RELATED_ONLY`, fehlende Modifier-Evidenz
+  und Kerndifferenzen bleiben ausdrücklich ausgeschlossen. 335/335
+  Vertragstests bestanden; Batch 120 wurde mit null neuen Modellaufrufen aus
+  zwei journalisierten Requirements materialisiert.
+- Nächster Prüfschritt: Primärlauf ab Batch 121 abschließen und danach
   Vollkorpus-Abwesenheit, Rescue, Binärergebnis und Gold-Regression ausführen.
 - Entscheidung: `ADAPT_EXISTING`; keine neue Architektur.
 - Kanonischer Ausgang: Change-Set
   `LF-V2-CORE-MODIFIER-NORMALIZATION-20260916-001`, Implementierungscommit
-  `7800b11a5bb1db199b78a507898281f3370fd902`, Tracker 133.52 und Tests 91.
+  `7800b11a5bb1db199b78a507898281f3370fd902` und
+  `938ab782948b2c44ac4d846122cc0797a706a43e`, Tracker 133.52/133.53 und
+  Tests 91/92.
