@@ -10402,6 +10402,14 @@ Interne XLSX-Datei-SHA-256:
 70d5ecb6e26b278e01c17f1bfcf85e1e1eccddc6fee2dcb7f59b2282f3194243
 ```
 
+Eine byteidentische, zugriffsgeschützte Nachweiskopie liegt für den Kunden
+unter:
+
+```text
+/Users/michaelmischkot/Downloads/Projekt Lokale KI/Vergleiche/
+  LF-IMMO-Dynamischer-Referenzvergleich-V3.8.0-2026-09-16.xlsx
+```
+
 Damit ist der dynamische `LF_REFERENCE_A_DRIVEN_V2`-Ansatz für das bekannte
 LF-1+9-Set technisch und fachlich als kontrollierter Kunden-MVP aktiviert.
 Die Aussage bleibt bewusst auf dieses Entwicklungs- und Regressionsset
