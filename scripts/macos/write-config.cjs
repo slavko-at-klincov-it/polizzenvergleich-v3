@@ -22,10 +22,7 @@ const existingServerEnv = fs.existsSync(serverEnv)
   : "";
 const aDrivenEmbeddingContractFile =
   process.env.V3_A_DRIVEN_EMBEDDING_CONTRACT_FILE ||
-  existingValue(
-    existingServerEnv,
-    "POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE"
-  );
+  existingValue(existingServerEnv, "POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE");
 
 if (
   !aDrivenEmbeddingContractFile ||

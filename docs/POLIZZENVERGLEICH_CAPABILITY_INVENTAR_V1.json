@@ -44,26 +44,86 @@
     "REACTIVATES"
   ],
   "contractBindings": [
-    { "id": "LF_REFERENCE_A_DRIVEN_V2", "path": "server/utils/policyComparison/aDrivenReferenceProfile.js" },
-    { "id": "SOURCE_BLOCK_LEDGER_V1", "path": "server/utils/policyAnalysis/sourceBlockLedger.js" },
-    { "id": "NONEMPTY_EXTRACTED_LINES_V1", "path": "server/utils/policyAnalysis/sourceBlockLedger.js" },
-    { "id": "LF_A_SOURCE_UNIT_PLAN_V6", "path": "server/utils/policyAnalysis/aDrivenSourceUnitPlan.js" },
-    { "id": "LF_A_BOUNDED_CLASSIFICATION_V4", "path": "server/utils/policyAnalysis/aDrivenClassificationContract.js" },
-    { "id": "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V14", "path": "server/utils/policyAnalysis/aDrivenSemanticManifest.js" },
-    { "id": "LF_A_AUTOMATED_B_SHADOW_READINESS_V2", "path": "server/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.js" },
-    { "id": "LF_A_DRIVEN_COUNTERPART_SEARCH_PLAN_V3", "path": "server/utils/policyAnalysis/aDrivenCounterpartSearchPlan.js" },
-    { "id": "LF_A_DRIVEN_COUNTERPART_RETRIEVAL_V2", "path": "server/utils/policyAnalysis/aDrivenCounterpartSearchPlan.js" },
-    { "id": "LF_DINGHY_RANKING_RESULT_V2", "path": "server/utils/policyAnalysis/aDrivenCounterpartRetrieval.js" },
-    { "id": "LF_COUNTERPART_COMPACT_CANDIDATES_V1", "path": "server/utils/policyAnalysis/referenceCandidateCompactor.js" },
-    { "id": "LF_A_DRIVEN_COMPLETE_B_CORPUS_V1", "path": "server/utils/policyAnalysis/aDrivenCompleteBCorpus.js" },
-    { "id": "LF_A_DRIVEN_REQUIREMENT_DECISION_PLAN_V3", "path": "server/utils/policyAnalysis/aDrivenRequirementCounterpartDecision.js" },
-    { "id": "LF_A_DRIVEN_REQUIREMENT_DECISION_V1", "path": "server/utils/policyAnalysis/aDrivenRequirementCounterpartDecision.js" },
-    { "id": "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_V1", "path": "server/utils/policyAnalysis/aDrivenRequirementAbsenceCertification.js" },
-    { "id": "LF_A_DRIVEN_REQUIREMENT_FINAL_DECISION_V1", "path": "server/utils/policyAnalysis/aDrivenRequirementAbsenceCertification.js" },
-    { "id": "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V6", "path": "server/utils/policyAnalysis/aDrivenBinaryReferenceResult.js" },
-    { "id": "LF_A_DRIVEN_REFERENCE_A_TO_B_RESULT_V1", "path": "server/utils/policyComparison/aDrivenReferenceProfile.js" },
-    { "id": "POLICY_COMPARISON_ARTIFACT_SET_V1", "path": "server/utils/policyComparison/artifactSetPublisher.js" },
-    { "id": "POLICY_COMPARISON_EXPORT_V2", "path": "server/utils/policyComparison/comparisonExportContract.js" }
+    {
+      "id": "LF_REFERENCE_A_DRIVEN_V2",
+      "path": "server/utils/policyComparison/aDrivenReferenceProfile.js"
+    },
+    {
+      "id": "SOURCE_BLOCK_LEDGER_V1",
+      "path": "server/utils/policyAnalysis/sourceBlockLedger.js"
+    },
+    {
+      "id": "NONEMPTY_EXTRACTED_LINES_V1",
+      "path": "server/utils/policyAnalysis/sourceBlockLedger.js"
+    },
+    {
+      "id": "LF_A_SOURCE_UNIT_PLAN_V6",
+      "path": "server/utils/policyAnalysis/aDrivenSourceUnitPlan.js"
+    },
+    {
+      "id": "LF_A_BOUNDED_CLASSIFICATION_V4",
+      "path": "server/utils/policyAnalysis/aDrivenClassificationContract.js"
+    },
+    {
+      "id": "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V14",
+      "path": "server/utils/policyAnalysis/aDrivenSemanticManifest.js"
+    },
+    {
+      "id": "LF_A_AUTOMATED_B_SHADOW_READINESS_V2",
+      "path": "server/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_COUNTERPART_SEARCH_PLAN_V3",
+      "path": "server/utils/policyAnalysis/aDrivenCounterpartSearchPlan.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_COUNTERPART_RETRIEVAL_V2",
+      "path": "server/utils/policyAnalysis/aDrivenCounterpartSearchPlan.js"
+    },
+    {
+      "id": "LF_DINGHY_RANKING_RESULT_V2",
+      "path": "server/utils/policyAnalysis/aDrivenCounterpartRetrieval.js"
+    },
+    {
+      "id": "LF_COUNTERPART_COMPACT_CANDIDATES_V1",
+      "path": "server/utils/policyAnalysis/referenceCandidateCompactor.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_COMPLETE_B_CORPUS_V1",
+      "path": "server/utils/policyAnalysis/aDrivenCompleteBCorpus.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_REQUIREMENT_DECISION_PLAN_V3",
+      "path": "server/utils/policyAnalysis/aDrivenRequirementCounterpartDecision.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_REQUIREMENT_DECISION_V1",
+      "path": "server/utils/policyAnalysis/aDrivenRequirementCounterpartDecision.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_V1",
+      "path": "server/utils/policyAnalysis/aDrivenRequirementAbsenceCertification.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_REQUIREMENT_FINAL_DECISION_V1",
+      "path": "server/utils/policyAnalysis/aDrivenRequirementAbsenceCertification.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V6",
+      "path": "server/utils/policyAnalysis/aDrivenBinaryReferenceResult.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_REFERENCE_A_TO_B_RESULT_V1",
+      "path": "server/utils/policyComparison/aDrivenReferenceProfile.js"
+    },
+    {
+      "id": "POLICY_COMPARISON_ARTIFACT_SET_V1",
+      "path": "server/utils/policyComparison/artifactSetPublisher.js"
+    },
+    {
+      "id": "POLICY_COMPARISON_EXPORT_V2",
+      "path": "server/utils/policyComparison/comparisonExportContract.js"
+    }
   ],
   "workflowMaps": [
     {
@@ -113,7 +173,10 @@
       "productModes": ["LF", "AB"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "ACTIVE_PRODUCTION" },
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "ACTIVE_PRODUCTION"
+      },
       "implementationFiles": [
         "server/endpoints/policyComparisons.js",
         "server/models/policyComparison.js",
@@ -122,22 +185,63 @@
         "server/scripts/policyComparisonWorker.cjs"
       ],
       "publicEntrypoints": [
-        { "path": "server/endpoints/policyComparisons.js", "symbol": "policyComparisonEndpoints" },
-        { "path": "server/utils/policyComparison/workerSupervisor.js", "symbol": "policyComparisonWorkerSupervisor" }
+        {
+          "path": "server/endpoints/policyComparisons.js",
+          "symbol": "policyComparisonEndpoints"
+        },
+        {
+          "path": "server/utils/policyComparison/workerSupervisor.js",
+          "symbol": "policyComparisonWorkerSupervisor"
+        }
       ],
       "callers": [
-        { "path": "server/endpoints/workspaces.js", "contains": "policyComparisonEndpoints" },
-        { "path": "server/endpoints/policyComparisons.js", "contains": "policyComparisonWorkerSupervisor" }
+        {
+          "path": "server/endpoints/workspaces.js",
+          "contains": "policyComparisonEndpoints"
+        },
+        {
+          "path": "server/endpoints/policyComparisons.js",
+          "contains": "policyComparisonWorkerSupervisor"
+        }
       ],
-      "inputs": ["workspace mode", "A/B upload manifest", "session UUID", "worker lease nonce"],
-      "outputs": ["resumable run root", "session progress", "validated result path"],
-      "sideEffects": ["SQLite session writes", "private run files", "worker process lifecycle"],
+      "inputs": [
+        "workspace mode",
+        "A/B upload manifest",
+        "session UUID",
+        "worker lease nonce"
+      ],
+      "outputs": [
+        "resumable run root",
+        "session progress",
+        "validated result path"
+      ],
+      "sideEffects": [
+        "SQLite session writes",
+        "private run files",
+        "worker process lifecycle"
+      ],
       "dependencies": ["Prisma", "filesystem", "Node child_process"],
-      "qualityImpact": { "recall": "INDIRECT", "precision": "INDIRECT", "sourceBinding": "POSITIVE", "generalization": "POSITIVE" },
-      "resourceImpact": { "runtime": "MEASURED: serial worker execution", "ram": "INDIRECT", "gpu": "INDIRECT" },
-      "knownLimitsRisks": ["Configured worker concurrency does not override the global local-model lock.", "A session PASS does not prove fachliche correctness."],
+      "qualityImpact": {
+        "recall": "INDIRECT",
+        "precision": "INDIRECT",
+        "sourceBinding": "POSITIVE",
+        "generalization": "POSITIVE"
+      },
+      "resourceImpact": {
+        "runtime": "MEASURED: serial worker execution",
+        "ram": "INDIRECT",
+        "gpu": "INDIRECT"
+      },
+      "knownLimitsRisks": [
+        "Configured worker concurrency does not override the global local-model lock.",
+        "A session PASS does not prove fachliche correctness."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/scripts/qa/policyComparisonWorkerContract.test.js", "server/__tests__/utils/policyComparisonWorkerSupervisor.test.js", "server/__tests__/models/policyComparison.test.js"],
+        "tests": [
+          "server/__tests__/scripts/qa/policyComparisonWorkerContract.test.js",
+          "server/__tests__/utils/policyComparisonWorkerSupervisor.test.js",
+          "server/__tests__/models/policyComparison.test.js"
+        ],
         "runs": ["Tracker 133.45", "Tracker 133.47"],
         "adrs": ["ADR-009", "ADR-027", "ADR-031"],
         "failures": []
@@ -155,7 +259,10 @@
       "productModes": ["LF", "AB"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "ACTIVE_PRODUCTION" },
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "ACTIVE_PRODUCTION"
+      },
       "implementationFiles": [
         "collector/processSingleFile/convert/asPDF/index.js",
         "collector/processSingleFile/convert/asPDF/PDFLoader/index.js",
@@ -163,22 +270,52 @@
         "server/scripts/qa/extractPolicyDocument.cjs"
       ],
       "publicEntrypoints": [
-        { "path": "collector/processSingleFile/convert/asPDF/index.js", "symbol": "asPdf" },
-        { "path": "server/scripts/qa/extractPolicyDocument.cjs", "symbol": "run" }
+        {
+          "path": "collector/processSingleFile/convert/asPDF/index.js",
+          "symbol": "asPdf"
+        },
+        {
+          "path": "server/scripts/qa/extractPolicyDocument.cjs",
+          "symbol": "run"
+        }
       ],
       "callers": [
-        { "path": "collector/utils/constants.js", "contains": "./convert/asPDF/index.js" },
-        { "path": "server/utils/policyComparison/referenceRunner.js", "contains": "extractPolicyDocument.cjs" }
+        {
+          "path": "collector/utils/constants.js",
+          "contains": "./convert/asPDF/index.js"
+        },
+        {
+          "path": "server/utils/policyComparison/referenceRunner.js",
+          "contains": "extractPolicyDocument.cjs"
+        }
       ],
       "inputs": ["PDF bytes", "OCR language settings"],
       "outputs": ["page text documents", "document.private.json"],
-      "sideEffects": ["reads PDF", "may cache Tesseract models", "writes private extraction artifact"],
+      "sideEffects": [
+        "reads PDF",
+        "may cache Tesseract models",
+        "writes private extraction artifact"
+      ],
       "dependencies": ["pdf-parse/pdf.js", "tesseract.js"],
-      "qualityImpact": { "recall": "POSITIVE", "precision": "MIXED", "sourceBinding": "POSITIVE", "generalization": "POSITIVE" },
-      "resourceImpact": { "runtime": "OCR can be expensive; current LF fixture uses digital extraction", "ram": "UNKNOWN", "gpu": "UNKNOWN" },
-      "knownLimitsRisks": ["QA extractor does not invoke OCR itself; it expects digital text.", "OCR quality and layout reconstruction are not proven on unseen insurer scans."],
+      "qualityImpact": {
+        "recall": "POSITIVE",
+        "precision": "MIXED",
+        "sourceBinding": "POSITIVE",
+        "generalization": "POSITIVE"
+      },
+      "resourceImpact": {
+        "runtime": "OCR can be expensive; current LF fixture uses digital extraction",
+        "ram": "UNKNOWN",
+        "gpu": "UNKNOWN"
+      },
+      "knownLimitsRisks": [
+        "QA extractor does not invoke OCR itself; it expects digital text.",
+        "OCR quality and layout reconstruction are not proven on unseen insurer scans."
+      ],
       "evidence": {
-        "tests": ["collector/__tests__/processSingleFile/convert/asPDF/asPDFPageMap.test.js"],
+        "tests": [
+          "collector/__tests__/processSingleFile/convert/asPDF/asPDFPageMap.test.js"
+        ],
         "runs": ["Tests section 25"],
         "adrs": ["ADR-004"],
         "failures": []
@@ -196,29 +333,58 @@
       "productModes": ["LF", "AB"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "ACTIVE_PRODUCTION" },
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "ACTIVE_PRODUCTION"
+      },
       "implementationFiles": [
         "collector/processSingleFile/convert/asPDF/PDFPageMap/index.js",
         "server/utils/PageAwareTextSplitter/index.js",
         "server/utils/vectorDbProviders/lance/provenance.js"
       ],
       "publicEntrypoints": [
-        { "path": "collector/processSingleFile/convert/asPDF/PDFPageMap/index.js", "symbol": "assemblePageMap" },
-        { "path": "server/utils/PageAwareTextSplitter/index.js", "symbol": "PageAwareTextSplitter" }
+        {
+          "path": "collector/processSingleFile/convert/asPDF/PDFPageMap/index.js",
+          "symbol": "assemblePageMap"
+        },
+        {
+          "path": "server/utils/PageAwareTextSplitter/index.js",
+          "symbol": "PageAwareTextSplitter"
+        }
       ],
       "callers": [
-        { "path": "collector/processSingleFile/convert/asPDF/index.js", "contains": "assemblePageMap" },
-        { "path": "server/utils/vectorDbProviders/lance/index.js", "contains": "provenance" }
+        {
+          "path": "collector/processSingleFile/convert/asPDF/index.js",
+          "contains": "assemblePageMap"
+        },
+        {
+          "path": "server/utils/vectorDbProviders/lance/index.js",
+          "contains": "provenance"
+        }
       ],
       "inputs": ["ordered extracted pages", "document identity"],
       "outputs": ["canonical pageContent", "pageMap", "page-bound chunks"],
-      "sideEffects": ["none in PageMap builder", "vector metadata writes downstream"],
+      "sideEffects": [
+        "none in PageMap builder",
+        "vector metadata writes downstream"
+      ],
       "dependencies": ["PDF extraction"],
-      "qualityImpact": { "recall": "NEUTRAL", "precision": "POSITIVE", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "POSITIVE" },
+      "qualityImpact": {
+        "recall": "NEUTRAL",
+        "precision": "POSITIVE",
+        "sourceBinding": "CRITICAL_POSITIVE",
+        "generalization": "POSITIVE"
+      },
       "resourceImpact": { "runtime": "LOW", "ram": "LOW", "gpu": "NONE" },
-      "knownLimitsRisks": ["Correctness depends on complete ordered physical-page extraction."],
+      "knownLimitsRisks": [
+        "Correctness depends on complete ordered physical-page extraction."
+      ],
       "evidence": {
-        "tests": ["collector/__tests__/processSingleFile/convert/asPDF/asPDFPageMap.test.js", "server/__tests__/utils/PageAwareTextSplitter/index.test.js", "server/__tests__/utils/vectorDbProviders/lance/pageAwareIngest.test.js"],
+        "tests": [
+          "collector/__tests__/processSingleFile/convert/asPDF/asPDFPageMap.test.js",
+          "server/__tests__/utils/PageAwareTextSplitter/index.test.js",
+          "server/__tests__/utils/vectorDbProviders/lance/pageAwareIngest.test.js"
+        ],
         "runs": ["Tests section 25"],
         "adrs": ["INV-001", "ADR-004"],
         "failures": []
@@ -236,19 +402,50 @@
       "productModes": ["AB"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "AVAILABLE_NOT_WIRED", "AB": "ACTIVE_PRODUCTION" },
-      "implementationFiles": ["server/utils/policyAnalysis/controlledOccurrenceWorksheet.js", "server/scripts/qa/buildCategoryOccurrenceWorksheet.cjs"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/controlledOccurrenceWorksheet.js", "symbol": "buildControlledOccurrenceWorksheet" }],
-      "callers": [{ "path": "server/scripts/qa/buildCategoryOccurrenceWorksheet.cjs", "contains": "controlledOccurrenceWorksheet" }],
+      "activationByMode": {
+        "LF": "AVAILABLE_NOT_WIRED",
+        "AB": "ACTIVE_PRODUCTION"
+      },
+      "implementationFiles": [
+        "server/utils/policyAnalysis/controlledOccurrenceWorksheet.js",
+        "server/scripts/qa/buildCategoryOccurrenceWorksheet.cjs"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/controlledOccurrenceWorksheet.js",
+          "symbol": "buildControlledOccurrenceWorksheet"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/qa/buildCategoryOccurrenceWorksheet.cjs",
+          "contains": "controlledOccurrenceWorksheet"
+        }
+      ],
       "inputs": ["document artifact", "versioned category catalog"],
       "outputs": ["occurrence worksheet", "source-bound structural context"],
       "sideEffects": ["CLI writes private worksheet"],
       "dependencies": ["PageMap", "catalog contracts"],
-      "qualityImpact": { "recall": "POSITIVE", "precision": "POSITIVE", "sourceBinding": "POSITIVE", "generalization": "MIXED" },
-      "resourceImpact": { "runtime": "LOW_TO_MEDIUM", "ram": "UNKNOWN", "gpu": "NONE" },
-      "knownLimitsRisks": ["Catalog-driven terms do not by themselves prove exhaustive unseen-document recall.", "Structure is navigation, not coverage effect."],
+      "qualityImpact": {
+        "recall": "POSITIVE",
+        "precision": "POSITIVE",
+        "sourceBinding": "POSITIVE",
+        "generalization": "MIXED"
+      },
+      "resourceImpact": {
+        "runtime": "LOW_TO_MEDIUM",
+        "ram": "UNKNOWN",
+        "gpu": "NONE"
+      },
+      "knownLimitsRisks": [
+        "Catalog-driven terms do not by themselves prove exhaustive unseen-document recall.",
+        "Structure is navigation, not coverage effect."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysis/controlledOccurrenceWorksheet.test.js", "server/__tests__/utils/policyAnalysis/categoryCatalogRecallP0.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysis/controlledOccurrenceWorksheet.test.js",
+          "server/__tests__/utils/policyAnalysis/categoryCatalogRecallP0.test.js"
+        ],
         "runs": ["Tests sections 14, 18 and 25"],
         "adrs": ["ADR-003", "ADR-004", "ADR-005"],
         "failures": ["FAIL-005"]
@@ -266,27 +463,64 @@
       "productModes": ["LF", "AB"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "ACTIVE_PRODUCTION" },
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "ACTIVE_PRODUCTION"
+      },
       "implementationFiles": [
         "server/utils/policyAnalysis/preparedEvidenceContract.js",
         "server/utils/policyAnalysis/componentScopePolicyContract.js",
         "server/utils/policyAnalysis/requestedFieldBindingGroupContract.js",
         "server/utils/policyAnalysis/sourceBoundSectionScopeContract.js"
       ],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/preparedEvidenceContract.js", "symbol": "materializePreparedEvidence" }],
-      "callers": [
-        { "path": "server/scripts/qa/runPreparedEvidenceEvaluation.cjs", "contains": "preparedEvidenceContract" },
-        { "path": "server/utils/policyComparison/resultBuilder.js", "contains": "requestedFieldBindingGroupContract" }
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/preparedEvidenceContract.js",
+          "symbol": "materializePreparedEvidence"
+        }
       ],
-      "inputs": ["server-bound candidates", "requested components", "model classifications"],
+      "callers": [
+        {
+          "path": "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
+          "contains": "preparedEvidenceContract"
+        },
+        {
+          "path": "server/utils/policyComparison/resultBuilder.js",
+          "contains": "requestedFieldBindingGroupContract"
+        }
+      ],
+      "inputs": [
+        "server-bound candidates",
+        "requested components",
+        "model classifications"
+      ],
       "outputs": ["typed facts", "scope/value/effect evidence", "diagnostics"],
       "sideEffects": ["none in contracts", "CLI persists validated artifacts"],
-      "dependencies": ["occurrence worksheet", "source spans", "component contracts"],
-      "qualityImpact": { "recall": "MIXED", "precision": "CRITICAL_POSITIVE", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "POSITIVE" },
-      "resourceImpact": { "runtime": "LOW after model response", "ram": "LOW", "gpu": "NONE in validators" },
-      "knownLimitsRisks": ["FAIL-003 remains a warning against binding multiple nearby monetary roles without local semantic proof."],
+      "dependencies": [
+        "occurrence worksheet",
+        "source spans",
+        "component contracts"
+      ],
+      "qualityImpact": {
+        "recall": "MIXED",
+        "precision": "CRITICAL_POSITIVE",
+        "sourceBinding": "CRITICAL_POSITIVE",
+        "generalization": "POSITIVE"
+      },
+      "resourceImpact": {
+        "runtime": "LOW after model response",
+        "ram": "LOW",
+        "gpu": "NONE in validators"
+      },
+      "knownLimitsRisks": [
+        "FAIL-003 remains a warning against binding multiple nearby monetary roles without local semantic proof."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysis/preparedEvidenceContract.test.js", "server/__tests__/utils/policyAnalysis/requestedFieldBindingGroupContract.test.js", "server/__tests__/utils/policyAnalysis/sourceBoundSectionScopeContract.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysis/preparedEvidenceContract.test.js",
+          "server/__tests__/utils/policyAnalysis/requestedFieldBindingGroupContract.test.js",
+          "server/__tests__/utils/policyAnalysis/sourceBoundSectionScopeContract.test.js"
+        ],
         "runs": ["Tests sections 15 and 84"],
         "adrs": ["ADR-007", "ADR-021", "ADR-031"],
         "failures": ["FAIL-003"]
@@ -305,21 +539,64 @@
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
       "activationByMode": { "LF": "INACTIVE", "AB": "ACTIVE_PRODUCTION" },
-      "implementationFiles": ["run-all-categories-quality.command", "server/utils/policyComparison/referenceRunner.js", "server/utils/policyComparison/resultBuilder.js", "server/scripts/policyComparisonWorker.cjs"],
-      "publicEntrypoints": [
-        { "path": "server/utils/policyComparison/referenceRunner.js", "symbol": "analyzeReferenceDocument" },
-        { "path": "server/utils/policyComparison/resultBuilder.js", "symbol": "writeComparisonArtifacts" }
+      "implementationFiles": [
+        "run-all-categories-quality.command",
+        "server/utils/policyComparison/referenceRunner.js",
+        "server/utils/policyComparison/resultBuilder.js",
+        "server/scripts/policyComparisonWorker.cjs"
       ],
-      "callers": [{ "path": "server/scripts/policyComparisonWorker.cjs", "contains": "runDocument" }],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyComparison/referenceRunner.js",
+          "symbol": "analyzeReferenceDocument"
+        },
+        {
+          "path": "server/utils/policyComparison/resultBuilder.js",
+          "symbol": "writeComparisonArtifacts"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/policyComparisonWorker.cjs",
+          "contains": "runDocument"
+        }
+      ],
       "inputs": ["A and B package documents", "five-category product profile"],
-      "outputs": ["224-row symmetric comparison", "private facts and customer workbook"],
-      "sideEffects": ["Qwen calls", "private category artifacts", "published comparison artifact set"],
-      "dependencies": ["CAP-AB-001", "CAP-SEM-001", "CAP-MODEL-001", "CAP-RESULT-002"],
-      "qualityImpact": { "recall": "KNOWN_FIXTURE_MEASURED_ONLY", "precision": "KNOWN_FIXTURE_MEASURED_ONLY", "sourceBinding": "POSITIVE", "generalization": "NOT_PROVEN" },
-      "resourceImpact": { "runtime": "MEASURED on recorded runs; varies by cache", "ram": "model-dependent", "gpu": "Qwen sequential" },
-      "knownLimitsRisks": ["The fixed 224-row customer profile is a view, not a complete fact universe.", "Known fixtures do not prove holdout generalization."],
+      "outputs": [
+        "224-row symmetric comparison",
+        "private facts and customer workbook"
+      ],
+      "sideEffects": [
+        "Qwen calls",
+        "private category artifacts",
+        "published comparison artifact set"
+      ],
+      "dependencies": [
+        "CAP-AB-001",
+        "CAP-SEM-001",
+        "CAP-MODEL-001",
+        "CAP-RESULT-002"
+      ],
+      "qualityImpact": {
+        "recall": "KNOWN_FIXTURE_MEASURED_ONLY",
+        "precision": "KNOWN_FIXTURE_MEASURED_ONLY",
+        "sourceBinding": "POSITIVE",
+        "generalization": "NOT_PROVEN"
+      },
+      "resourceImpact": {
+        "runtime": "MEASURED on recorded runs; varies by cache",
+        "ram": "model-dependent",
+        "gpu": "Qwen sequential"
+      },
+      "knownLimitsRisks": [
+        "The fixed 224-row customer profile is a view, not a complete fact universe.",
+        "Known fixtures do not prove holdout generalization."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/scripts/qa/allCategoryShellRunnerContract.test.js", "server/__tests__/utils/policyComparisonResultBuilder.test.js"],
+        "tests": [
+          "server/__tests__/scripts/qa/allCategoryShellRunnerContract.test.js",
+          "server/__tests__/utils/policyComparisonResultBuilder.test.js"
+        ],
         "runs": ["Tests sections 49, 56 and 59"],
         "adrs": ["ADR-023", "ADR-026", "ADR-027"],
         "failures": ["FAIL-004", "FAIL-005"]
@@ -338,21 +615,51 @@
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
       "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "INACTIVE" },
-      "implementationFiles": ["server/utils/policyAnalysis/sourceBlockLedger.js", "server/utils/policyAnalysis/aDrivenSourceUnitPlan.js", "server/scripts/qa/buildADrivenReferenceShadow.cjs"],
-      "publicEntrypoints": [
-        { "path": "server/utils/policyAnalysis/sourceBlockLedger.js", "symbol": "buildSourceBlockLedger" },
-        { "path": "server/utils/policyAnalysis/aDrivenSourceUnitPlan.js", "symbol": "buildADrivenSourceUnitPlan" }
+      "implementationFiles": [
+        "server/utils/policyAnalysis/sourceBlockLedger.js",
+        "server/utils/policyAnalysis/aDrivenSourceUnitPlan.js",
+        "server/scripts/qa/buildADrivenReferenceShadow.cjs"
       ],
-      "callers": [{ "path": "server/scripts/qa/buildADrivenReferenceShadow.cjs", "contains": "buildADrivenSourceUnitPlan" }],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/sourceBlockLedger.js",
+          "symbol": "buildSourceBlockLedger"
+        },
+        {
+          "path": "server/utils/policyAnalysis/aDrivenSourceUnitPlan.js",
+          "symbol": "buildADrivenSourceUnitPlan"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/qa/buildADrivenReferenceShadow.cjs",
+          "contains": "buildADrivenSourceUnitPlan"
+        }
+      ],
       "inputs": ["A document artifacts with PageMap"],
       "outputs": ["SOURCE_BLOCK_LEDGER_V1", "LF_A_SOURCE_UNIT_PLAN_V6"],
       "sideEffects": ["CLI writes hash-bound private plan artifacts"],
       "dependencies": ["CAP-PROV-001"],
-      "qualityImpact": { "recall": "CRITICAL_POSITIVE", "precision": "NEUTRAL", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "POSITIVE" },
-      "resourceImpact": { "runtime": "LOW", "ram": "LOW_TO_MEDIUM", "gpu": "NONE" },
-      "knownLimitsRisks": ["Block ownership is necessary but does not prove semantic atomization completeness."],
+      "qualityImpact": {
+        "recall": "CRITICAL_POSITIVE",
+        "precision": "NEUTRAL",
+        "sourceBinding": "CRITICAL_POSITIVE",
+        "generalization": "POSITIVE"
+      },
+      "resourceImpact": {
+        "runtime": "LOW",
+        "ram": "LOW_TO_MEDIUM",
+        "gpu": "NONE"
+      },
+      "knownLimitsRisks": [
+        "Block ownership is necessary but does not prove semantic atomization completeness."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysis/sourceBlockLedger.test.js", "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js", "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysis/sourceBlockLedger.test.js",
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
+          "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"
+        ],
         "runs": ["Tracker 133.46"],
         "adrs": ["ADR-028", "ADR-031"],
         "failures": ["FAIL-001"]
@@ -371,18 +678,57 @@
       "maturityStatus": "EXPERIMENTAL",
       "activationStatus": "ACTIVE_PRODUCTION",
       "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "INACTIVE" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenClassificationContract.js", "server/scripts/qa/runADrivenReferenceClassification.cjs"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/aDrivenClassificationContract.js", "symbol": "buildADrivenClassificationBatches" }],
-      "callers": [{ "path": "run-a-driven-reference-product-v2.command", "contains": "runADrivenReferenceClassification.cjs" }],
-      "inputs": ["LF_A_SOURCE_UNIT_PLAN_V6", "smallest complete source units", "Qwen configuration"],
-      "outputs": ["validated per-unit classifications", "append-only attempt journals"],
-      "sideEffects": ["local Qwen requests", "private batch artifacts", "model recovery on transport failure"],
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenClassificationContract.js",
+        "server/scripts/qa/runADrivenReferenceClassification.cjs"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenClassificationContract.js",
+          "symbol": "buildADrivenClassificationBatches"
+        }
+      ],
+      "callers": [
+        {
+          "path": "run-a-driven-reference-product-v2.command",
+          "contains": "runADrivenReferenceClassification.cjs"
+        }
+      ],
+      "inputs": [
+        "LF_A_SOURCE_UNIT_PLAN_V6",
+        "smallest complete source units",
+        "Qwen configuration"
+      ],
+      "outputs": [
+        "validated per-unit classifications",
+        "append-only attempt journals"
+      ],
+      "sideEffects": [
+        "local Qwen requests",
+        "private batch artifacts",
+        "model recovery on transport failure"
+      ],
       "dependencies": ["CAP-A-001", "CAP-MODEL-001"],
-      "qualityImpact": { "recall": "CRITICAL_BUT_NOT_HOLDOUT_PROVEN", "precision": "CRITICAL_BUT_NOT_HOLDOUT_PROVEN", "sourceBinding": "POSITIVE", "generalization": "HYPOTHESIS_SUPPORTED_BY_MUTATIONS" },
-      "resourceImpact": { "runtime": "HIGH: 58 batches on current 1+9 fixture", "ram": "Qwen model footprint", "gpu": "Qwen bursts" },
-      "knownLimitsRisks": ["Model-valid output is not automatically fachlich optimal.", "Unseen structures remain a generalization gate."],
+      "qualityImpact": {
+        "recall": "CRITICAL_BUT_NOT_HOLDOUT_PROVEN",
+        "precision": "CRITICAL_BUT_NOT_HOLDOUT_PROVEN",
+        "sourceBinding": "POSITIVE",
+        "generalization": "HYPOTHESIS_SUPPORTED_BY_MUTATIONS"
+      },
+      "resourceImpact": {
+        "runtime": "HIGH: 58 batches on current 1+9 fixture",
+        "ram": "Qwen model footprint",
+        "gpu": "Qwen bursts"
+      },
+      "knownLimitsRisks": [
+        "Model-valid output is not automatically fachlich optimal.",
+        "Unseen structures remain a generalization gate."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js", "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
+          "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"
+        ],
         "runs": ["Tracker 133.46"],
         "adrs": ["ADR-031"],
         "failures": ["FAIL-001"]
@@ -401,18 +747,52 @@
       "maturityStatus": "EXPERIMENTAL",
       "activationStatus": "ACTIVE_PRODUCTION",
       "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "INACTIVE" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenSemanticManifest.js", "server/utils/policyAnalysis/sourceEvidenceBoundaryContext.js"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/aDrivenSemanticManifest.js", "symbol": "buildADrivenSemanticManifest" }],
-      "callers": [{ "path": "server/scripts/qa/runADrivenReferenceClassification.cjs", "contains": "buildADrivenSemanticManifest" }],
-      "inputs": ["validated A classifications", "source plan", "document artifacts"],
-      "outputs": ["LF_A_DYNAMIC_SEMANTIC_MANIFEST_V14", "terminal block/unit crosswalk"],
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenSemanticManifest.js",
+        "server/utils/policyAnalysis/sourceEvidenceBoundaryContext.js"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenSemanticManifest.js",
+          "symbol": "buildADrivenSemanticManifest"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/qa/runADrivenReferenceClassification.cjs",
+          "contains": "buildADrivenSemanticManifest"
+        }
+      ],
+      "inputs": [
+        "validated A classifications",
+        "source plan",
+        "document artifacts"
+      ],
+      "outputs": [
+        "LF_A_DYNAMIC_SEMANTIC_MANIFEST_V14",
+        "terminal block/unit crosswalk"
+      ],
       "sideEffects": ["CLI writes immutable private manifest"],
       "dependencies": ["CAP-A-001", "CAP-A-002", "CAP-SEM-001"],
-      "qualityImpact": { "recall": "CRITICAL", "precision": "CRITICAL", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "PRIMARY_UNPROVEN_GATE" },
-      "resourceImpact": { "runtime": "LOW after classifications", "ram": "MEDIUM", "gpu": "NONE" },
-      "knownLimitsRisks": ["Known 1+9 manifest quality is regression evidence, not a holdout proof."],
+      "qualityImpact": {
+        "recall": "CRITICAL",
+        "precision": "CRITICAL",
+        "sourceBinding": "CRITICAL_POSITIVE",
+        "generalization": "PRIMARY_UNPROVEN_GATE"
+      },
+      "resourceImpact": {
+        "runtime": "LOW after classifications",
+        "ram": "MEDIUM",
+        "gpu": "NONE"
+      },
+      "knownLimitsRisks": [
+        "Known 1+9 manifest quality is regression evidence, not a holdout proof."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js", "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
+          "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"
+        ],
         "runs": ["Tracker 133.46"],
         "adrs": ["ADR-028", "ADR-031"],
         "failures": []
@@ -431,19 +811,51 @@
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
       "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "INACTIVE" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.js", "server/scripts/qa/verifyAutomatedADrivenBPilotLaunch.cjs", "server/scripts/qa/runADrivenReferenceClassification.cjs"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.js", "symbol": "buildAutomatedADrivenIntegrityReceipt" }],
-      "callers": [{ "path": "server/scripts/qa/verifyAutomatedADrivenBPilotLaunch.cjs", "contains": "aDrivenAutomaticIntegrityGate" }],
-      "inputs": ["A plan", "classification batches", "dynamic manifest", "input manifest"],
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.js",
+        "server/scripts/qa/verifyAutomatedADrivenBPilotLaunch.cjs",
+        "server/scripts/qa/runADrivenReferenceClassification.cjs"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.js",
+          "symbol": "buildAutomatedADrivenIntegrityReceipt"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/qa/verifyAutomatedADrivenBPilotLaunch.cjs",
+          "contains": "aDrivenAutomaticIntegrityGate"
+        }
+      ],
+      "inputs": [
+        "A plan",
+        "classification batches",
+        "dynamic manifest",
+        "input manifest"
+      ],
       "outputs": ["LF_A_AUTOMATED_B_SHADOW_READINESS_V2"],
       "sideEffects": ["CLI writes readiness artifact"],
       "dependencies": ["CAP-A-001", "CAP-A-002", "CAP-A-003"],
-      "qualityImpact": { "recall": "GUARDS_SILENT_LOSS", "precision": "GUARDS_INVALID_OUTPUT", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "NECESSARY_NOT_SUFFICIENT" },
+      "qualityImpact": {
+        "recall": "GUARDS_SILENT_LOSS",
+        "precision": "GUARDS_INVALID_OUTPUT",
+        "sourceBinding": "CRITICAL_POSITIVE",
+        "generalization": "NECESSARY_NOT_SUFFICIENT"
+      },
       "resourceImpact": { "runtime": "LOW", "ram": "LOW", "gpu": "NONE" },
-      "knownLimitsRisks": ["A technical PASS does not prove fachliche completeness or 99 percent.", "Coordinated peril atomization is intentionally syntax-bounded; unseen enumeration forms remain a holdout question."],
+      "knownLimitsRisks": [
+        "A technical PASS does not prove fachliche completeness or 99 percent.",
+        "Coordinated peril atomization is intentionally syntax-bounded; unseen enumeration forms remain a holdout question."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.test.js"],
-        "runs": ["Tracker 133.46", "Tracker 133.55; 58/58 rematerialized, 363 requirements and 1,282 components"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.test.js"
+        ],
+        "runs": [
+          "Tracker 133.46",
+          "Tracker 133.55; 58/58 rematerialized, 363 requirements and 1,282 components"
+        ],
         "adrs": ["ADR-032"],
         "failures": ["INT-20260916-039"]
       },
@@ -460,23 +872,62 @@
       "productModes": ["LF"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "AVAILABLE_NOT_WIRED" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenCounterpartSearchPlan.js", "server/utils/policyAnalysis/counterpartRetrievalPrimitives.js", "server/utils/policyAnalysis/counterpartQueryVariants.js"],
-      "publicEntrypoints": [
-        { "path": "server/utils/policyAnalysis/aDrivenCounterpartSearchPlan.js", "symbol": "buildADrivenCounterpartSearchPlan" },
-        { "path": "server/utils/policyAnalysis/counterpartRetrievalPrimitives.js", "symbol": "rankLexicalCandidates" },
-        { "path": "server/utils/policyAnalysis/counterpartQueryVariants.js", "symbol": "controlledQueryVariants" }
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "AVAILABLE_NOT_WIRED"
+      },
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenCounterpartSearchPlan.js",
+        "server/utils/policyAnalysis/counterpartRetrievalPrimitives.js",
+        "server/utils/policyAnalysis/counterpartQueryVariants.js"
       ],
-      "callers": [{ "path": "server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs", "contains": "buildADrivenCounterpartSearchPlan" }],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenCounterpartSearchPlan.js",
+          "symbol": "buildADrivenCounterpartSearchPlan"
+        },
+        {
+          "path": "server/utils/policyAnalysis/counterpartRetrievalPrimitives.js",
+          "symbol": "rankLexicalCandidates"
+        },
+        {
+          "path": "server/utils/policyAnalysis/counterpartQueryVariants.js",
+          "symbol": "controlledQueryVariants"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs",
+          "contains": "buildADrivenCounterpartSearchPlan"
+        }
+      ],
       "inputs": ["dynamic A manifest", "all B document artifacts"],
-      "outputs": ["LF_A_DRIVEN_COUNTERPART_SEARCH_PLAN_V3", "per-channel ranked candidates"],
+      "outputs": [
+        "LF_A_DRIVEN_COUNTERPART_SEARCH_PLAN_V3",
+        "per-channel ranked candidates"
+      ],
       "sideEffects": ["none in plan/ranking primitives"],
       "dependencies": ["CAP-A-003", "CAP-PROV-001"],
-      "qualityImpact": { "recall": "POSITIVE", "precision": "MIXED_UNTIL_SEMANTIC_DECISION", "sourceBinding": "POSITIVE", "generalization": "POSITIVE" },
-      "resourceImpact": { "runtime": "MEASURED: 11,466 rankings on current fixture", "ram": "MEDIUM", "gpu": "NONE for BM25" },
-      "knownLimitsRisks": ["Controlled synonym families are finite and require versioned general rules.", "Per-channel top-k is navigation only; absence needs the full-corpus path."],
+      "qualityImpact": {
+        "recall": "POSITIVE",
+        "precision": "MIXED_UNTIL_SEMANTIC_DECISION",
+        "sourceBinding": "POSITIVE",
+        "generalization": "POSITIVE"
+      },
+      "resourceImpact": {
+        "runtime": "MEASURED: 11,466 rankings on current fixture",
+        "ram": "MEDIUM",
+        "gpu": "NONE for BM25"
+      },
+      "knownLimitsRisks": [
+        "Controlled synonym families are finite and require versioned general rules.",
+        "Per-channel top-k is navigation only; absence needs the full-corpus path."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js", "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
+          "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"
+        ],
         "runs": ["Tracker 133.46"],
         "adrs": ["ADR-005", "ADR-025", "ADR-031"],
         "failures": ["FAIL-005"]
@@ -494,19 +945,49 @@
       "productModes": ["LF"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "AVAILABLE_NOT_WIRED" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenCounterpartRetrieval.js", "server/utils/policyAnalysis/referenceCandidateCompactor.js"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/aDrivenCounterpartRetrieval.js", "symbol": "buildClauseBoundaries" }],
-      "callers": [{ "path": "server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs", "contains": "retrieveADrivenCounterpartCandidates" }],
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "AVAILABLE_NOT_WIRED"
+      },
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenCounterpartRetrieval.js",
+        "server/utils/policyAnalysis/referenceCandidateCompactor.js"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenCounterpartRetrieval.js",
+          "symbol": "buildClauseBoundaries"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs",
+          "contains": "retrieveADrivenCounterpartCandidates"
+        }
+      ],
       "inputs": ["B PageMaps", "search packages"],
       "outputs": ["clause boundaries", "structural candidates"],
       "sideEffects": ["none in library"],
       "dependencies": ["CAP-PROV-001", "CAP-B-001"],
-      "qualityImpact": { "recall": "POSITIVE", "precision": "POSITIVE", "sourceBinding": "POSITIVE", "generalization": "STRUCTURE_DEPENDENT" },
-      "resourceImpact": { "runtime": "LOW_TO_MEDIUM", "ram": "MEDIUM", "gpu": "NONE" },
-      "knownLimitsRisks": ["Structure provides navigation and cannot alone assert semantic equivalence or coverage effect."],
+      "qualityImpact": {
+        "recall": "POSITIVE",
+        "precision": "POSITIVE",
+        "sourceBinding": "POSITIVE",
+        "generalization": "STRUCTURE_DEPENDENT"
+      },
+      "resourceImpact": {
+        "runtime": "LOW_TO_MEDIUM",
+        "ram": "MEDIUM",
+        "gpu": "NONE"
+      },
+      "knownLimitsRisks": [
+        "Structure provides navigation and cannot alone assert semantic equivalence or coverage effect."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js", "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
+          "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"
+        ],
         "runs": ["Tracker 133.46"],
         "adrs": ["ADR-004", "ADR-031"],
         "failures": []
@@ -524,22 +1005,63 @@
       "productModes": ["LF", "AB"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "AVAILABLE_NOT_WIRED" },
-      "implementationFiles": ["server/utils/policyAnalysis/hybridShadowSearch.js", "server/utils/policyAnalysis/hybridShadowEmbeddingClient.js", "server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/hybridShadowSearch.js", "symbol": "loadHybridShadowContract" }],
-      "callers": [
-        { "path": "server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs", "contains": "hybridShadowSearch" },
-        { "path": "server/scripts/policyComparisonWorker.cjs", "contains": "loadHybridShadowContract" }
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "AVAILABLE_NOT_WIRED"
+      },
+      "implementationFiles": [
+        "server/utils/policyAnalysis/hybridShadowSearch.js",
+        "server/utils/policyAnalysis/hybridShadowEmbeddingClient.js",
+        "server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs"
       ],
-      "inputs": ["versioned embedding contract", "A component queries", "B clause texts"],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/hybridShadowSearch.js",
+          "symbol": "loadHybridShadowContract"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/qa/runADrivenReferenceDinghyRetrieval.cjs",
+          "contains": "hybridShadowSearch"
+        },
+        {
+          "path": "server/scripts/policyComparisonWorker.cjs",
+          "contains": "loadHybridShadowContract"
+        }
+      ],
+      "inputs": [
+        "versioned embedding contract",
+        "A component queries",
+        "B clause texts"
+      ],
       "outputs": ["LF_DINGHY_RANKING_RESULT_V2"],
-      "sideEffects": ["loads local embedding model", "embedding API calls", "private ranking artifact"],
+      "sideEffects": [
+        "loads local embedding model",
+        "embedding API calls",
+        "private ranking artifact"
+      ],
       "dependencies": ["LM Studio", "Dinghy 4B", "global model lock"],
-      "qualityImpact": { "recall": "COMPLEMENTARY_POSITIVE", "precision": "NAVIGATION_ONLY", "sourceBinding": "POSITIVE", "generalization": "PROMISING_NOT_HOLDOUT_PROVEN" },
-      "resourceImpact": { "runtime": "MEDIUM_TO_HIGH", "ram": "embedding model footprint", "gpu": "exclusive embedding phase" },
-      "knownLimitsRisks": ["Dinghy cannot certify absence or semantic equivalence by itself.", "Exactly one local model may be loaded in this workflow."],
+      "qualityImpact": {
+        "recall": "COMPLEMENTARY_POSITIVE",
+        "precision": "NAVIGATION_ONLY",
+        "sourceBinding": "POSITIVE",
+        "generalization": "PROMISING_NOT_HOLDOUT_PROVEN"
+      },
+      "resourceImpact": {
+        "runtime": "MEDIUM_TO_HIGH",
+        "ram": "embedding model footprint",
+        "gpu": "exclusive embedding phase"
+      },
+      "knownLimitsRisks": [
+        "Dinghy cannot certify absence or semantic equivalence by itself.",
+        "Exactly one local model may be loaded in this workflow."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysis/hybridShadowSearch.test.js", "server/__tests__/utils/policyAnalysis/hybridShadowEmbeddingClient.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysis/hybridShadowSearch.test.js",
+          "server/__tests__/utils/policyAnalysis/hybridShadowEmbeddingClient.test.js"
+        ],
         "runs": ["Tests section 60", "Tracker 133.46"],
         "adrs": ["ADR-005", "ADR-009", "ADR-025"],
         "failures": []
@@ -557,19 +1079,46 @@
       "productModes": ["LF"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "AVAILABLE_NOT_WIRED" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenCounterpartRetrieval.js", "server/utils/policyAnalysis/referenceCandidateCompactor.js"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/referenceCandidateCompactor.js", "symbol": "compactReferenceCandidates" }],
-      "callers": [{ "path": "server/utils/policyAnalysis/aDrivenCounterpartRetrieval.js", "contains": "compactReferenceCandidates" }],
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "AVAILABLE_NOT_WIRED"
+      },
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenCounterpartRetrieval.js",
+        "server/utils/policyAnalysis/referenceCandidateCompactor.js"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/referenceCandidateCompactor.js",
+          "symbol": "compactReferenceCandidates"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenCounterpartRetrieval.js",
+          "contains": "compactReferenceCandidates"
+        }
+      ],
       "inputs": ["server-owned per-channel candidates"],
-      "outputs": ["compact candidates preserving every source member and channel"],
+      "outputs": [
+        "compact candidates preserving every source member and channel"
+      ],
       "sideEffects": ["none"],
       "dependencies": ["CAP-B-001", "CAP-B-002", "CAP-B-003"],
-      "qualityImpact": { "recall": "PRESERVES_INPUT_MEMBERS", "precision": "POSITIVE_CONTEXT", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "POSITIVE" },
+      "qualityImpact": {
+        "recall": "PRESERVES_INPUT_MEMBERS",
+        "precision": "POSITIVE_CONTEXT",
+        "sourceBinding": "CRITICAL_POSITIVE",
+        "generalization": "POSITIVE"
+      },
       "resourceImpact": { "runtime": "LOW", "ram": "MEDIUM", "gpu": "NONE" },
-      "knownLimitsRisks": ["Primary compact candidates remain bounded navigation and cannot prove package-wide absence."],
+      "knownLimitsRisks": [
+        "Primary compact candidates remain bounded navigation and cannot prove package-wide absence."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"
+        ],
         "runs": ["Tracker 133.45 and 133.46"],
         "adrs": ["ADR-031"],
         "failures": []
@@ -587,19 +1136,48 @@
       "productModes": ["LF"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "AVAILABLE_NOT_WIRED" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenCompleteBCorpus.js", "server/scripts/qa/buildADrivenCompleteBCorpus.cjs"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/aDrivenCompleteBCorpus.js", "symbol": "buildADrivenCompleteBCorpus" }],
-      "callers": [{ "path": "run-a-driven-reference-product-v2.command", "contains": "buildADrivenCompleteBCorpus.cjs" }],
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "AVAILABLE_NOT_WIRED"
+      },
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenCompleteBCorpus.js",
+        "server/scripts/qa/buildADrivenCompleteBCorpus.cjs"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenCompleteBCorpus.js",
+          "symbol": "buildADrivenCompleteBCorpus"
+        }
+      ],
+      "callers": [
+        {
+          "path": "run-a-driven-reference-product-v2.command",
+          "contains": "buildADrivenCompleteBCorpus.cjs"
+        }
+      ],
       "inputs": ["all B document artifacts", "search plan"],
       "outputs": ["LF_A_DRIVEN_COMPLETE_B_CORPUS_V1"],
       "sideEffects": ["writes private corpus artifact"],
       "dependencies": ["CAP-PROV-001", "CAP-B-002"],
-      "qualityImpact": { "recall": "CRITICAL_FOR_ABSENCE", "precision": "NEUTRAL", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "POSITIVE" },
-      "resourceImpact": { "runtime": "LOW materialization; downstream review is high", "ram": "MEDIUM", "gpu": "NONE" },
-      "knownLimitsRisks": ["Corpus completeness does not itself prove that the model correctly interprets every clause."],
+      "qualityImpact": {
+        "recall": "CRITICAL_FOR_ABSENCE",
+        "precision": "NEUTRAL",
+        "sourceBinding": "CRITICAL_POSITIVE",
+        "generalization": "POSITIVE"
+      },
+      "resourceImpact": {
+        "runtime": "LOW materialization; downstream review is high",
+        "ram": "MEDIUM",
+        "gpu": "NONE"
+      },
+      "knownLimitsRisks": [
+        "Corpus completeness does not itself prove that the model correctly interprets every clause."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"
+        ],
         "runs": ["Tracker 133.46"],
         "adrs": ["ADR-031"],
         "failures": ["FAIL-005"]
@@ -618,21 +1196,76 @@
       "maturityStatus": "EXPERIMENTAL",
       "activationStatus": "ACTIVE_PRODUCTION",
       "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "INACTIVE" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenRequirementCounterpartDecision.js", "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/aDrivenRequirementCounterpartDecision.js", "symbol": "validateADrivenRequirementDecisionResponses" }],
-      "callers": [{ "path": "run-a-driven-reference-product-v2.command", "contains": "runADrivenRequirementCounterpartDecisions.cjs" }],
-      "inputs": ["dynamic manifest", "search plan/execution", "complete B corpus", "bounded server candidates"],
-      "outputs": ["LF_A_DRIVEN_REQUIREMENT_DECISION_V1", "append-only attempts", "PASS batches"],
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenRequirementCounterpartDecision.js",
+        "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenRequirementCounterpartDecision.js",
+          "symbol": "validateADrivenRequirementDecisionResponses"
+        }
+      ],
+      "callers": [
+        {
+          "path": "run-a-driven-reference-product-v2.command",
+          "contains": "runADrivenRequirementCounterpartDecisions.cjs"
+        }
+      ],
+      "inputs": [
+        "dynamic manifest",
+        "search plan/execution",
+        "complete B corpus",
+        "bounded server candidates"
+      ],
+      "outputs": [
+        "LF_A_DRIVEN_REQUIREMENT_DECISION_V1",
+        "append-only attempts",
+        "PASS batches"
+      ],
       "sideEffects": ["local Qwen calls", "private resume artifacts"],
       "dependencies": ["CAP-B-004", "CAP-B-005", "CAP-MODEL-001"],
-      "qualityImpact": { "recall": "PRIMARY_DECISION_GATE", "precision": "PRIMARY_DECISION_GATE", "sourceBinding": "SERVER_VALIDATED", "generalization": "NOT_YET_END_TO_END_PROVEN" },
-      "resourceImpact": { "runtime": "HIGH for a cold run; measured seeded rematerialization of 204 batches took 87,781 ms with 361/363 requirements reused; 15/15 rescue rows rematerialized in 24 ms with zero model calls", "ram": "Qwen model footprint", "gpu": "Qwen bursts only for non-seeded requirements" },
-      "knownLimitsRisks": ["A PASS batch proves contract validity, not agreement with Gold.", "Deterministic local-model output can repeat the same malformed or schema-invalid answer; bounded schema-specific repair must remain fail-closed.", "Identity-core modifier normalization is allowed only for a positive MATCH or COUNTERPART_WITH_DIFFERENCE context, identical server-bound candidate IDs and explicit differences limited to scope, condition, value, limit, deductible or temporal validity; RELATED_ONLY remains excluded.", "Cross-plan reuse is allowed only after complete seed binding, byte-identical row comparison and current single-row revalidation.", "Explicit-exclusion normalization is restricted to one PERIL_OR_CAUSE identity core, an existing COVERAGE_EFFECT, one cited server-bound clause with explicit exclusion wording and exactly one configured general peril-equivalence group; unrelated clauses, ambiguous cores and uncited evidence remain fail-closed."],
+      "qualityImpact": {
+        "recall": "PRIMARY_DECISION_GATE",
+        "precision": "PRIMARY_DECISION_GATE",
+        "sourceBinding": "SERVER_VALIDATED",
+        "generalization": "NOT_YET_END_TO_END_PROVEN"
+      },
+      "resourceImpact": {
+        "runtime": "HIGH for a cold run; measured seeded rematerialization of 204 batches took 87,781 ms with 361/363 requirements reused; 15/15 rescue rows rematerialized in 24 ms with zero model calls",
+        "ram": "Qwen model footprint",
+        "gpu": "Qwen bursts only for non-seeded requirements"
+      },
+      "knownLimitsRisks": [
+        "A PASS batch proves contract validity, not agreement with Gold.",
+        "Deterministic local-model output can repeat the same malformed or schema-invalid answer; bounded schema-specific repair must remain fail-closed.",
+        "Identity-core modifier normalization is allowed only for a positive MATCH or COUNTERPART_WITH_DIFFERENCE context, identical server-bound candidate IDs and explicit differences limited to scope, condition, value, limit, deductible or temporal validity; RELATED_ONLY remains excluded.",
+        "Cross-plan reuse is allowed only after complete seed binding, byte-identical row comparison and current single-row revalidation.",
+        "Explicit-exclusion normalization is restricted to one PERIL_OR_CAUSE identity core, an existing COVERAGE_EFFECT, one cited server-bound clause with explicit exclusion wording and exactly one configured general peril-equivalence group; unrelated clauses, ambiguous cores and uncited evidence remain fail-closed."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tracker 133.47", "Tracker 133.51", "Tracker 133.52", "Tracker 133.53", "Tracker 133.54", "Tracker 133.55; 204/204 and 363/363 terminal with 361 seeded plus 2 new model decisions", "Tracker 133.56; 351/351 tests, 15/15 rescue rows seeded, zero model calls"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"
+        ],
+        "runs": [
+          "Tracker 133.47",
+          "Tracker 133.51",
+          "Tracker 133.52",
+          "Tracker 133.53",
+          "Tracker 133.54",
+          "Tracker 133.55; 204/204 and 363/363 terminal with 361 seeded plus 2 new model decisions",
+          "Tracker 133.56; 351/351 tests, 15/15 rescue rows seeded, zero model calls"
+        ],
         "adrs": ["ADR-031"],
-        "failures": ["INT-20260915-037", "INT-20260916-038", "INT-20260916-039", "INT-20260916-040", "INT-20260916-041", "INT-20260916-042", "INT-20260916-043"]
+        "failures": [
+          "INT-20260915-037",
+          "INT-20260916-038",
+          "INT-20260916-039",
+          "INT-20260916-040",
+          "INT-20260916-041",
+          "INT-20260916-042",
+          "INT-20260916-043"
+        ]
       },
       "lastVerifiedCommit": "ac3ce5631cd062143f70188c33f5c28baa25f8cb",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
@@ -648,19 +1281,55 @@
       "maturityStatus": "EXPERIMENTAL",
       "activationStatus": "ACTIVE_PRODUCTION",
       "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "INACTIVE" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenRequirementAbsenceCertification.js", "server/scripts/qa/runADrivenRequirementAbsenceDecisions.cjs", "server/scripts/qa/materializeADrivenRequirementRescueReviewPlan.cjs", "server/scripts/qa/materializeADrivenRequirementFinalDecisions.cjs"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/aDrivenRequirementAbsenceCertification.js", "symbol": "buildADrivenRequirementFinalDecisions" }],
-      "callers": [{ "path": "run-a-driven-reference-product-v2.command", "contains": "runADrivenRequirementAbsenceDecisions.cjs" }],
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenRequirementAbsenceCertification.js",
+        "server/scripts/qa/runADrivenRequirementAbsenceDecisions.cjs",
+        "server/scripts/qa/materializeADrivenRequirementRescueReviewPlan.cjs",
+        "server/scripts/qa/materializeADrivenRequirementFinalDecisions.cjs"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenRequirementAbsenceCertification.js",
+          "symbol": "buildADrivenRequirementFinalDecisions"
+        }
+      ],
+      "callers": [
+        {
+          "path": "run-a-driven-reference-product-v2.command",
+          "contains": "runADrivenRequirementAbsenceDecisions.cjs"
+        }
+      ],
       "inputs": ["preliminary B decisions", "complete B corpus"],
-      "outputs": ["absence decisions", "rescue plan/results", "final requirement decisions"],
+      "outputs": [
+        "absence decisions",
+        "rescue plan/results",
+        "final requirement decisions"
+      ],
       "sideEffects": ["additional Qwen calls", "private decision artifacts"],
       "dependencies": ["CAP-B-005", "CAP-B-006", "CAP-MODEL-001"],
-      "qualityImpact": { "recall": "CRITICAL_POSITIVE", "precision": "POSITIVE_FAIL_CLOSED", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "KNOWN_FIXTURE_VALIDATED_NOT_HOLDOUT_PROVEN" },
-      "resourceImpact": { "runtime": "Measured seeded absence: 112 ms for 561/561 reused partitions; latest 15-row rescue rematerialization: 24 ms and zero model calls", "ram": "Qwen model footprint", "gpu": "Qwen bursts during non-seeded rescue only" },
-      "knownLimitsRisks": ["An explicit exclusion of the same source-bound element is a contradicted counterpart, while a true null finding remains separate and requires complete-corpus certification.", "The completed 1+9 run validates this known fixture only; unseen insurer and cold-run runtime gates remain open."],
+      "qualityImpact": {
+        "recall": "CRITICAL_POSITIVE",
+        "precision": "POSITIVE_FAIL_CLOSED",
+        "sourceBinding": "CRITICAL_POSITIVE",
+        "generalization": "KNOWN_FIXTURE_VALIDATED_NOT_HOLDOUT_PROVEN"
+      },
+      "resourceImpact": {
+        "runtime": "Measured seeded absence: 112 ms for 561/561 reused partitions; latest 15-row rescue rematerialization: 24 ms and zero model calls",
+        "ram": "Qwen model footprint",
+        "gpu": "Qwen bursts during non-seeded rescue only"
+      },
+      "knownLimitsRisks": [
+        "An explicit exclusion of the same source-bound element is a contradicted counterpart, while a true null finding remains separate and requires complete-corpus certification.",
+        "The completed 1+9 run validates this known fixture only; unseen insurer and cold-run runtime gates remain open."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tracker 133.55; 561/561 absence partitions, 8/8 rescue batches and 363 binary final decisions", "Tracker 133.56; 322 FOUND, 41 NOT_FOUND, 0 unresolved; 199 FULL, 118 PARTIAL, 5 CONTRADICTED"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"
+        ],
+        "runs": [
+          "Tracker 133.55; 561/561 absence partitions, 8/8 rescue batches and 363 binary final decisions",
+          "Tracker 133.56; 322 FOUND, 41 NOT_FOUND, 0 unresolved; 199 FULL, 118 PARTIAL, 5 CONTRADICTED"
+        ],
         "adrs": ["ADR-022", "ADR-026", "ADR-031"],
         "failures": []
       },
@@ -677,19 +1346,63 @@
       "productModes": ["LF", "AB"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "ACTIVE_PRODUCTION" },
-      "implementationFiles": ["server/scripts/qa/runADrivenReferenceClassification.cjs", "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs", "server/scripts/qa/runPreparedEvidenceEvaluation.cjs", "server/scripts/qa/runVsCandidateTriage.cjs", "run-a-driven-reference-product-v2.command"],
-      "publicEntrypoints": [{ "path": "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs", "symbol": "main" }],
-      "callers": [{ "path": "run-a-driven-reference-product-v2.command", "contains": "LF_B_QWEN_REQUEST_TIMEOUT_MS" }],
-      "inputs": ["model ID/context", "bounded prompts", "timeouts and retry budgets"],
-      "outputs": ["validated answer or fail-closed resumable batch", "attempt diagnostics"],
-      "sideEffects": ["LM Studio load/unload/recovery", "network calls to localhost", "append-only journals"],
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "ACTIVE_PRODUCTION"
+      },
+      "implementationFiles": [
+        "server/scripts/qa/runADrivenReferenceClassification.cjs",
+        "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs",
+        "server/scripts/qa/runPreparedEvidenceEvaluation.cjs",
+        "server/scripts/qa/runVsCandidateTriage.cjs",
+        "run-a-driven-reference-product-v2.command"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs",
+          "symbol": "main"
+        }
+      ],
+      "callers": [
+        {
+          "path": "run-a-driven-reference-product-v2.command",
+          "contains": "LF_B_QWEN_REQUEST_TIMEOUT_MS"
+        }
+      ],
+      "inputs": [
+        "model ID/context",
+        "bounded prompts",
+        "timeouts and retry budgets"
+      ],
+      "outputs": [
+        "validated answer or fail-closed resumable batch",
+        "attempt diagnostics"
+      ],
+      "sideEffects": [
+        "LM Studio load/unload/recovery",
+        "network calls to localhost",
+        "append-only journals"
+      ],
       "dependencies": ["LM Studio SDK", "global model lock"],
-      "qualityImpact": { "recall": "NEUTRAL_SEMANTIC", "precision": "NEUTRAL_SEMANTIC", "sourceBinding": "GUARDS_STALE_RESPONSE", "generalization": "NEUTRAL" },
-      "resourceImpact": { "runtime": "Can retry and split timed-out groups", "ram": "Qwen load footprint", "gpu": "exclusive Qwen" },
-      "knownLimitsRisks": ["Transport recovery must never be interpreted as a semantic answer.", "Safe recovery is required before retry."],
+      "qualityImpact": {
+        "recall": "NEUTRAL_SEMANTIC",
+        "precision": "NEUTRAL_SEMANTIC",
+        "sourceBinding": "GUARDS_STALE_RESPONSE",
+        "generalization": "NEUTRAL"
+      },
+      "resourceImpact": {
+        "runtime": "Can retry and split timed-out groups",
+        "ram": "Qwen load footprint",
+        "gpu": "exclusive Qwen"
+      },
+      "knownLimitsRisks": [
+        "Transport recovery must never be interpreted as a semantic answer.",
+        "Safe recovery is required before retry."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"
+        ],
         "runs": ["Tracker 133.47"],
         "adrs": ["ADR-009", "ADR-010"],
         "failures": []
@@ -707,23 +1420,69 @@
       "productModes": ["LF", "AB"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "ACTIVE_PRODUCTION" },
-      "implementationFiles": ["server/utils/policyAnalysis/validatedModelResponseCache.js", "server/scripts/policyComparisonWorker.cjs", "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/validatedModelResponseCache.js", "symbol": "readValidatedCachedResponse" }],
-      "callers": [
-        { "path": "server/scripts/policyComparisonWorker.cjs", "contains": "seedResponseCacheFromRunHistory" },
-        { "path": "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs", "contains": "LF_A_DRIVEN_REQUIREMENT_BATCH_RESULT_NOT_PASS" }
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "ACTIVE_PRODUCTION"
+      },
+      "implementationFiles": [
+        "server/utils/policyAnalysis/validatedModelResponseCache.js",
+        "server/scripts/policyComparisonWorker.cjs",
+        "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs"
       ],
-      "inputs": ["phase/model/context/prompt identity", "existing batch artifacts"],
-      "outputs": ["validated cache hit", "resume start at first incomplete batch"],
-      "sideEffects": ["private cache and batch file reads/writes", "invalid cache quarantine"],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/validatedModelResponseCache.js",
+          "symbol": "readValidatedCachedResponse"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/policyComparisonWorker.cjs",
+          "contains": "seedResponseCacheFromRunHistory"
+        },
+        {
+          "path": "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs",
+          "contains": "LF_A_DRIVEN_REQUIREMENT_BATCH_RESULT_NOT_PASS"
+        }
+      ],
+      "inputs": [
+        "phase/model/context/prompt identity",
+        "existing batch artifacts"
+      ],
+      "outputs": [
+        "validated cache hit",
+        "resume start at first incomplete batch"
+      ],
+      "sideEffects": [
+        "private cache and batch file reads/writes",
+        "invalid cache quarantine"
+      ],
       "dependencies": ["hash-bound contracts", "CAP-MODEL-001"],
-      "qualityImpact": { "recall": "NEUTRAL", "precision": "PRESERVES_VALIDATED_RESULT", "sourceBinding": "POSITIVE", "generalization": "NEUTRAL" },
-      "resourceImpact": { "runtime": "STRONG_POSITIVE for exact replay", "ram": "LOW", "gpu": "avoids repeated calls" },
-      "knownLimitsRisks": ["Speeds identical replays, not first runs on new documents.", "Cross-plan requirement reuse requires a complete terminal seed plus byte-identical current rows and current-contract revalidation."],
+      "qualityImpact": {
+        "recall": "NEUTRAL",
+        "precision": "PRESERVES_VALIDATED_RESULT",
+        "sourceBinding": "POSITIVE",
+        "generalization": "NEUTRAL"
+      },
+      "resourceImpact": {
+        "runtime": "STRONG_POSITIVE for exact replay",
+        "ram": "LOW",
+        "gpu": "avoids repeated calls"
+      },
+      "knownLimitsRisks": [
+        "Speeds identical replays, not first runs on new documents.",
+        "Cross-plan requirement reuse requires a complete terminal seed plus byte-identical current rows and current-contract revalidation."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysis/validatedModelResponseCache.test.js", "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tests section 59", "Tracker 133.47", "Tracker 133.55; 361/363 cross-plan requirement decisions reused"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysis/validatedModelResponseCache.test.js",
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"
+        ],
+        "runs": [
+          "Tests section 59",
+          "Tracker 133.47",
+          "Tracker 133.55; 361/363 cross-plan requirement decisions reused"
+        ],
         "adrs": ["ADR-030"],
         "failures": []
       },
@@ -741,19 +1500,47 @@
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
       "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "INACTIVE" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenBinaryReferenceResult.js", "server/utils/policyComparison/aDrivenReferenceResultBuilder.js", "server/scripts/qa/materializeADrivenRequirementBinaryResult.cjs"],
-      "publicEntrypoints": [{ "path": "server/utils/policyComparison/aDrivenReferenceResultBuilder.js", "symbol": "buildADrivenReferenceProductResult" }],
-      "callers": [{ "path": "run-a-driven-reference-product-v2.command", "contains": "materializeADrivenRequirementBinaryResult.cjs" }],
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenBinaryReferenceResult.js",
+        "server/utils/policyComparison/aDrivenReferenceResultBuilder.js",
+        "server/scripts/qa/materializeADrivenRequirementBinaryResult.cjs"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyComparison/aDrivenReferenceResultBuilder.js",
+          "symbol": "buildADrivenReferenceProductResult"
+        }
+      ],
+      "callers": [
+        {
+          "path": "run-a-driven-reference-product-v2.command",
+          "contains": "materializeADrivenRequirementBinaryResult.cjs"
+        }
+      ],
       "inputs": ["dynamic A manifest", "final B requirement decisions"],
       "outputs": ["binary reference result", "customer-safe dynamic read view"],
       "sideEffects": ["none in builders", "downstream artifact publication"],
       "dependencies": ["CAP-A-003", "CAP-B-007"],
-      "qualityImpact": { "recall": "PRESERVES_UPSTREAM", "precision": "PRESERVES_UPSTREAM", "sourceBinding": "POSITIVE", "generalization": "DYNAMIC_TOPOLOGY" },
+      "qualityImpact": {
+        "recall": "PRESERVES_UPSTREAM",
+        "precision": "PRESERVES_UPSTREAM",
+        "sourceBinding": "POSITIVE",
+        "generalization": "DYNAMIC_TOPOLOGY"
+      },
       "resourceImpact": { "runtime": "LOW", "ram": "MEDIUM", "gpu": "NONE" },
-      "knownLimitsRisks": ["Cannot improve upstream search or classification errors.", "Binary customer status must not erase private FULL/PARTIAL/CONTRADICTED detail."],
+      "knownLimitsRisks": [
+        "Cannot improve upstream search or classification errors.",
+        "Binary customer status must not erase private FULL/PARTIAL/CONTRADICTED detail."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js", "server/__tests__/utils/policyComparisonDynamicReferenceResultBuilder.test.js"],
-        "runs": ["Tracker 133.44 and 133.45", "Tracker 133.55; 363 rows, 318 found, 45 not found and 0 unresolved"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
+          "server/__tests__/utils/policyComparisonDynamicReferenceResultBuilder.test.js"
+        ],
+        "runs": [
+          "Tracker 133.44 and 133.45",
+          "Tracker 133.55; 363 rows, 318 found, 45 not found and 0 unresolved"
+        ],
         "adrs": ["ADR-031"],
         "failures": []
       },
@@ -770,26 +1557,78 @@
       "productModes": ["LF", "AB"],
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_PRODUCTION",
-      "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "ACTIVE_PRODUCTION" },
-      "implementationFiles": ["server/utils/policyComparison/artifactSetPublisher.js", "server/utils/policyComparison/comparisonResultReader.js", "server/utils/policyComparison/comparisonExportContract.js", "server/utils/policyComparison/aDrivenReferenceResultBuilder.js", "frontend/src/components/WorkspaceChat/ChatContainer/PolicyComparisonPanel/index.jsx"],
+      "activationByMode": {
+        "LF": "ACTIVE_PRODUCTION",
+        "AB": "ACTIVE_PRODUCTION"
+      },
+      "implementationFiles": [
+        "server/utils/policyComparison/artifactSetPublisher.js",
+        "server/utils/policyComparison/comparisonResultReader.js",
+        "server/utils/policyComparison/comparisonExportContract.js",
+        "server/utils/policyComparison/aDrivenReferenceResultBuilder.js",
+        "frontend/src/components/WorkspaceChat/ChatContainer/PolicyComparisonPanel/index.jsx"
+      ],
       "publicEntrypoints": [
-        { "path": "server/utils/policyComparison/artifactSetPublisher.js", "symbol": "publishComparisonArtifactSet" },
-        { "path": "server/utils/policyComparison/comparisonResultReader.js", "symbol": "readValidatedComparisonResult" },
-        { "path": "server/utils/policyComparison/comparisonExportContract.js", "symbol": "buildComparisonExportContract" }
+        {
+          "path": "server/utils/policyComparison/artifactSetPublisher.js",
+          "symbol": "publishComparisonArtifactSet"
+        },
+        {
+          "path": "server/utils/policyComparison/comparisonResultReader.js",
+          "symbol": "readValidatedComparisonResult"
+        },
+        {
+          "path": "server/utils/policyComparison/comparisonExportContract.js",
+          "symbol": "buildComparisonExportContract"
+        }
       ],
       "callers": [
-        { "path": "server/scripts/policyComparisonWorker.cjs", "contains": "readValidatedComparisonResult" },
-        { "path": "server/endpoints/policyComparisons.js", "contains": "readValidatedStoredComparisonArtifacts" }
+        {
+          "path": "server/scripts/policyComparisonWorker.cjs",
+          "contains": "readValidatedComparisonResult"
+        },
+        {
+          "path": "server/endpoints/policyComparisons.js",
+          "contains": "readValidatedStoredComparisonArtifacts"
+        }
       ],
-      "inputs": ["validated comparison result", "workbook", "session/run identity"],
-      "outputs": ["private artifact set", "customer result API", "downloadable XLSX"],
-      "sideEffects": ["atomic private filesystem publication", "workbook archive", "HTTP response"],
+      "inputs": [
+        "validated comparison result",
+        "workbook",
+        "session/run identity"
+      ],
+      "outputs": [
+        "private artifact set",
+        "customer result API",
+        "downloadable XLSX"
+      ],
+      "sideEffects": [
+        "atomic private filesystem publication",
+        "workbook archive",
+        "HTTP response"
+      ],
       "dependencies": ["ExcelJS", "filesystem fsync", "result contracts"],
-      "qualityImpact": { "recall": "NEUTRAL", "precision": "GUARDS_PRESENTATION_TRUTH", "sourceBinding": "POSITIVE", "generalization": "NEUTRAL" },
-      "resourceImpact": { "runtime": "LOW_TO_MEDIUM", "ram": "MEDIUM for XLSX", "gpu": "NONE" },
-      "knownLimitsRisks": ["A technically valid review workbook is not automatically customer-released.", "Current V2 XLSX remains private QA until explicit approval."],
+      "qualityImpact": {
+        "recall": "NEUTRAL",
+        "precision": "GUARDS_PRESENTATION_TRUTH",
+        "sourceBinding": "POSITIVE",
+        "generalization": "NEUTRAL"
+      },
+      "resourceImpact": {
+        "runtime": "LOW_TO_MEDIUM",
+        "ram": "MEDIUM for XLSX",
+        "gpu": "NONE"
+      },
+      "knownLimitsRisks": [
+        "A technically valid review workbook is not automatically customer-released.",
+        "Current V2 XLSX remains private QA until explicit approval."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyComparisonResultReader.test.js", "server/__tests__/utils/policyComparisonResultBuilder.test.js", "server/__tests__/frontend/policyComparisonLfUiTruthContract.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyComparisonResultReader.test.js",
+          "server/__tests__/utils/policyComparisonResultBuilder.test.js",
+          "server/__tests__/frontend/policyComparisonLfUiTruthContract.test.js"
+        ],
         "runs": ["Tracker 133.44 and 133.45"],
         "adrs": ["ADR-008", "ADR-012", "ADR-023"],
         "failures": []
@@ -808,19 +1647,52 @@
       "maturityStatus": "VALIDATED",
       "activationStatus": "QA_ONLY",
       "activationByMode": { "LF": "QA_ONLY", "AB": "INACTIVE" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenGoldRegression.js", "server/utils/policyAnalysis/aDrivenRequirementPlanGoldRegression.js", "server/utils/policyAnalysis/lfReferenceGoldOracle.js"],
-      "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/aDrivenRequirementPlanGoldRegression.js", "symbol": "buildADrivenRequirementPlanGoldRegression" }],
-      "callers": [{ "path": "server/scripts/qa/evaluateADrivenRequirementPlanGoldRegression.cjs", "contains": "aDrivenRequirementPlanGoldRegression" }],
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenGoldRegression.js",
+        "server/utils/policyAnalysis/aDrivenRequirementPlanGoldRegression.js",
+        "server/utils/policyAnalysis/lfReferenceGoldOracle.js"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenRequirementPlanGoldRegression.js",
+          "symbol": "buildADrivenRequirementPlanGoldRegression"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/qa/evaluateADrivenRequirementPlanGoldRegression.cjs",
+          "contains": "aDrivenRequirementPlanGoldRegression"
+        }
+      ],
       "inputs": ["frozen Gold", "dynamic run artifacts"],
       "outputs": ["regression comparison and discrepancy lists"],
       "sideEffects": ["writes private QA artifacts"],
       "dependencies": ["frozen known-fixture evidence"],
-      "qualityImpact": { "recall": "MEASUREMENT_ONLY", "precision": "MEASUREMENT_ONLY", "sourceBinding": "POSITIVE", "generalization": "NO_PROOF" },
-      "resourceImpact": { "runtime": "LOW_TO_MEDIUM", "ram": "LOW_TO_MEDIUM", "gpu": "NONE unless an explicit reviewer run is separately started" },
-      "knownLimitsRisks": ["Gold-283 is regression for one known 1+9 set and never a production template or holdout proof."],
+      "qualityImpact": {
+        "recall": "MEASUREMENT_ONLY",
+        "precision": "MEASUREMENT_ONLY",
+        "sourceBinding": "POSITIVE",
+        "generalization": "NO_PROOF"
+      },
+      "resourceImpact": {
+        "runtime": "LOW_TO_MEDIUM",
+        "ram": "LOW_TO_MEDIUM",
+        "gpu": "NONE unless an explicit reviewer run is separately started"
+      },
+      "knownLimitsRisks": [
+        "Gold-283 is regression for one known 1+9 set and never a production template or holdout proof."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyAnalysis/lfReferenceGoldOracle.test.js", "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tests sections 82-84", "Tracker 133.43", "Tracker 133.55", "Tracker 133.56; Gold 283/283 source-covered, 141/144 measurable binary matches, 0 false positives, 3 false negatives and 563/631 role-covered"],
+        "tests": [
+          "server/__tests__/utils/policyAnalysis/lfReferenceGoldOracle.test.js",
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"
+        ],
+        "runs": [
+          "Tests sections 82-84",
+          "Tracker 133.43",
+          "Tracker 133.55",
+          "Tracker 133.56; Gold 283/283 source-covered, 141/144 measurable binary matches, 0 false positives, 3 false negatives and 563/631 role-covered"
+        ],
         "adrs": ["ADR-031"],
         "failures": []
       },
@@ -838,18 +1710,47 @@
       "maturityStatus": "SUPERSEDED",
       "activationStatus": "ACTIVE_PRODUCTION",
       "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "INACTIVE" },
-      "implementationFiles": ["server/utils/policyComparison/lfReferenceFamilyContract.js", "server/utils/policyComparison/lfReferenceProfile.js", "server/utils/policyComparison/dynamicReferenceRunner.js"],
-      "publicEntrypoints": [{ "path": "server/utils/policyComparison/dynamicReferenceRunner.js", "symbol": "prepareDynamicReferenceTemplate" }],
-      "callers": [{ "path": "server/scripts/policyComparisonWorker.cjs", "contains": "prepareDynamicReferenceTemplate" }],
+      "implementationFiles": [
+        "server/utils/policyComparison/lfReferenceFamilyContract.js",
+        "server/utils/policyComparison/lfReferenceProfile.js",
+        "server/utils/policyComparison/dynamicReferenceRunner.js"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyComparison/dynamicReferenceRunner.js",
+          "symbol": "prepareDynamicReferenceTemplate"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/policyComparisonWorker.cjs",
+          "contains": "prepareDynamicReferenceTemplate"
+        }
+      ],
       "inputs": ["historical LF profile and source document"],
       "outputs": ["historically compatible reference results"],
       "sideEffects": ["legacy model/category runs and artifacts"],
       "dependencies": ["category catalogs", "CAP-AB-001", "CAP-CACHE-001"],
-      "qualityImpact": { "recall": "KNOWN_FIXTURE_ONLY", "precision": "KNOWN_FIXTURE_ONLY", "sourceBinding": "POSITIVE", "generalization": "LIMITED_BY_FIXED_PROFILE" },
-      "resourceImpact": { "runtime": "fast for exact cached replay; otherwise model-bound", "ram": "Qwen", "gpu": "Qwen" },
-      "knownLimitsRisks": ["Must not be mistaken for LF_REFERENCE_A_DRIVEN_V2.", "Fixed 283 rows cannot define changed or multi-document A packages."],
+      "qualityImpact": {
+        "recall": "KNOWN_FIXTURE_ONLY",
+        "precision": "KNOWN_FIXTURE_ONLY",
+        "sourceBinding": "POSITIVE",
+        "generalization": "LIMITED_BY_FIXED_PROFILE"
+      },
+      "resourceImpact": {
+        "runtime": "fast for exact cached replay; otherwise model-bound",
+        "ram": "Qwen",
+        "gpu": "Qwen"
+      },
+      "knownLimitsRisks": [
+        "Must not be mistaken for LF_REFERENCE_A_DRIVEN_V2.",
+        "Fixed 283 rows cannot define changed or multi-document A packages."
+      ],
       "evidence": {
-        "tests": ["server/__tests__/utils/policyComparisonLfReferenceFamilyContract.test.js", "server/__tests__/utils/policyComparisonLfReferenceProfile.test.js"],
+        "tests": [
+          "server/__tests__/utils/policyComparisonLfReferenceFamilyContract.test.js",
+          "server/__tests__/utils/policyComparisonLfReferenceProfile.test.js"
+        ],
         "runs": ["Tests sections 58 and 59"],
         "adrs": ["ADR-029", "ADR-030", "ADR-031"],
         "failures": []
@@ -875,9 +1776,16 @@
       "outputs": ["free-form generated inventory"],
       "sideEffects": ["historically expensive model calls"],
       "dependencies": ["large LLM context"],
-      "qualityImpact": { "recall": "REJECTED_FOR_COMPLETENESS", "precision": "UNSTABLE", "sourceBinding": "INSUFFICIENT", "generalization": "NOT_PROVEN" },
+      "qualityImpact": {
+        "recall": "REJECTED_FOR_COMPLETENESS",
+        "precision": "UNSTABLE",
+        "sourceBinding": "INSUFFICIENT",
+        "generalization": "NOT_PROVEN"
+      },
       "resourceImpact": { "runtime": "HIGH", "ram": "HIGH", "gpu": "HIGH" },
-      "knownLimitsRisks": ["Fails scaling and source-binding requirements; retries or larger context are not a root-cause fix."],
+      "knownLimitsRisks": [
+        "Fails scaling and source-binding requirements; retries or larger context are not a root-cause fix."
+      ],
       "evidence": {
         "tests": [],
         "runs": ["Tests sections 5 and 17"],
@@ -905,9 +1813,21 @@
       "outputs": ["experimental bilateral clause differences"],
       "sideEffects": ["none in current V3 because it is not wired"],
       "dependencies": ["historical strategy PoC evidence"],
-      "qualityImpact": { "recall": "SYNTHETIC_PROMISE_ONLY", "precision": "SYNTHETIC_PROMISE_ONLY", "sourceBinding": "POSITIVE_IN_POC", "generalization": "UNKNOWN" },
-      "resourceImpact": { "runtime": "UNKNOWN", "ram": "UNKNOWN", "gpu": "UNKNOWN" },
-      "knownLimitsRisks": ["No current V3 caller or real-structure acceptance.", "Must not become a second product architecture by copy/paste."],
+      "qualityImpact": {
+        "recall": "SYNTHETIC_PROMISE_ONLY",
+        "precision": "SYNTHETIC_PROMISE_ONLY",
+        "sourceBinding": "POSITIVE_IN_POC",
+        "generalization": "UNKNOWN"
+      },
+      "resourceImpact": {
+        "runtime": "UNKNOWN",
+        "ram": "UNKNOWN",
+        "gpu": "UNKNOWN"
+      },
+      "knownLimitsRisks": [
+        "No current V3 caller or real-structure acceptance.",
+        "Must not become a second product architecture by copy/paste."
+      ],
       "evidence": {
         "tests": [],
         "runs": ["Tests section 18"],
