@@ -10197,3 +10197,112 @@ Versicherern. Es gibt weiterhin kein Deployment und keine Kundenfreigabe.
 Status: `DYNAMISCHER 1+9-LAUF 363/363 BINÄR ABGESCHLOSSEN; 318 GEFUNDEN,
 45 NICHT GEFUNDEN, 0 UNKLAR; GOLD 137/144 MESSBAR RICHTIG; 7 FALSE NEGATIVES
 UND 68 LEGACY-ROLLENLÜCKEN OFFEN; INTERNE XLSX PASS; KEIN DEPLOYMENT`.
+
+### 133.56 Semantische B-Konflikte abgeschlossen und Ergebnis ohne Vollneuberechnung verbessert
+
+Die nach Abschnitt 133.55 noch offenen eindeutigen Gold-Abweichungen wurden
+an den bereits gespeicherten Primär-, Vollkorpus- und Rescue-Artefakten
+zerlegt. Die richtige B-Quelle war in mehreren Fällen bereits vorhanden; der
+Fehler lag in formal gültigen, aber dem Produktvertrag widersprechenden
+Negativantworten. Ein ausdrücklich abweichender Umfang oder Ausschluss des
+gleichen fachlichen Elements bleibt ein Gegenstück und muss seine Abweichung
+separat ausweisen.
+
+Die Commits `49b1b9ef6`, `529a1d544`, `727cd13b6`, `4b55d5fb8`,
+`5bf6c17c0`, `799c99cc6`, `224b7ae1e`, `5c0b0cb1f`, `880622ac9` und
+`ac3ce5631` adaptieren dafür ausschließlich `CAP-B-006` und `CAP-B-007`:
+
+- eine erfundene Rescue-ID wird nur bei exakt einem zulässigen `RCR-*`-
+  Kandidaten auf diesen eindeutigen Alias normalisiert;
+- widersprüchliche Abwesenheitsantworten werden source-bound in den
+  bestehenden Komponenten-Rescue geroutet;
+- ein vom Modell zitierter ausdrücklicher Ausschluss derselben allgemeinen
+  Gefahr wird nur bei genau einem `PERIL_OR_CAUSE`-Identitätskern, vorhandener
+  `COVERAGE_EFFECT`-Komponente, expliziter Ausschlusssprache und genau einer
+  belegten Gefahrenäquivalenz als `MATCH` plus `OPPOSITE` normalisiert;
+- andere Ausschlüsse, mehrere Identitätskerne, bloß verwandte Klauseln und
+  fehlende Quellenbindung bleiben fail-closed.
+
+Mac-Studio-Gate auf exakt
+`ac3ce5631cd062143f70188c33f5c28baa25f8cb` im isolierten Worktree
+`/private/tmp/lf-semantic-ac3ce5631`:
+
+```text
+Syntax:                                    PASS
+Prettier:                                  PASS
+vollständige A-driven-Vertragssuite:       351/351 PASS
+Rescue-Requirements/Batches:               15/15 PASS
+Seed-Wiederverwendung:                     15/15
+neue Modellaufrufe:                        0
+Wandzeit Rescue-Rematerialisierung:         24 ms
+Rescue-Decision-SHA-256:
+240ffdee67c057b25f0c00e2de10c1e1c2bb5c59c2029a449be6899762e42ccb
+```
+
+`GL-17` ist jetzt source-bound `FOUND / CONTRADICTED`: Die ausgewählte
+Originalklausel schließt innere Unruhen und Aufruhr ausdrücklich aus. Das
+belegt dasselbe Gefahrenelement mit gegenteiliger Deckungswirkung, nicht
+einen Nullfund. Zusammen mit den bereits gezielt korrigierten Fällen ergibt
+sich folgende neue Finalprojektion:
+
+```text
+Requirements / Zeilen:                    363
+GEFUNDEN / NICHT GEFUNDEN / UNKLAR:       322 / 41 / 0
+FULL / PARTIAL / CONTRADICTED / NONE:      199 / 118 / 5 / 41
+Side-B-only-Zeilen:                        0
+Final-Decision-SHA-256:
+5874df559ce0cc88de36339e5102be365295c517d9263aca4b2018b30af2ff34
+Binary-Result-SHA-256:
+e162790b809f588c28fa5440fc6deace0debd41513d776f7f8728a19ae4547b3
+```
+
+Private Artefakte:
+
+```text
+.../a-driven-v2-a-atomization-c48fc1588/
+  b-rescue-semantic-final-ac3ce5631/
+  final-semantic-ac3ce5631/
+```
+
+Die unveränderte Gold-283-Regression verbessert sich auf 141/144 eindeutig
+messbare binäre Übereinstimmungen, null False Positives und drei False
+Negatives. Die drei verbleibenden IDs sind `VS-15`, `AV-06` und `AV-22`.
+`AV-06` und `AV-22` sind nach Originalquellenprüfung bereits dokumentierte
+Gold-Korrekturvorschläge: Bestklausel und Günstigkeitsklausel sind nicht
+dasselbe; die Erlaubnis eigener Mitarbeiter belegt keine Erstattung ihrer
+Lohn- oder Gemeinkosten. `VS-15` blieb trotz separater A-Atomisierung und
+erweiterter Retrievalprüfung negativ und ist weiterhin nicht als
+Systemfehler bewiesen. Deshalb wurde keine zeilenspezifische Regel ergänzt
+und Gold-283 nicht überschrieben.
+
+```text
+Gold intern / Datei:
+d9475c0e8145b5f326ae54ffaab58e5b2c2d154521837452993fc72712257179
+9ed4ab6ba3dbd896de48ecf94e6874881391600ef2cc027afae5af5d21123a55
+Gold 283/283 Anforderungen / 563/631 Rollen
+eindeutig messbar:                         144
+binär richtig / falsch:                    141 / 3
+False Positives / False Negatives:         0 / 3
+Gold-Regressions-Datei-SHA-256:
+2dbbf6cbf8a69942d465d9a43a33594494c7c13691cd27812f50f798f784f0fd
+```
+
+Die intern erzeugte Review-XLSX wurde im selben Schreibvorgang read-only
+zurückgelesen und gegen das vollständige Binärartefakt geprüft: 363 Zeilen,
+322/41 Statuswerte, eine Tabelle, keine Formeln, fortlaufende Reihenfolge,
+Filter, Freeze-Panes und leere manuelle Bewertungsspalte.
+
+```text
+.../final-semantic-ac3ce5631/
+LF-1PLUS9-A-DRIVEN-V2-INTERNAL-REVIEW-ac3ce5631.xlsx
+XLSX-SHA-256:
+70d5ecb6e26b278e01c17f1bfcf85e1e1eccddc6fee2dcb7f59b2282f3194243
+```
+
+Dieser Nachweis verbessert das bekannte LF-1+9-Regressionsset. Er ist kein
+Holdout-, Generalisierungs- oder 99-Prozent-Nachweis. Es erfolgte kein
+Deployment und keine Kunden-XLSX-Freigabe.
+
+Status: `DYNAMISCHER LF-1+9-LAUF 363/363 BINÄR; 322 GEFUNDEN, 41 NICHT
+GEFUNDEN, 0 UNKLAR; GOLD 141/144 MESSBAR RICHTIG; DREI GOLD-/CROSSWALK-FÄLLE
+OFFEN; INTERNE XLSX PASS; KEIN DEPLOYMENT`.

@@ -626,15 +626,15 @@
       "sideEffects": ["local Qwen calls", "private resume artifacts"],
       "dependencies": ["CAP-B-004", "CAP-B-005", "CAP-MODEL-001"],
       "qualityImpact": { "recall": "PRIMARY_DECISION_GATE", "precision": "PRIMARY_DECISION_GATE", "sourceBinding": "SERVER_VALIDATED", "generalization": "NOT_YET_END_TO_END_PROVEN" },
-      "resourceImpact": { "runtime": "HIGH for a cold run; measured seeded rematerialization of 204 batches took 87,781 ms with 361/363 requirements reused", "ram": "Qwen model footprint", "gpu": "Qwen bursts only for non-seeded requirements" },
-      "knownLimitsRisks": ["A PASS batch proves contract validity, not agreement with Gold.", "Deterministic local-model output can repeat the same malformed or schema-invalid answer; bounded schema-specific repair must remain fail-closed.", "Identity-core modifier normalization is allowed only for a positive MATCH or COUNTERPART_WITH_DIFFERENCE context, identical server-bound candidate IDs and explicit differences limited to scope, condition, value, limit, deductible or temporal validity; RELATED_ONLY remains excluded.", "Cross-plan reuse is allowed only after complete seed binding, byte-identical row comparison and current single-row revalidation."],
+      "resourceImpact": { "runtime": "HIGH for a cold run; measured seeded rematerialization of 204 batches took 87,781 ms with 361/363 requirements reused; 15/15 rescue rows rematerialized in 24 ms with zero model calls", "ram": "Qwen model footprint", "gpu": "Qwen bursts only for non-seeded requirements" },
+      "knownLimitsRisks": ["A PASS batch proves contract validity, not agreement with Gold.", "Deterministic local-model output can repeat the same malformed or schema-invalid answer; bounded schema-specific repair must remain fail-closed.", "Identity-core modifier normalization is allowed only for a positive MATCH or COUNTERPART_WITH_DIFFERENCE context, identical server-bound candidate IDs and explicit differences limited to scope, condition, value, limit, deductible or temporal validity; RELATED_ONLY remains excluded.", "Cross-plan reuse is allowed only after complete seed binding, byte-identical row comparison and current single-row revalidation.", "Explicit-exclusion normalization is restricted to one PERIL_OR_CAUSE identity core, an existing COVERAGE_EFFECT, one cited server-bound clause with explicit exclusion wording and exactly one configured general peril-equivalence group; unrelated clauses, ambiguous cores and uncited evidence remain fail-closed."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tracker 133.47", "Tracker 133.51", "Tracker 133.52", "Tracker 133.53", "Tracker 133.54", "Tracker 133.55; 204/204 and 363/363 terminal with 361 seeded plus 2 new model decisions"],
+        "runs": ["Tracker 133.47", "Tracker 133.51", "Tracker 133.52", "Tracker 133.53", "Tracker 133.54", "Tracker 133.55; 204/204 and 363/363 terminal with 361 seeded plus 2 new model decisions", "Tracker 133.56; 351/351 tests, 15/15 rescue rows seeded, zero model calls"],
         "adrs": ["ADR-031"],
-        "failures": ["INT-20260915-037", "INT-20260916-038", "INT-20260916-039", "INT-20260916-040"]
+        "failures": ["INT-20260915-037", "INT-20260916-038", "INT-20260916-039", "INT-20260916-040", "INT-20260916-041", "INT-20260916-042", "INT-20260916-043"]
       },
-      "lastVerifiedCommit": "fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33",
+      "lastVerifiedCommit": "ac3ce5631cd062143f70188c33f5c28baa25f8cb",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Reachable from the V2 runner and currently executing in the private 1+9 shadow.",
       "reactivationCriteria": "Not applicable while active."
@@ -656,15 +656,15 @@
       "sideEffects": ["additional Qwen calls", "private decision artifacts"],
       "dependencies": ["CAP-B-005", "CAP-B-006", "CAP-MODEL-001"],
       "qualityImpact": { "recall": "CRITICAL_POSITIVE", "precision": "POSITIVE_FAIL_CLOSED", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "KNOWN_FIXTURE_VALIDATED_NOT_HOLDOUT_PROVEN" },
-      "resourceImpact": { "runtime": "Measured seeded absence: 111 ms for 561/561 reused partitions; fresh rescue: 350,122 ms for 8 batches and 11 attempts", "ram": "Qwen model footprint", "gpu": "Qwen bursts during rescue" },
-      "knownLimitsRisks": ["Null finding remains separate from explicit exclusion.", "The completed 1+9 run validates this known fixture only; unseen insurer and cold-run runtime gates remain open."],
+      "resourceImpact": { "runtime": "Measured seeded absence: 112 ms for 561/561 reused partitions; latest 15-row rescue rematerialization: 24 ms and zero model calls", "ram": "Qwen model footprint", "gpu": "Qwen bursts during non-seeded rescue only" },
+      "knownLimitsRisks": ["An explicit exclusion of the same source-bound element is a contradicted counterpart, while a true null finding remains separate and requires complete-corpus certification.", "The completed 1+9 run validates this known fixture only; unseen insurer and cold-run runtime gates remain open."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tracker 133.55; 561/561 absence partitions, 8/8 rescue batches and 363 binary final decisions"],
+        "runs": ["Tracker 133.55; 561/561 absence partitions, 8/8 rescue batches and 363 binary final decisions", "Tracker 133.56; 322 FOUND, 41 NOT_FOUND, 0 unresolved; 199 FULL, 118 PARTIAL, 5 CONTRADICTED"],
         "adrs": ["ADR-022", "ADR-026", "ADR-031"],
         "failures": []
       },
-      "lastVerifiedCommit": "fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33",
+      "lastVerifiedCommit": "ac3ce5631cd062143f70188c33f5c28baa25f8cb",
       "relations": [{ "type": "REFINES", "target": "CAP-B-006" }],
       "activationReason": "Wired immediately after primary B in the V2 runner, but not yet reached by the fresh run.",
       "reactivationCriteria": "Not applicable while active."
@@ -820,11 +820,11 @@
       "knownLimitsRisks": ["Gold-283 is regression for one known 1+9 set and never a production template or holdout proof."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysis/lfReferenceGoldOracle.test.js", "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tests sections 82-84", "Tracker 133.43", "Tracker 133.55; Gold 283/283 source-covered, 137/144 measurable binary matches and 563/631 role-covered"],
+        "runs": ["Tests sections 82-84", "Tracker 133.43", "Tracker 133.55", "Tracker 133.56; Gold 283/283 source-covered, 141/144 measurable binary matches, 0 false positives, 3 false negatives and 563/631 role-covered"],
         "adrs": ["ADR-031"],
         "failures": []
       },
-      "lastVerifiedCommit": "fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33",
+      "lastVerifiedCommit": "ac3ce5631cd062143f70188c33f5c28baa25f8cb",
       "relations": [{ "type": "CONTRADICTS", "target": "CAP-LEGACY-001" }],
       "activationReason": "Explicitly QA-only and excluded from production row generation.",
       "reactivationCriteria": "Use only for the same frozen document set and exact Gold contract."
