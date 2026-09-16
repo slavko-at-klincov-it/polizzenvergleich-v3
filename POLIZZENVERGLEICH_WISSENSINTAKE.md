@@ -146,6 +146,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260902-033` | Paketmitgliedschaft und vollständiger Nullfund bestimmen den Vergleich   | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | Vergleichsvertrag V8 schrittweise implementieren und auf dem Mac Studio abnehmen                                        |
 | `INT-20260904-034` | Zwei Workspace-Verfahren: gerichtetes LF A→B und vollständiges A/B       | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | beide Laufverträge getrennt versionieren; LF-Katalog nach dem 35-Zeilen-Startprofil vollständig erweitern               |
 | `INT-20260915-037` | Schemafeste semantische Reparatur ohne Verlust gültiger Batches         | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | Reparaturhinweis präzisieren und am ersten unvollständigen Batch resumieren                                               |
+| `INT-20260916-038` | Identitätskern mit getrennt belegten Modifier-Abweichungen normalisieren | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | streng begrenzte Normalisierung testen und den ersten unvollständigen Batch aus dem Journal fortsetzen                   |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -2748,3 +2749,56 @@ Vollständigkeitsbehauptung erzeugen.
 - Kanonischer Ausgang: Change-Set `LF-V2-REPAIR-SCHEMA-20260915-001`,
   Implementierungscommits `49e56cbe8`, `69879c78f`, `5bc7aacdb` und
   Implementierungstracker Abschnitt 133.51.
+
+## INT-20260916-038 — Identitätskern mit getrennt belegten Modifier-Abweichungen normalisieren
+
+- Erfasst: 2026-09-16
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Wenn eine B-Modellantwort denselben quellengebundenen
+  Identitätskern und dieselben Kandidaten nennt, aber den Kern irrtümlich als
+  `COUNTERPART_WITH_DIFFERENCE` ausgibt, darf der bestehende Runner diesen
+  Strukturfehler nur dann deterministisch zu `MATCH` normalisieren, wenn alle
+  für diese Kandidaten ausgewiesenen Abweichungen ausschließlich den bereits
+  zugelassenen Modifier-Dimensionen Scope, Bedingung, Wert, Limit,
+  Selbstbehalt oder Zeit gelten. Ohne solche gebundene Modifier-Evidenz bleibt
+  die Antwort fail-closed ungültig.
+- Ist-Wahrheit: `NEIN`; beobachteter wiederholter Modellfehler und
+  Implementierungshypothese vor gezieltem Vertragstest und Realbatch-Gate.
+- Quelle: aggregierter Mac-Studio-Befund des ersten unvollständigen
+  Komponenten-Batches; keine Kundentexte, privaten IDs oder Dokumente in der
+  Knowledge Base.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Abweichende Werte, Limits
+  oder Bedingungen bleiben sichtbar, ohne ein belegtes Gegenstück zu verlieren
+  oder gültige Vorgängerbatches neu zu berechnen.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-B-006`;
+  keine pauschale Freigabe von Kerndifferenzen, keine Umdeutung eines anderen
+  fachlichen Kerns, kein neuer Modelllauf für bereits journalisierte gültige
+  Evidenz und kein Deployment.
+- Evidenz und Beweisgrenze: Der beobachtete Response enthält einen positiven
+  Kontext, eine servergebundene Kandidaten-ID und ausschließlich separat
+  ausgewiesene Modifier-Abweichungen. Die Hypothese beweist weder die Qualität
+  aller A-Komponenten noch einen vollständigen B-Lauf oder Generalisierung.
+- Systembezug: B-Semantik, strikte Responsevalidierung, Append-only-Attempts,
+  Resume und binärer Kundenstatus; `CAP-B-006`, `ADR-031`,
+  `INT-20260915-037`.
+- Beziehungen:
+  - `REFINES` -> `INT-20260915-037`
+  - `REUSES` -> bestehende strikte Komponentenvalidierung und Journal-Resume
+  - verhindert -> blindes Retry identischer Antworten und pauschales
+    Akzeptieren fachlich anderer Kerne
+- Hard-Gates: positive und negative Vertragstests, unveränderte Wiederverwendung
+  bestehender PASS-Batches, Realbatch-Gate am ersten unvollständigen Batch und
+  anschließende Gold-/Endergebnisprüfung.
+- Bewertung: kleinster allgemeiner Reparaturpfad für einen wiederholbaren
+  Strukturfehler; nur bei vollständig gebundener Modifier-Evidenz zulässig.
+- Evidenzqualität: `BEOBACHTET_CODE` plus vorläufiger
+  `GEMESSEN_KUNDENHARDWARE`-Fehlerbefund.
+- Riskanteste Annahme: Die separat ausgewiesene Modifier-Evidenz genügt, um
+  auszuschließen, dass der eigentliche Identitätskern verschieden ist.
+- Nächster Prüfschritt: Normalisierung mit adversarialen Negativfällen testen,
+  danach den journalisierten ersten unvollständigen Batch ohne neuen
+  Modellaufruf materialisieren.
+- Entscheidung: `ADAPT_EXISTING`; keine neue Architektur.
+- Kanonischer Ausgang: Change-Set
+  `LF-V2-CORE-MODIFIER-NORMALIZATION-20260916-001`.
