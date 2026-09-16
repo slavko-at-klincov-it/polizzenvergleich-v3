@@ -5242,3 +5242,38 @@ Der 363-Zeilen-LF-1+9-Nachweis mit 322 Funden, 41 Nullfunden und null
 ungeklärten Zeilen bleibt die fachliche Freigabeevidenz. Unbekannte
 Mehrversicherer-Holdouts, allgemeine 99-Prozent-Richtigkeit und eine
 allgemeine Laufzeitzusage bleiben ausdrücklich außerhalb dieser Aktivierung.
+
+## 97. V3.8.0 produktiv aktiviert und unveränderte Evidenz verifiziert
+
+Der annotierte Tag `v3.8.0`, `origin/main` und der Kunden-Checkout zeigen auf
+`8f8d70e88c0d481bc1e0a09fc9da4e5dc09b2fb7`. Das vollständige Gate auf dem
+Mac Studio bestand mit 2.936/2.936 Servertests, beiden Lints, Prisma,
+Capability-Inventar, Frontend-Build und Installer-Suite.
+
+Vor dem Update waren Queue und Worker leer. Ein geschütztes lokales Backup
+wurde unter `~/Polizzenvergleich-Backups/pre-v3.8.0-20260916T175005Z`
+erstellt; der SQLite-`quick_check` war vor und nach dem Update `ok`, und die
+relevanten Datenbankzählungen blieben unverändert. Der stabile
+Embeddingvertrag besitzt SHA-256
+`d3275eef1f47cf64c87c36a567178d11f3aa68e6cba42e1e8fe22c29c742db8b`.
+
+Der offizielle Updater endete mit `Doctor: PASS`. Server und Collector laufen
+nur auf Loopback, Qwen 3.6 ist allein geladen, und der Checkout ist sauber
+und detached auf dem Release-Tag.
+
+Die bekannte dynamische LF-1+9-Evidenz wurde nach dem Deployment read-only
+erneut geprüft: 363/363 binäre Zeilen, 322 `FOUND`, 41 `NOT_FOUND`, null
+unklar; 199 `FULL`, 118 `PARTIAL`, fünf `CONTRADICTED`. Das Binärartefakt hat
+Datei-SHA-256
+`ff9a7292f10f34b0f9cb2bfc728a8ad08b3e46da3995f8fa62a8703785733d18`,
+die interne XLSX
+`70d5ecb6e26b278e01c17f1bfcf85e1e1eccddc6fee2dcb7f59b2282f3194243`.
+
+**Positive Erkenntnis:** Der dynamische A-getriebene Produktpfad ist jetzt
+als kontrollierter Kunden-MVP installiert; der alte 283er-Katalog ist nur
+Regression und kein Produktionseingang.
+
+**Beweisgrenze:** Das Deployment erweitert den bekannten 1+9-Nachweis nicht
+zu einem ungesehenen Holdout- oder allgemeinen 99-Prozent-Nachweis.
+
+Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
