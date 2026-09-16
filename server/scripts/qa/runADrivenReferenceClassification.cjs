@@ -1688,10 +1688,11 @@ function coordinatedPerilLabels(value) {
     labels.length < 2 ||
     labels.length > 12 ||
     !terminalPeril.test(labels.at(-1)) ||
-    labels.slice(0, -1).some(
-      (label) =>
-        !ellipticalPeril.test(label) && !terminalPeril.test(label)
-    )
+    labels
+      .slice(0, -1)
+      .some(
+        (label) => !ellipticalPeril.test(label) && !terminalPeril.test(label)
+      )
   )
     return [];
   return labels;

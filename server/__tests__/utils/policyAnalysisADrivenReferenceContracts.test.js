@@ -4440,12 +4440,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   test.each([
     {
       label: "Bruch-, Frost-, Verstopfungs- und Korrosionsschäden",
-      expected: [
-        "Bruch-",
-        "Frost-",
-        "Verstopfungs-",
-        "Korrosionsschäden",
-      ],
+      expected: ["Bruch-", "Frost-", "Verstopfungs-", "Korrosionsschäden"],
     },
     {
       label: "Brandgefahr und Explosionsgefahr",
