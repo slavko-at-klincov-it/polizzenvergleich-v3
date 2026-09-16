@@ -76,10 +76,12 @@ const {
   runBatch: runCounterpartDecisionBatch,
 } = require("../../scripts/qa/runADrivenReferenceCounterpartDecisions.cjs");
 const {
+  compatibleSeedResponses: compatibleRequirementDecisionSeedResponses,
   journalState: requirementDecisionJournalState,
   normalizeIdentityCoreModifierDifferences,
   normalizeRepeatedCandidateIds,
   prompt: requirementDecisionPrompt,
+  processBatches: processRequirementDecisionBatches,
   repairInstruction: requirementDecisionRepairInstruction,
   runBatch: runRequirementDecisionBatch,
   validateBatchResponses: validateRequirementDecisionBatchResponses,
@@ -15083,6 +15085,44 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     };
   }
 
+  function completedRequirementSeed(plan, responses) {
+    const decisions = validateADrivenRequirementDecisionResponses({
+      plan,
+      responses,
+    });
+    return {
+      schemaVersion: 1,
+      contractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V1",
+      decisionPlanSha256: plan.planSha256,
+      decisionSha256: decisions.decisionSha256,
+      promptContractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V2",
+      validatorContractId: A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID,
+      model: {
+        id: "qwen/qwen3.6-35b-a3b",
+        state: "loaded",
+        loadedContextLength: 42_496,
+      },
+      terminalRequirements: plan.rows.length,
+      unresolvedRequirements: 0,
+    };
+  }
+
+  function changedRequirementPlan(sourcePlan) {
+    const plan = JSON.parse(JSON.stringify(sourcePlan));
+    const changedRequirementId = plan.rows[0].requirementId;
+    plan.rows[0].displayLabel = `${plan.rows[0].displayLabel} (präzisiert)`;
+    const batchRow = plan.batches
+      .flatMap(({ rows }) => rows)
+      .find(({ requirementId }) => requirementId === changedRequirementId);
+    batchRow.displayLabel = plan.rows[0].displayLabel;
+    const { planSha256: _oldPlanSha256, ...payload } = plan;
+    plan.planSha256 = digest(
+      A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
+      payload
+    );
+    return { plan, changedRequirementId };
+  }
+
   test("keeps the complete retrieval matrix but reviews one coherent A requirement", () => {
     const { manifest, searchExecution, decisionPlan } =
       requirementDecisionFixture();
@@ -15108,6 +15148,140 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ).toBe(true);
     expect(decisionPlan.selection.characterClippingAllowed).toBe(false);
     expect(decisionPlan.selection.goldInputsAllowed).toBe(false);
+  });
+
+  test("revalidates only byte-identical responses from a complete requirement seed", () => {
+    const { decisionPlan: seedPlan } = requirementDecisionFixture();
+    const seedResponses = seedPlan.rows.map(validRequirementResponse);
+    const { plan, changedRequirementId } = changedRequirementPlan(seedPlan);
+
+    const seed = compatibleRequirementDecisionSeedResponses({
+      plan,
+      seedPlan,
+      seedResponses,
+      seedSummary: completedRequirementSeed(seedPlan, seedResponses),
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+    });
+
+    expect(seed.responsesByRequirement.size).toBe(plan.rows.length - 1);
+    expect(seed.responsesByRequirement.has(changedRequirementId)).toBe(false);
+    expect(seed.audit).toMatchObject({
+      suppliedRequirements: seedPlan.rows.length,
+      compatibleRequirements: plan.rows.length - 1,
+      incompatibleRequirements: 1,
+      incompatibleRequirementIds: [changedRequirementId],
+    });
+  });
+
+  test("rejects an incomplete or integrity-mismatched requirement seed", () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const seedResponses = decisionPlan.rows.map(validRequirementResponse);
+    const seedSummary = completedRequirementSeed(decisionPlan, seedResponses);
+
+    expect(() =>
+      compatibleRequirementDecisionSeedResponses({
+        plan: decisionPlan,
+        seedPlan: decisionPlan,
+        seedResponses: seedResponses.slice(1),
+        seedSummary,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+      })
+    ).toThrow("LF_A_DRIVEN_REQUIREMENT_SEED_BINDING_INVALID");
+    expect(() =>
+      compatibleRequirementDecisionSeedResponses({
+        plan: decisionPlan,
+        seedPlan: decisionPlan,
+        seedResponses,
+        seedSummary: { ...seedSummary, decisionSha256: "0".repeat(64) },
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+      })
+    ).toThrow("LF_A_DRIVEN_REQUIREMENT_SEED_BINDING_INVALID");
+  });
+
+  test("materializes seeded batches without model calls and calls the model only for a changed row", async () => {
+    const { decisionPlan: seedPlan } = requirementDecisionFixture();
+    const seedResponses = seedPlan.rows.map(validRequirementResponse);
+    const { plan, changedRequirementId } = changedRequirementPlan(seedPlan);
+    const seed = compatibleRequirementDecisionSeedResponses({
+      plan,
+      seedPlan,
+      seedResponses,
+      seedSummary: completedRequirementSeed(seedPlan, seedResponses),
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+    });
+    const output = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-requirement-seed-resume-")
+    );
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async ({ messages }) => {
+            const input = JSON.parse(
+              messages.find(({ role }) => role === "user").content
+            );
+            return {
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify(
+                      input.expectedRequirementIds.map((requirementId) =>
+                        validRequirementResponse(
+                          plan.rows.find(
+                            (row) => row.requirementId === requirementId
+                          )
+                        )
+                      )
+                    ),
+                  },
+                },
+              ],
+              usage: {},
+            };
+          }),
+        },
+      },
+    };
+    try {
+      const result = await processRequirementDecisionBatches({
+        args: {
+          output,
+          model: "qwen/qwen3.6-35b-a3b",
+          modelContext: 42_496,
+          maximumAttempts: 2,
+          requestTimeoutMs: 180_000,
+          abortSettlementTimeoutMs: 15_000,
+          modelRecoveryTimeoutMs: 180_000,
+          maximumNewBatches: null,
+          startBatchIndex: 0,
+        },
+        plan,
+        client,
+        recoverModelAfterAbort: jest.fn(async () => ({
+          status: "SAFE_TEST_DOUBLE",
+        })),
+        seed,
+      });
+
+      expect(result.complete).toBe(true);
+      expect(result.seededRequirements).toBe(plan.rows.length - 1);
+      expect(client.chat.completions.create).toHaveBeenCalledTimes(1);
+      const request = JSON.parse(
+        client.chat.completions.create.mock.calls[0][0].messages.find(
+          ({ role }) => role === "user"
+        ).content
+      );
+      expect(request.expectedRequirementIds).toEqual([changedRequirementId]);
+      expect(result.results.flatMap(({ responses }) => responses)).toHaveLength(
+        plan.rows.length
+      );
+    } finally {
+      fs.rmSync(output, { recursive: true, force: true });
+    }
   });
 
   test("combines disjoint hash-bound plan segments without recomputing valid responses", () => {

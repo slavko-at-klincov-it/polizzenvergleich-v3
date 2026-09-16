@@ -55,6 +55,9 @@ function argumentsFrom(argv) {
   }
   const allowed = new Set([
     "decisionPlan",
+    "seedDecisionPlan",
+    "seedResponses",
+    "seedSummary",
     "manifest",
     "searchPlan",
     "searchExecution",
@@ -93,6 +96,14 @@ function argumentsFrom(argv) {
     fail(
       "Exakt --decisionPlan oder alle vier Quellen --manifest, --searchPlan, --searchExecution und --completeCorpus sind erforderlich"
     );
+  const seedInputs = ["seedDecisionPlan", "seedResponses", "seedSummary"];
+  if (
+    seedInputs.some((name) => values[name]) &&
+    seedInputs.some((name) => !values[name])
+  )
+    fail(
+      "--seedDecisionPlan, --seedResponses und --seedSummary müssen gemeinsam angegeben werden"
+    );
   const integer = (name, fallback, minimum = 1) => {
     const parsed = Number(values[name] ?? fallback);
     if (!Number.isSafeInteger(parsed) || parsed < minimum)
@@ -103,6 +114,13 @@ function argumentsFrom(argv) {
     decisionPlan: values.decisionPlan
       ? path.resolve(values.decisionPlan)
       : null,
+    seedDecisionPlan: values.seedDecisionPlan
+      ? path.resolve(values.seedDecisionPlan)
+      : null,
+    seedResponses: values.seedResponses
+      ? path.resolve(values.seedResponses)
+      : null,
+    seedSummary: values.seedSummary ? path.resolve(values.seedSummary) : null,
     manifest: values.manifest ? path.resolve(values.manifest) : null,
     searchPlan: values.searchPlan ? path.resolve(values.searchPlan) : null,
     searchExecution: values.searchExecution
@@ -474,6 +492,122 @@ function validateBatchResponses(plan, batch, responses) {
     terminalRequirementIds: artifact.results
       .filter(({ status }) => status === "TERMINAL")
       .map(({ requirementId }) => requirementId),
+  };
+}
+
+function compatibleSeedResponses({
+  plan,
+  seedPlan,
+  seedResponses,
+  seedSummary,
+  model,
+  modelContext,
+}) {
+  validateADrivenRequirementDecisionPlan(seedPlan);
+  const seedDecisions = validateADrivenRequirementDecisionResponses({
+    plan: seedPlan,
+    responses: seedResponses,
+  });
+  if (
+    seedSummary?.contractId !== RUN_CONTRACT_ID ||
+    seedSummary.decisionPlanSha256 !== seedPlan.planSha256 ||
+    seedSummary.decisionSha256 !== seedDecisions.decisionSha256 ||
+    seedSummary.promptContractId !== PROMPT_CONTRACT_ID ||
+    seedSummary.validatorContractId !==
+      A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID ||
+    seedSummary.model?.id !== model ||
+    Number(seedSummary.model?.loadedContextLength) !== Number(modelContext) ||
+    seedSummary.terminalRequirements !== seedPlan.rows.length ||
+    seedSummary.unresolvedRequirements !== 0 ||
+    seedDecisions.summary.terminalRequirements !== seedPlan.rows.length ||
+    seedDecisions.summary.unresolvedRequirements !== 0 ||
+    seedDecisions.diagnostics.length !== 0
+  )
+    throw new Error("LF_A_DRIVEN_REQUIREMENT_SEED_BINDING_INVALID");
+
+  const seedRows = new Map(
+    seedPlan.rows.map((row) => [row.requirementId, row])
+  );
+  const responses = new Map(
+    seedResponses.map((response) => [response.requirementId, response])
+  );
+  const compatible = new Map();
+  const incompatibleRequirementIds = [];
+  for (const row of plan.rows) {
+    const seedRow = seedRows.get(row.requirementId);
+    const response = responses.get(row.requirementId);
+    if (
+      !seedRow ||
+      !response ||
+      stableStringify(seedRow) !== stableStringify(row)
+    ) {
+      incompatibleRequirementIds.push(row.requirementId);
+      continue;
+    }
+    const batch = plan.batches.find(({ expectedRequirementIds }) =>
+      expectedRequirementIds.includes(row.requirementId)
+    );
+    if (!batch)
+      throw new Error("LF_A_DRIVEN_REQUIREMENT_SEED_CURRENT_BATCH_MISSING");
+    const single = {
+      ...batch,
+      expectedRequirementIds: [row.requirementId],
+      rows: [row],
+    };
+    if (!validateBatchResponses(plan, single, [response]).passed)
+      throw new Error(
+        `LF_A_DRIVEN_REQUIREMENT_SEED_RESPONSE_INVALID:${row.requirementId}`
+      );
+    compatible.set(row.requirementId, response);
+  }
+  return {
+    responsesByRequirement: compatible,
+    audit: {
+      seedDecisionPlanSha256: seedPlan.planSha256,
+      seedDecisionSha256: seedDecisions.decisionSha256,
+      suppliedRequirements: seedPlan.rows.length,
+      compatibleRequirements: compatible.size,
+      incompatibleRequirements: incompatibleRequirementIds.length,
+      incompatibleRequirementIds,
+    },
+  };
+}
+
+function loadCompatibleSeed({ args, plan }) {
+  if (!args.seedDecisionPlan) return null;
+  const seedPlan = readJson(
+    args.seedDecisionPlan,
+    "LF_A_DRIVEN_REQUIREMENT_SEED_PLAN"
+  );
+  const seedResponses = readJson(
+    args.seedResponses,
+    "LF_A_DRIVEN_REQUIREMENT_SEED_RESPONSES"
+  );
+  const seedSummary = readJson(
+    args.seedSummary,
+    "LF_A_DRIVEN_REQUIREMENT_SEED_SUMMARY"
+  );
+  const compatible = compatibleSeedResponses({
+    plan,
+    seedPlan,
+    seedResponses,
+    seedSummary,
+    model: args.model,
+    modelContext: args.modelContext,
+  });
+  return {
+    ...compatible,
+    audit: {
+      ...compatible.audit,
+      seedDecisionPlanFile: args.seedDecisionPlan,
+      seedDecisionPlanFileSha256: sha256(
+        fs.readFileSync(args.seedDecisionPlan)
+      ),
+      seedResponsesFile: args.seedResponses,
+      seedResponsesFileSha256: sha256(fs.readFileSync(args.seedResponses)),
+      seedSummaryFile: args.seedSummary,
+      seedSummaryFileSha256: sha256(fs.readFileSync(args.seedSummary)),
+    },
   };
 }
 
@@ -946,10 +1080,18 @@ function journalState({ output, plan, batch, args }) {
   };
 }
 
-async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
+async function processBatches({
+  args,
+  plan,
+  client,
+  recoverModelAfterAbort,
+  seed = null,
+}) {
   const results = [];
   let newBatches = 0;
   let nextBatchIndex = null;
+  const seededRequirementIds = new Set();
+  let fullySeededBatches = 0;
   for (const batch of plan.batches) {
     if (batch.batchIndex < args.startBatchIndex) continue;
     const file = batchFile(args.output, batch);
@@ -972,6 +1114,28 @@ async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
         batch,
         args,
       });
+      const batchSeedResponses = batch.expectedRequirementIds
+        .filter((requirementId) =>
+          seed?.responsesByRequirement.has(requirementId)
+        )
+        .map((requirementId) =>
+          seed.responsesByRequirement.get(requirementId)
+        );
+      const acceptedByRequirement = new Map(
+        batchSeedResponses.map((response) => [
+          response.requirementId,
+          response,
+        ])
+      );
+      for (const response of resumeState.acceptedResponses)
+        acceptedByRequirement.set(response.requirementId, response);
+      for (const response of batchSeedResponses)
+        seededRequirementIds.add(response.requirementId);
+      if (
+        batchSeedResponses.length === batch.expectedRequirementIds.length &&
+        resumeState.acceptedResponses.length === 0
+      )
+        fullySeededBatches += 1;
       result = await runBatch({
         client,
         model: args.model,
@@ -982,7 +1146,13 @@ async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
         requestTimeoutMs: args.requestTimeoutMs,
         abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
         recoverModelAfterAbort,
-        initialAcceptedResponses: resumeState.acceptedResponses,
+        initialAcceptedResponses: batch.expectedRequirementIds
+          .filter((requirementId) =>
+            acceptedByRequirement.has(requirementId)
+          )
+          .map((requirementId) =>
+            acceptedByRequirement.get(requirementId)
+          ),
         initialIdentityCoreModifierNormalizations:
           resumeState.identityCoreModifierNormalizations,
         resumeAfterSafeGroupedTimeout:
@@ -1010,6 +1180,8 @@ async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
       args.startBatchIndex === 0 && results.length === plan.batches.length,
     newBatches,
     nextBatchIndex,
+    seededRequirements: seededRequirementIds.size,
+    fullySeededBatches,
   };
 }
 
@@ -1061,6 +1233,7 @@ async function run() {
     plan,
     "LF_A_DRIVEN_REQUIREMENT_PLAN_RESUME_MISMATCH"
   );
+  const seed = loadCompatibleSeed({ args, plan });
   const baseUrl = process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
   const loadedModel = await verifyModel({
     baseUrl,
@@ -1087,6 +1260,7 @@ async function run() {
     plan,
     client,
     recoverModelAfterAbort,
+    seed,
   });
   const checkpointBase = {
     schemaVersion: 1,
@@ -1100,6 +1274,9 @@ async function run() {
     startBatchIndex: args.startBatchIndex,
     totalBatches: plan.batches.length,
     newBatches: processed.newBatches,
+    seededRequirements: processed.seededRequirements,
+    fullySeededBatches: processed.fullySeededBatches,
+    seed: seed?.audit || null,
     completedAt: new Date().toISOString(),
   };
   if (!processed.complete) {
@@ -1144,6 +1321,9 @@ async function run() {
       (sum, result) => sum + result.attempts.length,
       0
     ),
+    seededRequirements: processed.seededRequirements,
+    fullySeededBatches: processed.fullySeededBatches,
+    seed: seed?.audit || null,
     ...decisions.summary,
   };
   writeOrVerifyPrivateJson(
@@ -1174,7 +1354,9 @@ if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
 module.exports = {
+  compatibleSeedResponses,
   journalState,
+  loadCompatibleSeed,
   normalizeIdentityCoreModifierDifferences,
   normalizeRepeatedCandidateIds,
   parseJsonArray,
