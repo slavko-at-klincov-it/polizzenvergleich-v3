@@ -4438,6 +4438,114 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   );
 
   test.each([
+    {
+      label: "Bruch-, Frost-, Verstopfungs- und Korrosionsschäden",
+      expected: [
+        "Bruch-",
+        "Frost-",
+        "Verstopfungs-",
+        "Korrosionsschäden",
+      ],
+    },
+    {
+      label: "Brandgefahr und Explosionsgefahr",
+      expected: ["Brandgefahr", "Explosionsgefahr"],
+    },
+    {
+      label: "Bruch- sowie Frostschäden",
+      expected: ["Bruch-", "Frostschäden"],
+    },
+  ])(
+    "atomizes a source-bound coordinated peril enumeration: $label",
+    ({ label, expected }) => {
+      const source = `${label} sind mitversichert.`;
+      const unit = {
+        unitId: "coordinated-peril-enumeration",
+        source: {
+          blockIds: ["statement"],
+          combinedText: source,
+          blocks: [{ blockId: "statement", exactText: source }],
+        },
+      };
+      const normalized = normalizeUnambiguousComponentTypes(
+        [
+          {
+            unitId: unit.unitId,
+            primaryClass: "PERIL_OR_DAMAGE",
+            semanticClasses: ["PERIL_OR_DAMAGE"],
+            requirements: [
+              {
+                displayLabel: source,
+                components: [
+                  {
+                    type: "PERIL_OR_CAUSE",
+                    label,
+                    sourceBlockIds: ["statement"],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        [unit]
+      );
+
+      expect(
+        normalized.responses[0].requirements[0].components.map(
+          ({ type, label: componentLabel }) => [type, componentLabel]
+        )
+      ).toEqual(
+        expected.map((componentLabel) => ["PERIL_OR_CAUSE", componentLabel])
+      );
+      expect(normalized.componentRepairs).toContainEqual({
+        unitId: unit.unitId,
+        requirementIndex: 0,
+        componentIndex: 0,
+        action: "ATOMIZE_COORDINATED_PERIL_ENUMERATION",
+        perilComponents: expected.length,
+      });
+    }
+  );
+
+  test.each([
+    "Bruch- oder Frostschäden",
+    "Brand- und Explosionsschutz",
+    "Schäden durch Bruch und Frost",
+  ])("does not split a non-conjunctive peril phrase: %s", (label) => {
+    const source = `${label} sind mitversichert.`;
+    const unit = {
+      unitId: "non-coordinated-peril-enumeration",
+      source: {
+        blockIds: ["statement"],
+        combinedText: source,
+        blocks: [{ blockId: "statement", exactText: source }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: source,
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label,
+              sourceBlockIds: ["statement"],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
+  });
+
+  test.each([
     "Schäden an den angeschlossenen Einrichtungen und Armaturen",
     "ständig instandgehaltene Gebäude und Betriebseinrichtungen",
     "Die Erfüllung von Verträgen und die an die Stelle tretende Ersatzleistung",

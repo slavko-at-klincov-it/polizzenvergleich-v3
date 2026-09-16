@@ -1661,6 +1661,77 @@ function normalizeCoordinatedObjectEnumerations(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function coordinatedPerilLabels(value) {
+  const normalizedValue = String(value || "")
+    .normalize("NFKC")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .replace(/^[•*-]\s*/u, "")
+    .replace(/[.;:]\s*$/u, "")
+    .trim();
+  if (
+    !normalizedValue ||
+    /\boder\b/iu.test(normalizedValue) ||
+    /\b(?:wenn|sofern|falls|soweit|wobei|obwohl|weil|dass)\b/iu.test(
+      normalizedValue
+    )
+  )
+    return [];
+  const labels = normalizedValue
+    .split(/\s*,\s*|\s+(?:und|sowie)\s+/iu)
+    .map((label) => label.trim())
+    .filter(Boolean);
+  const terminalPeril =
+    /^\p{Lu}[\p{L}\p{M}-]{2,100}(?:schäden?|gefahren?|ereignisse?|ursachen?)$/iu;
+  const ellipticalPeril = /^\p{Lu}[\p{L}\p{M}-]{1,80}-$/u;
+  if (
+    labels.length < 2 ||
+    labels.length > 12 ||
+    !terminalPeril.test(labels.at(-1)) ||
+    labels.slice(0, -1).some(
+      (label) =>
+        !ellipticalPeril.test(label) && !terminalPeril.test(label)
+    )
+  )
+    return [];
+  return labels;
+}
+
+function normalizeCoordinatedPerilEnumerations(requirements, unit) {
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => ({
+      ...requirement,
+      components: (requirement?.components || []).flatMap(
+        (component, componentIndex) => {
+          if (component?.type !== "PERIL_OR_CAUSE") return [component];
+          const labels = coordinatedPerilLabels(String(component.label || ""));
+          const perilComponents = labels.map((label) => ({
+            ...component,
+            label,
+            sourceBlockIds: sourceBlockIdsForExactSpan(unit, label),
+          }));
+          if (
+            perilComponents.length === 0 ||
+            perilComponents.some(
+              ({ sourceBlockIds }) => sourceBlockIds.length === 0
+            )
+          )
+            return [component];
+          repairs.push({
+            requirementIndex,
+            componentIndex,
+            action: "ATOMIZE_COORDINATED_PERIL_ENUMERATION",
+            perilComponents: perilComponents.length,
+          });
+          return perilComponents;
+        }
+      ),
+    })
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function normalizeSharedActionObjectEnumerations(requirements, unit) {
   const sourceText = String(unit?.source?.combinedText || "");
   const comparableSource = sourceText
@@ -3332,6 +3403,13 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     );
     requirements = coordinatedObjects.requirements;
     for (const repair of coordinatedObjects.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    const coordinatedPerils = normalizeCoordinatedPerilEnumerations(
+      requirements,
+      unit
+    );
+    requirements = coordinatedPerils.requirements;
+    for (const repair of coordinatedPerils.repairs)
       repairs.push({ unitId: response?.unitId, ...repair });
     const aggregatedEventDefinition = normalizeAggregatedEventDefinition(
       requirements,
