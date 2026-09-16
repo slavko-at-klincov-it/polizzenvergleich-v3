@@ -10335,3 +10335,80 @@ den kontrollierten MVP-Betrieb, aber keine allgemeine 99-Prozent- oder
 Holdout-Aussage.
 
 Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
+
+### 133.58 V3.8.0 auf dem Kunden-Mac-Studio aktiviert
+
+Der kontrollierte Kunden-MVP wurde am 16. September 2026 über den offiziellen,
+rollbackfähigen Updater installiert. Der annotierte Release-Tag `v3.8.0`,
+`origin/main` und der installierte detached Checkout zeigen auf denselben
+Commit:
+
+```text
+8f8d70e88c0d481bc1e0a09fc9da4e5dc09b2fb7
+```
+
+Das vollständige Release-Gate lief zuvor auf genau diesem Commit in einem
+isolierten Mac-Studio-Worktree und bestand:
+
+```text
+Server:                  199/199 Suites, 2.936/2.936 Tests PASS
+Server-/Collector-Lint:  PASS / PASS
+Prisma:                  PASS
+Capability-Inventar:     PASS
+Frontend-Lint/-Build:    PASS / PASS
+macOS-Installer-Suite:   PASS
+```
+
+Vor dem Update bestanden Datenbank-`quick_check`, Quieszenzprüfung und
+Workerprüfung. Es gab keine `QUEUED`- oder `RUNNING`-Sitzung. Das geschützte
+Pre-Update-Backup liegt ausschließlich auf dem Mac Studio unter:
+
+```text
+/Users/michaelmischkot/Polizzenvergleich-Backups/
+  pre-v3.8.0-20260916T175005Z
+```
+
+Der freigegebene Dinghy-Vertrag wurde unter einem stabilen, nur für den
+Benutzer lesbaren Pfad materialisiert und vom neuen Doctor einschließlich
+Modell-, Dimensions-, Runtime- und Artefakthashes verifiziert:
+
+```text
+/Users/michaelmischkot/Library/Application Support/
+  at.klincov.polizzenvergleich-v3/contracts/
+  lf-a-driven-dinghy-v1.json
+Vertrags-SHA-256:
+d3275eef1f47cf64c87c36a567178d11f3aa68e6cba42e1e8fe22c29c742db8b
+```
+
+Der offizielle Updater baute die Oberfläche neu, bestätigte 42 vorhandene
+Migrationen ohne ausstehende Migration, aktivierte beide LaunchAgents und
+endete mit `Doctor: PASS`. Server und Collector laufen ausschließlich auf
+Loopback (`3004` und `8890`); Qwen 3.6 ist mit Kontext 42.496 und Parallelität
+1 geladen, kein weiteres Chat- oder Embeddingmodell ist resident. Der
+Checkout ist sauber und detached auf `v3.8.0`. Datenbankintegrität und die
+Zählungen von Vergleichssitzungen, Workspaces, Workspace-Dokumenten und
+Vektoren stimmen vor und nach dem Update überein.
+
+Die fachliche Freigabeevidenz wurde nach dem Deployment read-only erneut
+hash- und strukturverifiziert:
+
+```text
+Dynamische A-Zeilen:                       363
+GEFUNDEN / NICHT GEFUNDEN / UNKLAR:       322 / 41 / 0
+FULL / PARTIAL / CONTRADICTED / NONE:      199 / 118 / 5 / 41
+Binärartefakt-Datei-SHA-256:
+ff9a7292f10f34b0f9cb2bfc728a8ad08b3e46da3995f8fa62a8703785733d18
+Interne XLSX-Datei-SHA-256:
+70d5ecb6e26b278e01c17f1bfcf85e1e1eccddc6fee2dcb7f59b2282f3194243
+```
+
+Damit ist der dynamische `LF_REFERENCE_A_DRIVEN_V2`-Ansatz für das bekannte
+LF-1+9-Set technisch und fachlich als kontrollierter Kunden-MVP aktiviert.
+Die Aussage bleibt bewusst auf dieses Entwicklungs- und Regressionsset
+begrenzt; ungesehene Mehrversicherer-Holdouts, allgemeine 99-Prozent-
+Richtigkeit und eine allgemeine Laufzeitzusage sind weiterhin nicht bewiesen.
+
+Status: `V3.8.0 PRODUKTIV AKTIV; DOCTOR PASS; DYNAMISCHES LF-1+9 363/363
+BINÄR; KONTROLLIERTER KUNDEN-MVP, KEIN ALLGEMEINER HOLDOUT-NACHWEIS`.
+
+Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
