@@ -82,6 +82,7 @@ const {
   prompt: requirementDecisionPrompt,
   repairInstruction: requirementDecisionRepairInstruction,
   runBatch: runRequirementDecisionBatch,
+  validateBatchResponses: validateRequirementDecisionBatchResponses,
 } = require("../../scripts/qa/runADrivenRequirementCounterpartDecisions.cjs");
 const {
   buildADrivenCounterpartDecisionPlan,
@@ -15392,9 +15393,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       },
     ];
 
-    expect(validateBatchResponses(decisionPlan, batch, [response]).passed).toBe(
-      false
-    );
+    expect(
+      validateRequirementDecisionBatchResponses(decisionPlan, batch, [response])
+        .passed
+    ).toBe(false);
     const normalized = normalizeIdentityCoreModifierDifferences(batch, [
       response,
     ]);
@@ -15416,7 +15418,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       ).outcome
     ).toBe("MATCH");
     expect(
-      validateBatchResponses(decisionPlan, batch, normalized.responses).passed
+      validateRequirementDecisionBatchResponses(
+        decisionPlan,
+        batch,
+        normalized.responses
+      ).passed
     ).toBe(true);
     expect(response.componentFindings).toContainEqual(
       expect.objectContaining({
@@ -15465,7 +15471,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       expect(normalized.normalizations).toEqual([]);
       expect(normalized.responses).toEqual([response]);
       expect(
-        validateBatchResponses(decisionPlan, batch, normalized.responses).passed
+        validateRequirementDecisionBatchResponses(
+          decisionPlan,
+          batch,
+          normalized.responses
+        ).passed
       ).toBe(false);
     }
   );
