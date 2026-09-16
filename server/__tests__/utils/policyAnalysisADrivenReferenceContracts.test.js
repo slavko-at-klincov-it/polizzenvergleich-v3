@@ -15715,23 +15715,26 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       [{ candidateId: "RCR-67ac73c0307887d218282628" }],
       "RCE-c30aad586050f71073e77633",
     ],
-  ])("keeps %s invalid for strict validation", (_name, candidates, candidateId) => {
-    const response = {
-      requirementId: "unsafe-rescue",
-      contextFinding: { outcome: "MATCH", candidateIds: [candidateId] },
-      componentFindings: [],
-      unmodeledDifferences: [],
-    };
-    const normalized = normalizeUniqueRescueCandidateAliases(
-      { rows: [{ requirementId: "unsafe-rescue", candidates }] },
-      [response]
-    );
+  ])(
+    "keeps %s invalid for strict validation",
+    (_name, candidates, candidateId) => {
+      const response = {
+        requirementId: "unsafe-rescue",
+        contextFinding: { outcome: "MATCH", candidateIds: [candidateId] },
+        componentFindings: [],
+        unmodeledDifferences: [],
+      };
+      const normalized = normalizeUniqueRescueCandidateAliases(
+        { rows: [{ requirementId: "unsafe-rescue", candidates }] },
+        [response]
+      );
 
-    expect(normalized.normalizations).toEqual([]);
-    expect(normalized.responses[0].contextFinding.candidateIds).toEqual([
-      candidateId,
-    ]);
-  });
+      expect(normalized.normalizations).toEqual([]);
+      expect(normalized.responses[0].contextFinding.candidateIds).toEqual([
+        candidateId,
+      ]);
+    }
+  );
 
   test("normalizes an identity-core difference only when every candidate has bound modifier evidence", () => {
     const { decisionPlan } = requirementDecisionFixture();
@@ -16167,6 +16170,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       expect(resumeState).toEqual({
         acceptedResponses: [],
         identityCoreModifierNormalizations: [],
+        uniqueRescueCandidateAliasNormalizations: [],
         resumeAfterSafeGroupedTimeout: true,
       });
 
