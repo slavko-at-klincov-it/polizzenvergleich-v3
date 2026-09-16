@@ -15879,11 +15879,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       modelContext: 42_496,
     });
 
-    expect(compatible.responsesByRequirement.get(response.requirementId)).toMatchObject(
-      {
-        contextFinding: { outcome: "COUNTERPART_WITH_DIFFERENCE" },
-      }
-    );
+    expect(
+      compatible.responsesByRequirement.get(response.requirementId)
+    ).toMatchObject({
+      contextFinding: { outcome: "COUNTERPART_WITH_DIFFERENCE" },
+    });
     expect(
       compatible.audit.explicitExclusionCounterpartNormalizations
     ).toHaveLength(1);
@@ -16322,6 +16322,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       });
       expect(resumeState).toEqual({
         acceptedResponses: [],
+        explicitExclusionCounterpartNormalizations: [],
         identityCoreModifierNormalizations: [],
         uniqueRescueCandidateAliasNormalizations: [],
         resumeAfterSafeGroupedTimeout: true,

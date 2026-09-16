@@ -772,11 +772,8 @@ function compatibleSeedResponses({
       [response]
     );
     if (
-      !validateBatchResponses(
-        plan,
-        single,
-        exclusionNormalization.responses
-      ).passed
+      !validateBatchResponses(plan, single, exclusionNormalization.responses)
+        .passed
     )
       throw new Error(
         `LF_A_DRIVEN_REQUIREMENT_SEED_RESPONSE_INVALID:${row.requirementId}`
