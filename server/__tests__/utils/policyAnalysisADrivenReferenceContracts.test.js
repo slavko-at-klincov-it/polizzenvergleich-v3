@@ -16790,6 +16790,28 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         },
       })
     ).toContain("SAME_ELEMENT_REJECTED_ONLY_FOR_MODIFIER_DIFFERENCE");
+    modifierComponent.label =
+      "vorläufige Deckung gilt bis zum Einlangen der vollständigen Polizze oder der Ablehnung des Antrages";
+    expect(
+      negativeDecisionSemanticConflicts({
+        plan: modifierPlan,
+        partition: firstPartition,
+        response: {
+          ...negativeBase,
+          rationale: `Kandidat ${firstPartition.candidateIds[0]} enthält zwar den Satz „Eine allfällige vorläufige Deckung ist gesondert zu vereinbaren“, jedoch fehlt der spezifische Zeitraum und die Bedingung bis zum Policeneingang.`,
+        },
+      })
+    ).toContain("SAME_ELEMENT_REJECTED_ONLY_FOR_MODIFIER_DIFFERENCE");
+    expect(
+      negativeDecisionSemanticConflicts({
+        plan: modifierPlan,
+        partition: firstPartition,
+        response: {
+          ...negativeBase,
+          rationale: `Kandidat ${firstPartition.candidateIds[0]} schließt innere Unruhen und Aufruhr explizit aus. Keine Klausel stellt dafür eine positive Deckung her.`,
+        },
+      })
+    ).toContain("EXPLICIT_EXCLUSION_REJECTED_FOR_POSITIVE_EFFECT");
     expect(
       validateADrivenRequirementAbsencePartitionResponse({
         plan: absencePlan,

@@ -503,9 +503,39 @@ function normalizedSemanticText(value) {
     .normalize("NFKD")
     .replace(/\p{M}/gu, "")
     .toLocaleLowerCase("de-AT")
+    .replace(/ß/gu, "ss")
     .replace(/[^a-z0-9]+/gu, " ")
     .replace(/\s+/gu, " ")
     .trim();
+}
+
+function hasMeaningfulIdentityOverlap(identityLabel, rationale) {
+  const ignored = new Set([
+    "aber",
+    "alle",
+    "auch",
+    "dass",
+    "diese",
+    "einem",
+    "einer",
+    "eines",
+    "eine",
+    "einen",
+    "entstehen",
+    "gilt",
+    "jedenfalls",
+    "oder",
+    "sind",
+    "unter",
+    "versichert",
+    "welche",
+    "werden",
+  ]);
+  const tokens = normalizedSemanticText(identityLabel)
+    .split(" ")
+    .filter((token) => token.length >= 4 && !ignored.has(token));
+  const rationaleTokens = new Set(normalizedSemanticText(rationale).split(" "));
+  return new Set(tokens.filter((token) => rationaleTokens.has(token))).size >= 2;
 }
 
 function negativeDecisionSemanticConflicts({ plan, partition, response }) {
@@ -542,16 +572,18 @@ function negativeDecisionSemanticConflicts({ plan, partition, response }) {
   const requirement = plan.requirements.find(
     ({ requirementId }) => requirementId === partition.requirementId
   );
-  const identityLabels = (requirement?.components || [])
-    .filter(({ identityCore, label }) => identityCore && label)
-    .map(({ label }) => normalizedSemanticText(label))
-    .filter((label) => label.split(" ").length >= 2 && label.length >= 8);
   const mentionsAllowedCandidate = partition.candidateIds.some((candidateId) =>
     rationale.includes(normalizedSemanticText(candidateId))
   );
-  const repeatsIdentityLabel = identityLabels.some((label) =>
-    rationale.includes(label)
-  );
+  const acknowledgedCandidateText =
+    /\b(?:enthalt|regelt|behandelt|betrifft)\b\s+\bzwar\b.{0,300}/u.exec(
+      rationale
+    )?.[0] || "";
+  const meaningfullyOverlapsIdentity = (requirement?.components || [])
+    .filter(({ identityCore, label }) => identityCore && label)
+    .some(({ label }) =>
+      hasMeaningfulIdentityOverlap(label, acknowledgedCandidateText)
+    );
   const namesModifierDifference =
     /\b(?:bedingung|dauer|geltung|umfang|wert|limit|zeitraum|befristung)\b/u.test(
       rationale
@@ -565,11 +597,27 @@ function negativeDecisionSemanticConflicts({ plan, partition, response }) {
     );
   if (
     mentionsAllowedCandidate &&
-    repeatsIdentityLabel &&
+    acknowledgedCandidateText &&
+    meaningfullyOverlapsIdentity &&
     namesModifierDifference &&
     deniesOnlyBecauseModifier
   )
     conflicts.push("SAME_ELEMENT_REJECTED_ONLY_FOR_MODIFIER_DIFFERENCE");
+  const describesExplicitExclusion =
+    /\b(?:schliesst|schliessen|ausgeschlossen|ausschluss)\b.{0,240}\b(?:explizit|ausgeschlossen|aus)\b/u.test(
+      rationale
+    );
+  const rejectsForMissingPositiveEffect =
+    /\b(?:keine|kein|fehlt|nicht)\b.{0,120}\bpositive\b.{0,80}\b(?:deckung|versicherungsschutz|wirkung)\b/u.test(
+      rationale
+    ) ||
+    /\bnicht\b.{0,80}\bals\b.{0,40}\bversichert\b/u.test(rationale);
+  if (
+    mentionsAllowedCandidate &&
+    describesExplicitExclusion &&
+    rejectsForMissingPositiveEffect
+  )
+    conflicts.push("EXPLICIT_EXCLUSION_REJECTED_FOR_POSITIVE_EFFECT");
   return [...new Set(conflicts)].sort();
 }
 
