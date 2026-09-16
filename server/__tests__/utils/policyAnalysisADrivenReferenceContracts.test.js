@@ -77,6 +77,7 @@ const {
 } = require("../../scripts/qa/runADrivenReferenceCounterpartDecisions.cjs");
 const {
   journalState: requirementDecisionJournalState,
+  normalizeIdentityCoreModifierDifferences,
   normalizeRepeatedCandidateIds,
   prompt: requirementDecisionPrompt,
   repairInstruction: requirementDecisionRepairInstruction,
@@ -15369,6 +15370,169 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ]);
   });
 
+  test("normalizes an identity-core difference only when every candidate has bound modifier evidence", () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const batch = decisionPlan.batches[0];
+    const row = batch.rows[0];
+    const candidateId = row.candidates[0].candidateId;
+    const identityCore = row.components.find(({ identityCore }) => identityCore);
+    const response = validRequirementResponse(row);
+    response.componentFindings = response.componentFindings.map((finding) =>
+      finding.componentId === identityCore.componentId
+        ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
+        : finding
+    );
+    response.unmodeledDifferences = [
+      {
+        dimension: "VALUE_AND_UNIT",
+        description: "Der Wert weicht ab.",
+        candidateIds: [candidateId],
+      },
+    ];
+
+    expect(
+      validateBatchResponses(decisionPlan, batch, [response]).passed
+    ).toBe(false);
+    const normalized = normalizeIdentityCoreModifierDifferences(batch, [
+      response,
+    ]);
+
+    expect(normalized.normalizations).toEqual([
+      {
+        requirementId: row.requirementId,
+        componentId: identityCore.componentId,
+        dimension: identityCore.dimension,
+        fromOutcome: "COUNTERPART_WITH_DIFFERENCE",
+        toOutcome: "MATCH",
+        candidateIds: [candidateId],
+        modifierDimensions: ["VALUE_AND_UNIT"],
+      },
+    ]);
+    expect(
+      normalized.responses[0].componentFindings.find(
+        ({ componentId }) => componentId === identityCore.componentId
+      ).outcome
+    ).toBe("MATCH");
+    expect(
+      validateBatchResponses(
+        decisionPlan,
+        batch,
+        normalized.responses
+      ).passed
+    ).toBe(true);
+    expect(response.componentFindings).toContainEqual(
+      expect.objectContaining({
+        componentId: identityCore.componentId,
+        outcome: "COUNTERPART_WITH_DIFFERENCE",
+      })
+    );
+  });
+
+  test.each([
+    ["without modifier evidence", []],
+    [
+      "with an identity-core difference",
+      [
+        {
+          dimension: "OBJECT",
+          description: "Der fachliche Kern ist verschieden.",
+        },
+      ],
+    ],
+  ])("keeps an unsafe identity-core difference invalid %s", (_name, differences) => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const batch = decisionPlan.batches[0];
+    const row = batch.rows[0];
+    const candidateId = row.candidates[0].candidateId;
+    const identityCore = row.components.find(({ identityCore }) => identityCore);
+    const response = validRequirementResponse(row);
+    response.componentFindings = response.componentFindings.map((finding) =>
+      finding.componentId === identityCore.componentId
+        ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
+        : finding
+    );
+    response.unmodeledDifferences = differences.map((difference) => ({
+      ...difference,
+      candidateIds: [candidateId],
+    }));
+
+    const normalized = normalizeIdentityCoreModifierDifferences(batch, [
+      response,
+    ]);
+
+    expect(normalized.normalizations).toEqual([]);
+    expect(normalized.responses).toEqual([response]);
+    expect(
+      validateBatchResponses(
+        decisionPlan,
+        batch,
+        normalized.responses
+      ).passed
+    ).toBe(false);
+  });
+
+  test("accepts a bound identity-core modifier response without retry", async () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const sourceBatch = decisionPlan.batches[0];
+    const row = sourceBatch.rows[0];
+    const batch = {
+      ...sourceBatch,
+      expectedRequirementIds: [row.requirementId],
+      rows: [row],
+    };
+    const response = validRequirementResponse(row);
+    const identityCore = row.components.find(({ identityCore }) => identityCore);
+    const candidateId = row.candidates[0].candidateId;
+    response.componentFindings = response.componentFindings.map((finding) =>
+      finding.componentId === identityCore.componentId
+        ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
+        : finding
+    );
+    response.unmodeledDifferences = [
+      {
+        dimension: "LIMIT_BASIS",
+        description: "Die Berechnungsbasis weicht ab.",
+        candidateIds: [candidateId],
+      },
+    ];
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async () => ({
+            model: "qwen/qwen3.6-35b-a3b",
+            choices: [{ message: { content: JSON.stringify([response]) } }],
+            usage: {},
+          })),
+        },
+      },
+    };
+
+    const result = await runRequirementDecisionBatch({
+      client,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: decisionPlan,
+      batch,
+      maximumAttempts: 2,
+    });
+
+    expect(client.chat.completions.create).toHaveBeenCalledTimes(1);
+    expect(result.validation.passed).toBe(true);
+    expect(result.attempts).toHaveLength(1);
+    expect(result.attempts[0].identityCoreModifierNormalizations).toHaveLength(
+      1
+    );
+    expect(result.responses[0].componentFindings).toContainEqual(
+      expect.objectContaining({
+        componentId: identityCore.componentId,
+        outcome: "MATCH",
+      })
+    );
+    expect(result.responses[0].unmodeledDifferences).toEqual(
+      response.unmodeledDifferences
+    );
+  });
+
   test("retries invalid JSON and stores only a contract-valid requirement response", async () => {
     const { decisionPlan } = requirementDecisionFixture();
     const sourceBatch = decisionPlan.batches[0];
@@ -15616,6 +15780,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       });
       expect(resumeState).toEqual({
         acceptedResponses: [],
+        identityCoreModifierNormalizations: [],
         resumeAfterSafeGroupedTimeout: true,
       });
 
@@ -15667,6 +15832,102 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         [batch.expectedRequirementIds[0]],
         [batch.expectedRequirementIds[1]],
       ]);
+    } finally {
+      fs.rmSync(output, { recursive: true, force: true });
+    }
+  });
+
+  test("resumes a journaled identity-core modifier response without another model call", async () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const sourceBatch = decisionPlan.batches[0];
+    const row = sourceBatch.rows[0];
+    const batch = {
+      ...sourceBatch,
+      expectedRequirementIds: [row.requirementId],
+      rows: [row],
+    };
+    const output = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-core-modifier-resume-")
+    );
+    const args = {
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      requestTimeoutMs: 180_000,
+      abortSettlementTimeoutMs: 15_000,
+      modelRecoveryTimeoutMs: 180_000,
+    };
+    const response = validRequirementResponse(row);
+    const identityCore = row.components.find(({ identityCore }) => identityCore);
+    const candidateId = row.candidates[0].candidateId;
+    response.componentFindings = response.componentFindings.map((finding) =>
+      finding.componentId === identityCore.componentId
+        ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
+        : finding
+    );
+    response.unmodeledDifferences = [
+      {
+        dimension: "VALUE_AND_UNIT",
+        description: "Der Wert weicht ab.",
+        candidateIds: [candidateId],
+      },
+    ];
+    try {
+      const directory = path.join(
+        output,
+        "attempts",
+        `00000-${batch.batchId}`
+      );
+      fs.mkdirSync(directory, { recursive: true });
+      fs.writeFileSync(
+        path.join(directory, "cycle-001-attempt-001.private.json"),
+        `${JSON.stringify({
+          schemaVersion: 1,
+          contractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_TRANSPORT_V1",
+          decisionPlanSha256: decisionPlan.planSha256,
+          promptContractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V2",
+          promptSha256: crypto
+            .createHash("sha256")
+            .update(JSON.stringify(requirementDecisionPrompt(batch)))
+            .digest("hex"),
+          requestedModel: args.model,
+          modelContext: args.modelContext,
+          requestTimeoutMs: args.requestTimeoutMs,
+          abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+          modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
+          batchId: batch.batchId,
+          batchIndex: batch.batchIndex,
+          expectedRequirementIds: batch.expectedRequirementIds,
+          attempt: { responses: [response] },
+        })}\n`
+      );
+
+      const resumeState = requirementDecisionJournalState({
+        output,
+        plan: decisionPlan,
+        batch,
+        args,
+      });
+      expect(resumeState.acceptedResponses).toHaveLength(1);
+      expect(resumeState.identityCoreModifierNormalizations).toHaveLength(1);
+      const client = {
+        chat: { completions: { create: jest.fn() } },
+      };
+      const result = await runRequirementDecisionBatch({
+        client,
+        model: args.model,
+        modelContext: args.modelContext,
+        plan: decisionPlan,
+        batch,
+        maximumAttempts: 2,
+        initialAcceptedResponses: resumeState.acceptedResponses,
+        initialIdentityCoreModifierNormalizations:
+          resumeState.identityCoreModifierNormalizations,
+      });
+
+      expect(client.chat.completions.create).not.toHaveBeenCalled();
+      expect(result.validation.passed).toBe(true);
+      expect(result.attempts).toEqual([]);
+      expect(result.resumedIdentityCoreModifierNormalizations).toHaveLength(1);
     } finally {
       fs.rmSync(output, { recursive: true, force: true });
     }

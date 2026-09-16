@@ -10,6 +10,7 @@ const { OpenAI } = require("openai");
 const {
   A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID,
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
+  DIFFERENCE_DIMENSIONS,
   buildADrivenRequirementDecisionPlan,
   validateADrivenRequirementDecisionPlan,
   validateADrivenRequirementDecisionResponses,
@@ -247,6 +248,87 @@ function normalizeRepeatedCandidateIds(responses) {
   return { responses: normalizedResponses, duplicateCandidateIdsRemoved };
 }
 
+function normalizeIdentityCoreModifierDifferences(batch, responses) {
+  const rowsById = new Map(
+    batch.rows.map((row) => [row.requirementId, row])
+  );
+  const normalizations = [];
+  const normalizedResponses = (Array.isArray(responses) ? responses : []).map(
+    (response) => {
+      const row = rowsById.get(response?.requirementId);
+      if (
+        !row ||
+        !Array.isArray(response?.componentFindings) ||
+        !Array.isArray(response?.unmodeledDifferences) ||
+        response.contextFinding?.outcome !== "MATCH" ||
+        !Array.isArray(response.contextFinding.candidateIds)
+      )
+        return response;
+      const componentsById = new Map(
+        row.components.map((component) => [component.componentId, component])
+      );
+      const componentFindings = response.componentFindings.map((finding) => {
+        const component = componentsById.get(finding?.componentId);
+        if (
+          !component?.identityCore ||
+          finding.dimension !== component.dimension ||
+          finding.outcome !== "COUNTERPART_WITH_DIFFERENCE" ||
+          !Array.isArray(finding.candidateIds) ||
+          finding.candidateIds.length === 0 ||
+          finding.candidateIds.some(
+            (candidateId) =>
+              !response.contextFinding.candidateIds.includes(candidateId)
+          )
+        )
+          return finding;
+        const candidateIds = new Set(finding.candidateIds);
+        const modifierDifferences = response.unmodeledDifferences.filter(
+          (difference) =>
+            DIFFERENCE_DIMENSIONS.has(difference?.dimension) &&
+            typeof difference?.description === "string" &&
+            difference.description.trim() &&
+            Array.isArray(difference.candidateIds) &&
+            difference.candidateIds.some((candidateId) =>
+              candidateIds.has(candidateId)
+            )
+        );
+        const hasNonModifierDifference = response.unmodeledDifferences.some(
+          (difference) =>
+            !DIFFERENCE_DIMENSIONS.has(difference?.dimension) &&
+            Array.isArray(difference?.candidateIds) &&
+            difference.candidateIds.some((candidateId) =>
+              candidateIds.has(candidateId)
+            )
+        );
+        const everyCandidateExplained = finding.candidateIds.every(
+          (candidateId) =>
+            modifierDifferences.some((difference) =>
+              difference.candidateIds.includes(candidateId)
+            )
+        );
+        if (hasNonModifierDifference || !everyCandidateExplained)
+          return finding;
+        normalizations.push({
+          requirementId: response.requirementId,
+          componentId: finding.componentId,
+          dimension: finding.dimension,
+          fromOutcome: finding.outcome,
+          toOutcome: "MATCH",
+          candidateIds: [...finding.candidateIds],
+          modifierDimensions: [
+            ...new Set(
+              modifierDifferences.map(({ dimension }) => dimension)
+            ),
+          ].sort(),
+        });
+        return { ...finding, outcome: "MATCH" };
+      });
+      return { ...response, componentFindings };
+    }
+  );
+  return { responses: normalizedResponses, normalizations };
+}
+
 function repairInstruction(batch, diagnostics = [], previousResponses = []) {
   if (!Array.isArray(diagnostics) || diagnostics.length === 0) return null;
   const componentsById = new Map(
@@ -452,6 +534,7 @@ async function runBatch({
   recoverModelAfterAbort = async () => ({ status: "SAFE_TEST_DOUBLE" }),
   onAttempt = async () => {},
   initialAcceptedResponses = [],
+  initialIdentityCoreModifierNormalizations = [],
   resumeAfterSafeGroupedTimeout = false,
 }) {
   const accepted = new Map(
@@ -514,7 +597,12 @@ async function runBatch({
       const parsedResponse = normalizeRepeatedCandidateIds(
         parseJsonArray(observedRawText)
       );
-      const parsed = parsedResponse.responses;
+      const identityCoreNormalization =
+        normalizeIdentityCoreModifierDifferences(
+          workingBatch,
+          parsedResponse.responses
+        );
+      const parsed = identityCoreNormalization.responses;
       const currentValidation = validateBatchResponses(
         plan,
         workingBatch,
@@ -563,6 +651,8 @@ async function runBatch({
         responses: parsed,
         duplicateCandidateIdsRemoved:
           parsedResponse.duplicateCandidateIdsRemoved,
+        identityCoreModifierNormalizations:
+          identityCoreNormalization.normalizations,
         acceptedRequirements: accepted.size,
         pendingRequirements: pending.length,
         semanticRetryRequirementIds: retryBatch?.expectedRequirementIds || [],
@@ -686,6 +776,8 @@ async function runBatch({
     error: lastError,
     attempts,
     resumedAcceptedRequirements: initialAcceptedResponses.length,
+    resumedIdentityCoreModifierNormalizations:
+      initialIdentityCoreModifierNormalizations,
     resumeAfterSafeGroupedTimeout,
   };
 }
@@ -797,7 +889,11 @@ function journalState({ output, plan, batch, args }) {
     `${String(batch.batchIndex).padStart(5, "0")}-${batch.batchId}`
   );
   if (!fs.existsSync(directory))
-    return { acceptedResponses: [], resumeAfterSafeGroupedTimeout: false };
+    return {
+      acceptedResponses: [],
+      identityCoreModifierNormalizations: [],
+      resumeAfterSafeGroupedTimeout: false,
+    };
   const responses = [];
   let resumeAfterSafeGroupedTimeout = false;
   for (const name of fs.readdirSync(directory).sort()) {
@@ -836,8 +932,18 @@ function journalState({ output, plan, batch, args }) {
     )
       resumeAfterSafeGroupedTimeout = true;
   }
+  const identityCoreNormalization = normalizeIdentityCoreModifierDifferences(
+    batch,
+    responses
+  );
   return {
-    acceptedResponses: validResponses(plan, batch, responses),
+    acceptedResponses: validResponses(
+      plan,
+      batch,
+      identityCoreNormalization.responses
+    ),
+    identityCoreModifierNormalizations:
+      identityCoreNormalization.normalizations,
     resumeAfterSafeGroupedTimeout,
   };
 }
@@ -879,6 +985,8 @@ async function processBatches({ args, plan, client, recoverModelAfterAbort }) {
         abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
         recoverModelAfterAbort,
         initialAcceptedResponses: resumeState.acceptedResponses,
+        initialIdentityCoreModifierNormalizations:
+          resumeState.identityCoreModifierNormalizations,
         resumeAfterSafeGroupedTimeout:
           resumeState.resumeAfterSafeGroupedTimeout,
         onAttempt: attemptRecorder({ output: args.output, plan, batch, args }),
@@ -1069,6 +1177,7 @@ if (require.main === module)
 
 module.exports = {
   journalState,
+  normalizeIdentityCoreModifierDifferences,
   normalizeRepeatedCandidateIds,
   parseJsonArray,
   processBatches,
