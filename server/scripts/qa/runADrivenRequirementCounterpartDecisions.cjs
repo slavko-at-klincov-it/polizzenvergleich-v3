@@ -226,6 +226,84 @@ function parseJsonArray(modelText) {
   return parsed;
 }
 
+function normalizeUniqueRescueCandidateAliases(batch, responses) {
+  const rowsById = new Map(batch.rows.map((row) => [row.requirementId, row]));
+  const normalizationsByKey = new Map();
+  const normalizeCandidateIds = (row, candidateIds) => {
+    if (!Array.isArray(candidateIds)) return candidateIds;
+    const allowedCandidateIds = new Set(
+      row.candidates.map(({ candidateId }) => candidateId)
+    );
+    const rescueCandidateIds = [...allowedCandidateIds].filter((candidateId) =>
+      /^RCR-[a-f0-9]{24}$/u.test(candidateId)
+    );
+    return candidateIds.map((candidateId) => {
+      if (
+        allowedCandidateIds.has(candidateId) ||
+        rescueCandidateIds.length !== 1 ||
+        !/^RCR-[a-f0-9]{24,64}$/u.test(candidateId)
+      )
+        return candidateId;
+      const normalizedCandidateId = rescueCandidateIds[0];
+      const normalization = {
+        requirementId: row.requirementId,
+        fromCandidateId: candidateId,
+        toCandidateId: normalizedCandidateId,
+      };
+      normalizationsByKey.set(
+        `${normalization.requirementId}:${normalization.fromCandidateId}:${normalization.toCandidateId}`,
+        normalization
+      );
+      return normalizedCandidateId;
+    });
+  };
+  const normalizedResponses = (Array.isArray(responses) ? responses : []).map(
+    (response) => {
+      const row = rowsById.get(response?.requirementId);
+      if (!row) return response;
+      return {
+        ...response,
+        ...(response?.contextFinding
+          ? {
+              contextFinding: {
+                ...response.contextFinding,
+                candidateIds: normalizeCandidateIds(
+                  row,
+                  response.contextFinding.candidateIds
+                ),
+              },
+            }
+          : {}),
+        ...(Array.isArray(response?.componentFindings)
+          ? {
+              componentFindings: response.componentFindings.map((finding) => ({
+                ...finding,
+                candidateIds: normalizeCandidateIds(row, finding.candidateIds),
+              })),
+            }
+          : {}),
+        ...(Array.isArray(response?.unmodeledDifferences)
+          ? {
+              unmodeledDifferences: response.unmodeledDifferences.map(
+                (difference) => ({
+                  ...difference,
+                  candidateIds: normalizeCandidateIds(
+                    row,
+                    difference.candidateIds
+                  ),
+                })
+              ),
+            }
+          : {}),
+      };
+    }
+  );
+  return {
+    responses: normalizedResponses,
+    normalizations: [...normalizationsByKey.values()],
+  };
+}
+
 function normalizeRepeatedCandidateIds(responses) {
   let duplicateCandidateIdsRemoved = 0;
   const unique = (values) => {
@@ -667,6 +745,7 @@ async function runBatch({
   onAttempt = async () => {},
   initialAcceptedResponses = [],
   initialIdentityCoreModifierNormalizations = [],
+  initialUniqueRescueCandidateAliasNormalizations = [],
   resumeAfterSafeGroupedTimeout = false,
 }) {
   const accepted = new Map(
@@ -726,8 +805,13 @@ async function runBatch({
         recoverModelAfterAbort,
       });
       observedRawText = completion.choices?.[0]?.message?.content || "";
+      const rescueCandidateAliasNormalization =
+        normalizeUniqueRescueCandidateAliases(
+          workingBatch,
+          parseJsonArray(observedRawText)
+        );
       const parsedResponse = normalizeRepeatedCandidateIds(
-        parseJsonArray(observedRawText)
+        rescueCandidateAliasNormalization.responses
       );
       const identityCoreNormalization =
         normalizeIdentityCoreModifierDifferences(
@@ -783,6 +867,8 @@ async function runBatch({
         responses: parsed,
         duplicateCandidateIdsRemoved:
           parsedResponse.duplicateCandidateIdsRemoved,
+        uniqueRescueCandidateAliasNormalizations:
+          rescueCandidateAliasNormalization.normalizations,
         identityCoreModifierNormalizations:
           identityCoreNormalization.normalizations,
         acceptedRequirements: accepted.size,
@@ -910,6 +996,8 @@ async function runBatch({
     resumedAcceptedRequirements: initialAcceptedResponses.length,
     resumedIdentityCoreModifierNormalizations:
       initialIdentityCoreModifierNormalizations,
+    resumedUniqueRescueCandidateAliasNormalizations:
+      initialUniqueRescueCandidateAliasNormalizations,
     resumeAfterSafeGroupedTimeout,
   };
 }
@@ -1024,6 +1112,7 @@ function journalState({ output, plan, batch, args }) {
     return {
       acceptedResponses: [],
       identityCoreModifierNormalizations: [],
+      uniqueRescueCandidateAliasNormalizations: [],
       resumeAfterSafeGroupedTimeout: false,
     };
   const responses = [];
@@ -1064,9 +1153,14 @@ function journalState({ output, plan, batch, args }) {
     )
       resumeAfterSafeGroupedTimeout = true;
   }
+  const rescueCandidateAliasNormalization =
+    normalizeUniqueRescueCandidateAliases(batch, responses);
+  const repeatedCandidateNormalization = normalizeRepeatedCandidateIds(
+    rescueCandidateAliasNormalization.responses
+  );
   const identityCoreNormalization = normalizeIdentityCoreModifierDifferences(
     batch,
-    responses
+    repeatedCandidateNormalization.responses
   );
   return {
     acceptedResponses: validResponses(
@@ -1076,6 +1170,8 @@ function journalState({ output, plan, batch, args }) {
     ),
     identityCoreModifierNormalizations:
       identityCoreNormalization.normalizations,
+    uniqueRescueCandidateAliasNormalizations:
+      rescueCandidateAliasNormalization.normalizations,
     resumeAfterSafeGroupedTimeout,
   };
 }
@@ -1146,6 +1242,8 @@ async function processBatches({
           .map((requirementId) => acceptedByRequirement.get(requirementId)),
         initialIdentityCoreModifierNormalizations:
           resumeState.identityCoreModifierNormalizations,
+        initialUniqueRescueCandidateAliasNormalizations:
+          resumeState.uniqueRescueCandidateAliasNormalizations,
         resumeAfterSafeGroupedTimeout:
           resumeState.resumeAfterSafeGroupedTimeout,
         onAttempt: attemptRecorder({ output: args.output, plan, batch, args }),
@@ -1350,6 +1448,7 @@ module.exports = {
   loadCompatibleSeed,
   normalizeIdentityCoreModifierDifferences,
   normalizeRepeatedCandidateIds,
+  normalizeUniqueRescueCandidateAliases,
   parseJsonArray,
   processBatches,
   prompt,

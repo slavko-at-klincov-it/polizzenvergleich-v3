@@ -80,6 +80,7 @@ const {
   journalState: requirementDecisionJournalState,
   normalizeIdentityCoreModifierDifferences,
   normalizeRepeatedCandidateIds,
+  normalizeUniqueRescueCandidateAliases,
   prompt: requirementDecisionPrompt,
   processBatches: processRequirementDecisionBatches,
   repairInstruction: requirementDecisionRepairInstruction,
@@ -15646,6 +15647,89 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       "one",
       "one",
       "two",
+    ]);
+  });
+
+  test("normalizes an unknown rescue alias only when the row has exactly one allowed rescue candidate", () => {
+    const uniqueRescueId = "RCR-67ac73c0307887d218282628";
+    const inventedRescueId = "RCR-67ac30aad586050f71073e77633";
+    const response = {
+      requirementId: "unique-rescue",
+      contextFinding: {
+        outcome: "COUNTERPART_WITH_DIFFERENCE",
+        candidateIds: [inventedRescueId],
+      },
+      componentFindings: [
+        { componentId: "component", candidateIds: [inventedRescueId] },
+      ],
+      unmodeledDifferences: [
+        { dimension: "SCOPE", candidateIds: [inventedRescueId] },
+      ],
+    };
+    const batch = {
+      rows: [
+        {
+          requirementId: "unique-rescue",
+          candidates: [
+            { candidateId: uniqueRescueId },
+            { candidateId: "RCE-c30aad586050f71073e77633" },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUniqueRescueCandidateAliases(batch, [
+      response,
+    ]);
+
+    expect(normalized.normalizations).toEqual([
+      {
+        requirementId: "unique-rescue",
+        fromCandidateId: inventedRescueId,
+        toCandidateId: uniqueRescueId,
+      },
+    ]);
+    expect(normalized.responses[0].contextFinding.candidateIds).toEqual([
+      uniqueRescueId,
+    ]);
+    expect(normalized.responses[0].componentFindings[0].candidateIds).toEqual([
+      uniqueRescueId,
+    ]);
+    expect(normalized.responses[0].unmodeledDifferences[0].candidateIds).toEqual(
+      [uniqueRescueId]
+    );
+    expect(response.contextFinding.candidateIds).toEqual([inventedRescueId]);
+  });
+
+  test.each([
+    [
+      "more than one allowed rescue candidate",
+      [
+        { candidateId: "RCR-67ac73c0307887d218282628" },
+        { candidateId: "RCR-77ac73c0307887d218282628" },
+      ],
+      "RCR-67ac30aad586050f71073e77633",
+    ],
+    [
+      "an unknown primary candidate",
+      [{ candidateId: "RCR-67ac73c0307887d218282628" }],
+      "RCE-c30aad586050f71073e77633",
+    ],
+  ])("keeps %s invalid for strict validation", (_name, candidates, candidateId) => {
+    const response = {
+      requirementId: "unsafe-rescue",
+      contextFinding: { outcome: "MATCH", candidateIds: [candidateId] },
+      componentFindings: [],
+      unmodeledDifferences: [],
+    };
+    const normalized = normalizeUniqueRescueCandidateAliases(
+      { rows: [{ requirementId: "unsafe-rescue", candidates }] },
+      [response]
+    );
+
+    expect(normalized.normalizations).toEqual([]);
+    expect(normalized.responses[0].contextFinding.candidateIds).toEqual([
+      candidateId,
     ]);
   });
 
