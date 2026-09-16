@@ -1682,7 +1682,7 @@ function coordinatedPerilLabels(value) {
     .map((label) => label.trim())
     .filter(Boolean);
   const terminalPeril =
-    /^\p{Lu}[\p{L}\p{M}-]{2,100}(?:schäden?|gefahren?|ereignisse?|ursachen?)$/iu;
+    /^\p{Lu}[\p{L}\p{M}-]{2,100}(?:schaden|schäden|gefahr|gefahren|ereignis|ereignisse|ursache|ursachen)$/iu;
   const ellipticalPeril = /^\p{Lu}[\p{L}\p{M}-]{1,80}-$/u;
   if (
     labels.length < 2 ||
