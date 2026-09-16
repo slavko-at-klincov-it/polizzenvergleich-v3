@@ -15375,7 +15375,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     const batch = decisionPlan.batches[0];
     const row = batch.rows[0];
     const candidateId = row.candidates[0].candidateId;
-    const identityCore = row.components.find(({ identityCore }) => identityCore);
+    const identityCore = row.components.find(
+      ({ identityCore }) => identityCore
+    );
     const response = validRequirementResponse(row);
     response.componentFindings = response.componentFindings.map((finding) =>
       finding.componentId === identityCore.componentId
@@ -15390,9 +15392,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       },
     ];
 
-    expect(
-      validateBatchResponses(decisionPlan, batch, [response]).passed
-    ).toBe(false);
+    expect(validateBatchResponses(decisionPlan, batch, [response]).passed).toBe(
+      false
+    );
     const normalized = normalizeIdentityCoreModifierDifferences(batch, [
       response,
     ]);
@@ -15414,11 +15416,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       ).outcome
     ).toBe("MATCH");
     expect(
-      validateBatchResponses(
-        decisionPlan,
-        batch,
-        normalized.responses
-      ).passed
+      validateBatchResponses(decisionPlan, batch, normalized.responses).passed
     ).toBe(true);
     expect(response.componentFindings).toContainEqual(
       expect.objectContaining({
@@ -15439,37 +15437,38 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         },
       ],
     ],
-  ])("keeps an unsafe identity-core difference invalid %s", (_name, differences) => {
-    const { decisionPlan } = requirementDecisionFixture();
-    const batch = decisionPlan.batches[0];
-    const row = batch.rows[0];
-    const candidateId = row.candidates[0].candidateId;
-    const identityCore = row.components.find(({ identityCore }) => identityCore);
-    const response = validRequirementResponse(row);
-    response.componentFindings = response.componentFindings.map((finding) =>
-      finding.componentId === identityCore.componentId
-        ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
-        : finding
-    );
-    response.unmodeledDifferences = differences.map((difference) => ({
-      ...difference,
-      candidateIds: [candidateId],
-    }));
+  ])(
+    "keeps an unsafe identity-core difference invalid %s",
+    (_name, differences) => {
+      const { decisionPlan } = requirementDecisionFixture();
+      const batch = decisionPlan.batches[0];
+      const row = batch.rows[0];
+      const candidateId = row.candidates[0].candidateId;
+      const identityCore = row.components.find(
+        ({ identityCore }) => identityCore
+      );
+      const response = validRequirementResponse(row);
+      response.componentFindings = response.componentFindings.map((finding) =>
+        finding.componentId === identityCore.componentId
+          ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
+          : finding
+      );
+      response.unmodeledDifferences = differences.map((difference) => ({
+        ...difference,
+        candidateIds: [candidateId],
+      }));
 
-    const normalized = normalizeIdentityCoreModifierDifferences(batch, [
-      response,
-    ]);
+      const normalized = normalizeIdentityCoreModifierDifferences(batch, [
+        response,
+      ]);
 
-    expect(normalized.normalizations).toEqual([]);
-    expect(normalized.responses).toEqual([response]);
-    expect(
-      validateBatchResponses(
-        decisionPlan,
-        batch,
-        normalized.responses
-      ).passed
-    ).toBe(false);
-  });
+      expect(normalized.normalizations).toEqual([]);
+      expect(normalized.responses).toEqual([response]);
+      expect(
+        validateBatchResponses(decisionPlan, batch, normalized.responses).passed
+      ).toBe(false);
+    }
+  );
 
   test("accepts a bound identity-core modifier response without retry", async () => {
     const { decisionPlan } = requirementDecisionFixture();
@@ -15481,7 +15480,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       rows: [row],
     };
     const response = validRequirementResponse(row);
-    const identityCore = row.components.find(({ identityCore }) => identityCore);
+    const identityCore = row.components.find(
+      ({ identityCore }) => identityCore
+    );
     const candidateId = row.candidates[0].candidateId;
     response.componentFindings = response.componentFindings.map((finding) =>
       finding.componentId === identityCore.componentId
@@ -15857,7 +15858,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       modelRecoveryTimeoutMs: 180_000,
     };
     const response = validRequirementResponse(row);
-    const identityCore = row.components.find(({ identityCore }) => identityCore);
+    const identityCore = row.components.find(
+      ({ identityCore }) => identityCore
+    );
     const candidateId = row.candidates[0].candidateId;
     response.componentFindings = response.componentFindings.map((finding) =>
       finding.componentId === identityCore.componentId
@@ -15872,11 +15875,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       },
     ];
     try {
-      const directory = path.join(
-        output,
-        "attempts",
-        `00000-${batch.batchId}`
-      );
+      const directory = path.join(output, "attempts", `00000-${batch.batchId}`);
       fs.mkdirSync(directory, { recursive: true });
       fs.writeFileSync(
         path.join(directory, "cycle-001-attempt-001.private.json"),

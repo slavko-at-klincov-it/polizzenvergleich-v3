@@ -249,9 +249,7 @@ function normalizeRepeatedCandidateIds(responses) {
 }
 
 function normalizeIdentityCoreModifierDifferences(batch, responses) {
-  const rowsById = new Map(
-    batch.rows.map((row) => [row.requirementId, row])
-  );
+  const rowsById = new Map(batch.rows.map((row) => [row.requirementId, row]));
   const normalizations = [];
   const normalizedResponses = (Array.isArray(responses) ? responses : []).map(
     (response) => {
@@ -316,9 +314,7 @@ function normalizeIdentityCoreModifierDifferences(batch, responses) {
           toOutcome: "MATCH",
           candidateIds: [...finding.candidateIds],
           modifierDimensions: [
-            ...new Set(
-              modifierDifferences.map(({ dimension }) => dimension)
-            ),
+            ...new Set(modifierDifferences.map(({ dimension }) => dimension)),
           ].sort(),
         });
         return { ...finding, outcome: "MATCH" };
