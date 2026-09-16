@@ -95,9 +95,7 @@ function validateCapability(capability, ids) {
     "CAPABILITY_MODES_INVALID",
     capability.id
   );
-  if (
-    capability.productModes.some((mode) => !["LF", "AB"].includes(mode))
-  )
+  if (capability.productModes.some((mode) => !["LF", "AB"].includes(mode)))
     fail("CAPABILITY_MODE_UNKNOWN", capability.id);
   if (!MATURITY.has(capability.maturityStatus))
     fail("CAPABILITY_MATURITY_INVALID", capability.id);
@@ -114,7 +112,10 @@ function validateCapability(capability, ids) {
     { allowEmpty: true }
   );
   for (const relativePath of capability.implementationFiles)
-    regularRepositoryFile(relativePath, "CAPABILITY_IMPLEMENTATION_FILE_MISSING");
+    regularRepositoryFile(
+      relativePath,
+      "CAPABILITY_IMPLEMENTATION_FILE_MISSING"
+    );
 
   if (!Array.isArray(capability.publicEntrypoints))
     fail("CAPABILITY_ENTRYPOINTS_INVALID", capability.id);
@@ -133,7 +134,10 @@ function validateCapability(capability, ids) {
 
   if (!Array.isArray(capability.callers))
     fail("CAPABILITY_CALLERS_INVALID", capability.id);
-  if (ACTIVE.has(capability.activationStatus) && capability.callers.length === 0)
+  if (
+    ACTIVE.has(capability.activationStatus) &&
+    capability.callers.length === 0
+  )
     fail("ACTIVE_CAPABILITY_CALLER_REQUIRED", capability.id);
   for (const caller of capability.callers || []) {
     const file = regularRepositoryFile(
@@ -155,7 +159,12 @@ function validateCapability(capability, ids) {
       `${capability.id}:${field}`,
       { allowEmpty: field === "sideEffects" || field === "dependencies" }
     );
-  for (const field of ["recall", "precision", "sourceBinding", "generalization"])
+  for (const field of [
+    "recall",
+    "precision",
+    "sourceBinding",
+    "generalization",
+  ])
     requireString(
       capability.qualityImpact?.[field],
       "CAPABILITY_QUALITY_IMPACT_MISSING",
@@ -201,7 +210,10 @@ function validateCapabilityInventory(inventory) {
     fail("CAPABILITY_INVENTORY_HEADER_INVALID");
   requireString(inventory.changeSetId, "CAPABILITY_CHANGESET_ID_REQUIRED");
   const ids = new Set();
-  if (!Array.isArray(inventory.capabilities) || inventory.capabilities.length === 0)
+  if (
+    !Array.isArray(inventory.capabilities) ||
+    inventory.capabilities.length === 0
+  )
     fail("CAPABILITY_INVENTORY_EMPTY");
   for (const capability of inventory.capabilities)
     validateCapability(capability, ids);
@@ -211,7 +223,10 @@ function validateCapabilityInventory(inventory) {
       if (!inventory.relationshipTypes.includes(relation?.type))
         fail("CAPABILITY_RELATION_TYPE_INVALID", capability.id);
       if (!ids.has(relation?.target))
-        fail("CAPABILITY_RELATION_TARGET_UNKNOWN", `${capability.id}:${relation?.target}`);
+        fail(
+          "CAPABILITY_RELATION_TARGET_UNKNOWN",
+          `${capability.id}:${relation?.target}`
+        );
     }
 
   const workflowIds = new Set();
@@ -221,7 +236,11 @@ function validateCapabilityInventory(inventory) {
     if (workflowIds.has(workflow.id))
       fail("CAPABILITY_WORKFLOW_ID_DUPLICATE", workflow.id);
     workflowIds.add(workflow.id);
-    requireString(workflow.name, "CAPABILITY_WORKFLOW_NAME_REQUIRED", workflow.id);
+    requireString(
+      workflow.name,
+      "CAPABILITY_WORKFLOW_NAME_REQUIRED",
+      workflow.id
+    );
     requireStringArray(
       workflow.nodes,
       "CAPABILITY_WORKFLOW_NODES_INVALID",
@@ -231,7 +250,10 @@ function validateCapabilityInventory(inventory) {
       fail("CAPABILITY_WORKFLOW_NODE_DUPLICATE", workflow.id);
     for (const capabilityId of workflow.nodes)
       if (!ids.has(capabilityId))
-        fail("CAPABILITY_WORKFLOW_NODE_UNKNOWN", `${workflow.id}:${capabilityId}`);
+        fail(
+          "CAPABILITY_WORKFLOW_NODE_UNKNOWN",
+          `${workflow.id}:${capabilityId}`
+        );
   }
 
   const contractIds = new Set();

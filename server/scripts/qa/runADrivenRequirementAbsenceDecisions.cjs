@@ -14,7 +14,6 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenRequirementCounterpartDecision");
 const {
   A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_CONTRACT_ID,
-  A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_CONTRACT_ID,
   buildADrivenRequirementAbsencePlan,
   validateADrivenRequirementAbsenceDecisionArtifact,
   validateADrivenRequirementAbsencePlan,
