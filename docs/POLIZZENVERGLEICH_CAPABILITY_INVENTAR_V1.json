@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V2-REPAIR-SCHEMA-20260915-001",
+  "changeSetId": "LF-V2-CORE-MODIFIER-NORMALIZATION-20260916-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
