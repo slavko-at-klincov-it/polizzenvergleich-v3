@@ -627,14 +627,14 @@
       "dependencies": ["CAP-B-004", "CAP-B-005", "CAP-MODEL-001"],
       "qualityImpact": { "recall": "PRIMARY_DECISION_GATE", "precision": "PRIMARY_DECISION_GATE", "sourceBinding": "SERVER_VALIDATED", "generalization": "NOT_YET_END_TO_END_PROVEN" },
       "resourceImpact": { "runtime": "HIGH: 204 planned batches on current fixture", "ram": "Qwen model footprint", "gpu": "Qwen bursts" },
-      "knownLimitsRisks": ["The active 204-batch run is not complete.", "A PASS batch proves contract validity, not agreement with Gold.", "Deterministic local-model output can repeat the same malformed or schema-invalid answer; bounded schema-specific repair must remain fail-closed."],
+      "knownLimitsRisks": ["The resumed 204-batch run has 117 PASS batches and is not complete.", "A PASS batch proves contract validity, not agreement with Gold.", "Deterministic local-model output can repeat the same malformed or schema-invalid answer; bounded schema-specific repair must remain fail-closed.", "Identity-core modifier normalization is allowed only for a MATCH context, identical server-bound candidate IDs and explicit differences limited to scope, condition, value, limit, deductible or temporal validity."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tracker 133.47", "Tracker 133.51", "fresh 1+9 run in progress on 2026-09-15"],
+        "runs": ["Tracker 133.47", "Tracker 133.51", "Tracker 133.52", "fresh 1+9 run resumed after Batch 117 on 2026-09-16"],
         "adrs": ["ADR-031"],
-        "failures": ["INT-20260915-037"]
+        "failures": ["INT-20260915-037", "INT-20260916-038"]
       },
-      "lastVerifiedCommit": "5bc7aacdba008c10de69a7bf669c4cf92721fd7e",
+      "lastVerifiedCommit": "7800b11a5bb1db199b78a507898281f3370fd902",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Reachable from the V2 runner and currently executing in the private 1+9 shadow.",
       "reactivationCriteria": "Not applicable while active."

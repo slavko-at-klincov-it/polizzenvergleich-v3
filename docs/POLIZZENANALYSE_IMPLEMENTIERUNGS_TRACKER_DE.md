@@ -9918,3 +9918,67 @@ vollständige Lauf wurde danach gestartet und verwendet 50/204 Batches wieder.
 
 Status: `BATCH 50 ROOT-CAUSE REPAIR PASS; 50/204 WIEDERVERWENDET; PRIMÄRLAUF
 AB BATCH 51 LÄUFT; KEIN DEPLOYMENT`.
+
+### 133.52 Batch 117: gebundene Modifier-Abweichung ohne Verlust des Gegenstücks
+
+Der nach Batch 50 fortgesetzte Primärlauf erreichte 116/204 unveränderliche
+PASS-Batches und stoppte anschließend an Batch 117 fail-closed. Transport,
+Timeout und Modellzustand waren gesund. Acht gespeicherte Versuche nannten
+denselben servergebundenen B-Kandidaten, positiven Kontext und dasselbe
+fachliche Gegenstück. Qwen verwendete für die breite
+Identitätskernkomponente dennoch wiederholt
+`COUNTERPART_WITH_DIFFERENCE`, obwohl die genannten Unterschiede
+ausschließlich Wert, Berechnungsbasis oder Bedingung betrafen und separat in
+`unmodeledDifferences` gebunden waren. Der V1-Validator verbietet diesen
+Outcome auf einer Identitätskerndimension ohne weitere Absicherung.
+
+Change-Set `LF-V2-CORE-MODIFIER-NORMALIZATION-20260916-001` adaptiert deshalb
+den bestehenden Runner aus `CAP-B-006`. Vor der unveränderten strikten
+V1-Validierung wird ein solcher Kernstatus nur dann zu `MATCH` normalisiert,
+wenn:
+
+- der Requirement-Kontext selbst `MATCH` ist;
+- jede verwendete Kandidaten-ID bereits servergebunden und auch im
+  Kontextfund enthalten ist;
+- jede Kandidaten-ID durch mindestens eine ausdrückliche
+  `unmodeledDifference` belegt ist;
+- diese Unterschiede ausschließlich Scope, Bedingung, Wert, Limit,
+  Selbstbehalt oder zeitliche Geltung betreffen;
+- keine Kerndifferenz für dieselben Kandidaten behauptet wird.
+
+Ohne diese Voraussetzungen bleibt die Antwort unverändert ungültig. Rohtext
+und alle acht alten Attempts bleiben append-only erhalten. Bestehende
+PASS-Batches, Manifest, Retrieval und Entscheidungsplan ändern sich nicht.
+
+Mac-Studio-Nachweise auf dem exakten Commit
+`7800b11a5bb1db199b78a507898281f3370fd902` im isolierten Worktree
+`/private/tmp/lf-core-modifier-197481fc6` mit Node `v22.23.2`:
+
+```text
+Prettier:                                         PASS
+gezielte Positiv-/Negativ-/Resume-Tests:          4/4 PASS
+vollständige A-driven-Vertragssuite:              334/334 PASS
+Batch 117 aus vorhandenem Journal:                PASS
+neue Modellaufrufe für Batch 117:                 0
+unverändert wiederverwendete Vorgänger:            116/116
+Resume-Start:                                      Batch 118
+Modell:                                            qwen/qwen3.6-35b-a3b
+Kontext:                                           42.496
+```
+
+Eine zusätzliche read-only Prüfung des aktuellen A-Manifests mit dem bereits
+vorhandenen heuristischen Atomizitätsaudit meldete 138 Risiken in 85 Units.
+Sie beweisen nicht 138 fachliche Fehler, zeigen aber, dass die frühere Aussage
+„A fertig“ nur Block-/Responsevollständigkeit und nicht vollständig geprüfte
+fachliche Atomizität meinte. Außerdem ist dieses vorhandene Audit im
+vollständigen Produktkommando derzeit nicht vor der B-Phase verdrahtet. Dieser
+Befund bleibt als separates Produktintegritätsproblem offen und darf bei einer
+späteren Produktionsfreigabe nicht verschwiegen werden; er rechtfertigt aber
+keinen Verlust der bereits source-bound geprüften B-Arbeit.
+
+Der restliche Primärlauf wurde SSH-unabhängig ab Batch 118 fortgesetzt. Kein
+Deployment und keine Kundenfreigabe.
+
+Status: `117/204 PRIMÄRBATCHES PASS; RESUME AB 118 AKTIV; 0 NEUE
+MODELLAUFRUFE FÜR BATCH 117; A-ATOMIZITÄTSGATE-VERDRAHTUNG OFFEN; KEIN
+DEPLOYMENT`.
