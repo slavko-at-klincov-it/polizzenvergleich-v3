@@ -2819,3 +2819,113 @@ Vollständigkeitsbehauptung erzeugen.
   `7800b11a5bb1db199b78a507898281f3370fd902` und
   `938ab782948b2c44ac4d846122cc0797a706a43e`, Tracker 133.52/133.53 und
   Tests 91/92/93.
+
+## INT-20260916-039 — Koordinierte Gefahrenlisten vor der B-Prüfung atomisieren
+
+- Erfasst: 2026-09-16
+- Typ: `BEOBACHTUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Eine source-bound A-Komponente wie „Bruch-, Frost-,
+  Verstopfungs- und Korrosionsschäden“ darf nicht als unteilbarer
+  `PERIL_OR_CAUSE`-Identitätskern in die B-Prüfung gelangen. Eindeutig
+  koordinierte, quellwörtlich gebundene Gefahrennomen müssen vor Manifest- und
+  Komponenten-ID-Bildung einzeln materialisiert werden, während die sichtbare
+  A-Anforderung und ihre Reihenfolge unverändert bleiben.
+- Ist-Wahrheit: `JA`; der allgemeine Fix ist implementiert, auf dem Mac Studio
+  mit 341/341 Vertragstests validiert und im dynamischen 1+9-Lauf
+  rematerialisiert.
+- Quelle: aggregierter Mac-Studio-Befund aus dem ersten unvollständigen
+  Rescue-Lauf des dynamischen LF-1+9-Fixtures; keine Kundentexte oder privaten
+  IDs in der Knowledge Base.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Ein in B belegtes
+  Teilgegenstück einer koordinierten A-Liste kann als `GEFUNDEN` erscheinen,
+  während nicht belegte Listenelemente getrennt sichtbar bleiben. Ein
+  Kernunterschied darf nicht pauschal zu `MATCH` umgedeutet werden.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für die bestehende
+  A-Klassifikations-/Atomisierungsfähigkeit und anschließend normale
+  hashgebundene Downstream-Neumaterialisierung. Keine Zeilen-ID-Sonderregel,
+  keine Abschwächung des B-Validators, kein Gold als Produktionseingang und
+  kein Deployment.
+- Evidenz und Beweisgrenze: Drei deterministische Modellversuche erkannten
+  denselben belegten Teilkern, blieben aber zu Recht ungültig, weil das
+  Manifest die koordinierten Gefahren noch als eine Kernkomponente führte.
+  Der Befund beweist weder weitere Listenfehler noch Generalisierung.
+- Systembezug: dynamische A-Atomisierung, Manifestidentität, Retrievalmatrix,
+  B-Komponentenentscheidung, Resume und binärer Kundenstatus; `CAP-A-004`,
+  `CAP-B-006`, `CAP-B-007`, `ADR-031`, `INT-20260916-038`.
+- Beziehungen:
+  - `REFINES` -> verbindliche Atomisierungsregel des Produktvertrags
+  - `REUSES` -> bestehende source-bound Komponenten-Normalisierung
+  - verhindert -> pauschales Akzeptieren echter Kerndifferenzen und Verlust
+    belegter Teilgegenstücke
+- Hard-Gates: positive und negative Varianten für elliptische und vollständig
+  ausgeschriebene Gefahrenlisten; unveränderte gekoppelte Komposita; komplette
+  A-driven-Vertragssuite; hashgebundene Neumaterialisierung aus bestehenden
+  A-Antworten; gezielter B-Rescue und anschließende Gold-Regression auf dem
+  Mac Studio.
+- Bewertung: kleinste allgemeine Root-Cause-Korrektur am tatsächlichen
+  Entstehungsort des Fehlers; Umsetzung und Realnachweis stehen aus.
+- Evidenzqualität: `BEOBACHTET_CODE` plus `GEMESSEN_KUNDENHARDWARE`.
+- Riskanteste Annahme: Die streng begrenzte Syntax erkennt ausschließlich
+  echte koordinierte Gefahrennomen und verändert keine Alternative, Bedingung
+  oder gekoppelte Fachphrase.
+- Nächster Prüfschritt: Die verbleibenden sieben eindeutig messbaren
+  Gold-Fehler und ungesehene Gefahrenlistenvarianten getrennt prüfen; den
+  bestätigten Fix nicht zeilenspezifisch erweitern.
+- Entscheidung: `ADAPT_EXISTING`; keine zweite Architektur.
+- Kanonischer Ausgang: Change-Set
+  `LF-V2-COORDINATED-PERIL-ATOMIZATION-20260916-001`, Implementierungsstand
+  `51b522ce93b732bf7811c16d836c4ff8c3b61299`, Tracker 133.55 und Tests 94.
+
+## INT-20260916-040 — B-Entscheidungen für byteidentische Requirements planübergreifend revalidieren
+
+- Erfasst: 2026-09-16
+- Typ: `IMPLEMENTIERUNGSHYPOTHESE`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Wenn eine allgemeine A-Korrektur nur einzelne Requirements und
+  dadurch den globalen Planhash verändert, dürfen vollständig validierte
+  B-Antworten eines abgeschlossenen Seed-Laufs ausschließlich für
+  byteidentische aktuelle Planzeilen wiederverwendet werden. Jede übernommene
+  Antwort muss zusätzlich gegen den aktuellen Einzelzeilenvertrag erneut
+  validiert und unter dem neuen Planhash in ein neues Batchartefakt
+  materialisiert werden.
+- Ist-Wahrheit: `JA`; 361/363 aktuelle Requirements wurden nach vollständiger
+  Seed-Integritätsprüfung und aktueller Einzelzeilen-Revalidierung übernommen,
+  während exakt zwei geänderte Requirements neue Modellaufrufe erhielten.
+- Quelle: hashgebundener Vergleich des vollständigen B-Primärplans mit dem
+  nach `INT-20260916-039` neu materialisierten Plan auf dem Mac Studio.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Allgemeine
+  A-Verbesserungen führen nicht mehr automatisch zu stundenlangen
+  Wiederholungen fachlich unveränderter B-Entscheidungen. Nur wirklich
+  geänderte Requirements werden erneut durch das Modell geprüft.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-B-006` und
+  dessen Append-only-/Resume-Vertrag. Keine Übernahme nur aufgrund gleicher
+  Position, ähnlichen Textes oder alter IDs; keine Abschwächung der aktuellen
+  Validatoren; keine Änderung an Gold, Kundenstatus oder Produkt-Routing.
+- Evidenz und Beweisgrenze: Der aktuelle Vergleich ergibt 361 byteidentische
+  und zwei geänderte Requirements in Batch 77 und 88. Das beweist die
+  Wiederverwendbarkeit nur nach vollständiger Seed-Integritätsprüfung und
+  aktueller Einzelzeilen-Revalidierung.
+- Systembezug: B-Entscheidungsplan, Modellkosten/Laufzeit, Batchartefakte,
+  Resume, Auditierbarkeit und Downstream-Abwesenheits-/Rescue-Verträge;
+  `CAP-B-006`, `ADR-031`, `INT-20260916-039`.
+- Beziehungen:
+  - `DEPENDS_ON` -> vollständiger, terminaler und hashgebundener Seed-Lauf
+  - `REFINES` -> bestehende Batch-/Journal-Wiederverwendung
+  - verhindert -> stille Übernahme geänderter Kandidaten oder Komponenten
+- Hard-Gates: unvollständiger oder manipulierte Seed wird fail-closed
+  abgelehnt; geänderte Zeile wird nicht übernommen; byteidentische Zeile wird
+  gegen den aktuellen Vertrag revalidiert; vollständig gesäte Batches lösen
+  keinen Modellaufruf aus; nur betroffene Batches werden neu berechnet.
+- Bewertung: kleinste Erweiterung des bestehenden Resume-Vertrags; keine neue
+  Architektur.
+- Evidenzqualität: `BEOBACHTET_CODE` plus `GEMESSEN_KUNDENHARDWARE`.
+- Riskanteste Annahme: Byteidentität der gesamten aktuellen Planzeile bindet
+  alle semantisch relevanten Inputs der vorhandenen B-Antwort vollständig.
+- Nächster Prüfschritt: Wiederverwendung bei weiteren allgemeinen
+  Manifeständerungen beobachten; unvollständige Seed-Läufe bleiben bewusst
+  ausgeschlossen.
+- Entscheidung: `ADAPT_EXISTING`; keine zweite Architektur.
+- Kanonischer Ausgang: Change-Set
+  `LF-V2-B-DECISION-SEED-REVALIDATION-20260916-001`, Implementierungsstand
+  `fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33`, Tracker 133.55 und Tests 94.

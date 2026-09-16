@@ -5092,3 +5092,66 @@ Nullfund erst nach vollständiger Korpusprüfung zulässig ist.
 **Beweisgrenze:** Weder 311/52 noch die Anzahl der 572 Partitionen ist ein
 Kundenergebnis oder eine Gold-Metrik. Abwesenheit, Rescue, Binärergebnis und
 Gold-Regression bleiben offen. Kein Deployment.
+
+## 94. Koordinierte Gefahrenlisten und vollständiger binärer 1+9-Abschluss
+
+Der vollständige 572-Partitionen-Abwesenheitslauf endete mit 43
+Nullfund-Kandidaten und neun Rescue-Fällen. Im vierten Rescue-Fall belegte B
+nur den Teilkern „Bruch“ einer einzigen A-Kernkomponente „Bruch-, Frost-,
+Verstopfungs- und Korrosionsschäden“. Drei deterministische Modellantworten
+blieben deshalb zu Recht fail-closed ungültig. Die Root Cause lag in der
+A-Atomisierung, nicht in Retrieval, Timeout oder B-Validierung.
+
+Change-Set `LF-V2-COORDINATED-PERIL-ATOMIZATION-20260916-001` trennt nur
+eindeutig koordinierte, quellwörtlich gebundene Gefahrennomen. Alternativen,
+Schutz-Komposita und abhängige Phrasen bilden negative Vertragstests. Auf dem
+Mac Studio bestanden 6/6 gezielte Varianten und 341/341 vollständige
+A-driven-Vertragstests. 58/58 A-Batches wurden ohne neuen Modellaufruf
+rematerialisiert; das Ergebnis besitzt 363 Requirements, 1.282 Komponenten
+und null Unresolved.
+
+Der globale Planhash änderte sich, obwohl 361/363 B-Planzeilen byteidentisch
+blieben. Change-Set `LF-V2-B-DECISION-SEED-REVALIDATION-20260916-001`
+erweitert deshalb den bestehenden Resume-Vertrag: vollständige Seed-Bindung,
+Byteidentität der gesamten Zeile und aktuelle Einzelzeilen-Revalidierung sind
+gemeinsam erforderlich. Manipulierte, unvollständige oder geänderte Zeilen
+werden nicht übernommen. Mac Studio: Syntax und Prettier PASS, 344/344
+A-driven-Vertragstests PASS.
+
+Der reale Resume übernahm 361 Requirements und 202 vollständige Batches;
+exakt zwei Modellaufrufe prüften die geänderten Requirements. Danach wurden
+561/561 Vollkorpuspartitionen in 111 ms mit null Modellaufrufen revalidiert.
+Der neue achtteilige Rescue benötigte elf Modellversuche und 350.122 ms;
+sechs Gegenstücke und zwei zusätzliche Abwesenheiten wurden terminalisiert.
+
+```text
+Primär:                             204/204 Batches, 363/363 terminal
+Primär FOUND / FALLBACK / offen:    312 / 51 / 0
+Vollkorpus:                         561/561, 43 Nullfund, 8 Rescue, 0 offen
+Rescue:                             6 FOUND, 2 NOT_FOUND, 0 offen
+Final:                              318 FOUND, 45 NOT_FOUND, 0 offen
+FULL / PARTIAL / CONTRADICTED:      198 / 116 / 4
+Side-B-only-Zeilen:                 0
+```
+
+Die interne XLSX enthält 363 eindeutige IDs, fortlaufende Nummern, exakt
+318/45 binäre Statuswerte, keine Fehlerzellen, einen Filter und Freeze-Panes.
+Die manuelle Bewertungsspalte bleibt leer. Datei-SHA-256:
+`630b1a2c46619c5dcafaa464bd51a61e74daa828af9422ca9702f9c4bf66c483`.
+
+Die Gold-Regression liefert eine gemischte Wahrheit. Positiv: 283/283
+Legacy-Anforderungen sind quellseitig abgedeckt und 137/144 eindeutig
+messbare Zeilen stimmen. Gegenüber der letzten Revision verschwinden zwei
+False Positives. Negativ: Die Trefferzahl bleibt 137, False Negatives steigen
+von fünf auf sieben, 68/631 Legacy-Komponentenrollen sind nicht gedeckt und
+139 Gold-Zeilen bleiben durch Split-/Merge-Kontext nicht binär messbar.
+
+**Beweist:** Der beobachtete koordinierte-Gefahren-Fehler ist allgemein am
+Entstehungsort behoben; unveränderte B-Arbeit lässt sich sicher und massiv
+schneller wiederverwenden; der bekannte 1+9-Lauf besitzt jetzt 363 binäre
+Kundenstatus ohne unklare Zwischenklasse.
+
+**Beweist nicht:** Einen Nettoanstieg der Gold-Treffer, einen kalten
+End-to-End-Laufzeitwert, Generalisierung auf ungesehene Versicherer oder
+99-Prozent-Qualität. Die nächsten fachlichen Arbeiten sind die sieben
+eindeutig messbaren False Negatives und die 68 Rollenlücken. Kein Deployment.
