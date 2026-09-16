@@ -14,6 +14,27 @@ const storage = path.join(repo, "server/storage");
 const comparisonExportDirectory =
   process.env.V3_COMPARISON_EXPORT_DIR ||
   path.join(os.homedir(), "Downloads", "Projekt Lokale KI", "Vergleiche");
+const existingServerEnv = fs.existsSync(serverEnv)
+  ? fs.readFileSync(serverEnv, "utf8")
+  : "";
+const aDrivenEmbeddingContractFile =
+  process.env.V3_A_DRIVEN_EMBEDDING_CONTRACT_FILE ||
+  existingValue(
+    existingServerEnv,
+    "POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE"
+  );
+
+if (
+  !aDrivenEmbeddingContractFile ||
+  !path.isAbsolute(aDrivenEmbeddingContractFile)
+) {
+  throw new Error(
+    "V3_A_DRIVEN_EMBEDDING_CONTRACT_FILE muss auf einen absoluten LF-V2-Embeddingvertrag zeigen."
+  );
+}
+const aDrivenContractStat = fs.lstatSync(aDrivenEmbeddingContractFile);
+if (!aDrivenContractStat.isFile() || aDrivenContractStat.isSymbolicLink())
+  throw new Error("LF-V2-Embeddingvertrag ist keine reguläre Datei.");
 
 function existingValue(content, key) {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -91,6 +112,7 @@ mergeManagedBlock(serverEnv, {
   LMSTUDIO_MODEL_TOKEN_LIMIT: "42496",
   POLICY_FULL_MODEL: "qwen/qwen3.6-35b-a3b",
   POLICY_FULL_MODEL_TOKEN_LIMIT: "42496",
+  POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE: aDrivenEmbeddingContractFile,
   POLICY_COMPARISON_EXPORT_DIR: comparisonExportDirectory,
 });
 

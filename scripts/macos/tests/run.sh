@@ -20,10 +20,13 @@ temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/polizzenvergleich-v3-installer-test.XXXXX
 trap '/bin/rm -rf "$temp_dir"' EXIT
 mkdir -p "$temp_dir/repo/server" "$temp_dir/repo/collector" "$temp_dir/repo/frontend"
 printf '%s\n' 'JWT_SECRET="preserved-secret"' 'LLM_PROVIDER="lmstudio"' >"$temp_dir/repo/server/.env"
+printf '%s\n' '{"enabled":true}' >"$temp_dir/embedding-contract.json"
+chmod 600 "$temp_dir/embedding-contract.json"
 
 V3_REPO_DIR="$temp_dir/repo" \
 V3_SERVER_PORT=3004 \
 V3_COLLECTOR_PORT=8890 \
+V3_A_DRIVEN_EMBEDDING_CONTRACT_FILE="$temp_dir/embedding-contract.json" \
   "${NODE_BIN:-node}" "$SCRIPT_DIR/write-config.cjs" >/dev/null
 
 /usr/bin/grep -q '^SERVER_PORT="3004"$' "$temp_dir/repo/server/.env"
@@ -34,6 +37,7 @@ V3_COLLECTOR_PORT=8890 \
 /usr/bin/grep -q '^LLM_PROVIDER="lmstudio"$' "$temp_dir/repo/server/.env"
 /usr/bin/grep -q '^LMSTUDIO_MODEL_PREF="qwen/qwen3.6-35b-a3b"$' "$temp_dir/repo/server/.env"
 /usr/bin/grep -q '^LMSTUDIO_MODEL_TOKEN_LIMIT="42496"$' "$temp_dir/repo/server/.env"
+/usr/bin/grep -Fq "POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE=\"$temp_dir/embedding-contract.json\"" "$temp_dir/repo/server/.env"
 /usr/bin/grep -q '^COLLECTOR_HOST="127.0.0.1"$' "$temp_dir/repo/collector/.env"
 /usr/bin/grep -q '^VITE_API_BASE="/api"$' "$temp_dir/repo/frontend/.env"
 [ "$(stat -f '%OLp' "$temp_dir/repo/server/.env")" = "600" ]
@@ -53,6 +57,7 @@ mkdir -p "$temp_dir/fresh/server" "$temp_dir/fresh/collector" "$temp_dir/fresh/f
 V3_REPO_DIR="$temp_dir/fresh" \
 V3_SERVER_PORT=3004 \
 V3_COLLECTOR_PORT=8890 \
+V3_A_DRIVEN_EMBEDDING_CONTRACT_FILE="$temp_dir/embedding-contract.json" \
   "${NODE_BIN:-node}" "$SCRIPT_DIR/write-config.cjs" >/dev/null
 ! /usr/bin/grep -q '^JWT_SECRET=' "$temp_dir/fresh/server/.env"
 
@@ -83,7 +88,7 @@ for plist in "$V3_LAUNCH_AGENTS_DIR"/*.plist; do
 done
 [ "$(find "$V3_LAUNCH_AGENTS_DIR" -name '*.plist' | wc -l | tr -d ' ')" = "2" ]
 [ "$V3_NODE_VERSION" = "22.23.2" ]
-[ "$V3_RELEASE_VERSION" = "3.7.4" ]
+[ "$V3_RELEASE_VERSION" = "3.8.0" ]
 [ "$V3_SERVER_PORT" = "3004" ]
 [ "$V3_COLLECTOR_PORT" = "8890" ]
 

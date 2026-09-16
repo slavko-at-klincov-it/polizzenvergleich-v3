@@ -13,7 +13,7 @@ v3_safe_repo_path
 [ "$(uname -s)/$(uname -m)" = "Darwin/arm64" ] && ok "macOS Apple Silicon" || bad "macOS arm64 erforderlich"
 [ -x "$V3_NODE_BIN" ] && ok "Lokale Node-Runtime" || bad "Node-Runtime fehlt"
 [ "$($V3_NODE_BIN --version 2>/dev/null || true)" = "v$V3_NODE_VERSION" ] && ok "Node v$V3_NODE_VERSION" || bad "Falsche Node-Version"
-[ "$V3_RELEASE_VERSION" = "3.7.4" ] && ok "Produktversion v$V3_RELEASE_VERSION" || bad "Unerwartete Produktversion"
+[ "$V3_RELEASE_VERSION" = "3.8.0" ] && ok "Produktversion v$V3_RELEASE_VERSION" || bad "Unerwartete Produktversion"
 v3_release_checkout_matches &&
   ok "Annotierter Release-Tag v$V3_RELEASE_VERSION stimmt mit HEAD überein" ||
   bad "HEAD entspricht nicht dem annotierten Release-Tag v$V3_RELEASE_VERSION"
@@ -35,6 +35,23 @@ for file in "$V3_REPO_DIR/server/.env" "$V3_REPO_DIR/collector/.env"; do
     bad "Konfiguration fehlt oder ist ungeschützt: $file"
   fi
 done
+
+A_DRIVEN_CONTRACT_FILE="$($V3_NODE_BIN -e '
+  const fs = require("fs");
+  const content = fs.readFileSync(process.argv[1], "utf8");
+  const match = content.match(/^\s*POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE\s*=\s*(.+?)\s*$/m);
+  if (!match) process.exit(2);
+  let value;
+  try { value = JSON.parse(match[1]); } catch { value = match[1].replace(/^["'\'' ]+|["'\'' ]+$/g, ""); }
+  if (!value || !require("path").isAbsolute(value)) process.exit(3);
+  process.stdout.write(value);
+' "$V3_REPO_DIR/server/.env" 2>/dev/null || true)"
+if [ -n "$A_DRIVEN_CONTRACT_FILE" ] && [ -f "$A_DRIVEN_CONTRACT_FILE" ] && [ ! -L "$A_DRIVEN_CONTRACT_FILE" ] &&
+  [ "$(stat -f '%OLp' "$A_DRIVEN_CONTRACT_FILE" 2>/dev/null || true)" = "600" ]; then
+  ok "LF-V2-Embeddingvertrag vorhanden und geschützt"
+else
+  bad "LF-V2-Embeddingvertrag fehlt, ist unsicher oder nicht absolut konfiguriert"
+fi
 
 [ -f "$V3_REPO_DIR/server/public/_index.html" ] && ok "Produktions-Oberfläche" || bad "Produktions-Oberfläche fehlt"
 if [ -s "$V3_REPO_DIR/server/storage/anythingllm.db" ] &&

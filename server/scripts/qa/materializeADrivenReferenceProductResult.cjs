@@ -300,7 +300,7 @@ async function main() {
   );
   const summary = {
     schemaVersion: 1,
-    contractId: "LF_A_DRIVEN_REFERENCE_PRODUCT_SHADOW_V1",
+    contractId: "LF_A_DRIVEN_REFERENCE_PRODUCT_RUN_V1",
     runContractId: inputs.manifest.runContractId,
     generatedAt: productResult.generatedAt,
     sessionUuid: productResult.sessionUuid,
@@ -326,7 +326,7 @@ async function main() {
       ({ side }) => side === "B"
     ).length,
     goldDefinesProductionRows: false,
-    customerWorkbookCreated: false,
+    customerWorkbookCreated: Boolean(artifactSet),
     deploymentPerformed: false,
   };
   const summaryFile = path.join(args.outputDirectory, "summary.private.json");
