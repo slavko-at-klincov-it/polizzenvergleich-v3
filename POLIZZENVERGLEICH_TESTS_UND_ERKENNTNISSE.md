@@ -5268,6 +5268,9 @@ Datei-SHA-256
 `ff9a7292f10f34b0f9cb2bfc728a8ad08b3e46da3995f8fa62a8703785733d18`,
 die interne XLSX
 `70d5ecb6e26b278e01c17f1bfcf85e1e1eccddc6fee2dcb7f59b2282f3194243`.
+Eine byteidentische Nachweiskopie liegt im Kundenordner `Downloads/Projekt
+Lokale KI/Vergleiche` als
+`LF-IMMO-Dynamischer-Referenzvergleich-V3.8.0-2026-09-16.xlsx`.
 
 **Positive Erkenntnis:** Der dynamische A-getriebene Produktpfad ist jetzt
 als kontrollierter Kunden-MVP installiert; der alte 283er-Katalog ist nur
