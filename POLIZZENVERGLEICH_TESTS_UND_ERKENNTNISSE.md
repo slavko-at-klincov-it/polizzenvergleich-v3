@@ -5055,3 +5055,40 @@ Normalisierung nicht passieren.
 **Beweisgrenze:** Das Gate beweist die sichere Wiederverwendung dieses
 Fehlertyps, nicht die fachliche Qualität aller 204 Batches oder die spätere
 Gold-Qualität. Der Primärlauf wurde ab Batch 121 fortgesetzt. Kein Deployment.
+
+## 93. Primärabschluss ist noch kein zertifizierter Nullfund
+
+Der fortgesetzte reale 1+9-Primärlauf schloss alle 204/204 Batches und
+363/363 dynamischen Requirements terminal ab. Die Verteilung lautet 311
+vorläufig `FOUND`, 52 `FALLBACK_REQUIRED` und null `UNRESOLVED`. Die beiden
+Modifier-Normalisierungen verursachten nach Batch 120 keinen neuen
+fail-closed Stopp; Batch 121 bis 204 liefen regulär durch.
+
+```text
+Modell:                                   qwen/qwen3.6-35b-a3b
+Kontext:                                  42.496
+Primärbatches:                            204/204 PASS
+Requirements:                             363/363 terminal
+FOUND / FALLBACK_REQUIRED / UNRESOLVED:   311 / 52 / 0
+Modellversuche:                           228
+Entscheidungsartefakt-SHA-256:
+aa86199088250863ae5b3d47044f4e1ab31ef35d7a1f82e73e0eacc7f5bcaf45
+```
+
+Der daraus deterministisch erzeugte Abwesenheitsplan umfasst für die 52
+Fallback-Requirements 572 Partitionen des vollständigen 322-Klausel-Korpus.
+Nur 22 vorhandene Partitionen besitzen bereits denselben V4-Promptvertrag;
+ältere vollständige Läufe dürfen trotz fachlicher Nähe nicht still als
+V4-Evidenz wiederverwendet werden.
+
+**Positive Erkenntnis:** Der primäre B-Vertrag ist nach mehreren
+fail-closed Resume-Gates vollständig und ohne Verlust der 120 bereits
+gültigen Batches abgeschlossen.
+
+**Negative Erkenntnis:** 204/204 bedeutet noch nicht 363 binäre
+Kundenentscheidungen. Die 52 Fallbacks sind gerade jene Fälle, für die ein
+Nullfund erst nach vollständiger Korpusprüfung zulässig ist.
+
+**Beweisgrenze:** Weder 311/52 noch die Anzahl der 572 Partitionen ist ein
+Kundenergebnis oder eine Gold-Metrik. Abwesenheit, Rescue, Binärergebnis und
+Gold-Regression bleiben offen. Kein Deployment.

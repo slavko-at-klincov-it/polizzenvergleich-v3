@@ -2806,11 +2806,16 @@ Vollständigkeitsbehauptung erzeugen.
   und Kerndifferenzen bleiben ausdrücklich ausgeschlossen. 335/335
   Vertragstests bestanden; Batch 120 wurde mit null neuen Modellaufrufen aus
   zwei journalisierten Requirements materialisiert.
-- Nächster Prüfschritt: Primärlauf ab Batch 121 abschließen und danach
-  Vollkorpus-Abwesenheit, Rescue, Binärergebnis und Gold-Regression ausführen.
+- Abschlussbefund Primärlauf: 204/204 Batches und 363/363 Requirements sind
+  terminal; 311 gelten vorläufig als gefunden, 52 verlangen weiterhin den
+  vollständigen Abwesenheits-/Rescue-Vertrag. Der aktuelle Abwesenheitsplan
+  besitzt 572 hashgebundene Korpuspartitionen. Diese Menge darf nicht als 52
+  bestätigte Nullfunde interpretiert werden.
+- Nächster Prüfschritt: Vollkorpus-Abwesenheit, Rescue, Binärergebnis und
+  Gold-Regression abschließen.
 - Entscheidung: `ADAPT_EXISTING`; keine neue Architektur.
 - Kanonischer Ausgang: Change-Set
   `LF-V2-CORE-MODIFIER-NORMALIZATION-20260916-001`, Implementierungscommit
   `7800b11a5bb1db199b78a507898281f3370fd902` und
   `938ab782948b2c44ac4d846122cc0797a706a43e`, Tracker 133.52/133.53 und
-  Tests 91/92.
+  Tests 91/92/93.
