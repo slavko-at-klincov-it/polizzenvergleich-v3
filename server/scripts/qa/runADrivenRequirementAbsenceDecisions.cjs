@@ -530,10 +530,10 @@ function negativeDecisionSemanticConflicts({ plan, partition, response }) {
   )
     conflicts.push("RATIONALE_CONFIRMS_COUNTERPART");
   if (
-    /\bausschluss\b.{0,120}\b(?:kein|nicht)\b.{0,50}\bgegenstuck\b/u.test(
+    /\bein\b\s+\bausschluss\b\s+\bist\b\s+(?:aber\s+)?\bkein\b\s+\bgegenstuck\b/u.test(
       rationale
     ) ||
-    /\b(?:direkter|ausdrucklicher)\b.{0,30}\bausschluss\b.{0,180}\b(?:aber|jedoch)\b.{0,120}\b(?:keine deckung|kein gegenstuck)\b/u.test(
+    /\b(?:ausschluss|ausschlussklausel)\b\s+\bzahlt\b\s+\bnicht\b\s+\bals\b\s+\bgegenstuck\b/u.test(
       rationale
     )
   )

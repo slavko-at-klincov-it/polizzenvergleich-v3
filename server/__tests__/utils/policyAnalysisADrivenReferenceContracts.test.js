@@ -16675,6 +16675,17 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         },
       })
     ).toContain("EXCLUSION_WRONGLY_REJECTED_AS_COUNTERPART");
+    expect(
+      negativeDecisionSemanticConflicts({
+        plan: absencePlan,
+        partition: firstPartition,
+        response: {
+          ...negativeBase,
+          rationale:
+            "Der Ausschluss betrifft eine andere Gefahr und ist deshalb kein Gegenstück zum fachlichen Kern.",
+        },
+      })
+    ).toEqual([]);
     const modifierPlan = JSON.parse(JSON.stringify(absencePlan));
     const modifierRequirement = modifierPlan.requirements.find(
       ({ requirementId }) => requirementId === firstPartition.requirementId
