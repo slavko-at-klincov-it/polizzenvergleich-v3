@@ -216,11 +216,12 @@ function compatibleSeedPartitionResponses({
       candidateIds: seedResult.selectedCandidateIds,
       rationale: seedResult.rationale,
     };
-    const initialValidation = validateADrivenRequirementAbsencePartitionResponse({
-      plan,
-      partitionId: partition.partitionId,
-      response,
-    });
+    const initialValidation =
+      validateADrivenRequirementAbsencePartitionResponse({
+        plan,
+        partitionId: partition.partitionId,
+        response,
+      });
     if (initialValidation.result.status !== "TERMINAL")
       throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_PARTITION_INVALID");
     const semanticContractConflicts = negativeDecisionSemanticConflicts({
@@ -234,12 +235,10 @@ function compatibleSeedPartitionResponses({
         response,
         semanticContractConflicts,
       });
-    if (
-      semanticContractConflicts.length > 0 &&
-      !semanticReviewNormalization
-    )
+    if (semanticContractConflicts.length > 0 && !semanticReviewNormalization)
       continue;
-    const normalizedResponse = semanticReviewNormalization?.response || response;
+    const normalizedResponse =
+      semanticReviewNormalization?.response || response;
     const validation = semanticReviewNormalization
       ? validateADrivenRequirementAbsencePartitionResponse({
           plan,
