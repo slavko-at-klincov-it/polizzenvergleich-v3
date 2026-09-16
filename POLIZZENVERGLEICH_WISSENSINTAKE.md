@@ -146,7 +146,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260902-033` | Paketmitgliedschaft und vollständiger Nullfund bestimmen den Vergleich   | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | Vergleichsvertrag V8 schrittweise implementieren und auf dem Mac Studio abnehmen                                        |
 | `INT-20260904-034` | Zwei Workspace-Verfahren: gerichtetes LF A→B und vollständiges A/B       | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | beide Laufverträge getrennt versionieren; LF-Katalog nach dem 35-Zeilen-Startprofil vollständig erweitern               |
 | `INT-20260915-037` | Schemafeste semantische Reparatur ohne Verlust gültiger Batches         | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | Reparaturhinweis präzisieren und am ersten unvollständigen Batch resumieren                                               |
-| `INT-20260916-038` | Identitätskern mit getrennt belegten Modifier-Abweichungen normalisieren | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | streng begrenzte Normalisierung testen und den ersten unvollständigen Batch aus dem Journal fortsetzen                   |
+| `INT-20260916-038` | Identitätskern mit getrennt belegten Modifier-Abweichungen normalisieren | `BEOBACHTUNG`           | `PROMOTED`    | vollständigen Primärlauf und anschließende Gold-/Endergebnisprüfung abschließen                                          |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -199,7 +199,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 
 - Erfasst: 2026-08-24
 - Typ: `IDEE`
-- Status: `IN_PRÜFUNG`
+- Status: `PROMOTED`
 - Aussage: Eine Wortmatrix soll bekannte Vergleichspunkte, Begriffsvarianten
   und erwartete Faktrollen je Thema als kontrollierten Retrieval-Seed
   bereitstellen.
@@ -2763,8 +2763,9 @@ Vollständigkeitsbehauptung erzeugen.
   zugelassenen Modifier-Dimensionen Scope, Bedingung, Wert, Limit,
   Selbstbehalt oder Zeit gelten. Ohne solche gebundene Modifier-Evidenz bleibt
   die Antwort fail-closed ungültig.
-- Ist-Wahrheit: `NEIN`; beobachteter wiederholter Modellfehler und
-  Implementierungshypothese vor gezieltem Vertragstest und Realbatch-Gate.
+- Ist-Wahrheit: `JA` für die streng begrenzte Normalisierung, 334/334
+  Vertragstests und das bestandene Realbatch-Gate ohne neuen Modellaufruf;
+  `NEIN` für einen bereits vollständigen 204-Batch- und Gold-Nachweis.
 - Quelle: aggregierter Mac-Studio-Befund des ersten unvollständigen
   Komponenten-Batches; keine Kundentexte, privaten IDs oder Dokumente in der
   Knowledge Base.
@@ -2787,18 +2788,18 @@ Vollständigkeitsbehauptung erzeugen.
   - `REUSES` -> bestehende strikte Komponentenvalidierung und Journal-Resume
   - verhindert -> blindes Retry identischer Antworten und pauschales
     Akzeptieren fachlich anderer Kerne
-- Hard-Gates: positive und negative Vertragstests, unveränderte Wiederverwendung
-  bestehender PASS-Batches, Realbatch-Gate am ersten unvollständigen Batch und
-  anschließende Gold-/Endergebnisprüfung.
+- Hard-Gates: positive und negative Vertragstests, unveränderte
+  Wiederverwendung bestehender PASS-Batches und Realbatch-Gate bestanden;
+  Gold-/Endergebnisprüfung folgt nach 204/204.
 - Bewertung: kleinster allgemeiner Reparaturpfad für einen wiederholbaren
   Strukturfehler; nur bei vollständig gebundener Modifier-Evidenz zulässig.
-- Evidenzqualität: `BEOBACHTET_CODE` plus vorläufiger
-  `GEMESSEN_KUNDENHARDWARE`-Fehlerbefund.
+- Evidenzqualität: `BEOBACHTET_CODE` plus
+  `GEMESSEN_KUNDENHARDWARE`.
 - Riskanteste Annahme: Die separat ausgewiesene Modifier-Evidenz genügt, um
   auszuschließen, dass der eigentliche Identitätskern verschieden ist.
-- Nächster Prüfschritt: Normalisierung mit adversarialen Negativfällen testen,
-  danach den journalisierten ersten unvollständigen Batch ohne neuen
-  Modellaufruf materialisieren.
+- Nächster Prüfschritt: Primärlauf ab Batch 118 abschließen und danach
+  Vollkorpus-Abwesenheit, Rescue, Binärergebnis und Gold-Regression ausführen.
 - Entscheidung: `ADAPT_EXISTING`; keine neue Architektur.
 - Kanonischer Ausgang: Change-Set
-  `LF-V2-CORE-MODIFIER-NORMALIZATION-20260916-001`.
+  `LF-V2-CORE-MODIFIER-NORMALIZATION-20260916-001`, Implementierungscommit
+  `7800b11a5bb1db199b78a507898281f3370fd902`, Tracker 133.52 und Tests 91.

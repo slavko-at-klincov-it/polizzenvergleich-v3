@@ -4971,3 +4971,48 @@ Erkenntnis: Ein unveränderter Temperatur-0-Aufruf reproduziert denselben Fehler
 ein bloßer Neustart ist daher kein Root-Cause-Fix. Beweisgrenze: Das bestandene
 Einzelbatch belegt weder 204/204 noch fachliche Gold-Qualität, Holdout-Leistung
 oder Produktfreigabe. Kein Deployment.
+
+## 91. Identitätskern und getrennte Modifier-Abweichung dürfen nicht kollidieren
+
+Der fortgesetzte Komponentenlauf stoppte nach 116 gültigen Batches an einer
+wiederholbar schemawidrigen, fachlich aber konsistenten Antwort. Qwen nannte
+denselben servergebundenen Kandidaten und positiven Requirement-Kontext,
+verwendete für eine Identitätskernkomponente jedoch
+`COUNTERPART_WITH_DIFFERENCE`. Die separat gebundenen Unterschiede betrafen
+ausschließlich Wert, Berechnungsbasis oder Bedingung. Acht gespeicherte
+Versuche änderten dieses Muster trotz explizitem Reparaturhinweis nicht.
+
+Change-Set `LF-V2-CORE-MODIFIER-NORMALIZATION-20260916-001` adaptiert den
+vorhandenen `CAP-B-006`-Runner. Die Normalisierung zu `MATCH` erfolgt nur bei
+positivem Kontext, identischen servergebundenen Kandidaten, vollständiger
+Modifier-Evidenz und ausschließlich zugelassenen Scope-, Bedingungs-, Wert-,
+Limit-, Selbstbehalt- oder Zeitdimensionen. Fehlt eine solche Evidenz oder
+wird eine Kerndifferenz genannt, bleibt die Antwort fail-closed ungültig.
+
+Mac Studio, Commit
+`7800b11a5bb1db199b78a507898281f3370fd902`, Node `v22.23.2`:
+
+```text
+Prettier:                                  PASS
+gezielte positive/negative/Resume-Tests:   4/4 PASS
+gesamte A-driven-Vertragssuite:            334/334 PASS
+Batch 117 aus Journal:                     PASS
+neue Modellaufrufe für Batch 117:          0
+alte PASS-Batches wiederverwendet:         116/116
+```
+
+**Positive Erkenntnis:** Der binäre Fachvertrag „gleiches Element trotz
+abweichender Werte oder Bedingungen gefunden“ lässt sich ohne Lockerung für
+fachlich andere Kerne und ohne erneute Modellberechnung bereits gültiger
+Evidenz materialisieren.
+
+**Negative Erkenntnis:** Die frühere Kurzbeschreibung „A fertig“ war zu stark.
+Eine separate read-only Ausführung des vorhandenen heuristischen
+A-Atomizitätsaudits meldet 138 Risiken in 85 Units; das Produktkommando ruft
+dieses Audit derzeit vor B nicht auf. Diese Heuristiken sind keine 138
+bewiesenen fachlichen Fehler, aber ein offenes Integritäts- und
+Verdrahtungsproblem vor Produktfreigabe.
+
+**Beweisgrenze:** Batch 117 und die Vertragssuite beweisen weder 204/204,
+Gold-Qualität, fachlich perfekte A-Atomisierung noch Holdout-Generalisierung.
+Der restliche Primärlauf wurde ab Batch 118 fortgesetzt. Kein Deployment.
