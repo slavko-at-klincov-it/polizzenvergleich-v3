@@ -137,6 +137,7 @@ const {
 } = require("../../utils/policyComparison/referenceCustomerPresentation");
 const {
   compatibleSeedPartitionResponses,
+  negativeDecisionSemanticConflicts,
   parseSingleDecision: parseRequirementAbsenceDecision,
   positiveCandidateSignals: requirementAbsencePositiveCandidateSignals,
   preliminaryDecision: preliminaryRequirementAbsenceDecision,
@@ -16632,6 +16633,55 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       candidateIds: [],
       rationale: "Kein Gegenstück in dieser vollständigen Partition.",
     }));
+    const firstPartition = absencePlan.partitions[0];
+    const negativeBase = negativeResponses[0];
+    expect(
+      negativeDecisionSemanticConflicts({
+        plan: absencePlan,
+        partition: firstPartition,
+        response: negativeBase,
+      })
+    ).toEqual([]);
+    expect(
+      negativeDecisionSemanticConflicts({
+        plan: absencePlan,
+        partition: firstPartition,
+        response: {
+          ...negativeBase,
+          rationale:
+            "Der ausdrückliche Ausschluss adressiert denselben Kern; daher liegt ein Gegenstück vor.",
+        },
+      })
+    ).toContain("RATIONALE_CONFIRMS_COUNTERPART");
+    expect(
+      negativeDecisionSemanticConflicts({
+        plan: absencePlan,
+        partition: firstPartition,
+        response: {
+          ...negativeBase,
+          rationale:
+            "Die Klausel enthält einen direkten Ausschluss. Ein Ausschluss ist aber kein Gegenstück.",
+        },
+      })
+    ).toContain("EXCLUSION_WRONGLY_REJECTED_AS_COUNTERPART");
+    const modifierPlan = JSON.parse(JSON.stringify(absencePlan));
+    const modifierRequirement = modifierPlan.requirements.find(
+      ({ requirementId }) => requirementId === firstPartition.requirementId
+    );
+    const modifierComponent = modifierRequirement.components.find(
+      ({ identityCore }) => identityCore
+    );
+    modifierComponent.label = "vorläufige Deckung";
+    expect(
+      negativeDecisionSemanticConflicts({
+        plan: modifierPlan,
+        partition: firstPartition,
+        response: {
+          ...negativeBase,
+          rationale: `Kandidat ${firstPartition.candidateIds[0]} enthält zwar die vorläufige Deckung, jedoch fehlt eine Regelung über deren Dauer und Bedingung.`,
+        },
+      })
+    ).toContain("SAME_ELEMENT_REJECTED_ONLY_FOR_MODIFIER_DIFFERENCE");
     expect(
       validateADrivenRequirementAbsencePartitionResponse({
         plan: absencePlan,
@@ -16837,6 +16887,92 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       status: "TERMINAL",
       decision: "NO_COUNTERPART_IN_PARTITION",
     });
+    const semanticRetryMessages = [];
+    const semanticConflictResponse = {
+      ...negativeResponses[0],
+      rationale:
+        "Der ausdrückliche Ausschluss adressiert denselben fachlichen Kern; daher liegt ein Gegenstück vor.",
+    };
+    const semanticCorrectedResponse = {
+      ...negativeResponses[0],
+      decision: "COUNTERPART_PRESENT",
+      candidateIds: [absencePlan.partitions[0].candidateIds[0]],
+      rationale:
+        "Der ausdrückliche Ausschluss behandelt dasselbe fachliche Element mit gegenteiliger Wirkung.",
+    };
+    const semanticRun = await runRequirementAbsencePartition({
+      client: {
+        chat: {
+          completions: {
+            create: jest.fn(async ({ messages }) => {
+              semanticRetryMessages.push(messages);
+              return {
+                model: "qwen/qwen3.6-35b-a3b",
+                choices: [
+                  {
+                    message: {
+                      content: JSON.stringify(
+                        semanticRetryMessages.length === 1
+                          ? semanticConflictResponse
+                          : semanticCorrectedResponse
+                      ),
+                    },
+                  },
+                ],
+                usage: {},
+              };
+            }),
+          },
+        },
+      },
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: absencePlan,
+      partition: absencePlan.partitions[0],
+      maximumAttempts: 2,
+      requestTimeoutMs: 100,
+      abortSettlementTimeoutMs: 10,
+      recoverModelAfterAbort: jest.fn(),
+    });
+    expect(semanticRun.validation.result.decision).toBe("COUNTERPART_PRESENT");
+    expect(semanticRun.attempts.map(({ errorClass }) => errorClass)).toEqual([
+      "SEMANTIC_CONTRACT_CONFLICT",
+      null,
+    ]);
+    expect(semanticRetryMessages[1].at(-1).content).toContain(
+      "Identität des fachlichen Elements"
+    );
+    await expect(
+      runRequirementAbsencePartition({
+        client: {
+          chat: {
+            completions: {
+              create: jest.fn(async () => ({
+                model: "qwen/qwen3.6-35b-a3b",
+                choices: [
+                  {
+                    message: {
+                      content: JSON.stringify(semanticConflictResponse),
+                    },
+                  },
+                ],
+                usage: {},
+              })),
+            },
+          },
+        },
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        plan: absencePlan,
+        partition: absencePlan.partitions[0],
+        maximumAttempts: 1,
+        requestTimeoutMs: 100,
+        abortSettlementTimeoutMs: 10,
+        recoverModelAfterAbort: jest.fn(),
+      })
+    ).rejects.toThrow(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PARTITION_FAILED_CLOSED"
+    );
     const certified = validateADrivenRequirementAbsenceResponses({
       plan: absencePlan,
       responses: negativeResponses,
@@ -16874,6 +17010,34 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       },
       validation: { result: { status: "TERMINAL" } },
     });
+    const conflictResponses = negativeResponses.map((response, index) =>
+      index === 0
+        ? {
+            ...response,
+            rationale:
+              "Der Ausschluss betrifft denselben Kern; daher liegt ein Gegenstück vor.",
+          }
+        : response
+    );
+    const conflictCertified = validateADrivenRequirementAbsenceResponses({
+      plan: absencePlan,
+      responses: conflictResponses,
+    });
+    const conflictSeed = compatibleSeedPartitionResponses({
+      seedPlan: absencePlan,
+      seedDecisions: conflictCertified,
+      seedSummary: {
+        ...seedSummary,
+        absenceDecisionSha256: conflictCertified.decisionSha256,
+      },
+      plan: absencePlan,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      requestTimeoutMs: 180_000,
+      abortSettlementTimeoutMs: 15_000,
+    });
+    expect(conflictSeed.size).toBe(absencePlan.partitions.length - 1);
+    expect(conflictSeed.has(absencePlan.partitions[0].partitionId)).toBe(false);
     const { planSha256: _planSha256, ...changedPayload } = JSON.parse(
       JSON.stringify(absencePlan)
     );

@@ -223,6 +223,12 @@ function compatibleSeedPartitionResponses({
     });
     if (validation.result.status !== "TERMINAL")
       throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_PARTITION_INVALID");
+    const semanticContractConflicts = negativeDecisionSemanticConflicts({
+      plan,
+      partition,
+      response,
+    });
+    if (semanticContractConflicts.length > 0) continue;
     const rawResponse = JSON.stringify(response);
     responses.set(partition.partitionId, {
       schemaVersion: 1,
@@ -492,6 +498,76 @@ function positiveCandidateSignals({ rawResponse, plan, partition }) {
   return [...new Set(candidateIds)].sort();
 }
 
+function normalizedSemanticText(value) {
+  return String(value || "")
+    .normalize("NFKD")
+    .replace(/\p{M}/gu, "")
+    .toLocaleLowerCase("de-AT")
+    .replace(/[^a-z0-9]+/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function negativeDecisionSemanticConflicts({ plan, partition, response }) {
+  if (
+    response?.decision !== "NO_COUNTERPART_IN_PARTITION" ||
+    typeof response?.rationale !== "string"
+  )
+    return [];
+  const rationale = normalizedSemanticText(response.rationale);
+  const conflicts = [];
+  if (
+    /\b(?:liegt|besteht)\b.{0,80}\bgegenstuck\b.{0,30}\bvor\b/u.test(
+      rationale
+    ) ||
+    /\bzahlt\b.{0,80}\bals\b.{0,30}\bgegenstuck\b/u.test(rationale) ||
+    /\bstellt\b.{0,100}\bgegenstuck\b.{0,30}\bdar\b/u.test(rationale)
+  )
+    conflicts.push("RATIONALE_CONFIRMS_COUNTERPART");
+  if (
+    /\bausschluss\b.{0,120}\b(?:kein|nicht)\b.{0,50}\bgegenstuck\b/u.test(
+      rationale
+    ) ||
+    /\b(?:direkter|ausdrucklicher)\b.{0,30}\bausschluss\b.{0,180}\b(?:aber|jedoch)\b.{0,120}\b(?:keine deckung|kein gegenstuck)\b/u.test(
+      rationale
+    )
+  )
+    conflicts.push("EXCLUSION_WRONGLY_REJECTED_AS_COUNTERPART");
+
+  const requirement = plan.requirements.find(
+    ({ requirementId }) => requirementId === partition.requirementId
+  );
+  const identityLabels = (requirement?.components || [])
+    .filter(({ identityCore, label }) => identityCore && label)
+    .map(({ label }) => normalizedSemanticText(label))
+    .filter((label) => label.split(" ").length >= 2 && label.length >= 8);
+  const mentionsAllowedCandidate = partition.candidateIds.some((candidateId) =>
+    rationale.includes(normalizedSemanticText(candidateId))
+  );
+  const repeatsIdentityLabel = identityLabels.some((label) =>
+    rationale.includes(label)
+  );
+  const namesModifierDifference =
+    /\b(?:bedingung|dauer|geltung|umfang|wert|limit|zeitraum|befristung)\b/u.test(
+      rationale
+    );
+  const deniesOnlyBecauseModifier =
+    /\b(?:jedoch|aber)\b.{0,420}\b(?:keine regelung|fehlt|nicht geregelt|kein gegenstuck)\b/u.test(
+      rationale
+    ) ||
+    /\b(?:keine regelung|fehlt)\b.{0,240}\b(?:bedingung|dauer|geltung|umfang|wert|limit|zeitraum|befristung)\b/u.test(
+      rationale
+    );
+  if (
+    mentionsAllowedCandidate &&
+    repeatsIdentityLabel &&
+    namesModifierDifference &&
+    deniesOnlyBecauseModifier
+  )
+    conflicts.push("SAME_ELEMENT_REJECTED_ONLY_FOR_MODIFIER_DIFFERENCE");
+  return [...new Set(conflicts)].sort();
+}
+
 function retryInstruction(attempts) {
   const previous = attempts.at(-1);
   if (!previous) return null;
@@ -524,6 +600,17 @@ function retryInstruction(attempts) {
     ]
       .filter(Boolean)
       .join(" ");
+  if (previous.errorClass === "SEMANTIC_CONTRACT_CONFLICT")
+    return [
+      "KORREKTUR FÜR DIESEN RETRY:",
+      `Die vorige Negativantwort widersprach dem Gegenstückvertrag (${(
+        previous.semanticContractConflicts || []
+      ).join(", ")}).`,
+      "Entscheide zuerst ausschließlich die Identität des fachlichen Elements: Nennt oder regelt eine Klausel denselben Gegenstand, dieselbe Gefahr oder dieselbe Faktrolle?",
+      "Erst danach bewerte Wirkung und Modifier. Ein ausdrücklicher Ausschluss sowie abweichende Werte, Limits, Bedingungen, Umfänge oder zeitliche Geltung bleiben ein Gegenstück.",
+      "Eine bloße Keyword-Nennung oder ein nur verwandter anderer Kern bleibt dagegen NO_COUNTERPART_IN_PARTITION.",
+      "Gib genau ein einziges finales JSON-Objekt ohne Begleittext aus.",
+    ].join(" ");
   if (previous.validation?.result?.status !== "TERMINAL")
     return [
       "KORREKTUR FÜR DIESEN RETRY:",
@@ -636,6 +723,10 @@ async function runPartition({
         partitionId: partition.partitionId,
         response,
       });
+      const semanticContractConflicts =
+        validation.result.status === "TERMINAL"
+          ? negativeDecisionSemanticConflicts({ plan, partition, response })
+          : [];
       const observedPositiveCandidateIds = [
         ...new Set(
           attempts.flatMap(
@@ -650,10 +741,15 @@ async function runPartition({
           ({ errorClass: priorErrorClass }) =>
             priorErrorClass === "POSITIVE_SIGNAL_CONFLICT"
         );
+      const semanticContractConflict = semanticContractConflicts.length > 0;
       const attemptRecord = {
         attempt,
         durationMs: Math.round(performance.now() - started),
-        errorClass: positiveSignalConflict ? "POSITIVE_SIGNAL_CONFLICT" : null,
+        errorClass: semanticContractConflict
+          ? "SEMANTIC_CONTRACT_CONFLICT"
+          : positiveSignalConflict
+            ? "POSITIVE_SIGNAL_CONFLICT"
+            : null,
         timedOut: false,
         abortTriggered: false,
         responseModel: completion.model || null,
@@ -664,11 +760,12 @@ async function runPartition({
         rawResponseSha256: sha256(rawResponse),
         response,
         validation,
+        semanticContractConflicts,
         positiveCandidateSignals: observedPositiveCandidateIds,
       };
       attempts.push(attemptRecord);
       await onAttempt(attemptRecord);
-      if (positiveSignalConflict) continue;
+      if (semanticContractConflict || positiveSignalConflict) continue;
       if (validation.result.status === "TERMINAL")
         return {
           schemaVersion: 1,
@@ -751,9 +848,15 @@ function existingResult(file, plan, partition, args) {
     partitionId: partition.partitionId,
     response: result.response,
   });
+  const semanticContractConflicts = negativeDecisionSemanticConflicts({
+    plan,
+    partition,
+    response: result.response,
+  });
   if (
     validation.result.status !== "TERMINAL" ||
-    stableStringify(validation) !== stableStringify(result.validation)
+    stableStringify(validation) !== stableStringify(result.validation) ||
+    semanticContractConflicts.length > 0
   )
     throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_RESULT_NOT_PASS");
   return result;
@@ -986,6 +1089,7 @@ if (require.main === module)
 module.exports = {
   compatibleSeedPartitionResponses,
   jsonObjectsFromText,
+  negativeDecisionSemanticConflicts,
   parseSingleDecision,
   positiveCandidateSignals,
   preliminaryDecision,
