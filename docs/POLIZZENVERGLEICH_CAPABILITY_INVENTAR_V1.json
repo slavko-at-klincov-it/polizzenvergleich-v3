@@ -431,7 +431,7 @@
       "maturityStatus": "VALIDATED",
       "activationStatus": "ACTIVE_SHADOW",
       "activationByMode": { "LF": "ACTIVE_SHADOW", "AB": "INACTIVE" },
-      "implementationFiles": ["server/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.js", "server/scripts/qa/verifyAutomatedADrivenBPilotLaunch.cjs"],
+      "implementationFiles": ["server/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.js", "server/scripts/qa/verifyAutomatedADrivenBPilotLaunch.cjs", "server/scripts/qa/runADrivenReferenceClassification.cjs"],
       "publicEntrypoints": [{ "path": "server/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.js", "symbol": "buildAutomatedADrivenIntegrityReceipt" }],
       "callers": [{ "path": "server/scripts/qa/verifyAutomatedADrivenBPilotLaunch.cjs", "contains": "aDrivenAutomaticIntegrityGate" }],
       "inputs": ["A plan", "classification batches", "dynamic manifest", "input manifest"],
@@ -440,14 +440,14 @@
       "dependencies": ["CAP-A-001", "CAP-A-002", "CAP-A-003"],
       "qualityImpact": { "recall": "GUARDS_SILENT_LOSS", "precision": "GUARDS_INVALID_OUTPUT", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "NECESSARY_NOT_SUFFICIENT" },
       "resourceImpact": { "runtime": "LOW", "ram": "LOW", "gpu": "NONE" },
-      "knownLimitsRisks": ["A technical PASS does not prove fachliche completeness or 99 percent."],
+      "knownLimitsRisks": ["A technical PASS does not prove fachliche completeness or 99 percent.", "Coordinated peril atomization is intentionally syntax-bounded; unseen enumeration forms remain a holdout question."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysis/aDrivenAutomaticIntegrityGate.test.js"],
-        "runs": ["Tracker 133.46"],
+        "runs": ["Tracker 133.46", "Tracker 133.55; 58/58 rematerialized, 363 requirements and 1,282 components"],
         "adrs": ["ADR-032"],
-        "failures": []
+        "failures": ["INT-20260916-039"]
       },
-      "lastVerifiedCommit": "c87aadf9d483d72ddce0bc67aacd529c19b54788",
+      "lastVerifiedCommit": "51b522ce93b732bf7811c16d836c4ff8c3b61299",
       "relations": [{ "type": "REFINES", "target": "CAP-A-003" }],
       "activationReason": "Required by the controlled V2 B launch contract.",
       "reactivationCriteria": "Not applicable while active."
@@ -626,15 +626,15 @@
       "sideEffects": ["local Qwen calls", "private resume artifacts"],
       "dependencies": ["CAP-B-004", "CAP-B-005", "CAP-MODEL-001"],
       "qualityImpact": { "recall": "PRIMARY_DECISION_GATE", "precision": "PRIMARY_DECISION_GATE", "sourceBinding": "SERVER_VALIDATED", "generalization": "NOT_YET_END_TO_END_PROVEN" },
-      "resourceImpact": { "runtime": "HIGH: 204 planned batches on current fixture", "ram": "Qwen model footprint", "gpu": "Qwen bursts" },
-      "knownLimitsRisks": ["The current 204-batch primary run is complete, but 52 fallback requirements still require full-corpus absence and rescue before a binary result exists.", "A PASS batch proves contract validity, not agreement with Gold.", "Deterministic local-model output can repeat the same malformed or schema-invalid answer; bounded schema-specific repair must remain fail-closed.", "Identity-core modifier normalization is allowed only for a positive MATCH or COUNTERPART_WITH_DIFFERENCE context, identical server-bound candidate IDs and explicit differences limited to scope, condition, value, limit, deductible or temporal validity; RELATED_ONLY remains excluded."],
+      "resourceImpact": { "runtime": "HIGH for a cold run; measured seeded rematerialization of 204 batches took 87,781 ms with 361/363 requirements reused", "ram": "Qwen model footprint", "gpu": "Qwen bursts only for non-seeded requirements" },
+      "knownLimitsRisks": ["A PASS batch proves contract validity, not agreement with Gold.", "Deterministic local-model output can repeat the same malformed or schema-invalid answer; bounded schema-specific repair must remain fail-closed.", "Identity-core modifier normalization is allowed only for a positive MATCH or COUNTERPART_WITH_DIFFERENCE context, identical server-bound candidate IDs and explicit differences limited to scope, condition, value, limit, deductible or temporal validity; RELATED_ONLY remains excluded.", "Cross-plan reuse is allowed only after complete seed binding, byte-identical row comparison and current single-row revalidation."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tracker 133.47", "Tracker 133.51", "Tracker 133.52", "Tracker 133.53", "Tracker 133.54", "fresh 1+9 primary run completed 204/204 on 2026-09-16"],
+        "runs": ["Tracker 133.47", "Tracker 133.51", "Tracker 133.52", "Tracker 133.53", "Tracker 133.54", "Tracker 133.55; 204/204 and 363/363 terminal with 361 seeded plus 2 new model decisions"],
         "adrs": ["ADR-031"],
-        "failures": ["INT-20260915-037", "INT-20260916-038"]
+        "failures": ["INT-20260915-037", "INT-20260916-038", "INT-20260916-039", "INT-20260916-040"]
       },
-      "lastVerifiedCommit": "938ab782948b2c44ac4d846122cc0797a706a43e",
+      "lastVerifiedCommit": "fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Reachable from the V2 runner and currently executing in the private 1+9 shadow.",
       "reactivationCriteria": "Not applicable while active."
@@ -655,16 +655,16 @@
       "outputs": ["absence decisions", "rescue plan/results", "final requirement decisions"],
       "sideEffects": ["additional Qwen calls", "private decision artifacts"],
       "dependencies": ["CAP-B-005", "CAP-B-006", "CAP-MODEL-001"],
-      "qualityImpact": { "recall": "CRITICAL_POSITIVE", "precision": "POSITIVE_FAIL_CLOSED", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "NOT_YET_REAL_RUN_VALIDATED" },
-      "resourceImpact": { "runtime": "UNKNOWN until fresh full phase completes", "ram": "Qwen model footprint", "gpu": "Qwen bursts" },
-      "knownLimitsRisks": ["Current fresh run has not yet executed this phase.", "Null finding remains separate from explicit exclusion."],
+      "qualityImpact": { "recall": "CRITICAL_POSITIVE", "precision": "POSITIVE_FAIL_CLOSED", "sourceBinding": "CRITICAL_POSITIVE", "generalization": "KNOWN_FIXTURE_VALIDATED_NOT_HOLDOUT_PROVEN" },
+      "resourceImpact": { "runtime": "Measured seeded absence: 111 ms for 561/561 reused partitions; fresh rescue: 350,122 ms for 8 batches and 11 attempts", "ram": "Qwen model footprint", "gpu": "Qwen bursts during rescue" },
+      "knownLimitsRisks": ["Null finding remains separate from explicit exclusion.", "The completed 1+9 run validates this known fixture only; unseen insurer and cold-run runtime gates remain open."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Previous hash-reuse product run only; fresh V62 run pending"],
+        "runs": ["Tracker 133.55; 561/561 absence partitions, 8/8 rescue batches and 363 binary final decisions"],
         "adrs": ["ADR-022", "ADR-026", "ADR-031"],
         "failures": []
       },
-      "lastVerifiedCommit": "c87aadf9d483d72ddce0bc67aacd529c19b54788",
+      "lastVerifiedCommit": "fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33",
       "relations": [{ "type": "REFINES", "target": "CAP-B-006" }],
       "activationReason": "Wired immediately after primary B in the V2 runner, but not yet reached by the fresh run.",
       "reactivationCriteria": "Not applicable while active."
@@ -720,14 +720,14 @@
       "dependencies": ["hash-bound contracts", "CAP-MODEL-001"],
       "qualityImpact": { "recall": "NEUTRAL", "precision": "PRESERVES_VALIDATED_RESULT", "sourceBinding": "POSITIVE", "generalization": "NEUTRAL" },
       "resourceImpact": { "runtime": "STRONG_POSITIVE for exact replay", "ram": "LOW", "gpu": "avoids repeated calls" },
-      "knownLimitsRisks": ["Speeds identical replays, not first runs on new documents."],
+      "knownLimitsRisks": ["Speeds identical replays, not first runs on new documents.", "Cross-plan requirement reuse requires a complete terminal seed plus byte-identical current rows and current-contract revalidation."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysis/validatedModelResponseCache.test.js", "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tests section 59", "Tracker 133.47"],
+        "runs": ["Tests section 59", "Tracker 133.47", "Tracker 133.55; 361/363 cross-plan requirement decisions reused"],
         "adrs": ["ADR-030"],
         "failures": []
       },
-      "lastVerifiedCommit": "c87aadf9d483d72ddce0bc67aacd529c19b54788",
+      "lastVerifiedCommit": "fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Both current worker paths reuse validated work under exact identities.",
       "reactivationCriteria": "Not applicable while active."
@@ -753,11 +753,11 @@
       "knownLimitsRisks": ["Cannot improve upstream search or classification errors.", "Binary customer status must not erase private FULL/PARTIAL/CONTRADICTED detail."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js", "server/__tests__/utils/policyComparisonDynamicReferenceResultBuilder.test.js"],
-        "runs": ["Tracker 133.44 and 133.45"],
+        "runs": ["Tracker 133.44 and 133.45", "Tracker 133.55; 363 rows, 318 found, 45 not found and 0 unresolved"],
         "adrs": ["ADR-031"],
         "failures": []
       },
-      "lastVerifiedCommit": "c87aadf9d483d72ddce0bc67aacd529c19b54788",
+      "lastVerifiedCommit": "fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33",
       "relations": [{ "type": "SUPERSEDES", "target": "CAP-LEGACY-001" }],
       "activationReason": "Wired after final B decisions; previously validated through hash-bound product materialization.",
       "reactivationCriteria": "Not applicable while active."
@@ -820,11 +820,11 @@
       "knownLimitsRisks": ["Gold-283 is regression for one known 1+9 set and never a production template or holdout proof."],
       "evidence": {
         "tests": ["server/__tests__/utils/policyAnalysis/lfReferenceGoldOracle.test.js", "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"],
-        "runs": ["Tests sections 82-84", "Tracker 133.43"],
+        "runs": ["Tests sections 82-84", "Tracker 133.43", "Tracker 133.55; Gold 283/283 source-covered, 137/144 measurable binary matches and 563/631 role-covered"],
         "adrs": ["ADR-031"],
         "failures": []
       },
-      "lastVerifiedCommit": "c87aadf9d483d72ddce0bc67aacd529c19b54788",
+      "lastVerifiedCommit": "fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33",
       "relations": [{ "type": "CONTRADICTS", "target": "CAP-LEGACY-001" }],
       "activationReason": "Explicitly QA-only and excluded from production row generation.",
       "reactivationCriteria": "Use only for the same frozen document set and exact Gold contract."

@@ -10068,3 +10068,132 @@ Complete-B-Corpus-SHA-256:
 
 Status: `PRIMÄR-B 204/204 PASS; 311 FOUND, 52 FALLBACK_REQUIRED;
 VOLLKORPUS-ABWESENHEIT 572 PARTITIONEN AKTIV; KEIN DEPLOYMENT`.
+
+### 133.55 Koordinierte Gefahren atomisiert und dynamischer 1+9-Lauf binär abgeschlossen
+
+Der vollständige Abwesenheitslauf aus Abschnitt 133.54 endete mit 572/572
+terminalen Partitionen, 43 Nullfund-Kandidaten, neun Rescue-Fällen und null
+ungeklärten Partitionen. Im anschließenden Rescue wiederholte Qwen für die
+source-bound A-Komponente „Bruch-, Frost-, Verstopfungs- und
+Korrosionsschäden“ dreimal denselben fachlich plausiblen Teilfund: Bruch war
+in B belegt, die übrigen Gefahren nicht. Der strikte Validator lehnte die
+Antwort zu Recht ab, weil A diese vier Gefahren noch als einen unteilbaren
+`PERIL_OR_CAUSE`-Identitätskern führte. Das war ein A-Atomisierungsfehler und
+kein Grund, den B-Validator abzuschwächen.
+
+Change-Set `LF-V2-COORDINATED-PERIL-ATOMIZATION-20260916-001` adaptiert
+deshalb `CAP-A-004`. Die source-bound Normalisierung trennt ausschließlich
+eindeutig koordinierte Gefahrennomen und elliptische Formen. Alternativen,
+Schutz-Komposita und abhängige Phrasen bleiben unverändert. Die sichtbare
+A-Zeile, Reihenfolge und Quellenbindung werden nicht umgeschrieben. Commits:
+
+```text
+b6cf6efe6  Atomize coordinated peril components
+40bb22387  Format coordinated peril atomization
+51b522ce9  Handle singular peril nouns
+```
+
+Mac-Studio-Gate auf `51b522ce93b732bf7811c16d836c4ff8c3b61299`:
+
+```text
+Node:                                      v22.23.2
+Prettier:                                  PASS
+gezielte Positiv-/Negativvarianten:        6/6 PASS
+vollständige A-driven-Vertragssuite:       341/341 PASS
+A-Rematerialisierung:                      58/58 PASS, 0 Modellaufrufe
+Manifest:                                  363 Requirements, 1.282 Komponenten
+UNRESOLVED:                                0
+Manifest-Datei-SHA-256:
+55b521e0b831af10b43d8752bc0d9bf6974958352eb8df20c52c8370e2ef250
+```
+
+Nur zwei Requirements änderten ihre Identität. Die erste Gefahrenliste wurde
+in vier statt eine Kernkomponente zerlegt; „Schwamm- und
+Vermorschungsschäden“ wurde ebenfalls quellwörtlich in zwei Gefahren
+materialisiert. Alle übrigen 361 Requirements blieben einschließlich ihrer
+B-Kandidaten byteidentisch.
+
+Change-Set `LF-V2-B-DECISION-SEED-REVALIDATION-20260916-001` adaptiert
+`CAP-B-006` und `CAP-CACHE-001`. Ein vollständiger Seed-Lauf wird nur bei
+gültiger Plan-, Entscheidungs-, Prompt-, Validator-, Modell- und
+Kontextbindung akzeptiert. Danach wird jede Antwort ausschließlich für eine
+byteidentische aktuelle Planzeile übernommen und nochmals gegen den aktuellen
+Einzelzeilenvertrag validiert. Geänderte Zeilen werden nicht übernommen.
+Commits `724d41636` und `fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33`.
+
+Mac-Studio-Gate auf exakt `fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33`:
+
+```text
+Syntax / Prettier:                         PASS / PASS
+vollständige A-driven-Vertragssuite:       344/344 PASS
+Primärbatches:                             204/204 PASS
+Requirements:                              363/363 terminal
+Seed-Revalidierung:                        361 übernommen, 2 neu geprüft
+vollständig gesäte Batches:                202
+neue Modellversuche:                       2
+Wandzeit Primärresume:                     87.781 ms
+FOUND / FALLBACK_REQUIRED / UNRESOLVED:    312 / 51 / 0
+Entscheidungs-SHA-256:
+0d2aceb3e4e19189bdba34d42a98aebc15bf69bbf52ff77dbd5acd515379e467
+```
+
+Die neue Vollkorpusprüfung übernahm 561/561 aktuelle Partitionen nach
+Revalidierung und benötigte null Modellaufrufe. Sie endete nach 111 ms mit 43
+Nullfund-Kandidaten und acht Rescue-Fällen. Der neue Rescue umfasste exakt
+acht Requirements; sechs wurden als Gegenstück bestätigt, zwei nach
+Vollkorpusprüfung als Abwesenheit abgeschlossen. Die acht Rescue-Batches
+benötigten elf Modellversuche und 350.122 ms.
+
+Das finale binäre Ergebnis ist technisch vollständig:
+
+```text
+Requirements / Zeilen:                    363
+GEFUNDEN / NICHT GEFUNDEN / UNKLAR:       318 / 45 / 0
+FULL / PARTIAL / CONTRADICTED / NONE:      198 / 116 / 4 / 45
+Side-B-only-Zeilen:                        0
+Final-Decision-SHA-256:
+47b37f924570edc0489eec1c8f22d58a6bf13aabf3c563a86eb140b26737dd89
+Binary-Result-SHA-256:
+19225ef1324b31cb07845fa07b0d790d58f17e83e4bb06efe5b7b288d4cac31e
+Binary-Datei-SHA-256:
+09d3cdd4646f72bf072e3dc9f34dd4292ef36c9dd051dafd5ffe9c488f3f0719
+```
+
+Die unveränderte Gold-283-Regression deckt 283/283 Legacy-Anforderungen,
+aber nur 563/631 Legacy-Komponentenrollen ab. 144 Gold-Zeilen sind wegen
+eindeutiger Quellenzuordnung binär messbar: 137 stimmen, sieben sind falsch,
+davon null False Positives und sieben False Negatives. 139 Zeilen bleiben
+wegen Split-/Merge-Quellenkontext nicht binär messbar. Gegenüber dem letzten
+vergleichbaren Revisionsartefakt bleiben die 137 Treffer gleich; zwei False
+Positives verschwinden, dafür steigen False Negatives von fünf auf sieben.
+Die Änderung ist deshalb ein belegter Root-Cause-Fix, aber kein Nettoanstieg
+der Gold-Trefferzahl und kein Generalisierungs- oder 99-Prozent-Nachweis.
+
+```text
+Gold intern / Datei:
+d9475c0e8145b5f326ae54ffaab58e5b2c2d154521837452993fc72712257179
+9ed4ab6ba3dbd896de48ecf94e6874881391600ef2cc027afae5af5d21123a55
+Gold-Regression-Datei-SHA-256:
+194d67c69398cb2b7cd3e095b0822cbb9d2a97d713e745714c78fe8a1b6665c7
+```
+
+Die interne Review-XLSX wurde read-only erneut geöffnet und auf 363
+eindeutige IDs, fortlaufende Nummern, 318/45 Statuswerte, Fehlerzellen,
+Filter und Freeze-Panes geprüft. Alle Prüfungen bestanden; die manuelle
+Bewertungsspalte ist leer.
+
+```text
+.../a-driven-v2-a-atomization-c48fc1588/
+LF-1PLUS9-A-DRIVEN-V2-INTERNAL-REVIEW-fbdfdb7ee.xlsx
+XLSX-SHA-256:
+630b1a2c46619c5dcafaa464bd51a61e74daa828af9422ca9702f9c4bf66c483
+```
+
+Offen bleiben die fachliche Analyse der sieben eindeutig messbaren
+False-Negatives, die 68 nicht rollengedeckten Legacy-Komponenten, ein kalter
+End-to-End-Laufzeitnachweis und die Generalisierungs-Gates auf ungesehenen
+Versicherern. Es gibt weiterhin kein Deployment und keine Kundenfreigabe.
+
+Status: `DYNAMISCHER 1+9-LAUF 363/363 BINÄR ABGESCHLOSSEN; 318 GEFUNDEN,
+45 NICHT GEFUNDEN, 0 UNKLAR; GOLD 137/144 MESSBAR RICHTIG; 7 FALSE NEGATIVES
+UND 68 LEGACY-ROLLENLÜCKEN OFFEN; INTERNE XLSX PASS; KEIN DEPLOYMENT`.
