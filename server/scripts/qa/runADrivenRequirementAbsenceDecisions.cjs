@@ -535,7 +535,9 @@ function hasMeaningfulIdentityOverlap(identityLabel, rationale) {
     .split(" ")
     .filter((token) => token.length >= 4 && !ignored.has(token));
   const rationaleTokens = new Set(normalizedSemanticText(rationale).split(" "));
-  return new Set(tokens.filter((token) => rationaleTokens.has(token))).size >= 2;
+  return (
+    new Set(tokens.filter((token) => rationaleTokens.has(token))).size >= 2
+  );
 }
 
 function negativeDecisionSemanticConflicts({ plan, partition, response }) {
@@ -610,8 +612,7 @@ function negativeDecisionSemanticConflicts({ plan, partition, response }) {
   const rejectsForMissingPositiveEffect =
     /\b(?:keine|kein|fehlt|nicht)\b.{0,120}\bpositive\b.{0,80}\b(?:deckung|versicherungsschutz|wirkung)\b/u.test(
       rationale
-    ) ||
-    /\bnicht\b.{0,80}\bals\b.{0,40}\bversichert\b/u.test(rationale);
+    ) || /\bnicht\b.{0,80}\bals\b.{0,40}\bversichert\b/u.test(rationale);
   if (
     mentionsAllowedCandidate &&
     describesExplicitExclusion &&
