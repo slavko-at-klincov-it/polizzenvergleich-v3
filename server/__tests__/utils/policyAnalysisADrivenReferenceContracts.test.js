@@ -15380,6 +15380,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       ({ identityCore }) => identityCore
     );
     const response = validRequirementResponse(row);
+    response.contextFinding.outcome = "COUNTERPART_WITH_DIFFERENCE";
     response.componentFindings = response.componentFindings.map((finding) =>
       finding.componentId === identityCore.componentId
         ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
@@ -15433,7 +15434,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
   });
 
   test.each([
-    ["without modifier evidence", []],
+    ["without modifier evidence", [], "MATCH"],
     [
       "with an identity-core difference",
       [
@@ -15442,10 +15443,21 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
           description: "Der fachliche Kern ist verschieden.",
         },
       ],
+      "MATCH",
+    ],
+    [
+      "in a merely related context",
+      [
+        {
+          dimension: "SCOPE",
+          description: "Der Umfang weicht ab.",
+        },
+      ],
+      "RELATED_ONLY",
     ],
   ])(
     "keeps an unsafe identity-core difference invalid %s",
-    (_name, differences) => {
+    (_name, differences, contextOutcome) => {
       const { decisionPlan } = requirementDecisionFixture();
       const batch = decisionPlan.batches[0];
       const row = batch.rows[0];
@@ -15454,6 +15466,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         ({ identityCore }) => identityCore
       );
       const response = validRequirementResponse(row);
+      response.contextFinding.outcome = contextOutcome;
       response.componentFindings = response.componentFindings.map((finding) =>
         finding.componentId === identityCore.componentId
           ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }

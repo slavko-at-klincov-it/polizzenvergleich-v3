@@ -258,7 +258,9 @@ function normalizeIdentityCoreModifierDifferences(batch, responses) {
         !row ||
         !Array.isArray(response?.componentFindings) ||
         !Array.isArray(response?.unmodeledDifferences) ||
-        response.contextFinding?.outcome !== "MATCH" ||
+        !["MATCH", "COUNTERPART_WITH_DIFFERENCE"].includes(
+          response.contextFinding?.outcome
+        ) ||
         !Array.isArray(response.contextFinding.candidateIds)
       )
         return response;
