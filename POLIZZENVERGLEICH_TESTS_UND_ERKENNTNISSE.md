@@ -5217,3 +5217,28 @@ Identitätskerne oder einen anderen Ausschluss als Gegenstück umdeuten.
 verbleibenden Gold-/Crosswalk-Fälle, 68 nicht rollengedeckte
 Legacy-Komponenten, kalte Laufzeit und ungesehene Versicherer bleiben
 außerhalb dieses Nachweises. Kein Deployment.
+
+## 96. Kontrollierte Produktaktivierung des dynamischen LF-V2-Vertrags
+
+Change-Set `LF-V2-PRODUCTION-ACTIVATION-20260916-001` nutzt den bestehenden
+`LF_REFERENCE_A_DRIVEN_V2`-Pfad unverändert als fachlichen Kern. Der aktuelle
+Code verdrahtet neue LF-Sessions bereits vollständig über Upload, Queue,
+Worker, dynamische A-Ermittlung, vollständige B-Suche, komponentenweise
+Entscheidung, Abwesenheit, Rescue, API, UI und XLSX. Deshalb wird keine neue
+Architektur gebaut.
+
+Die Produktaktivierung adaptiert nur die vorhandene Releasegrenze:
+
+- V3.8.0 als neuer unveränderlicher Release;
+- persistenter absoluter Embeddingvertrag in der lokalen Serverkonfiguration;
+- fail-closed Doctor-Prüfung von Vertrag, Modell, Dimensionen, Runtime und
+  tatsächlichen Artefakthashes;
+- ehrliche Produktlauf- und Arbeitsmappenmetadaten;
+- vollständige Tests auf dem Mac Studio sowie offizieller Updater mit
+  Sicherung und Rollback.
+
+Die Freigabe gilt als kontrollierter Kunden-MVP für den dynamischen Ansatz.
+Der 363-Zeilen-LF-1+9-Nachweis mit 322 Funden, 41 Nullfunden und null
+ungeklärten Zeilen bleibt die fachliche Freigabeevidenz. Unbekannte
+Mehrversicherer-Holdouts, allgemeine 99-Prozent-Richtigkeit und eine
+allgemeine Laufzeitzusage bleiben ausdrücklich außerhalb dieser Aktivierung.
