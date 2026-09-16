@@ -517,11 +517,16 @@ function negativeDecisionSemanticConflicts({ plan, partition, response }) {
   const rationale = normalizedSemanticText(response.rationale);
   const conflicts = [];
   if (
-    /\b(?:liegt|besteht)\b.{0,80}\bgegenstuck\b.{0,30}\bvor\b/u.test(
+    /\bliegt\b\s+(?:(?:somit|daher|damit)\s+)?\bein\b\s+\bgegenstuck\b\s+\bvor\b/u.test(
+      rationale
+    ) ||
+    /\bbesteht\b\s+(?:(?:somit|daher|damit)\s+)?\bein\b\s+\bgegenstuck\b/u.test(
       rationale
     ) ||
     /\bzahlt\b.{0,80}\bals\b.{0,30}\bgegenstuck\b/u.test(rationale) ||
-    /\bstellt\b.{0,100}\bgegenstuck\b.{0,30}\bdar\b/u.test(rationale)
+    /\bstellt\b\s+(?:(?:somit|daher|damit)\s+)?\bein\b\s+\bgegenstuck\b\s+\bdar\b/u.test(
+      rationale
+    )
   )
     conflicts.push("RATIONALE_CONFIRMS_COUNTERPART");
   if (

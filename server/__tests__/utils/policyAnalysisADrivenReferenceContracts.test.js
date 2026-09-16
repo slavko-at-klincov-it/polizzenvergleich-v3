@@ -16649,6 +16649,17 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         response: {
           ...negativeBase,
           rationale:
+            "Die Klausel betrifft einen anderen fachlichen Kern; daher liegt kein Gegenstück vor.",
+        },
+      })
+    ).toEqual([]);
+    expect(
+      negativeDecisionSemanticConflicts({
+        plan: absencePlan,
+        partition: firstPartition,
+        response: {
+          ...negativeBase,
+          rationale:
             "Der ausdrückliche Ausschluss adressiert denselben Kern; daher liegt ein Gegenstück vor.",
         },
       })
