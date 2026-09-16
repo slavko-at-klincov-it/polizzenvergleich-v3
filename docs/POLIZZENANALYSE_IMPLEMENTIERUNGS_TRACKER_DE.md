@@ -10306,3 +10306,32 @@ Deployment und keine Kunden-XLSX-Freigabe.
 Status: `DYNAMISCHER LF-1+9-LAUF 363/363 BINÄR; 322 GEFUNDEN, 41 NICHT
 GEFUNDEN, 0 UNKLAR; GOLD 141/144 MESSBAR RICHTIG; DREI GOLD-/CROSSWALK-FÄLLE
 OFFEN; INTERNE XLSX PASS; KEIN DEPLOYMENT`.
+
+### 133.57 V3.8.0-Produktaktivierung vorbereitet
+
+Nach ausdrücklicher Kundenfreigabe wird der vollständig verdrahtete
+`LF_REFERENCE_A_DRIVEN_V2`-Pfad als kontrollierter Kunden-MVP aktiviert. Es
+wird keine neue Vergleichsarchitektur ergänzt: Queue, Worker, dynamische
+A-Ermittlung, vollständige B-Prüfung, API, UI und XLSX werden direkt
+wiederverwendet (`DIRECT_REUSE`). Angepasst werden ausschließlich bestehende
+Release-, Installer- und Betriebsgrenzen (`ADAPT_EXISTING`).
+
+Vor dem Tag und Deployment gelten fail-closed:
+
+- Releaseversion und Doctor müssen V3.8.0 binden;
+- `POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE` muss absolut, regulär und
+  geschützt konfiguriert sein;
+- Vertrag, Dinghy-Modell, Dimensionen, Runtime sowie Modell- und
+  Runtimeartefakte müssen hashverifiziert werden;
+- das Produktartefakt muss sich als Produktlauf und die tatsächlich erzeugte
+  Arbeitsmappe korrekt ausweisen;
+- vollständige Release-Gates müssen auf dem exakten Release-SHA am Mac Studio
+  bestehen;
+- der offizielle Updater muss Sicherung, Quieszenz, Aktivierung und Doctor
+  erfolgreich abschließen.
+
+Beweisgrenze bleibt unverändert: Der bekannte dynamische 1+9-Nachweis erlaubt
+den kontrollierten MVP-Betrieb, aber keine allgemeine 99-Prozent- oder
+Holdout-Aussage.
+
+Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.

@@ -3,6 +3,9 @@ const crypto = require("crypto");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const {
+  loadHybridShadowContract,
+} = require("../../server/utils/policyAnalysis/hybridShadowSearch");
 
 const repo = path.resolve(
   process.env.V3_REPO_DIR || path.resolve(__dirname, "../..")
@@ -35,6 +38,11 @@ if (
 const aDrivenContractStat = fs.lstatSync(aDrivenEmbeddingContractFile);
 if (!aDrivenContractStat.isFile() || aDrivenContractStat.isSymbolicLink())
   throw new Error("LF-V2-Embeddingvertrag ist keine reguläre Datei.");
+const { identity: aDrivenEmbeddingIdentity } = loadHybridShadowContract(
+  aDrivenEmbeddingContractFile
+);
+if (aDrivenEmbeddingIdentity.enabled !== true)
+  throw new Error("LF-V2-Embeddingvertrag entspricht nicht dem Produktprofil.");
 
 function existingValue(content, key) {
   const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");

@@ -20,8 +20,42 @@ temp_dir="$(mktemp -d "${TMPDIR:-/tmp}/polizzenvergleich-v3-installer-test.XXXXX
 trap '/bin/rm -rf "$temp_dir"' EXIT
 mkdir -p "$temp_dir/repo/server" "$temp_dir/repo/collector" "$temp_dir/repo/frontend"
 printf '%s\n' 'JWT_SECRET="preserved-secret"' 'LLM_PROVIDER="lmstudio"' >"$temp_dir/repo/server/.env"
-printf '%s\n' '{"enabled":true}' >"$temp_dir/embedding-contract.json"
+printf '%s\n' 'model-fixture' >"$temp_dir/model.gguf"
+printf '%s\n' 'runtime-fixture' >"$temp_dir/llama-server"
+model_sha="$(shasum -a 256 "$temp_dir/model.gguf" | /usr/bin/awk '{print $1}')"
+runtime_sha="$(shasum -a 256 "$temp_dir/llama-server" | /usr/bin/awk '{print $1}')"
+printf '%s\n' \
+  '{' \
+  '  "schemaVersion": 1,' \
+  '  "contractId": "lf-a-driven-installer-test-v1",' \
+  '  "enabled": true,' \
+  '  "mode": "SHADOW_ONLY",' \
+  '  "failurePolicy": "FAIL_SHADOW_RUN",' \
+  '  "provider": {' \
+  '    "kind": "OPENAI_COMPATIBLE_EMBEDDINGS",' \
+  '    "baseUrl": "http://127.0.0.1:1234/v1",' \
+  '    "model": "text-embedding-dinghy-law-4b-v1",' \
+  '    "dimensions": 2560,' \
+  '    "apiKeyEnv": null,' \
+  '    "requestTimeoutMs": 30000,' \
+  "    \"modelArtifactPath\": \"$temp_dir/model.gguf\"," \
+  "    \"modelArtifactSha256\": \"$model_sha\"," \
+  '    "runtimeRevision": "llama.cpp-mac-arm64-apple-metal-advsimd@2.28.2",' \
+  "    \"runtimeArtifactPath\": \"$temp_dir/llama-server\"," \
+  "    \"runtimeArtifactSha256\": \"$runtime_sha\"," \
+  '    "inputNormalization": "NFKC_WHITESPACE_V1"' \
+  '  },' \
+  '  "retrieval": {' \
+  '    "chunkSize": 3000,' \
+  '    "chunkOverlap": 250,' \
+  '    "topK": 3,' \
+  '    "batchSize": 32,' \
+  '    "minimumScore": 0' \
+  '  }' \
+  '}' >"$temp_dir/embedding-contract.json"
 chmod 600 "$temp_dir/embedding-contract.json"
+"${NODE_BIN:-node}" "$REPO_DIR/server/scripts/verifyADrivenEmbeddingContract.cjs" \
+  "$temp_dir/embedding-contract.json" >/dev/null
 
 V3_REPO_DIR="$temp_dir/repo" \
 V3_SERVER_PORT=3004 \

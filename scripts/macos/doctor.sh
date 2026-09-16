@@ -47,10 +47,11 @@ A_DRIVEN_CONTRACT_FILE="$($V3_NODE_BIN -e '
   process.stdout.write(value);
 ' "$V3_REPO_DIR/server/.env" 2>/dev/null || true)"
 if [ -n "$A_DRIVEN_CONTRACT_FILE" ] && [ -f "$A_DRIVEN_CONTRACT_FILE" ] && [ ! -L "$A_DRIVEN_CONTRACT_FILE" ] &&
-  [ "$(stat -f '%OLp' "$A_DRIVEN_CONTRACT_FILE" 2>/dev/null || true)" = "600" ]; then
-  ok "LF-V2-Embeddingvertrag vorhanden und geschützt"
+  [ "$(stat -f '%OLp' "$A_DRIVEN_CONTRACT_FILE" 2>/dev/null || true)" = "600" ] &&
+  "$V3_NODE_BIN" "$V3_REPO_DIR/server/scripts/verifyADrivenEmbeddingContract.cjs" "$A_DRIVEN_CONTRACT_FILE" >/dev/null; then
+  ok "LF-V2-Embeddingvertrag und lokale Artefakte hashverifiziert"
 else
-  bad "LF-V2-Embeddingvertrag fehlt, ist unsicher oder nicht absolut konfiguriert"
+  bad "LF-V2-Embeddingvertrag fehlt, ist unsicher oder nicht hashverifiziert"
 fi
 
 [ -f "$V3_REPO_DIR/server/public/_index.html" ] && ok "Produktions-Oberfläche" || bad "Produktions-Oberfläche fehlt"

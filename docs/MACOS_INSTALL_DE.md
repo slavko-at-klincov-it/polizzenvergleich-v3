@@ -6,16 +6,19 @@ Voraussetzungen:
 - angemeldete grafische macOS-Sitzung
 - Internetzugang während der ersten Installation
 - LM Studio samt CLI unter `$HOME/.lmstudio/bin/lms`
-- das einmalig geladene Modell
+- das einmalig geladene Chatmodell
   `lmstudio-community/Qwen3.6-35B-A3B-MLX-4bit` (20,43 GB)
+- für den dynamischen LF-V2-Modus das lokale Embeddingmodell
+  `Hanno-Labs/dinghy-law-4b-v1-gguf` und der auf dem Zielsystem
+  hashverifizierte Embeddingvertrag
 
 ## Installation
 
 ```bash
 cd ~/Code/polizzenvergleich-v3
 git fetch origin --tags
-git checkout v3.7.3
-./install.command
+git checkout v3.8.0
+V3_A_DRIVEN_EMBEDDING_CONTRACT_FILE="/ABSOLUTER/PFAD/ZUM/embedding-contract.json" ./install.command
 ```
 
 Der Installer lädt eine eigene geprüfte Node-Laufzeit, installiert die
@@ -41,14 +44,16 @@ Start den dafür notwendigen `lms get`-Befehl an. V3 erstellt daraus eine
 platzsparende reine Textansicht und lädt ausschließlich
 `qwen/qwen3.6-35b-a3b` mit 42.496 Token Kontext, Parallelität 1, 8-Bit-MLX-
 KV-Cache und ausgeschaltetem Thinking. Andere geladene Chat- oder
-Embeddingmodelle werden beim V3-Serverstart entladen.
+Embeddingmodelle werden beim V3-Serverstart entladen. Der dynamische
+LF-V2-Lauf wechselt kontrolliert auf Dinghy und stellt danach Qwen wieder her.
+Der Doctor prüft den lokalen Embeddingvertrag sowie Modell- und Runtimehash.
 
 ## Update einer bestehenden V3-Installation
 
 ```bash
 cd ~/Code/polizzenvergleich-v3
 ./doctor.command
-./update.command v3.7.3
+V3_A_DRIVEN_EMBEDDING_CONTRACT_FILE="/ABSOLUTER/PFAD/ZUM/embedding-contract.json" ./update.command v3.8.0
 ./doctor.command
 ```
 
@@ -58,5 +63,5 @@ PDF-Seitenprovenienz müssen Original-PDFs in einem neuen Workspace erneut
 hochgeladen und indexiert werden. Alte flache PDF-Vektoren können nicht
 nachträglich zuverlässig einer physischen Seite zugeordnet werden.
 
-Modellentscheidung, Messwerte und noch ausstehende Abnahme stehen in
-`docs/RELEASE_V3.7.3_DE.md`.
+Modellentscheidung, Messwerte und Beweisgrenzen stehen in
+`docs/RELEASE_V3.8.0_DE.md`.

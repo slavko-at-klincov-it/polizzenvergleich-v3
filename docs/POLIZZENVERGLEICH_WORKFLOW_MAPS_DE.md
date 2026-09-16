@@ -56,14 +56,14 @@ hineininterpretiert werden.
 
 | Capability-Gruppe | LF V2 | A/B | Befund |
 | --- | --- | --- | --- |
-| Upload, Modus, Sitzung, Queue, Worker, Resume | Shadow-aktiv | produktiv aktiv | tatsächlich gemeinsam |
+| Upload, Modus, Sitzung, Queue, Worker, Resume | produktiv aktiv | produktiv aktiv | tatsächlich gemeinsam |
 | PDF-Extraktion und PageMap | aktiv | aktiv | tatsächlich gemeinsam |
 | Occurrence-/FTS-Worksheet | nicht direkt verdrahtet | aktiv | wiederverwendbare Primitive, anderer Vertrag |
 | Werte-/Rollen-/Scope-/Wirkungsverträge | aktiv verwendet | aktiv verwendet | semantischer gemeinsamer Kern |
 | BM25/Synonyme/Struktur/Dinghy | aktiv | Dinghy nicht produktiv verdrahtet | derzeit parallel statt vollständig gemeinsam |
 | Komponentenweise Gegenstückprüfung | aktiv | nicht verdrahtet | LF-spezifische Orchestrierung über allgemeine Semantik |
 | Abwesenheit/Rescue | aktiv verdrahtet, frischer Lauf noch ausständig | nicht verdrahtet | LF-Vertrag; bilaterale Semantik wäre separat zu definieren |
-| Artefaktpublikation, Reader, Export, UI | Shadow-aktiv | produktiv aktiv | tatsächlich gemeinsam |
+| Artefaktpublikation, Reader, Export, UI | produktiv aktiv | produktiv aktiv | tatsächlich gemeinsam |
 | Gold-283 | QA-only | inaktiv | bekannte LF-Regression, keine Produktquelle |
 
 ## 4. Tatsächlich gemeinsam verwendete Bausteine
@@ -96,8 +96,8 @@ hineininterpretiert werden.
 
 ## 6. Vorhanden, aber nicht verdrahtet
 
-- Dinghy ist im LF-V2-Shadow aktiv, im vollständigen A/B-Produktpfad aber nur
-  als frühere Shadow-/PoC-Fähigkeit vorhanden.
+- Dinghy ist im LF-V2-Produktpfad aktiv, im vollständigen A/B-Produktpfad aber
+  nur als frühere Shadow-/PoC-Fähigkeit vorhanden.
 - Die LF-V2-Komponentensuchmatrix könnte langfristig einen gemeinsamen
   A/B-Retrievalkern speisen; aktuell existiert dafür kein bilateraler
   Produktcaller.
