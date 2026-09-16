@@ -1118,14 +1118,9 @@ async function processBatches({
         .filter((requirementId) =>
           seed?.responsesByRequirement.has(requirementId)
         )
-        .map((requirementId) =>
-          seed.responsesByRequirement.get(requirementId)
-        );
+        .map((requirementId) => seed.responsesByRequirement.get(requirementId));
       const acceptedByRequirement = new Map(
-        batchSeedResponses.map((response) => [
-          response.requirementId,
-          response,
-        ])
+        batchSeedResponses.map((response) => [response.requirementId, response])
       );
       for (const response of resumeState.acceptedResponses)
         acceptedByRequirement.set(response.requirementId, response);
@@ -1147,12 +1142,8 @@ async function processBatches({
         abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
         recoverModelAfterAbort,
         initialAcceptedResponses: batch.expectedRequirementIds
-          .filter((requirementId) =>
-            acceptedByRequirement.has(requirementId)
-          )
-          .map((requirementId) =>
-            acceptedByRequirement.get(requirementId)
-          ),
+          .filter((requirementId) => acceptedByRequirement.has(requirementId))
+          .map((requirementId) => acceptedByRequirement.get(requirementId)),
         initialIdentityCoreModifierNormalizations:
           resumeState.identityCoreModifierNormalizations,
         resumeAfterSafeGroupedTimeout:
