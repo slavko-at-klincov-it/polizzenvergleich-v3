@@ -10024,3 +10024,47 @@ Kundenfreigabe.
 
 Status: `120/204 PRIMÄRBATCHES PASS; RESUME AB 121 AKTIV; 0 NEUE
 MODELLAUFRUFE FÜR BATCH 120; KEIN DEPLOYMENT`.
+
+### 133.54 Primäre B-Gegenstückprüfung 204/204 abgeschlossen
+
+Der auf Commit `938ab782948b2c44ac4d846122cc0797a706a43e` fortgesetzte
+Primärlauf wurde vollständig abgeschlossen. Batch 1 bis 120 wurden
+unverändert wiederverwendet; Batch 121 bis 204 wurden danach ohne weiteren
+fail-closed Stopp terminalisiert. Es wurde weder A neu klassifiziert noch der
+Retrievalplan verändert.
+
+```text
+Primärbatches:                                  204/204 PASS
+Requirements:                                  363/363 terminal
+vorläufig FOUND / FALLBACK_REQUIRED:            311 / 52
+UNRESOLVED:                                           0
+Modellversuche gesamt:                              228
+gemessene Resume-Wandzeit:                    5.997.300 ms
+Entscheidungsplan-Dateihash:
+7dd62f6c98ae37be5c5dfdd51dd083553fa93263bebac1d052d22b69791385c0
+Primärentscheidungs-Dateihash:
+aa86199088250863ae5b3d47044f4e1ab31ef35d7a1f82e73e0eacc7f5bcaf45
+Responses-Dateihash:
+2401089571ccbb68bd577f3066e4d913c97a75526be1bf14638ac653ad2cd945
+Summary-Dateihash:
+6eeb2280ccf3ae3ead2262ffac442288c69f09bd44cfe7e4dd7660a61f94b22c
+```
+
+Die 52 vorläufig negativen Requirements sind noch keine fachlichen
+`NOT_FOUND`-Entscheidungen. Der unveränderte Vollkorpusvertrag erzeugte dafür
+einen hashgebundenen Plan mit 572 Partitionen über alle 322 B-Klauseln.
+`LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V4` läuft unter demselben Qwen-Modell
+mit Kontext 42.496 weiter. Nur ein vollständig kompatibler V4-Seed mit 22
+Partitionen ist zulässig; ältere vollständige Abwesenheitsläufe besitzen
+einen anderen Promptvertrag und werden bewusst nicht als aktueller Beweis
+umetikettiert.
+
+```text
+Abwesenheitsplan: 52 Requirements, 572 Partitionen, 322 Klauseln
+Plan-SHA-256: 5ec82b5cf50b38adc6c75975afddf41ba5698f2127479794bd5d3379efd52643
+Complete-B-Corpus-SHA-256:
+28ed0da539dd0f215d0c66ec7c3f0c1d60da1dd8a86802f593d40f152a7f6754
+```
+
+Status: `PRIMÄR-B 204/204 PASS; 311 FOUND, 52 FALLBACK_REQUIRED;
+VOLLKORPUS-ABWESENHEIT 572 PARTITIONEN AKTIV; KEIN DEPLOYMENT`.
