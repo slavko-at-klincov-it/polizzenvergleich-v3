@@ -9982,3 +9982,45 @@ Deployment und keine Kundenfreigabe.
 Status: `117/204 PRIMÄRBATCHES PASS; RESUME AB 118 AKTIV; 0 NEUE
 MODELLAUFRUFE FÜR BATCH 117; A-ATOMIZITÄTSGATE-VERDRAHTUNG OFFEN; KEIN
 DEPLOYMENT`.
+
+### 133.53 Batch 120: derselbe Kernvertrag in positivem Differenzkontext
+
+Der Resume-Lauf bestand Batch 118 und 119 und stoppte an Batch 120 erneut
+fail-closed. Die strukturelle, inhaltsminimierte Diagnose der vier privaten
+Attempts zeigte keinen neuen fachlichen Fehlertyp: Kontext und breite
+OBJECT-Kernkomponente waren jeweils
+`COUNTERPART_WITH_DIFFERENCE`, dieselbe servergebundene Kandidaten-ID war
+vorhanden und die einzigen ausgewiesenen Abweichungen betrafen `SCOPE` sowie
+teilweise `CONDITION`. Eine zweite Requirement-Antwort desselben Batches war
+bereits gültig journalisiert.
+
+Commit `938ab782948b2c44ac4d846122cc0797a706a43e` präzisiert deshalb dieselbe
+allgemeine Regel aus `INT-20260916-038`: Als positiver Kontext ist neben
+`MATCH` auch `COUNTERPART_WITH_DIFFERENCE` zulässig. Alle übrigen Schranken
+bleiben unverändert. Insbesondere wird `RELATED_ONLY` ausdrücklich nicht
+normalisiert; fehlende Modifier-Evidenz oder eine OBJECT-/Peril-/Rollen-
+Kerndifferenz bleiben fail-closed. Es entstand keine neue Architektur und der
+Entscheidungsplan blieb hashidentisch.
+
+Mac-Studio-Nachweise auf exakt diesem Commit im isolierten Worktree
+`/private/tmp/lf-core-modifier-197481fc6`:
+
+```text
+Prettier:                                         PASS
+gezielte Positiv-/Negativ-/Resume-Tests:          5/5 PASS
+vollständige A-driven-Vertragssuite:              335/335 PASS
+Batch 120 aus vorhandenem Journal:                PASS
+neue Modellaufrufe für Batch 120:                 0
+journalisiert übernommene Requirements:            2/2
+vorhandene Batch-Artefakte:                        120/204
+Resume-Start:                                      Batch 121
+Modell:                                            qwen/qwen3.6-35b-a3b
+Kontext:                                           42.496
+```
+
+Der Primärlauf läuft seitdem SSH-unabhängig mit PID `19915` weiter und
+verwendet Batch 1 bis 120 unverändert wieder. Kein Deployment und keine
+Kundenfreigabe.
+
+Status: `120/204 PRIMÄRBATCHES PASS; RESUME AB 121 AKTIV; 0 NEUE
+MODELLAUFRUFE FÜR BATCH 120; KEIN DEPLOYMENT`.
