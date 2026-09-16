@@ -268,6 +268,10 @@ if /usr/bin/grep -RniE --exclude='run.sh' --exclude='start-server.sh' \
   --exclude='load-qwen36.cjs' --exclude='run-all-categories-quality.command' \
   --exclude='run-hybrid-shadow-pilot.command' \
   --exclude='run-hybrid-shadow-quality.command' \
+  --exclude='run-a-driven-controlled-b-pilot.command' \
+  --exclude='run-a-driven-reference-product-v2.command' \
+  --exclude='run-a-driven-reference-shadow-v2.command' \
+  --exclude='run-lf-reference-discovery-benchmark.command' \
   'feuer|policyComparison|dinghy|qwen3\.8|comparison_documents' \
   "$SCRIPT_DIR" "$REPO_DIR"/*.command; then
   printf '%s\n' "Spezialisierte Vergleichslogik im V3-Installer gefunden." >&2
@@ -294,6 +298,17 @@ fi
   "$REPO_DIR/run-all-categories-quality.command"
 /usr/bin/grep -Fq 'qwen/qwen3.6-35b-a3b' \
   "$REPO_DIR/run-all-categories-quality.command"
+
+# Der dynamische LF-V2-Produktrunner ist der ausdrückliche Worker-Unterprozess
+# für den LF-Modus. Er bleibt außerhalb von Installer, LaunchAgents und
+# Updatepfad; die Installation stellt nur seinen hashgebundenen lokalen
+# Embeddingvertrag bereit.
+/usr/bin/grep -Fq 'materializeADrivenReferenceProductResult.cjs' \
+  "$REPO_DIR/run-a-driven-reference-product-v2.command"
+/usr/bin/grep -Fq 'text-embedding-dinghy-law-4b-v1' \
+  "$REPO_DIR/run-a-driven-reference-product-v2.command"
+/usr/bin/grep -Fq 'POLICY_A_DRIVEN_EMBEDDING_CONTRACT_FILE' \
+  "$REPO_DIR/server/scripts/policyComparisonWorker.cjs"
 
 # Die Hybrid-Shadow-Runner bleiben explizite QA-Werkzeuge. Sie dürfen Modelle
 # kontrolliert wechseln, sind aber kein Bestandteil von Installation, Start,

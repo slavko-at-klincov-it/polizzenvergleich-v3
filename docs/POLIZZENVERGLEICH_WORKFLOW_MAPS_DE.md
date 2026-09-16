@@ -1,7 +1,7 @@
 # Workflow-Maps und Capability-Wiederverwendung
 
 Stand: 15. September 2026  
-Change-Set: `CAPABILITY-INVENTORY-20260915-001`  
+Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`
 Kanonisches Inventar:
 [`POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1.json`](./POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1.json)
 
