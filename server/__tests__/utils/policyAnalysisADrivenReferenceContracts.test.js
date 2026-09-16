@@ -15678,9 +15678,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       ],
     };
 
-    const normalized = normalizeUniqueRescueCandidateAliases(batch, [
-      response,
-    ]);
+    const normalized = normalizeUniqueRescueCandidateAliases(batch, [response]);
 
     expect(normalized.normalizations).toEqual([
       {
@@ -15695,9 +15693,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(normalized.responses[0].componentFindings[0].candidateIds).toEqual([
       uniqueRescueId,
     ]);
-    expect(normalized.responses[0].unmodeledDifferences[0].candidateIds).toEqual(
-      [uniqueRescueId]
-    );
+    expect(
+      normalized.responses[0].unmodeledDifferences[0].candidateIds
+    ).toEqual([uniqueRescueId]);
     expect(response.contextFinding.candidateIds).toEqual([inventedRescueId]);
   });
 
