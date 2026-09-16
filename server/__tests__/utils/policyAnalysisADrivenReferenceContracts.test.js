@@ -16841,7 +16841,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     });
     expect(
       validateADrivenRequirementAbsencePartitionResponse({
-        plan: modifierPlan,
+        plan: absencePlan,
         partitionId: firstPartition.partitionId,
         response: normalizedReview.response,
       }).result
