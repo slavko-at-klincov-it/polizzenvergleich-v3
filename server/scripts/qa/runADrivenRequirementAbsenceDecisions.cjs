@@ -216,19 +216,39 @@ function compatibleSeedPartitionResponses({
       candidateIds: seedResult.selectedCandidateIds,
       rationale: seedResult.rationale,
     };
-    const validation = validateADrivenRequirementAbsencePartitionResponse({
+    const initialValidation = validateADrivenRequirementAbsencePartitionResponse({
       plan,
       partitionId: partition.partitionId,
       response,
     });
-    if (validation.result.status !== "TERMINAL")
+    if (initialValidation.result.status !== "TERMINAL")
       throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_PARTITION_INVALID");
     const semanticContractConflicts = negativeDecisionSemanticConflicts({
       plan,
       partition,
       response,
     });
-    if (semanticContractConflicts.length > 0) continue;
+    const semanticReviewNormalization =
+      normalizeSemanticContractConflictForReview({
+        partition,
+        response,
+        semanticContractConflicts,
+      });
+    if (
+      semanticContractConflicts.length > 0 &&
+      !semanticReviewNormalization
+    )
+      continue;
+    const normalizedResponse = semanticReviewNormalization?.response || response;
+    const validation = semanticReviewNormalization
+      ? validateADrivenRequirementAbsencePartitionResponse({
+          plan,
+          partitionId: partition.partitionId,
+          response: normalizedResponse,
+        })
+      : initialValidation;
+    if (validation.result.status !== "TERMINAL")
+      throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_SEED_PARTITION_INVALID");
     const rawResponse = JSON.stringify(response);
     responses.set(partition.partitionId, {
       schemaVersion: 1,
@@ -241,11 +261,13 @@ function compatibleSeedPartitionResponses({
       requestTimeoutMs,
       abortSettlementTimeoutMs,
       partitionId: partition.partitionId,
-      response,
+      response: normalizedResponse,
       validation,
       rawResponse,
       rawResponseSha256: sha256(rawResponse),
       attempts: [],
+      semanticContractReviewNormalization:
+        semanticReviewNormalization?.audit || null,
       reuse: {
         contractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_VALIDATED_SEED_V1",
         sourceAbsencePlanSha256: seedPlan.planSha256,
@@ -622,6 +644,51 @@ function negativeDecisionSemanticConflicts({ plan, partition, response }) {
   return [...new Set(conflicts)].sort();
 }
 
+function normalizeSemanticContractConflictForReview({
+  partition,
+  response,
+  semanticContractConflicts,
+}) {
+  if (
+    response?.decision !== "NO_COUNTERPART_IN_PARTITION" ||
+    typeof response?.rationale !== "string" ||
+    !Array.isArray(semanticContractConflicts) ||
+    semanticContractConflicts.length === 0
+  )
+    return null;
+  const reviewableConflicts = new Set([
+    "RATIONALE_CONFIRMS_COUNTERPART",
+    "EXCLUSION_WRONGLY_REJECTED_AS_COUNTERPART",
+    "SAME_ELEMENT_REJECTED_ONLY_FOR_MODIFIER_DIFFERENCE",
+    "EXPLICIT_EXCLUSION_REJECTED_FOR_POSITIVE_EFFECT",
+  ]);
+  if (
+    semanticContractConflicts.some(
+      (conflict) => !reviewableConflicts.has(conflict)
+    )
+  )
+    return null;
+  const rationale = normalizedSemanticText(response.rationale);
+  const candidateIds = partition.candidateIds.filter((candidateId) =>
+    rationale.includes(normalizedSemanticText(candidateId))
+  );
+  if (candidateIds.length === 0) return null;
+  return {
+    response: {
+      ...response,
+      decision: "COUNTERPART_PRESENT",
+      candidateIds,
+    },
+    audit: {
+      fromDecision: response.decision,
+      toDecision: "COUNTERPART_PRESENT",
+      candidateIds,
+      semanticContractConflicts: [...semanticContractConflicts].sort(),
+      effect: "ROUTE_TO_COMPONENT_RESCUE_REVIEW",
+    },
+  };
+}
+
 function retryInstruction(attempts) {
   const previous = attempts.at(-1);
   if (!previous) return null;
@@ -766,21 +833,41 @@ async function runPartition({
       });
       rawResponse = completion.choices?.[0]?.message?.content || "";
       const parsed = parseSingleDecision(rawResponse);
-      const response = {
+      const observedResponse = {
         ...parsed,
         candidateIds: Array.isArray(parsed?.candidateIds)
           ? [...new Set(parsed.candidateIds)]
           : parsed?.candidateIds,
       };
-      const validation = validateADrivenRequirementAbsencePartitionResponse({
-        plan,
-        partitionId: partition.partitionId,
-        response,
-      });
+      const initialValidation =
+        validateADrivenRequirementAbsencePartitionResponse({
+          plan,
+          partitionId: partition.partitionId,
+          response: observedResponse,
+        });
       const semanticContractConflicts =
-        validation.result.status === "TERMINAL"
-          ? negativeDecisionSemanticConflicts({ plan, partition, response })
+        initialValidation.result.status === "TERMINAL"
+          ? negativeDecisionSemanticConflicts({
+              plan,
+              partition,
+              response: observedResponse,
+            })
           : [];
+      const semanticReviewNormalization =
+        normalizeSemanticContractConflictForReview({
+          partition,
+          response: observedResponse,
+          semanticContractConflicts,
+        });
+      const response =
+        semanticReviewNormalization?.response || observedResponse;
+      const validation = semanticReviewNormalization
+        ? validateADrivenRequirementAbsencePartitionResponse({
+            plan,
+            partitionId: partition.partitionId,
+            response,
+          })
+        : initialValidation;
       const observedPositiveCandidateIds = [
         ...new Set(
           attempts.flatMap(
@@ -795,7 +882,8 @@ async function runPartition({
           ({ errorClass: priorErrorClass }) =>
             priorErrorClass === "POSITIVE_SIGNAL_CONFLICT"
         );
-      const semanticContractConflict = semanticContractConflicts.length > 0;
+      const semanticContractConflict =
+        semanticContractConflicts.length > 0 && !semanticReviewNormalization;
       const attemptRecord = {
         attempt,
         durationMs: Math.round(performance.now() - started),
@@ -812,9 +900,12 @@ async function runPartition({
         totalTokens: completion.usage?.total_tokens || 0,
         rawResponse,
         rawResponseSha256: sha256(rawResponse),
+        observedResponse,
         response,
         validation,
         semanticContractConflicts,
+        semanticContractReviewNormalization:
+          semanticReviewNormalization?.audit || null,
         positiveCandidateSignals: observedPositiveCandidateIds,
       };
       attempts.push(attemptRecord);
@@ -1144,6 +1235,7 @@ module.exports = {
   compatibleSeedPartitionResponses,
   jsonObjectsFromText,
   negativeDecisionSemanticConflicts,
+  normalizeSemanticContractConflictForReview,
   parseSingleDecision,
   positiveCandidateSignals,
   preliminaryDecision,

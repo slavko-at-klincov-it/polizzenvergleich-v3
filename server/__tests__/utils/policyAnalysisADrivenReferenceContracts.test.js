@@ -139,6 +139,7 @@ const {
 const {
   compatibleSeedPartitionResponses,
   negativeDecisionSemanticConflicts,
+  normalizeSemanticContractConflictForReview,
   parseSingleDecision: parseRequirementAbsenceDecision,
   positiveCandidateSignals: requirementAbsencePositiveCandidateSignals,
   preliminaryDecision: preliminaryRequirementAbsenceDecision,
@@ -16812,6 +16813,52 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         },
       })
     ).toContain("EXPLICIT_EXCLUSION_REJECTED_FOR_POSITIVE_EFFECT");
+    const modifierConflictResponse = {
+      ...negativeBase,
+      rationale: `Kandidat ${firstPartition.candidateIds[0]} enthält zwar die vorläufige Deckung, jedoch fehlt eine Regelung über deren Dauer und Bedingung.`,
+    };
+    const semanticContractConflicts = negativeDecisionSemanticConflicts({
+      plan: modifierPlan,
+      partition: firstPartition,
+      response: modifierConflictResponse,
+    });
+    const normalizedReview = normalizeSemanticContractConflictForReview({
+      partition: firstPartition,
+      response: modifierConflictResponse,
+      semanticContractConflicts,
+    });
+    expect(normalizedReview).toMatchObject({
+      response: {
+        partitionId: firstPartition.partitionId,
+        decision: "COUNTERPART_PRESENT",
+        candidateIds: [firstPartition.candidateIds[0]],
+      },
+      audit: {
+        fromDecision: "NO_COUNTERPART_IN_PARTITION",
+        toDecision: "COUNTERPART_PRESENT",
+        effect: "ROUTE_TO_COMPONENT_RESCUE_REVIEW",
+      },
+    });
+    expect(
+      validateADrivenRequirementAbsencePartitionResponse({
+        plan: modifierPlan,
+        partitionId: firstPartition.partitionId,
+        response: normalizedReview.response,
+      }).result
+    ).toMatchObject({ status: "TERMINAL", decision: "COUNTERPART_PRESENT" });
+    expect(
+      normalizeSemanticContractConflictForReview({
+        partition: firstPartition,
+        response: {
+          ...negativeBase,
+          rationale:
+            "Eine nicht referenzierte Klausel betrifft einen anderen fachlichen Kern.",
+        },
+        semanticContractConflicts: [
+          "SAME_ELEMENT_REJECTED_ONLY_FOR_MODIFIER_DIFFERENCE",
+        ],
+      })
+    ).toBeNull();
     expect(
       validateADrivenRequirementAbsencePartitionResponse({
         plan: absencePlan,
