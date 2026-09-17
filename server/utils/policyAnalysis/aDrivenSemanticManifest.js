@@ -94,7 +94,7 @@ const COVERAGE_EFFECTS = new Set([
   "UNKNOWN",
 ]);
 const COVERAGE_EFFECT_TEXT_PATTERN =
-  /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en|ten)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|leistet(?:\s+\S+){0,24}\s+Ersatz|Anspruch\s+auf\s+(?:Zahlung|Leistung)|zur\s+Leistung\s+verpflichtet|verzichtet\s+der\s+Versicherer\s+auf\s+(?:den\s+)?Einwand|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
+  /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en|ten)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Versicherungsschutz(?:\s+\S+){0,16}\s+geleistet|leistet(?:\s+\S+){0,24}\s+Ersatz|Anspruch\s+auf\s+(?:Zahlung|Leistung)|zur\s+Leistung\s+verpflichtet|verzichtet\s+der\s+Versicherer\s+auf\s+(?:den\s+)?Einwand|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
 const REQUIREMENT_ROLE_SIGNALS_V1 = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_EXCLUSION",
@@ -1332,8 +1332,13 @@ function validateRequirement(draft, unit, requirementIndex) {
     sourceContains(unit, sourceBlockIds, articleTrimmedDisplayLabel)
   )
     displayLabel = articleTrimmedDisplayLabel;
+  const sourceBlocksById = new Map(
+    unit.source.blocks.map((block) => [block.blockId, block])
+  );
   const uncitedOwnedBlockIds = unit.source.blockIds.filter(
-    (blockId) => !selectedBlockIds.has(blockId)
+    (blockId) =>
+      !selectedBlockIds.has(blockId) &&
+      !isLayoutOnlyBlock(sourceBlocksById.get(blockId))
   );
   if (
     sourceBlocks.some((block) => !block) ||

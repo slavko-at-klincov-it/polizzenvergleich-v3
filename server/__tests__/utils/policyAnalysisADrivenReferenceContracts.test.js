@@ -9156,6 +9156,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ["LF_A_BOUNDED_CLASSIFICATION_RUN_V12", A_DYNAMIC_MANIFEST_CONTRACT_ID_V11],
     ["LF_A_BOUNDED_CLASSIFICATION_RUN_V12", A_DYNAMIC_MANIFEST_CONTRACT_ID_V12],
     ["LF_A_BOUNDED_CLASSIFICATION_RUN_V74", A_DYNAMIC_MANIFEST_CONTRACT_ID],
+    ["LF_A_BOUNDED_CLASSIFICATION_RUN_V76", A_DYNAMIC_MANIFEST_CONTRACT_ID],
   ])(
     "upgrades predecessor %s with validator %s by revalidating its responses",
     async (predecessorRunContractId, validatorContractId) => {
@@ -9229,7 +9230,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V76");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V77");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -10162,6 +10163,304 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       componentIndex: 0,
       action: "EXPAND_ELIDED_PERFORMANCE_OBLIGATION",
     });
+  });
+
+  test("restores unique elided component labels to their complete bounded source spans", () => {
+    const blocks = [
+      {
+        blockId: "damage-start",
+        structuralKind: "BODY_LINE",
+        exactText: "Schäden, die den versicherten Sachen",
+      },
+      {
+        blockId: "damage-middle",
+        structuralKind: "BODY_LINE",
+        exactText: "durch allmähliche Einwirkung",
+      },
+      {
+        blockId: "damage-end",
+        structuralKind: "BODY_LINE",
+        exactText: "zugefügt werden.",
+      },
+      {
+        blockId: "coverage",
+        structuralKind: "BODY_LINE",
+        exactText:
+          "Der Versicherungsschutz bezieht sich in Abänderung der Bedingungen auch auf",
+      },
+      {
+        blockId: "value-start",
+        structuralKind: "BODY_LINE",
+        exactText: "wird ohne Unterversicherungseinwand",
+      },
+      {
+        blockId: "value-end",
+        structuralKind: "BODY_LINE",
+        exactText: "Versicherungsschutz zum Neuwert geleistet",
+      },
+    ];
+    const unit = {
+      unitId: "elided-source-unit",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Schäden ... zugefügt werden.",
+              sourceBlockIds: ["damage-start", "damage-end"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "bezieht sich ... auch auf",
+              sourceBlockIds: ["coverage"],
+              coverageEffect: "INCLUDED",
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "wird ... Versicherungsschutz zum Neuwert geleistet",
+              sourceBlockIds: ["value-start", "value-end"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const components = normalized.responses[0].requirements[0].components;
+
+    expect(components[0]).toMatchObject({
+      label:
+        "Schäden, die den versicherten Sachen\ndurch allmähliche Einwirkung\nzugefügt werden.",
+      sourceBlockIds: ["damage-start", "damage-middle", "damage-end"],
+    });
+    expect(components[1].label).toBe(
+      "bezieht sich in Abänderung der Bedingungen auch auf"
+    );
+    expect(components[2].label).toBe(
+      "wird ohne Unterversicherungseinwand\nVersicherungsschutz zum Neuwert geleistet"
+    );
+    expect(
+      normalized.componentRepairs.filter(
+        ({ action }) => action === "RESTORE_EXACT_ELIDED_COMPONENT_SPAN"
+      )
+    ).toHaveLength(3);
+  });
+
+  test("keeps ambiguous elided component labels fail-closed", () => {
+    const sourceText =
+      "Schäden durch Wasser entstehen und Schäden durch Feuer entstehen.";
+    const unit = {
+      unitId: "ambiguous-elision",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText: sourceText,
+        blockIds: ["ambiguous"],
+        blocks: [
+          {
+            blockId: "ambiguous",
+            structuralKind: "BODY_LINE",
+            exactText: sourceText,
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      requirements: [
+        {
+          displayLabel: sourceText,
+          components: [
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Schäden ... entstehen",
+              sourceBlockIds: ["ambiguous"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements[0].components[0]
+    ).toEqual(response.requirements[0].components[0]);
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "RESTORE_EXACT_ELIDED_COMPONENT_SPAN",
+      })
+    );
+  });
+
+  test("materializes a source-bound damage heading after a layout-only bullet", () => {
+    const blocks = [
+      { blockId: "bullet", structuralKind: "BODY_LINE", exactText: "•" },
+      {
+        blockId: "heading",
+        structuralKind: "BODY_LINE",
+        exactText: " Allmählichkeitsschäden ",
+      },
+      {
+        blockId: "effect",
+        structuralKind: "BODY_LINE",
+        exactText: "Der Versicherungsschutz bezieht sich auch auf Sachen.",
+      },
+    ];
+    const unit = {
+      unitId: "bullet-damage-heading",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+      requirements: [
+        {
+          displayLabel: "Allmählichkeitsschäden",
+          components: [
+            {
+              type: "OBJECT",
+              label: "Sachen",
+              sourceBlockIds: ["effect"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "bezieht sich auch auf",
+              sourceBlockIds: ["effect"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].semanticClasses).toContain(
+      "PERIL_OR_DAMAGE"
+    );
+    expect(normalized.responses[0].requirements[0].components).toContainEqual({
+      type: "DAMAGE_OR_EFFECT",
+      label: "Allmählichkeitsschäden",
+      sourceBlockIds: ["heading"],
+    });
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        action: "MATERIALIZE_BULLET_DAMAGE_HEADING",
+      })
+    );
+  });
+
+  test("narrows a repeated literal to the unique source of its display label", () => {
+    const blocks = [
+      {
+        blockId: "title",
+        structuralKind: "BODY_LINE",
+        exactText: "Schäden an Müllsammelgefäßen",
+      },
+      {
+        blockId: "body",
+        structuralKind: "BODY_LINE",
+        exactText: "Beschädigung von Müllsammelgefäßen",
+      },
+    ];
+    const unit = {
+      unitId: "repeated-object",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+      },
+      logicalSourceSegments: [],
+    };
+    const component = {
+      type: "OBJECT",
+      label: "Müllsammelgefäßen",
+      sourceBlockIds: ["title", "body"],
+    };
+    const response = {
+      unitId: unit.unitId,
+      requirements: [
+        {
+          displayLabel: "Schäden an Müllsammelgefäßen",
+          components: [component],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements[0].components[0].sourceBlockIds
+    ).toEqual(["title"]);
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        action: "NARROW_REPEATED_COMPONENT_TO_DISPLAY_SOURCE",
+        fromSourceBlockIds: ["title", "body"],
+        toSourceBlockIds: ["title"],
+      })
+    );
+  });
+
+  test("keeps repeated component sources when the display label is not unique", () => {
+    const sourceText = "Müllsammelgefäßen\nMüllsammelgefäßen";
+    const blocks = sourceText.split("\n").map((exactText, index) => ({
+      blockId: `repeated-${index}`,
+      structuralKind: "BODY_LINE",
+      exactText,
+    }));
+    const unit = {
+      unitId: "repeated-display",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText: sourceText,
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+      },
+      logicalSourceSegments: [],
+    };
+    const component = {
+      type: "OBJECT",
+      label: "Müllsammelgefäßen",
+      sourceBlockIds: unit.source.blockIds,
+    };
+    const response = {
+      unitId: unit.unitId,
+      requirements: [
+        { displayLabel: "Müllsammelgefäßen", components: [component] },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements[0].components[0]
+    ).toEqual(component);
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "NARROW_REPEATED_COMPONENT_TO_DISPLAY_SOURCE",
+      })
+    );
   });
 
   test("normalizes a statutory applicability extension to precedence semantics", async () => {
@@ -11790,6 +12089,47 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
                 {
                   type: "COVERAGE_EFFECT",
                   label: "bezieht sich in Abänderung von Art. 7 auch auf",
+                  sourceBlockIds: unit.source.blockIds,
+                  coverageEffect: "INCLUDED",
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(manifest.summary.unresolvedUnits).toBe(0);
+  });
+
+  test("accepts Versicherungsschutz zum Neuwert geleistet as an inclusion effect", () => {
+    const source = artifact(
+      [
+        "Seite 1\nOhne Unterversicherungseinwand wird Versicherungsschutz zum Neuwert geleistet.\n",
+      ],
+      "5"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const unit = plan.units.find(
+      ({ initialDisposition }) =>
+        initialDisposition === "PENDING_CLASSIFICATION"
+    );
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "COVERAGE_EFFECT",
+                  label: "Versicherungsschutz zum Neuwert geleistet",
                   sourceBlockIds: unit.source.blockIds,
                   coverageEffect: "INCLUDED",
                 },

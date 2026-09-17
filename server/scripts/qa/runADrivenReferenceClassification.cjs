@@ -43,7 +43,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V76";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V77";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -109,6 +109,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V73",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V74",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V75",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V76",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -672,6 +673,179 @@ function exactConditionLabel(unit, component) {
   )
     return null;
   return declaredSourceText.slice(marker.index).trim();
+}
+
+function exactElidedComponentRepair(unit, component) {
+  const label = String(component?.label || "");
+  if (
+    !/(?:\.{3}|…)/u.test(label) ||
+    !Array.isArray(component?.sourceBlockIds) ||
+    component.sourceBlockIds.length === 0
+  )
+    return null;
+  const sourceBlocks = Array.isArray(unit?.source?.blocks)
+    ? unit.source.blocks
+    : [];
+  const declaredIds = [...new Set(component.sourceBlockIds)];
+  const indexes = declaredIds.map((blockId) =>
+    sourceBlocks.findIndex((block) => block.blockId === blockId)
+  );
+  if (
+    sourceBlocks.length === 0 ||
+    indexes.some((index) => index < 0) ||
+    indexes.length !== component.sourceBlockIds.length
+  )
+    return null;
+  const fragments = label
+    .split(/\s*(?:\.{3}|…)\s*/u)
+    .map((fragment) => fragment.normalize("NFKC").trim())
+    .filter(Boolean);
+  if (
+    fragments.length < 2 ||
+    fragments.some(
+      (fragment) => fragment.replace(/[^\p{L}\p{N}]/gu, "").length < 2
+    )
+  )
+    return null;
+  const firstIndex = Math.min(...indexes);
+  const lastIndex = Math.max(...indexes);
+  const boundedBlocks = sourceBlocks.slice(firstIndex, lastIndex + 1);
+  const boundedText = boundedBlocks
+    .map(({ exactText }) => String(exactText || ""))
+    .join("\n");
+  const fragmentPattern = (fragment) =>
+    fragment
+      .split(/\s+/u)
+      .map((token) => token.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"))
+      .join("\\s+");
+  const expression = new RegExp(
+    fragments.map(fragmentPattern).join("[\\s\\S]{1,600}?"),
+    "giu"
+  );
+  const matches = [...boundedText.matchAll(expression)];
+  if (matches.length !== 1) return null;
+  const exactLabel = String(matches[0][0] || "").trim();
+  if (!exactLabel || exactLabel.length > 1_200) return null;
+  const sourceText = String(unit?.source?.combinedText || "");
+  if (
+    sourceText.indexOf(exactLabel) < 0 ||
+    sourceText.indexOf(exactLabel) !== sourceText.lastIndexOf(exactLabel)
+  )
+    return null;
+  const sourceBlockIds = sourceBlockIdsForExactSpan(unit, exactLabel);
+  if (
+    sourceBlockIds.length === 0 ||
+    declaredIds.some((blockId) => !sourceBlockIds.includes(blockId)) ||
+    sourceBlockIds.some(
+      (blockId) =>
+        !boundedBlocks.some((boundedBlock) => boundedBlock.blockId === blockId)
+    )
+  )
+    return null;
+  return { ...component, label: exactLabel, sourceBlockIds };
+}
+
+function narrowRepeatedComponentToDisplayLabelSource(
+  unit,
+  requirement,
+  component
+) {
+  if (
+    /(?:\.{3}|…)/u.test(String(component?.label || "")) ||
+    !Array.isArray(component?.sourceBlockIds) ||
+    component.sourceBlockIds.length < 2
+  )
+    return null;
+  const comparable = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim();
+  const label = comparable(component.label);
+  const displayLabel = String(requirement?.displayLabel || "").trim();
+  if (!label || !comparable(displayLabel).includes(label)) return null;
+  const sourceText = String(unit?.source?.combinedText || "");
+  if (
+    !displayLabel ||
+    sourceText.indexOf(displayLabel) < 0 ||
+    sourceText.indexOf(displayLabel) !== sourceText.lastIndexOf(displayLabel)
+  )
+    return null;
+  const displaySourceBlockIds = sourceBlockIdsForExactSpan(unit, displayLabel);
+  if (
+    displaySourceBlockIds.length === 0 ||
+    displaySourceBlockIds.some(
+      (blockId) => !component.sourceBlockIds.includes(blockId)
+    )
+  )
+    return null;
+  const blocksById = new Map(
+    (unit?.source?.blocks || []).map((block) => [block.blockId, block])
+  );
+  const matchingDeclaredBlocks = component.sourceBlockIds.filter((blockId) =>
+    comparable(blocksById.get(blockId)?.exactText).includes(label)
+  );
+  if (matchingDeclaredBlocks.length < 2) return null;
+  const selectedText = displaySourceBlockIds
+    .map((blockId) => blocksById.get(blockId)?.exactText)
+    .join("\n");
+  if (!comparable(selectedText).includes(label)) return null;
+  return { ...component, sourceBlockIds: displaySourceBlockIds };
+}
+
+function materializeBulletDamageHeading(requirements, unit) {
+  if (!Array.isArray(requirements) || !Array.isArray(unit?.source?.blocks))
+    return { requirements, repairs: [] };
+  const sourceText = String(unit?.source?.combinedText || "");
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const displayLabel = String(requirement?.displayLabel || "").trim();
+      if (
+        !displayLabel ||
+        displayLabel.length > 160 ||
+        !/^\p{L}[\p{L}\s/-]*schäden\s*$/iu.test(displayLabel) ||
+        sourceText.indexOf(displayLabel) < 0 ||
+        sourceText.indexOf(displayLabel) !== sourceText.lastIndexOf(displayLabel)
+      )
+        return requirement;
+      const sourceBlockIds = sourceBlockIdsForExactSpan(unit, displayLabel);
+      if (sourceBlockIds.length !== 1) return requirement;
+      const blockIndex = unit.source.blocks.findIndex(
+        ({ blockId }) => blockId === sourceBlockIds[0]
+      );
+      if (
+        blockIndex < 1 ||
+        !/^[•▪◦‣]+$/u.test(
+          String(unit.source.blocks[blockIndex - 1]?.exactText || "").trim()
+        ) ||
+        (requirement.components || []).some(({ sourceBlockIds: ids }) =>
+          (ids || []).includes(sourceBlockIds[0])
+        ) ||
+        !(requirement.components || []).some(
+          ({ type }) => type === "COVERAGE_EFFECT"
+        )
+      )
+        return requirement;
+      repairs.push({
+        requirementIndex,
+        action: "MATERIALIZE_BULLET_DAMAGE_HEADING",
+        sourceBlockIds,
+      });
+      return {
+        ...requirement,
+        components: [
+          ...(requirement.components || []),
+          {
+            type: "DAMAGE_OR_EFFECT",
+            label: displayLabel,
+            sourceBlockIds,
+          },
+        ],
+      };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
 }
 
 function completeComponentSourceBlockIds(unit, component) {
@@ -4474,6 +4648,20 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     requirements = listSegmentBoundaries.requirements;
     for (const repair of listSegmentBoundaries.repairs)
       repairs.push({ unitId: response?.unitId, ...repair });
+    const bulletDamageHeading = materializeBulletDamageHeading(
+      requirements,
+      unit
+    );
+    requirements = bulletDamageHeading.requirements;
+    for (const repair of bulletDamageHeading.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (bulletDamageHeading.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([...(response.semanticClasses || []), "PERIL_OR_DAMAGE"]),
+        ],
+      };
     const conditionalMembership = normalizeConditionalMembershipObjects(
       requirements,
       unit
@@ -5168,6 +5356,23 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                     });
                     return [scopeComponent];
                   }
+                  const displayBoundComponent =
+                    narrowRepeatedComponentToDisplayLabelSource(
+                      unit,
+                      requirement,
+                      component
+                    );
+                  if (displayBoundComponent) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "NARROW_REPEATED_COMPONENT_TO_DISPLAY_SOURCE",
+                      fromSourceBlockIds: component.sourceBlockIds,
+                      toSourceBlockIds: displayBoundComponent.sourceBlockIds,
+                    });
+                    return [displayBoundComponent];
+                  }
                   const completeSourceBlockIds =
                     completeComponentSourceBlockIds(unit, component);
                   if (completeSourceBlockIds) {
@@ -5233,6 +5438,21 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                     return [
                       { ...component, label: exactPerformanceObligation },
                     ];
+                  }
+                  const exactElidedComponent = exactElidedComponentRepair(
+                    unit,
+                    component
+                  );
+                  if (exactElidedComponent) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "RESTORE_EXACT_ELIDED_COMPONENT_SPAN",
+                      fromSourceBlockIds: component.sourceBlockIds,
+                      toSourceBlockIds: exactElidedComponent.sourceBlockIds,
+                    });
+                    return [exactElidedComponent];
                   }
                   if (
                     component?.type === "COVERAGE_EFFECT" &&
