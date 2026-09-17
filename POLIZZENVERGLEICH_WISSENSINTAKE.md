@@ -3610,8 +3610,11 @@ Vollständigkeitsbehauptung erzeugen.
 - Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002`; Suche getrennt in
   eigenen Source-Blöcken und gebundenen Governor-Blöcken; ausschließlich
   NFKC-/Whitespace-Vergleich; eindeutig kleinste zusammenhängende Blockspanne;
-  alle gefundenen Block-IDs müssen bereits deklariert sein. Keine Korrektur
-  von Wörtern, OCR, Trennstrichen, Satzzeichen oder fehlenden Quellen.
+  alle gefundenen Block-IDs müssen bereits deklariert sein. Kommt ein kurzes
+  Label zugleich als Wortanfang in der Unit und exakt im Governor vor, gewinnt
+  nicht der erste Texttreffer, sondern nur ein Kandidat, dessen vollständige
+  Blockspanne von den deklarierten Source-IDs umfasst ist. Keine Korrektur von
+  Wörtern, OCR, Trennstrichen, Satzzeichen oder fehlenden Quellen.
 - Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
 - Geplanter Change-Set:
   `LF-V391-BATCH21-EVIDENCE-NORMALIZATION-20260917-001`.
