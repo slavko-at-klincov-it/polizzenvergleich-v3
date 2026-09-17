@@ -10636,6 +10636,54 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.72 Voraussetzung und nachfolgende Begriffsdefinition in Batch 32 atomisiert
+
+Der produktive V3.9.2-Resume übernahm Batches 1 bis 29 ohne neue
+Modellarbeit. Batches 30 und 31 bestanden. Batch 32 stoppte nach acht
+gespeicherten Versuchen korrekt fail-closed: fünf von sechs Units waren
+gültig, eine Unit blieb resumierbar offen. Der Attempt-Baum blieb unter
+SHA-256
+`fa98cb514fd2507829612c02938ba1c8cb2a95b4d914632e2957496380b55ae1`
+unverändert.
+
+Die offene Unit enthält in genau einem fortgesetzten Listenpunkt zuerst eine
+ausdrücklich formulierte Voraussetzung und unmittelbar danach eine
+„Unter X versteht man Y“-Definition. Objekt und geerbte Deckungswirkung waren
+korrekt. Das Modell vermischte jedoch das Ende der Voraussetzung mit der
+Definition zu einer überbreiten CONDITION und ließ den einleitenden
+Voraussetzungenblock unzitiert.
+
+Der allgemeine V74-Vertrag adaptiert `CAP-A-002` und `CAP-A-003`. Bei genau
+einem Fortsetzungssegment und einer Anforderung werden nur eine vollständige
+„ist, dass“-Voraussetzung und die unmittelbar folgende vollständige
+„Unter X versteht man Y“-Definition atomisiert. X muss wörtlich bereits in
+der Voraussetzung vorkommen. Die Voraussetzung wird `CONDITION`, X wird
+`PERIL_OR_CAUSE`, die Definition wird `FACT_ROLE`; unabhängige source-bound
+Objekt- und Governor-Komponenten bleiben erhalten. Termabweichungen,
+unvollständige Sätze und Mehrfach-Requirements bleiben fail-closed.
+
+Mac-Studio-Nachweise auf Implementierungscommit
+`ae206f003ed86915aa73207df158ed724aca4955`:
+
+```text
+Syntax und Prettier:                       PASS
+Vollständiger A-Referenzvertrag:           397/397 PASS
+Echter gespeicherter Batch 32:             6/6 Units, PASS
+Restdiagnosen:                             0
+Neue Modellaufrufe im Realartefakt-Test:   0
+Attempt-Artefaktbaum vorher/nachher:       hashgleich
+```
+
+V3.9.3-Release-Gate, Installation und Fortsetzung ab Batch 33 stehen noch
+aus. Gold-283-V2 bleibt unverändert; der bekannte LF-1+9-Lauf bleibt
+Regression und kein unabhängiger Generalisierungs- oder 99-Prozent-Nachweis.
+
+Status: `BATCH-32-ROOT-CAUSE ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
+MODELLAUFRUF; V3.9.3-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+
+Change-Set:
+`LF-V393-PREREQUISITE-DEFINITION-ATOMIZATION-20260917-001`.
+
 ### 133.71 Nachlaufende Satzfortsetzung in Batch 29 source-bound vervollständigt
 
 Der produktive V3.9.1-Resume materialisierte Batches 1 bis 21 ohne neue

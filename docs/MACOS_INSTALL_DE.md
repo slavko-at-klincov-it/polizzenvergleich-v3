@@ -17,7 +17,7 @@ Voraussetzungen:
 ```bash
 cd ~/Code/polizzenvergleich-v3
 git fetch origin --tags
-git checkout v3.9.2
+git checkout v3.9.3
 V3_A_DRIVEN_EMBEDDING_CONTRACT_FILE="/ABSOLUTER/PFAD/ZUM/embedding-contract.json" ./install.command
 ```
 
@@ -53,7 +53,7 @@ Der Doctor prüft den lokalen Embeddingvertrag sowie Modell- und Runtimehash.
 ```bash
 cd ~/Code/polizzenvergleich-v3
 ./doctor.command
-V3_A_DRIVEN_EMBEDDING_CONTRACT_FILE="/ABSOLUTER/PFAD/ZUM/embedding-contract.json" ./update.command v3.9.2
+V3_A_DRIVEN_EMBEDDING_CONTRACT_FILE="/ABSOLUTER/PFAD/ZUM/embedding-contract.json" ./update.command v3.9.3
 ./doctor.command
 ```
 
@@ -64,4 +64,4 @@ hochgeladen und indexiert werden. Alte flache PDF-Vektoren können nicht
 nachträglich zuverlässig einer physischen Seite zugeordnet werden.
 
 Modellentscheidung, Messwerte und Beweisgrenzen stehen in
-`docs/RELEASE_V3.9.2_DE.md`.
+`docs/RELEASE_V3.9.3_DE.md`.
