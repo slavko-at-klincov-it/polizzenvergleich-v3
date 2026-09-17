@@ -10336,6 +10336,54 @@ Holdout-Aussage.
 
 Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
 
+### 133.61 Kalter V3.8.1-Lauf und allgemeine administrative A-Normalisierung
+
+V3.8.1 wurde am 17. September 2026 mit dem offiziellen Updater auf dem
+Kunden-Mac-Studio aktiviert. Der installierte Checkout zeigte sauber und
+detached auf den unveränderlichen Tag `v3.8.1`; Doctor, Datenbank-Quick-Check,
+Loopback-Dienste sowie der lokale Qwen-Vertrag bestanden.
+
+Der danach über API, Queue und Worker gestartete echte kalte LF-1+9-Lauf mit
+zehn erneut hochgeladenen, hashverifizierten Dokumenten stoppte im zweiten
+von 58 A-Batches korrekt fail-closed. Batch 1 war `PASS`; Batch 2 blieb mit
+sämtlichen sechs gültigen Qwen-Versuchen und Resume-Artefakten erhalten. Es
+gab weder Timeout noch Transportfehler.
+
+Die Root Cause waren zwei allgemeine administrative Satztypen, bei denen das
+Modell wiederholt Pflichtlabels ausließ: eine Dokumentations-/Vermerkspflicht
+und eine Geltungsregel unter ausdrücklichen Voraussetzungen vor einer
+Deckungsaufzählung. Der V64-Klassifikationsvertrag normalisiert diese Fälle
+nun deterministisch aus den eigenen Originalblöcken als `OBLIGATION` oder
+`CONDITION`. Ausdrückliche Deckungs-, Ausschluss- und Entschädigungsaussagen
+sind als Negativgrenze von dieser Regel ausgeschlossen. Die Implementierung
+enthält keine bekannte Dokument-ID, Seite, Versichererbezeichnung oder
+Kundenformulierung.
+
+Der gespeicherte echte Fehlerbatch wurde im isolierten Mac-Studio-Worktree
+`/private/tmp/lf-v381-fix-ceb7b7107` auf Commit
+`de7b09cd8d336f75cffa79b15e487cc0ad662142` ohne neuen Modellaufruf gegen
+seine vorhandenen Versuchsjournale revalidiert:
+
+```text
+Erwartete Units:       6
+Wiederhergestellt:     6
+Batchstatus:           PASS
+Diagnosen:             0
+Administrative Regel: OBLIGATION, 1 Requirement
+Geltungsregel:         CONDITION, 1 Requirement
+```
+
+Der fokussierte Vertragscheck bestand mit 362/362 Tests; Prettier für die
+beiden geänderten Dateien bestand. V3.8.2-Release-Gate, Deployment und neuer
+kalter Produktlauf stehen noch aus. Gold-283-V2 bleibt unverändert. Der nicht
+vorhandene unabhängige expertengelabelte Mehrversicherer-Holdout bleibt ein
+separates, offenes Abnahme-Gate.
+
+Status: `V3.8.1 FAIL-CLOSED NACH 1/58 PASS; ECHTER FEHLERBATCH UNTER V64
+6/6 PASS; V3.8.2-GATE UND NEUER KALTER 1+9-LAUF AUSSTEHEND`.
+
+Change-Set: `LF-V382-ADMIN-CONDITION-NORMALIZATION-20260917-001`.
+
 ### 133.60 Gold-283-V2 eingefroren und V3.8.1-Release-Gate bestanden
 
 Der occurrence-gebundene V11-Fix wurde auf dem Mac Studio im isolierten
