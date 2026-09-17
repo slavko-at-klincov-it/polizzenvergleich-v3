@@ -42,8 +42,10 @@ const A_SEMANTIC_SIGNAL_CONTRACT_ID_V9 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V9";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V10 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V10";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V11 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V11";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V12";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -94,7 +96,7 @@ const COVERAGE_EFFECTS = new Set([
   "UNKNOWN",
 ]);
 const COVERAGE_EFFECT_TEXT_PATTERN =
-  /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en|ten)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Versicherungsschutz(?:\s+\S+){0,16}\s+geleistet|leistet(?:\s+\S+){0,24}\s+Ersatz|Anspruch\s+auf\s+(?:Zahlung|Leistung)|zur\s+Leistung\s+verpflichtet|verzichtet\s+der\s+Versicherer\s+auf\s+(?:den\s+)?Einwand|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
+  /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|als\s+versicherte\s+Sachen\s+gelten|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en|ten)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Versicherungsschutz(?:\s+\S+){0,16}\s+geleistet|leistet(?:\s+\S+){0,24}\s+Ersatz|Anspruch\s+auf\s+(?:Zahlung|Leistung)|zur\s+Leistung\s+verpflichtet|verzichtet\s+der\s+Versicherer\s+auf\s+(?:den\s+)?Einwand|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
 const REQUIREMENT_ROLE_SIGNALS_V1 = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_EXCLUSION",
@@ -271,6 +273,7 @@ const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V11,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 
@@ -291,6 +294,8 @@ function requirementRoleSignals(semanticSignalContractId) {
     return REQUIREMENT_ROLE_SIGNALS_V9;
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V10)
     return REQUIREMENT_ROLE_SIGNALS_V10;
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V11)
+    return REQUIREMENT_ROLE_SIGNALS_V11;
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
     return REQUIREMENT_ROLE_SIGNALS_V11;
   return REQUIREMENT_ROLE_SIGNALS_V2;
@@ -439,6 +444,26 @@ function comparableSignalText(value) {
   return comparableText(value).toLocaleLowerCase("de-AT");
 }
 
+function ownedCoverageResetEvidence(unit, beforeText = null) {
+  const sourceText = String(
+    beforeText === null ? unit?.source?.combinedText || "" : beforeText
+  );
+  if (
+    /\b(?:als\s+versicherte\s+Sachen\s+gelten|Versicherungsschutz\s+(?:besteht|gilt)|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf)\b/iu.test(
+      sourceText
+    )
+  )
+    return true;
+  return [
+    ...sourceText.matchAll(
+      /\b(?:zusätzlich\s+)?(?:mit)?versichert\s+sind\b/giu
+    ),
+  ].some(
+    ({ index = 0 }) =>
+      !/\bnicht\s*$/iu.test(sourceText.slice(Math.max(0, index - 40), index))
+  );
+}
+
 function matchedEvidenceBlockIds(matchedEvidence) {
   return matchedEvidence.blockIds || [matchedEvidence.blockId];
 }
@@ -554,11 +579,24 @@ function signalApplies(signal, matchedEvidence, unit) {
       matchIndex < 0
         ? ""
         : exactText.slice(Math.max(0, matchIndex - 2_000), matchIndex);
+    const ownedText = comparableSignalText(unit?.source?.combinedText || "");
+    const ownedMatchIndex = ownedText.indexOf(matchedText);
+    const precedingOwnedText =
+      ownedMatchIndex < 0
+        ? ""
+        : ownedText.slice(
+            Math.max(0, ownedMatchIndex - 2_000),
+            ownedMatchIndex
+          );
     const negativeGovernorPattern =
       /\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|kein(?:e[snmr]?)?\s+(?:deckung|versicherungsschutz))\b/iu;
     if (
-      negativeGovernorPattern.test(governingText) ||
-      negativeGovernorPattern.test(precedingExactText)
+      !ownedCoverageResetEvidence(
+        unit,
+        `${precedingOwnedText}\n${precedingExactText}`
+      ) &&
+      (negativeGovernorPattern.test(governingText) ||
+        negativeGovernorPattern.test(precedingExactText))
     )
       return false;
   }
@@ -570,8 +608,14 @@ function signalBelongsToRequirement(unit, requirement, signal, blockIds) {
     blockIds.some((blockId) =>
       (unit.governingContext?.blockIds || []).includes(blockId)
     )
-  )
+  ) {
+    if (
+      signal.signalId === "EXPLICIT_EXCLUSION" &&
+      ownedCoverageResetEvidence(unit)
+    )
+      return false;
     return true;
+  }
   if (!requirement.displayLabel) return true;
   const localTexts = [
     requirement.displayLabel,
@@ -2066,6 +2110,7 @@ module.exports = {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V11,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,

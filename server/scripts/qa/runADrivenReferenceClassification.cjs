@@ -32,6 +32,7 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V11,
   buildADrivenSemanticManifest,
   COMPONENT_TYPES,
   hasCoverageEffectEvidence,
@@ -43,7 +44,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V77";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V78";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -110,6 +111,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V74",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V75",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V76",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V77",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -131,6 +133,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V11,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V29";
@@ -1200,6 +1203,79 @@ function materializeParentheticalObjectExclusions(requirements, unit) {
     }
   );
   return { requirements: normalizedRequirements, repairs };
+}
+
+function normalizeOwnedInsuredThingsWithTrailingExclusion(requirements, unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const match =
+    /^\s*(?<positiveEffect>Als\s+versicherte\s+Sachen\s+gelten)\s+(?<baseObject>[^.;:]{1,500}?)\s+und\s+darüber\s+hinaus,\s+(?<condition>sofern\s+[^.;:]{1,500}?),\s+auch\s+(?<conditionalObject>[^.;:]{1,500}?)\.\s+(?<excludedEffect>Ausgenommen\s+bleiben\s+jedoch)\s+(?<excludedObjects>[^.;:]{1,500}?)\.\s*$/disu.exec(
+      sourceText
+    );
+  if (!match?.groups || !match.indices?.groups)
+    return { requirements, repairs: [] };
+  const span = (startName, endName) =>
+    sourceText.slice(
+      match.indices.groups[startName][0],
+      match.indices.groups[endName][1]
+    );
+  const component = (type, label, extra = {}) => ({
+    type,
+    label,
+    sourceBlockIds: sourceBlockIdsForExactSpan(unit, label),
+    ...extra,
+  });
+  const normalizedRequirements = [
+    {
+      displayLabel: span("positiveEffect", "baseObject"),
+      components: [
+        component("OBJECT", match.groups.baseObject),
+        component("COVERAGE_EFFECT", match.groups.positiveEffect, {
+          coverageEffect: "INCLUDED",
+        }),
+      ],
+    },
+    {
+      displayLabel: span("condition", "conditionalObject"),
+      components: [
+        component("OBJECT", match.groups.conditionalObject),
+        component("CONDITION", match.groups.condition),
+        component("COVERAGE_EFFECT", match.groups.positiveEffect, {
+          coverageEffect: "INCLUDED",
+        }),
+      ],
+    },
+    {
+      displayLabel: span("excludedEffect", "excludedObjects"),
+      components: [
+        component("OBJECT", match.groups.excludedObjects),
+        component("COVERAGE_EFFECT", match.groups.excludedEffect, {
+          coverageEffect: "EXCLUDED",
+        }),
+      ],
+    },
+  ];
+  if (
+    normalizedRequirements.some(
+      (requirement) =>
+        !requirement.displayLabel ||
+        requirement.components.some(
+          ({ label, sourceBlockIds }) =>
+            !label ||
+            !Array.isArray(sourceBlockIds) ||
+            sourceBlockIds.length === 0
+        )
+    )
+  )
+    return { requirements, repairs: [] };
+  return {
+    requirements: normalizedRequirements,
+    repairs: [
+      {
+        action: "ATOMIZE_OWNED_INSURED_THINGS_WITH_TRAILING_EXCLUSION",
+        requirements: normalizedRequirements.length,
+      },
+    ],
+  };
 }
 
 function normalizeProductConfigurationFactRelation(components, unit) {
@@ -2301,7 +2377,26 @@ function normalizeSharedActionObjectEnumerations(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function hasOwnedCoverageResetEvidence(unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  if (
+    /\b(?:als\s+versicherte\s+Sachen\s+gelten|Versicherungsschutz\s+(?:besteht|gilt)|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf)\b/iu.test(
+      sourceText
+    )
+  )
+    return true;
+  return [
+    ...sourceText.matchAll(
+      /\b(?:zusätzlich\s+)?(?:mit)?versichert\s+sind\b/giu
+    ),
+  ].some(
+    ({ index = 0 }) =>
+      !/\bnicht\s*$/iu.test(sourceText.slice(Math.max(0, index - 40), index))
+  );
+}
+
 function nearestUnambiguousInheritedCoverageEffect(unit) {
+  if (hasOwnedCoverageResetEvidence(unit)) return null;
   const contextBlocks = unit?.governingContext?.blocks || [];
   if (contextBlocks.length === 0) return null;
   const candidates = contextBlocks.flatMap(({ blockId }) => {
@@ -4674,6 +4769,22 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         action: "NORMALIZE_CONDITION_MEMBERSHIP_OBJECTS",
         ...repair,
       });
+    const insuredThingsWithTrailingExclusion =
+      normalizeOwnedInsuredThingsWithTrailingExclusion(requirements, unit);
+    requirements = insuredThingsWithTrailingExclusion.requirements;
+    for (const repair of insuredThingsWithTrailingExclusion.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (insuredThingsWithTrailingExclusion.repairs.length > 0)
+      response = {
+        ...response,
+        primaryClass: "INSURED_OBJECT",
+        semanticClasses: [
+          "INSURED_OBJECT",
+          "OPERATIVE_COVERAGE_STATEMENT",
+          "CONDITION",
+          "EXCLUSION",
+        ],
+      };
     const damageCauseGovernorObjects = normalizeDamageCauseGovernorComponents(
       requirements,
       unit

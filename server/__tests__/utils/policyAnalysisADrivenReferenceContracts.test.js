@@ -752,6 +752,167 @@ describe("A-driven classification evidence recovery", () => {
       recovered.units.find(({ unitId }) => unitId === "target").governingContext
     ).toBeUndefined();
   });
+
+  test("atomizes an owned insured-things clause before a trailing exclusion and ignores a superseded governor", () => {
+    const unit = {
+      unitId: "owned-coverage-reset",
+      source: {
+        blockIds: ["owned-one", "owned-two", "owned-three"],
+        combinedText:
+          "Als  versicherte  Sachen  gelten  sämtliche  Gebäudebestandteile  und  darüber  hinaus,  sofern  hierfür  keine \nandere  Versicherung  besteht,  auch  der  den  Mietern  gehörende  Hausrat.  Ausgenommen  bleiben  jedoch \ngewerblichen Zwecken dienende Einrichtungen, Waren und Vorräte. ",
+        blocks: [
+          {
+            blockId: "owned-one",
+            exactText:
+              "Als  versicherte  Sachen  gelten  sämtliche  Gebäudebestandteile  und  darüber  hinaus,  sofern  hierfür  keine ",
+          },
+          {
+            blockId: "owned-two",
+            exactText:
+              "andere  Versicherung  besteht,  auch  der  den  Mietern  gehörende  Hausrat.  Ausgenommen  bleiben  jedoch ",
+          },
+          {
+            blockId: "owned-three",
+            exactText:
+              "gewerblichen Zwecken dienende Einrichtungen, Waren und Vorräte. ",
+          },
+        ],
+      },
+      governingContext: {
+        blockIds: ["stale-governor"],
+        blocks: [
+          {
+            blockId: "stale-governor",
+            exactText:
+              "Nicht versichert im Rahmen der Gebäude- und Grundstückshaftpflichtversicherung sind:",
+          },
+        ],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "EXCLUSION",
+      semanticClasses: ["EXCLUSION"],
+      requirements: [
+        {
+          displayLabel:
+            "Als  versicherte  Sachen  gelten  sämtliche  Gebäudebestandteile  und  darüber  hinaus,  sofern  hierfür  keine \nandere  Versicherung  besteht,  auch  der  den  Mietern  gehörende  Hausrat.  Ausgenommen  bleiben  jedoch \ngewerblichen Zwecken dienende Einrichtungen, Waren und Vorräte. ",
+          components: [
+            {
+              type: "OBJECT",
+              label: "sämtliche  Gebäudebestandteile",
+              sourceBlockIds: ["owned-one"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const result = normalized.responses[0];
+
+    expect(result).toMatchObject({
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: [
+        "INSURED_OBJECT",
+        "OPERATIVE_COVERAGE_STATEMENT",
+        "CONDITION",
+        "EXCLUSION",
+      ],
+    });
+    expect(result.requirements).toHaveLength(3);
+    expect(
+      result.requirements.map(({ components }) =>
+        components.map(({ type, coverageEffect }) => ({
+          type,
+          coverageEffect,
+        }))
+      )
+    ).toEqual([
+      [
+        { type: "OBJECT", coverageEffect: undefined },
+        { type: "COVERAGE_EFFECT", coverageEffect: "INCLUDED" },
+      ],
+      [
+        { type: "OBJECT", coverageEffect: undefined },
+        { type: "CONDITION", coverageEffect: undefined },
+        { type: "COVERAGE_EFFECT", coverageEffect: "INCLUDED" },
+      ],
+      [
+        { type: "OBJECT", coverageEffect: undefined },
+        { type: "OBJECT", coverageEffect: undefined },
+        { type: "OBJECT", coverageEffect: undefined },
+        { type: "COVERAGE_EFFECT", coverageEffect: "EXCLUDED" },
+      ],
+    ]);
+    expect(
+      result.requirements.flatMap(({ components }) =>
+        components.flatMap(({ sourceBlockIds }) => sourceBlockIds)
+      )
+    ).not.toContain("stale-governor");
+    const roleRequirements = result.requirements.map((requirement) => ({
+      ...requirement,
+      sourceBlockIds: [
+        ...new Set(
+          requirement.components.flatMap(({ sourceBlockIds }) => sourceBlockIds)
+        ),
+      ],
+    }));
+    expect(requirementRoleEvidenceDiagnostics(unit, roleRequirements)).toEqual(
+      []
+    );
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: unit.unitId,
+        action: "ATOMIZE_OWNED_INSURED_THINGS_WITH_TRAILING_EXCLUSION",
+      })
+    );
+  });
+
+  test("does not atomize an incomplete insured-things clause", () => {
+    const unit = {
+      unitId: "incomplete-owned-coverage-reset",
+      source: {
+        blockIds: ["owned"],
+        combinedText:
+          "Als versicherte Sachen gelten Gebäudebestandteile. Ausgenommen bleiben weitere Sachen.",
+        blocks: [
+          {
+            blockId: "owned",
+            exactText:
+              "Als versicherte Sachen gelten Gebäudebestandteile. Ausgenommen bleiben weitere Sachen.",
+          },
+        ],
+      },
+      governingContext: null,
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: "Gebäudebestandteile",
+          components: [
+            {
+              type: "OBJECT",
+              label: "Gebäudebestandteile",
+              sourceBlockIds: ["owned"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].requirements).toEqual(response.requirements);
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "ATOMIZE_OWNED_INSURED_THINGS_WITH_TRAILING_EXCLUSION",
+      })
+    );
+  });
 });
 
 function digest(contractId, payload) {
@@ -9157,6 +9318,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ["LF_A_BOUNDED_CLASSIFICATION_RUN_V12", A_DYNAMIC_MANIFEST_CONTRACT_ID_V12],
     ["LF_A_BOUNDED_CLASSIFICATION_RUN_V74", A_DYNAMIC_MANIFEST_CONTRACT_ID],
     ["LF_A_BOUNDED_CLASSIFICATION_RUN_V76", A_DYNAMIC_MANIFEST_CONTRACT_ID],
+    ["LF_A_BOUNDED_CLASSIFICATION_RUN_V77", A_DYNAMIC_MANIFEST_CONTRACT_ID],
   ])(
     "upgrades predecessor %s with validator %s by revalidating its responses",
     async (predecessorRunContractId, validatorContractId) => {
@@ -9230,7 +9392,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V77");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V78");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
