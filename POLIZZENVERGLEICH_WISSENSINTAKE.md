@@ -157,6 +157,8 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-051` | Alte komponentenförmige Requirements vor fachlicher Normalisierung sicher heben   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.8-Produktlauf ab Batch 11 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
 | `INT-20260917-052` | Terminalalias in expliziter Schaden-durch-Komponente source-bound normalisieren   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.9-Produktlauf ab Batch 15 weiterführen und vollständiges Endergebnis getrennt prüfen                           |
 | `INT-20260917-053` | Alte Komponentenform für exakt ein vollständiges Listensegment sicher heben       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.9.0-Produktlauf ab Batch 18 weiterführen und vollständiges Endergebnis getrennt prüfen                            |
+| `INT-20260917-054` | Mehrblocklabel in alter Hülle nur über Whitespace normalisiert exakt binden        | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | minimale zusammenhängende Blockspanne testen und erste offene Batch-21-Unit revalidieren                                   |
+| `INT-20260917-055` | Quantifizierte Limitbasis aus wörtlichem Satzsubjekt statt Paraphrase binden       | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | Subjekt-/Scope-/Wertvertrag testen und zweite offene Batch-21-Unit revalidieren                                             |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3587,3 +3589,54 @@ Vollständigkeitsbehauptung erzeugen.
   Attempt betraf wie verlangt Batch 18, der anschließend PASS erreichte.
 - Geplanter Change-Set:
   `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
+
+## INT-20260917-054 — Mehrblocklabel in alter Hülle nur über Whitespace normalisiert exakt binden
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Ein wörtliches Komponentenlabel kann eine physische Blockgrenze
+  mit einem Leerzeichen statt dem im kombinierten Quelltext enthaltenen
+  Zeilenumbruch wiedergeben. Wenn ausschließlich Whitespace kollabiert wird
+  und eine eindeutige kleinste zusammenhängende Blockspanne das gesamte Label
+  enthält, ist die Quellenbindung fachlich identisch. Andere Normalisierung,
+  Dehyphenierung oder Paraphrase bleibt unzulässig.
+- Ist-Wahrheit: `JA` als Ursache der ersten offenen Batch-21-Unit. Die Unit
+  besitzt exakt ein vollständiges fortgesetztes Listensegment und einen
+  servergebundenen Governor. Objekt und Wirkung sind fachlich richtig; das
+  Objektlabel überquert die Zweiblockgrenze mit einem Leerzeichen, während die
+  Quelle dort einen Zeilenumbruch trägt. Wert und Governor-Wirkung sind
+  wortgetreu gebunden.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002`; Suche getrennt in
+  eigenen Source-Blöcken und gebundenen Governor-Blöcken; ausschließlich
+  NFKC-/Whitespace-Vergleich; eindeutig kleinste zusammenhängende Blockspanne;
+  alle gefundenen Block-IDs müssen bereits deklariert sein. Keine Korrektur
+  von Wörtern, OCR, Trennstrichen, Satzzeichen oder fehlenden Quellen.
+- Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
+- Geplanter Change-Set:
+  `LF-V391-BATCH21-EVIDENCE-NORMALIZATION-20260917-001`.
+
+## INT-20260917-055 — Quantifizierte Limitbasis aus wörtlichem Satzsubjekt statt Paraphrase binden
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: In einer wörtlichen Konstruktion „Der/Die/Das X beträgt [Scope]
+  [konkreter Wert]“ ist X die wörtliche Limitbasis. Kombiniert ein Modell X
+  und den optionalen Scope zu einem nicht wörtlichen Kurzlabel, darf dieses
+  nur aus der exakt geparsten Quelle in getrennte `LIMIT_BASIS`- und
+  `SCOPE`-Komponenten zurückgebunden werden; die vorhandene exakte
+  `VALUE_AND_UNIT`-Komponente bleibt erhalten.
+- Ist-Wahrheit: `JA` als Ursache der zweiten offenen Batch-21-Unit. Die
+  Anforderung und der konkrete Wert sind korrekt source-bound, aber die erste
+  `LIMIT_BASIS` lässt Artikel und Prädikat aus und verbindet Basis und Scope zu
+  einer Paraphrase. Die zweite Anforderung derselben Unit ist gültig.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002` und `CAP-A-003`;
+  exaktes Satzmuster mit `beträgt`; vorhandene gültige `VALUE_AND_UNIT` im
+  selben Requirement; exakt wörtlich auffindbare Basis und optionaler Scope;
+  das ungültige Altlabel muss genau diese Teile enthalten. Keine freie
+  Neuformulierung, kein Löschen fachlicher Rollen und keine Regel für
+  unquantifizierte oder mehrdeutige Sätze.
+- Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
+- Geplanter Change-Set:
+  `LF-V391-BATCH21-EVIDENCE-NORMALIZATION-20260917-001`.
