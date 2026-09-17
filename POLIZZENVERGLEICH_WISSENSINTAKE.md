@@ -150,6 +150,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-044` | Mehrere Rollen-Evidenzvorkommen occurrence-gebunden materialisieren     | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | V11-Vertrag am kalten Produktlauf und an Segmentierungsvarianten validieren                                               |
 | `INT-20260917-045` | Administrative Pflichten und Anwendbarkeitsbedingungen source-bound normalisieren | `BEOBACHTUNG` | `IN_PRÜFUNG` | allgemeinen Bedingungsvertrag testen und ab erstem unvollständigem A-Batch erneut materialisieren                         |
 | `INT-20260917-046` | Parenthetische Objektausnahmen als lokale Ausschlusswirkung materialisieren | `BEOBACHTUNG` | `IN_PRÜFUNG` | source-bound Negativgrenzen testen und den kalten Lauf ab erstem unvollständigem A-Batch fortsetzen                       |
+| `INT-20260917-047` | Internen Objekt-Listenkopf und fortgesetzten Satzanfang source-bound erhalten | `BEOBACHTUNG` | `IN_PRÜFUNG` | allgemeine Strukturregel mit Positiv-/Negativfällen testen und die gespeicherte Problem-Unit revalidieren                 |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3193,3 +3194,47 @@ Vollständigkeitsbehauptung erzeugen.
   Generalisierungs-Holdout.
 - Kanonischer Ausgang: Change-Set
   `LF-V383-PARENTHETICAL-OBJECT-EXCLUSION-20260917-001`.
+
+## INT-20260917-047 — Internen Objekt-Listenkopf und fortgesetzten Satzanfang source-bound erhalten
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Besteht eine intern strukturierte Listen-Unit aus einem
+  predicate-freien, objektbezogenen `LIST_GOVERNOR` und einem darunter
+  liegenden `LIST_ITEM_WITH_CONTINUATIONS`, muss der Listenkopf als eigene
+  wörtliche Objektkomponente in der abhängigen Requirement erhalten bleiben.
+  Beginnt die wörtliche Requirement bereits im ersten Listenblock, während
+  das erste atomare Objektwort erst in einem folgenden Fortsetzungsblock
+  steht, muss dessen Provenienzspanne bis an diesen tatsächlichen Satzanfang
+  reichen. Das gilt nur innerhalb derselben serverseitig gebundenen
+  Listenstruktur.
+- Ist-Wahrheit: `JA` für den kalten V3.8.3-Lauf. Qwen erzeugte in zwei
+  vollständigen, insgesamt sechsfach versuchten Zyklen dieselbe fachlich
+  brauchbare Objektliste, ließ aber den internen Objekt-Listenkopf und den
+  ersten Satzblock aus der Komponentenprovenienz aus. Der Validator stoppte
+  deshalb jeweils korrekt fail-closed. Die quellenidentische, zuvor valide
+  V3.8.2-Antwort belegt beide fehlenden Bindungen explizit.
+- Quelle: private, resumierbare Batch-4-Artefakte der V3.8.3-Produktsitzung
+  sowie der quellenidentische bestandene V3.8.2-Batch auf dem Mac Studio.
+  Kundentext wird in der Knowledge Base nicht vervielfältigt.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Lange Objektlisten
+  bleiben trotz PDF-Zeilenumbrüchen vollständig, atomar und beleggebunden,
+  ohne stochastische Wiederholungen oder eine Lockerung des Validators.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-A-002` und
+  `CAP-A-003`; keine dokument-, seiten-, ID-, Versicherer- oder
+  Wortlautsonderregel; keine automatische Übernahme eines eigenständigen
+  semantischen Listenkopfes; keine Zusammenlegung unabhängiger Segmente und
+  keine Lockerung der Quellenbindung.
+- Hard-Gates: objektbezogener interner Listenkopf plus genau gebundener
+  Fortsetzungssatz; unveränderter Fail-closed-Fall für einen ungebundenen
+  Einzel-Segment-Listenkopf; keine Reparatur bei Deckungswirkungs-Governor;
+  exakte Text-/Blockbindung; gespeicherte Real-Unit; Wiederverwendung
+  bestehender PASS-Batches beim Resume.
+- Entscheidung: Nur die vorhandene Listen-Provenienznormalisierung und die
+  vorhandene interne-Governor-Normalisierung erweitern; keine neue
+  Architektur. Implementierung und Mac-Studio-Validierung stehen aus.
+- Beweisgrenze: Der bekannte LF-1+9-Lauf ist Regression und kein
+  unabhängiger Generalisierungs-Holdout.
+- Geplanter Change-Set:
+  `LF-V384-INTERNAL-OBJECT-LIST-PROVENANCE-20260917-001`.
