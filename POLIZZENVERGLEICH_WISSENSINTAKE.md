@@ -159,7 +159,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-053` | Alte Komponentenform für exakt ein vollständiges Listensegment sicher heben       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.9.0-Produktlauf ab Batch 18 weiterführen und vollständiges Endergebnis getrennt prüfen                            |
 | `INT-20260917-054` | Mehrblocklabel in alter Hülle nur über Whitespace normalisiert exakt binden        | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | vollständigen kalten Produktlauf ab Batch 22 fortsetzen und Endergebnis getrennt prüfen                                    |
 | `INT-20260917-055` | Quantifizierte Limitbasis aus wörtlichem Satzsubjekt statt Paraphrase binden       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | vollständigen kalten Produktlauf ab Batch 22 fortsetzen und Endergebnis getrennt prüfen                                    |
-| `INT-20260917-056` | Nachlaufende Satzfortsetzung dem eindeutig letzten Komponentenanker zuordnen       | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | allgemeinen Suffixvertrag testen und offene Batch-29-Unit ohne Modellaufruf revalidieren                                   |
+| `INT-20260917-056` | Nachlaufende Satzfortsetzung dem eindeutig letzten Komponentenanker zuordnen       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.9.2-Gate abschließen, installieren und den kalten Produktlauf ab Batch 30 fortsetzen                                    |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3667,7 +3667,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-17
 - Typ: `BEOBACHTUNG`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: Enthält genau ein `LIST_ITEM_WITH_CONTINUATIONS` genau eine
   Anforderung und fehlt in deren Komponentenbelegen ausschließlich ein
   zusammenhängendes Suffix aus fortsetzenden `BODY_LINE`-Blöcken, darf dieses
@@ -3689,5 +3689,12 @@ Vollständigkeitsbehauptung erzeugen.
   bleiben fail-closed. Keine Dokument-ID, Seite, Versichererbezeichnung oder
   bekannte Kundenformulierung als Produktionsregel.
 - Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
+- Ergebnis: Syntax und Prettier sowie der vollständige A-Referenzvertrag
+  bestanden auf dem Mac Studio mit 395/395 Tests. Der echte gespeicherte
+  Batch 29 revalidierte ohne Modellaufruf mit 6/6 Units und null
+  Restdiagnosen. Der Attempt-Baum blieb unter SHA-256
+  `d9b25a76fbc0d1592ecb9be8552cf09152d6f7f49cc9547dae27f127c1e7c69b`
+  unverändert. Das vollständige Release-Gate, Deployment und Resume ab Batch
+  30 bleiben getrennte nächste Nachweise.
 - Geplanter Change-Set:
   `LF-V392-TRAILING-LIST-SENTENCE-PROVENANCE-20260917-001`.
