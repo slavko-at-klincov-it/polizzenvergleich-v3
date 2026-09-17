@@ -1,7 +1,6 @@
 # Polizzenvergleich V3.9.8
 
-V3.9.8 behebt den fail-closed Stopp des kalten dynamischen A-Laufs in Batch
-38. Die vier offenen Units lagen hinter nummerierten Abschnittsüberschriften
+V3.9.8 behebt den fail-closed Stopp des kalten dynamischen A-Laufs in Batch 38. Die vier offenen Units lagen hinter nummerierten Abschnittsüberschriften
 wie `1. Wann gilt die Versicherung?` und `2. Wo gilt die Versicherung?`.
 Diese Units wurden bereits deterministisch als Struktur terminalisiert,
 beendeten im Evidenzplan aber den älteren operativen Governor nicht. Dadurch

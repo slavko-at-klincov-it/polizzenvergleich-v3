@@ -482,12 +482,14 @@ describe("A-driven classification evidence recovery", () => {
     expect(
       byId.get("numbered-structure-boundary").governingContext
     ).toBeUndefined();
-    expect(byId.get("positive-after-boundary").governingContext).toBeUndefined();
-    expect(byId.get("numbered-operative-clause").governingContext).toMatchObject(
-      {
-        unitIds: ["second-negative-heading"],
-      }
-    );
+    expect(
+      byId.get("positive-after-boundary").governingContext
+    ).toBeUndefined();
+    expect(
+      byId.get("numbered-operative-clause").governingContext
+    ).toMatchObject({
+      unitIds: ["second-negative-heading"],
+    });
     expect(
       byId.get("dependent-after-operative-clause").governingContext
     ).toMatchObject({ unitIds: ["second-negative-heading"] });
