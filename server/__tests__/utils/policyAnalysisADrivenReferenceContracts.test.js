@@ -10082,7 +10082,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
               [
                 "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Garagen.\n",
               ],
-              "m"
+              "d"
             )
           ),
         ],
