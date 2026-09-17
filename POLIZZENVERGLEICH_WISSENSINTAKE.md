@@ -154,6 +154,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-048` | Eingebettete Listengovernor-Gruppen positionsunabhängig begrenzen                 | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.5 installieren und denselben kalten Lauf ab den gespeicherten Artefakten fortsetzen                                |
 | `INT-20260917-049` | Partiellen A-Resume über Releasegrenzen quellengebunden übernehmen                | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.6 installieren und Session 14 ab der ersten aktuell offenen Unit fortsetzen                                        |
 | `INT-20260917-050` | Komplementäre Duplicate-Unit-Hüllen vor Listen-Normalisierung sicher vereinigen   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.7-Produktlauf ab Batch 7 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
+| `INT-20260917-051` | Alte komponentenförmige Requirements vor fachlicher Normalisierung sicher heben   | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | eng begrenzten Schema-Adapter testen, gespeicherten Batch 10 revalidieren und erst danach den Produktlauf fortsetzen      |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3409,3 +3410,45 @@ Vollständigkeitsbehauptung erzeugen.
   unabhängiger Generalisierungs-Holdout.
 - Geplanter Change-Set:
   `LF-V387-COMPLEMENTARY-DUPLICATE-UNIT-MERGE-20260917-001`.
+
+## INT-20260917-051 — Alte komponentenförmige Requirements vor fachlicher Normalisierung sicher heben
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Ein Modell kann trotz aktuellem Prompt einzelne Komponenten des
+  heutigen Requirements-Vertrags als mehrere alte, komponentenförmige
+  `requirements` ausgeben: mit `type`, `label` und `sourceBlockIds` direkt auf
+  Requirement-Ebene, ohne `displayLabel` und ohne befülltes
+  `components`-Array. Sind sämtliche Einträge dieser einen erwarteten
+  Klausel vollständig in genau diesem alten Schema, quellengebunden und ohne
+  verschachtelte Komponenten, dürfen sie in ein heutiges Requirement gehoben
+  werden. Erst danach greifen die bereits vorhandenen allgemeinen
+  semantischen Normalisierungen und die unveränderte Manifestvalidierung.
+- Ist-Wahrheit: `JA` als technische Ursache des fail-closed Batch-10-Abbruchs
+  im kalten V3.8.7-Produktlauf. Fünf von sechs Units sind gültig gespeichert.
+  Die verbleibende erwartete Klausel wurde wiederholt source-bound, aber im
+  alten Komponentenformat geliefert und daher korrekt nicht als PASS
+  akzeptiert. Die bereits implementierte allgemeine Normalisierung für
+  konditionale Äquivalenzdefinitionen kann dadurch derzeit nicht greifen.
+- Quelle: private, resumierbare Batch-10-Attempt-Artefakte der Session
+  `79211e03-d5ce-44b6-9042-199e83f589a0` auf dem Mac Studio. Kundentext wird
+  in der Knowledge Base nicht vervielfältigt.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Ein vollständig belegter
+  fachlicher Inhalt geht nicht nur wegen einer veralteten JSON-Hüllenform
+  verloren; bestehende valide Units und Batches werden nicht neu berechnet.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-A-002` und
+  `CAP-A-003`; keine neue Fachheuristik; keine Dokument-, Seiten-, ID-,
+  Versicherer- oder Wortlautsonderregel; keine Ergänzung fehlender Labels,
+  Quellen oder Komponenten; keine Annahme gemischter alter und neuer Formen;
+  keine Lockerung der nachgelagerten semantischen Validierung.
+- Hard-Gates: ausschließlich erwartete `CLAUSE`-Units ohne logische
+  Listensegmente; alle Requirements haben einen gültigen Komponententyp, ein
+  nichtleeres Label, ausschließlich zur Unit gehörende `sourceBlockIds`, kein
+  `displayLabel` und keine verschachtelten Komponenten; jede Abweichung bleibt
+  unverändert fail-closed; gespeicherter Real-Attempt muss ohne Modellaufruf
+  6/6 PASS ergeben; der Attempt-Baum bleibt hashgleich.
+- Beweisgrenze: Der bekannte LF-1+9-Fehlerfall ist Regressionsevidenz, kein
+  unabhängiger Generalisierungs-Holdout.
+- Geplanter Change-Set:
+  `LF-V388-LEGACY-REQUIREMENT-SHAPE-LIFT-20260917-001`.
