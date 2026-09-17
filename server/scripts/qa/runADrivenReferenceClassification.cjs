@@ -852,21 +852,23 @@ function sourceBlockIdsForWhitespaceNormalizedSpan(unit, exactSpan) {
       .trim();
   const normalizedSpan = normalize(exactSpan);
   if (!normalizedSpan) return [];
-  const candidates = [unit?.source, unit?.governingContext].flatMap((source) => {
-    const blocks = Array.isArray(source?.blocks) ? source.blocks : [];
-    const matches = [];
-    for (let start = 0; start < blocks.length; start += 1)
-      for (let end = start; end < blocks.length; end += 1) {
-        const selected = blocks.slice(start, end + 1);
-        if (
-          normalize(selected.map(({ exactText }) => exactText).join("\n")).includes(
-            normalizedSpan
+  const candidates = [unit?.source, unit?.governingContext].flatMap(
+    (source) => {
+      const blocks = Array.isArray(source?.blocks) ? source.blocks : [];
+      const matches = [];
+      for (let start = 0; start < blocks.length; start += 1)
+        for (let end = start; end < blocks.length; end += 1) {
+          const selected = blocks.slice(start, end + 1);
+          if (
+            normalize(
+              selected.map(({ exactText }) => exactText).join("\n")
+            ).includes(normalizedSpan)
           )
-        )
-          matches.push(selected.map(({ blockId }) => blockId));
-      }
-    return matches;
-  });
+            matches.push(selected.map(({ blockId }) => blockId));
+        }
+      return matches;
+    }
+  );
   if (candidates.length === 0) return [];
   const minimumLength = Math.min(...candidates.map(({ length }) => length));
   const unique = [
@@ -2900,8 +2902,7 @@ function normalizeQuantifiedSubjectLimitBasis(requirements, unit) {
         /^\s*(?:Der|Die|Das)\s+(?<basis>[\p{L}\p{M}][\p{L}\p{M}\d\s/()-]{0,160}?)\s+beträgt\s+(?<tail>[\s\S]+?)\s*[.]?\s*$/iu.exec(
           displayLabel
         );
-      if (!relation?.groups?.basis || !relation.groups.tail)
-        return requirement;
+      if (!relation?.groups?.basis || !relation.groups.tail) return requirement;
       const components = Array.isArray(requirement.components)
         ? requirement.components
         : [];
@@ -2934,7 +2935,8 @@ function normalizeQuantifiedSubjectLimitBasis(requirements, unit) {
         if (
           component?.type !== "LIMIT_BASIS" ||
           sourceBlockIdsForExactSpan(unit, component.label).length > 0 ||
-          normalize(component.label) !== normalize([basis, scope].filter(Boolean).join(" "))
+          normalize(component.label) !==
+            normalize([basis, scope].filter(Boolean).join(" "))
         )
           return [];
         return [index];

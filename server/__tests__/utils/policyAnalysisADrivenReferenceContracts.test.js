@@ -4239,8 +4239,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const blocks = [
       {
         blockId: "snow-removal",
-        exactText:
-          "• Kosten für die Schneeräumung innerhalb ",
+        exactText: "• Kosten für die Schneeräumung innerhalb ",
       },
       {
         blockId: "snow-limit",
@@ -4286,7 +4285,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           requirements: [
             {
               type: "OBJECT",
-              label: "Kosten für die Schneeräumung innerhalb des versicherten Gebäudes",
+              label:
+                "Kosten für die Schneeräumung innerhalb des versicherten Gebäudes",
               sourceBlockIds: ["snow-removal", "snow-limit"],
               components: [],
             },
@@ -4562,8 +4562,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   });
 
   test("rebinds a paraphrased quantified subject limit basis to exact basis and scope", () => {
-    const source =
-      "Der Rohrersatz beträgt in der C-Deckung bis zu 10m Länge.";
+    const source = "Der Rohrersatz beträgt in der C-Deckung bis zu 10m Länge.";
     const unit = {
       unitId: "quantified-subject-limit",
       unitKind: "CLAUSE",
@@ -4645,8 +4644,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       valueLabel: "bis zu 10 m Länge",
     },
   ])("keeps quantified subject rebinding fail-closed for $name", (fixture) => {
-    const source =
-      "Der Rohrersatz beträgt in der C-Deckung bis zu 10m Länge.";
+    const source = "Der Rohrersatz beträgt in der C-Deckung bis zu 10m Länge.";
     const components = [
       {
         type: "LIMIT_BASIS",
