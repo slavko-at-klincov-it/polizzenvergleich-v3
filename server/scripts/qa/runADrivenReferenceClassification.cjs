@@ -5791,32 +5791,6 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                     });
                     return [{ ...component, ...coverageEffectRepair }];
                   }
-                  const redundantInvalidCoverageEffect =
-                    component?.type === "COVERAGE_EFFECT" &&
-                    !sourceBoundLiteralCoverageEffect(unit, component) &&
-                    requirement.components.some(
-                      (candidate) =>
-                        candidate !== component &&
-                        sourceBoundLiteralCoverageEffect(unit, candidate)
-                    ) &&
-                    component.sourceBlockIds.every((blockId) =>
-                      requirement.components.some(
-                        (candidate) =>
-                          candidate !== component &&
-                          candidate.sourceBlockIds?.includes(blockId) &&
-                          (candidate.type !== "COVERAGE_EFFECT" ||
-                            sourceBoundLiteralCoverageEffect(unit, candidate))
-                      )
-                    );
-                  if (redundantInvalidCoverageEffect) {
-                    repairs.push({
-                      unitId: response.unitId,
-                      requirementIndex,
-                      componentIndex,
-                      action: "DROP_REDUNDANT_INVALID_COVERAGE_EFFECT",
-                    });
-                    return [];
-                  }
                   if (
                     component?.type === "COVERAGE_EFFECT" &&
                     ((/^gilt$/iu.test(componentLabel) &&
@@ -5841,6 +5815,32 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       requirementIndex,
                       componentIndex,
                       action: "DROP_REDUNDANT_NON_COVERAGE_EFFECT",
+                    });
+                    return [];
+                  }
+                  const redundantInvalidCoverageEffect =
+                    component?.type === "COVERAGE_EFFECT" &&
+                    !sourceBoundLiteralCoverageEffect(unit, component) &&
+                    requirement.components.some(
+                      (candidate) =>
+                        candidate !== component &&
+                        sourceBoundLiteralCoverageEffect(unit, candidate)
+                    ) &&
+                    component.sourceBlockIds.every((blockId) =>
+                      requirement.components.some(
+                        (candidate) =>
+                          candidate !== component &&
+                          candidate.sourceBlockIds?.includes(blockId) &&
+                          (candidate.type !== "COVERAGE_EFFECT" ||
+                            sourceBoundLiteralCoverageEffect(unit, candidate))
+                      )
+                    );
+                  if (redundantInvalidCoverageEffect) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "DROP_REDUNDANT_INVALID_COVERAGE_EFFECT",
                     });
                     return [];
                   }
