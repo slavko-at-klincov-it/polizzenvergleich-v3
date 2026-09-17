@@ -154,7 +154,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-048` | Eingebettete Listengovernor-Gruppen positionsunabhängig begrenzen                 | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.5 installieren und denselben kalten Lauf ab den gespeicherten Artefakten fortsetzen                                |
 | `INT-20260917-049` | Partiellen A-Resume über Releasegrenzen quellengebunden übernehmen                | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.6 installieren und Session 14 ab der ersten aktuell offenen Unit fortsetzen                                        |
 | `INT-20260917-050` | Komplementäre Duplicate-Unit-Hüllen vor Listen-Normalisierung sicher vereinigen   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.7-Produktlauf ab Batch 7 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
-| `INT-20260917-051` | Alte komponentenförmige Requirements vor fachlicher Normalisierung sicher heben   | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | eng begrenzten Schema-Adapter testen, gespeicherten Batch 10 revalidieren und erst danach den Produktlauf fortsetzen      |
+| `INT-20260917-051` | Alte komponentenförmige Requirements vor fachlicher Normalisierung sicher heben   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.8-Produktlauf ab Batch 11 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -707,7 +707,7 @@ Kategorieviews -> A/B-Join` definieren, ohne zusätzliche Benutzeraktion.
 
 - Erfasst: 2026-08-24
 - Typ: `IDEE`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: Versionierte Prüfpunkt-IDs bilden den stabilen Merge-Schlüssel;
   positive Aussagen benötigen eine kanonische Quelle und Evidenz. Fehlende
   Evidenz bleibt ein sichtbarer Ergebniszustand.
@@ -3430,7 +3430,10 @@ Vollständigkeitsbehauptung erzeugen.
   Die verbleibende erwartete Klausel wurde wiederholt source-bound, aber im
   alten Komponentenformat geliefert und daher korrekt nicht als PASS
   akzeptiert. Die bereits implementierte allgemeine Normalisierung für
-  konditionale Äquivalenzdefinitionen kann dadurch derzeit nicht greifen.
+  konditionale Äquivalenzdefinitionen konnte dadurch nicht greifen. Nach dem
+  sicheren Heben der Hülle blieb zunächst zusätzlich der alte `OBJECT`-Alias
+  erhalten; die aktuelle Regel korrigiert ihn nur bei bereits deklarierter
+  `PERIL_OR_DAMAGE`-Semantik zu `PERIL_OR_CAUSE`.
 - Quelle: private, resumierbare Batch-10-Attempt-Artefakte der Session
   `79211e03-d5ce-44b6-9042-199e83f589a0` auf dem Mac Studio. Kundentext wird
   in der Knowledge Base nicht vervielfältigt.
@@ -3448,6 +3451,19 @@ Vollständigkeitsbehauptung erzeugen.
   `displayLabel` und keine verschachtelten Komponenten; jede Abweichung bleibt
   unverändert fail-closed; gespeicherter Real-Attempt muss ohne Modellaufruf
   6/6 PASS ergeben; der Attempt-Baum bleibt hashgleich.
+- Entscheidung: Der Adapter und die eng gebundene Rollenangleichung liegen in
+  Klassifikationslauf V69 vor. Der fokussierte Mac-Studio-Vertragslauf bestand
+  379/379 Tests. Der echte gespeicherte Batch 10 wurde mit 6/6 Units und ohne
+  Modellaufruf revalidiert; sein Attempt-Baum blieb unter SHA-256
+  `aa0856167dff6aa10b6872c1ccffa91cecf52bd187ac8419c03ca8b7e8a7f6a5`
+  unverändert. Der vollständige Releasekandidat
+  `a348b9d78d0d53a0aa807fb72a4c98126f509ee2` bestand auf dem Mac Studio
+  212/212 Suites, 3.074/3.074 Tests, sämtliche Lints, Prisma,
+  Capability-Inventar, Frontend-Build und Installer-Suite. V3.8.8 wurde über
+  den offiziellen Updater installiert; Doctor, API und Datenbankprüfung
+  bestanden. Der produktive Resume unter
+  `resume-d775a41856167bfd78fd113d` materialisierte Batch 1 bis 10 ohne neue
+  Attempts und setzt erst ab Batch 11 die Modellarbeit fort.
 - Beweisgrenze: Der bekannte LF-1+9-Fehlerfall ist Regressionsevidenz, kein
   unabhängiger Generalisierungs-Holdout.
 - Geplanter Change-Set:
