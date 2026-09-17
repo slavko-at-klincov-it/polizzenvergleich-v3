@@ -16,6 +16,7 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V12,
   buildADrivenSemanticManifest,
   logicalSegmentDiagnostics,
   materializeSharedSignalComponents,
@@ -1862,6 +1863,93 @@ describe("requirement-local semantic evidence completeness", () => {
         signalId: "EXPLICIT_CONDITION",
       }),
     ]);
+  });
+
+  test("materializes each explicit local condition from its own complete clause", () => {
+    const unit = evidenceUnit(
+      [
+        "condition-head",
+        "Versichert sind die Sachen, sofern sie vom Versicherungsnehmer",
+      ],
+      [
+        "condition-tail",
+        "innerhalb von zwei Jahren wiederbeschafft werden, bleibt die Zuordnung bestehen.",
+      ]
+    );
+    const input = [
+      requirement(
+        ["condition-head", "condition-tail"],
+        [
+          {
+            type: "OBJECT",
+            label: "die Sachen",
+            sourceBlockIds: ["condition-head"],
+          },
+          {
+            type: "CONDITION",
+            label: "innerhalb von zwei Jahren wiederbeschafft werden",
+            sourceBlockIds: ["condition-tail"],
+          },
+        ]
+      ),
+    ];
+
+    const result = materializeSharedSignalComponents(unit, input);
+
+    expect(result.requirements[0].components).toContainEqual({
+      type: "CONDITION",
+      label:
+        "sofern sie vom Versicherungsnehmer\ninnerhalb von zwei Jahren wiederbeschafft werden",
+      sourceBlockIds: ["condition-head", "condition-tail"],
+    });
+    expect(result.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "LOCAL_SIGNAL_COMPONENT_MATERIALIZED",
+        signalId: "EXPLICIT_CONDITION",
+        sourceBlockIds: ["condition-head", "condition-tail"],
+      })
+    );
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements)
+    ).toEqual([]);
+  });
+
+  test("keeps V12 local-condition replay behavior frozen", () => {
+    const unit = evidenceUnit(
+      ["condition-head", "Sachen, sofern sie vom Versicherungsnehmer"],
+      ["condition-tail", "wiederbeschafft werden, bleiben zugeordnet."],
+    );
+    const input = [
+      requirement(
+        ["condition-head", "condition-tail"],
+        [component("OBJECT", "condition-head", { label: "Sachen" })]
+      ),
+    ];
+
+    const result = materializeSharedSignalComponents(unit, input, {
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID_V12,
+    });
+
+    expect(result.requirements).toEqual(input);
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  test("does not materialize a local condition across an unowned block", () => {
+    const unit = evidenceUnit(
+      ["owned", "Sachen, sofern sie vom Versicherungsnehmer"],
+      ["foreign", "wiederbeschafft werden, bleiben zugeordnet."],
+    );
+    const input = [
+      requirement(
+        ["owned"],
+        [component("OBJECT", "owned", { label: "Sachen" })]
+      ),
+    ];
+
+    const result = materializeSharedSignalComponents(unit, input);
+
+    expect(result.requirements).toEqual(input);
+    expect(result.diagnostics).toEqual([]);
   });
 
   test("materializes an inherited percentage limit basis from its exact source block", () => {

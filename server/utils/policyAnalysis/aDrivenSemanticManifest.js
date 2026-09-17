@@ -20,8 +20,10 @@ const A_DYNAMIC_MANIFEST_CONTRACT_ID_V14 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V14";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID_V15 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V15";
-const A_DYNAMIC_MANIFEST_CONTRACT_ID =
+const A_DYNAMIC_MANIFEST_CONTRACT_ID_V16 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V16";
+const A_DYNAMIC_MANIFEST_CONTRACT_ID =
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V17";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V1 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V1";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V2 =
@@ -44,8 +46,10 @@ const A_SEMANTIC_SIGNAL_CONTRACT_ID_V10 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V10";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V11 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V11";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V12 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V12";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V13";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -274,6 +278,7 @@ const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V11,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V12,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 
@@ -295,6 +300,8 @@ function requirementRoleSignals(semanticSignalContractId) {
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V10)
     return REQUIREMENT_ROLE_SIGNALS_V10;
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V11)
+    return REQUIREMENT_ROLE_SIGNALS_V11;
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V12)
     return REQUIREMENT_ROLE_SIGNALS_V11;
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
     return REQUIREMENT_ROLE_SIGNALS_V11;
@@ -769,6 +776,43 @@ function governingConditionEvidence(unit, evidence) {
   return { label, sourceBlockIds };
 }
 
+function localConditionEvidence(unit, requirement, evidence) {
+  const allowedBlockIds = new Set(requirement?.sourceBlockIds || []);
+  if (
+    !matchedEvidenceBlockIds(evidence).some((blockId) =>
+      allowedBlockIds.has(blockId)
+    )
+  )
+    return null;
+  const blocks = evidenceBlocks(unit).filter(({ blockId }) =>
+    allowedBlockIds.has(blockId)
+  );
+  const startIndex = blocks.findIndex(({ blockId }) =>
+    matchedEvidenceBlockIds(evidence).includes(blockId)
+  );
+  if (startIndex < 0) return null;
+  const marker = String(evidence.match || "");
+  const markerIndex = String(blocks[startIndex].exactText || "")
+    .toLocaleLowerCase("de-AT")
+    .indexOf(marker.toLocaleLowerCase("de-AT"));
+  if (markerIndex < 0) return null;
+  const tail = [
+    String(blocks[startIndex].exactText || "").slice(markerIndex),
+    ...blocks.slice(startIndex + 1).map(({ exactText }) => exactText),
+  ].join("\n");
+  const boundary = /\s+[–—]\s+|[,;.]/u.exec(tail);
+  if (!boundary || boundary.index < marker.length) return null;
+  const label = tail.slice(0, boundary.index).trim();
+  if (!label || label.length > 400) return null;
+  const sourceBlockIds = minimalSourceRange(unit, label, [...allowedBlockIds]);
+  if (
+    !sourceBlockIds?.length ||
+    sourceBlockIds.some((blockId) => !allowedBlockIds.has(blockId))
+  )
+    return null;
+  return { label, sourceBlockIds };
+}
+
 function materializeSharedSignalComponents(
   unit,
   requirements,
@@ -923,24 +967,33 @@ function materializeSharedSignalComponents(
           signal.signalId === "EXPLICIT_CONDITION"
             ? governingConditionEvidence(unit, evidence)
             : null;
+        const exactLocalConditionEvidence =
+          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID &&
+          signal.signalId === "EXPLICIT_CONDITION"
+            ? localConditionEvidence(unit, requirement, evidence)
+            : null;
         const authoritativeExactEvidence =
           authoritativeBenefitEvidence ||
           authoritativeQuantifiedEvidence ||
           authoritativeLimitBasisEvidence ||
           authoritativeOccurrenceEvidence ||
-          Boolean(inheritedConditionEvidence);
+          Boolean(inheritedConditionEvidence) ||
+          Boolean(exactLocalConditionEvidence);
         const localText =
           exactEvidenceBinding ||
           authoritativeLimitBasisEvidence ||
           authoritativeOccurrenceEvidence
             ? evidence.match
             : inheritedConditionEvidence?.label ||
+              exactLocalConditionEvidence?.label ||
               localComponent?.label ||
               (evidenceBackedSignal
                 ? evidence.match
                 : requirement.displayLabel);
         const localMatches =
-          evidenceBackedSignal || inheritedConditionEvidence
+          evidenceBackedSignal ||
+          inheritedConditionEvidence ||
+          exactLocalConditionEvidence
             ? [evidence.match]
             : matchesForPattern(signal.pattern, localText);
         if (
@@ -1000,6 +1053,8 @@ function materializeSharedSignalComponents(
             ].includes(semanticSignalContractId));
         const sourceBlockIds = inheritedConditionEvidence
           ? inheritedConditionEvidence.sourceBlockIds
+          : exactLocalConditionEvidence
+            ? exactLocalConditionEvidence.sourceBlockIds
           : authoritativeLimitBasisEvidence
             ? minimalSourceRange(unit, label, matchedEvidenceBlockIds(evidence))
             : authoritativeSourceEvidence
@@ -2099,6 +2154,7 @@ module.exports = {
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V14,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V15,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V16,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -2111,6 +2167,7 @@ module.exports = {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V11,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V12,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
