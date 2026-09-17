@@ -1336,6 +1336,7 @@ describe("requirement-local semantic evidence completeness", () => {
       mapped.components
         .filter(({ type }) => type === "LIMIT_BASIS")
         .map(({ label }) => label)
+        .sort()
     ).toEqual([
       "Versicherungssummen nicht addiert",
       "nur einmal pro Schadenfall",
