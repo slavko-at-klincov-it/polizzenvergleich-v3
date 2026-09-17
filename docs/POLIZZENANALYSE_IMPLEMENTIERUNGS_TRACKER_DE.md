@@ -10636,6 +10636,42 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.80 Batch 55: redundante ungültige Deckungsrollen sicher entfernen
+
+Der auf V3.9.10 fortgesetzte kalte LF-1+9-Lauf übernahm Batches 1 bis 52 ohne
+einen neuen Modellversuch, erreichte 54/58 gültige A-Batches und stoppte Batch
+55 (`batchIndex 54`, `AUB-f32187483fc34639eff542f6`) korrekt fail-closed.
+Fünf von sechs Units waren gültig. Drei gespeicherte Versuche für die letzte
+Unit endeten ohne Timeout oder Transportfehler bei zwei
+`COVERAGE_EFFECT_LABEL_INVALID`-Diagnosen.
+
+Die offene Requirement enthielt bereits eine wörtlich gültige positive
+Deckungswirkung. Zwei zusätzliche `CONDITIONAL`-Wirkungen verwendeten dagegen
+eine Bedingungs- und eine Vorrangformulierung als vermeintliche
+Deckungswirkung. Beide Quellblöcke waren zugleich korrekt durch
+`CONDITION`, `PRECEDENCE_OR_REPLACEMENT` und `SCOPE` belegt.
+
+Der V82-Laufvertrag (`ac675c0d3`) adaptiert `CAP-A-002` mit einer engen
+allgemeinen Regel. Eine ungültige redundante Wirkungsrolle wird nur entfernt,
+wenn eine andere Wirkung derselben Requirement den kanonischen
+Deckungswirkungsvalidator besteht und jeder betroffene Quellblock durch eine
+andere gültige Rollenkomponente erhalten bleibt. Spezifische vorhandene
+Reparaturen laufen vorher und behalten ihre bisherigen Aktionen. Fehlt die
+gültige Schwesterwirkung oder ginge Quellenprovenienz verloren, greift die
+neue Regel nicht. V81 bleibt explizit als revalidierbarer Vorgänger erhalten.
+
+Auf dem Mac Studio bestanden 426/426 fokussierte Tests und Prettier. Der
+unveränderte echte Batch 55 wurde danach read-only über 14 Vorgängerwurzeln
+revalidiert: 6/6 Units PASS, sechs Vorgängerantworten wiederverwendet, null
+Modellaufrufe und null neue Versuche. Private Kundenartefakte blieben
+unverändert.
+
+Status: `ROOT CAUSE ALLGEMEIN BEHOBEN; BATCH 55 OFFLINE 6/6 PASS; V3.9.11
+RELEASE-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND; KEIN HOLDOUT- ODER
+99-PROZENT-NACHWEIS`.
+
+Change-Set: `LF-V3911-REDUNDANT-COVERAGE-ROLE-20260918-001`.
+
 ### 133.79 Batch 52: jede lokale Bedingung source-bound belegen
 
 Der auf V3.9.9 fortgesetzte kalte LF-1+9-Lauf übernahm die vorhandene

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V3910-LOCAL-CONDITION-EVIDENCE-20260918-001",
+  "changeSetId": "LF-V3911-REDUNDANT-COVERAGE-ROLE-20260918-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -758,7 +758,8 @@
         "A numbered pure structural heading or direct numbered question terminates an older operative heading governor; numbered operative assertions remain under the normal source-bound evidence rules.",
         "A single morphologically close model word is restored only from one unique contiguous span inside already declared owned source blocks; numbers, number words, negation, coverage polarity, modality, multiple differences and ambiguity remain fail-closed.",
         "A partial resume revalidates every explicit plan-identical predecessor in its bounded chain so valid units from older attempts are not recomputed.",
-        "Every explicit local condition occurrence must be bound to its own complete source clause; another CONDITION component from different blocks in the same requirement does not satisfy that occurrence."
+        "Every explicit local condition occurrence must be bound to its own complete source clause; another CONDITION component from different blocks in the same requirement does not satisfy that occurrence.",
+        "An invalid redundant COVERAGE_EFFECT is removed only when another canonical literal effect remains in the same requirement and every affected source block stays covered by another valid semantic component."
       ],
       "evidence": {
         "tests": [
@@ -785,7 +786,8 @@
           "Tracker 133.76",
           "Tracker 133.77",
           "Tracker 133.78",
-          "Tracker 133.79"
+          "Tracker 133.79",
+          "Tracker 133.80"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -815,10 +817,11 @@
           "INT-20260917-066",
           "INT-20260917-067",
           "INT-20260917-068",
-          "INT-20260918-069"
+          "INT-20260918-069",
+          "INT-20260918-070"
         ]
       },
-      "lastVerifiedCommit": "8a6234457caae34edf18fa997092994954e84b32",
+      "lastVerifiedCommit": "ac675c0d3fa8fabe408866ab859229b11ec77188",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
