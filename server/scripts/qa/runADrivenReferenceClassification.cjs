@@ -39,7 +39,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V65";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V66";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -94,6 +94,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V62",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V63",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V64",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V65",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -3356,6 +3357,156 @@ function completeBoundedListSegmentComponentSources(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function internalObjectListGovernor(unit) {
+  if (
+    unit?.unitKind !== "LIST" ||
+    !Array.isArray(unit.logicalSourceSegments) ||
+    unit.logicalSourceSegments.length < 2
+  )
+    return null;
+  const sourceBlocksById = new Map(
+    (unit.source?.blocks || []).map((block) => [block.blockId, block])
+  );
+  const [governorSegment, ...itemSegments] = unit.logicalSourceSegments;
+  const governorBlocks = (governorSegment?.blockIds || []).map((blockId) =>
+    sourceBlocksById.get(blockId)
+  );
+  if (
+    governorBlocks.length === 0 ||
+    governorBlocks.some((block) => !block) ||
+    governorBlocks[0].structuralKind !== "LIST_GOVERNOR" ||
+    itemSegments.some(
+      (segment) =>
+        sourceBlocksById.get(segment?.blockIds?.[0])?.structuralKind !==
+        "LIST_ITEM"
+    )
+  )
+    return null;
+  const exactText = governorBlocks
+    .map(({ exactText: blockText }) => blockText)
+    .join("\n");
+  const label = exactText.replace(/^\s*[•▪–—-]\s*/u, "").trim();
+  if (
+    !/^bei\s+\S/iu.test(label) ||
+    explicitCoveragePolarity(exactText) !== null
+  )
+    return null;
+  return {
+    segmentId: governorSegment.segmentId,
+    blockIds: governorBlocks.map(({ blockId }) => blockId),
+    label,
+    itemSegments,
+  };
+}
+
+function completeInternalObjectListLeadingComponentSources(requirements, unit) {
+  const governor = internalObjectListGovernor(unit);
+  if (!governor || !Array.isArray(requirements))
+    return { requirements, repairs: [] };
+  const comparable = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim()
+      .replace(/^[•▪–—-]\s*/u, "");
+  const sourceBlocksById = new Map(
+    (unit.source?.blocks || []).map((block) => [block.blockId, block])
+  );
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const segment = governor.itemSegments.find(
+        (candidate) =>
+          candidate?.type === "LIST_ITEM_WITH_CONTINUATIONS" &&
+          comparable(requirement?.displayLabel) ===
+            comparable(candidate.combinedText)
+      );
+      if (!segment || !Array.isArray(segment.blockIds)) return requirement;
+      const segmentBlocks = segment.blockIds.map((blockId) =>
+        sourceBlocksById.get(blockId)
+      );
+      if (
+        segmentBlocks.length < 2 ||
+        segmentBlocks.some((block) => !block) ||
+        segmentBlocks[0].structuralKind !== "LIST_ITEM" ||
+        segmentBlocks
+          .slice(1)
+          .some(({ structuralKind }) => structuralKind !== "BODY_LINE")
+      )
+        return requirement;
+      const segmentIndexByBlockId = new Map(
+        segment.blockIds.map((blockId, index) => [blockId, index])
+      );
+      const components = Array.isArray(requirement?.components)
+        ? requirement.components
+        : [];
+      if (
+        components.some(({ sourceBlockIds }) =>
+          (sourceBlockIds || []).includes(segment.blockIds[0])
+        )
+      )
+        return requirement;
+      const candidates = components.flatMap((component, componentIndex) => {
+        if (component?.type !== "OBJECT") return [];
+        const declaredIds = Array.isArray(component.sourceBlockIds)
+          ? component.sourceBlockIds
+          : [];
+        if (
+          declaredIds.length === 0 ||
+          declaredIds.some((blockId) => !segmentIndexByBlockId.has(blockId))
+        )
+          return [];
+        const indexes = declaredIds.map((blockId) =>
+          segmentIndexByBlockId.get(blockId)
+        );
+        const firstIndex = Math.min(...indexes);
+        const selectedText = declaredIds
+          .map((blockId) => sourceBlocksById.get(blockId)?.exactText)
+          .join("\n");
+        if (
+          firstIndex === 0 ||
+          !comparable(selectedText).includes(comparable(component.label))
+        )
+          return [];
+        return [{ component, componentIndex, declaredIds, firstIndex }];
+      });
+      if (candidates.length === 0) return requirement;
+      const earliestIndex = Math.min(
+        ...candidates.map(({ firstIndex }) => firstIndex)
+      );
+      const earliest = candidates.filter(
+        ({ firstIndex }) => firstIndex === earliestIndex
+      );
+      if (earliest.length !== 1) return requirement;
+      const [{ componentIndex, declaredIds }] = earliest;
+      const desiredSet = new Set([
+        ...segment.blockIds.slice(0, earliestIndex),
+        ...declaredIds,
+      ]);
+      const completedIds = segment.blockIds.filter((blockId) =>
+        desiredSet.has(blockId)
+      );
+      repairs.push({
+        requirementIndex,
+        componentIndex,
+        action: "COMPLETE_INTERNAL_OBJECT_LIST_LEADING_COMPONENT_SOURCE_IDS",
+        segmentId: segment.segmentId,
+        fromSourceBlockIds: declaredIds,
+        toSourceBlockIds: completedIds,
+      });
+      return {
+        ...requirement,
+        components: components.map((component, index) =>
+          index === componentIndex
+            ? { ...component, sourceBlockIds: completedIds }
+            : component
+        ),
+      };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -4386,13 +4537,22 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
   );
   const boundedListSegmentResponses = listGovernorNormalization.responses.map(
     (response) => {
+      const unit = unitsById.get(response?.unitId);
+      const leadingCompletion =
+        completeInternalObjectListLeadingComponentSources(
+          response?.requirements,
+          unit
+        );
+      for (const repair of leadingCompletion.repairs)
+        repairs.push({ unitId: response?.unitId, ...repair });
       const completed = completeBoundedListSegmentComponentSources(
-        response?.requirements,
-        unitsById.get(response?.unitId)
+        leadingCompletion.requirements,
+        unit
       );
       for (const repair of completed.repairs)
         repairs.push({ unitId: response?.unitId, ...repair });
-      return completed.repairs.length > 0
+      return leadingCompletion.repairs.length > 0 ||
+        completed.repairs.length > 0
         ? { ...response, requirements: completed.requirements }
         : response;
     }
@@ -4467,6 +4627,45 @@ function normalizeStandaloneListGovernorRequirements(responses, units = []) {
             (sourceBlockIds || []).some((blockId) => itemBlockIds.has(blockId))
           );
         });
+      const internalObjectGovernor = internalObjectListGovernor(unit);
+      if (
+        standalone.length === 0 &&
+        targets.length > 0 &&
+        internalObjectGovernor &&
+        Array.isArray(response?.semanticClasses) &&
+        response.semanticClasses.includes("INSURED_OBJECT") &&
+        targets.every(({ requirement }) =>
+          (requirement.components || []).some(({ type }) => type === "OBJECT")
+        )
+      ) {
+        const component = {
+          type: "OBJECT",
+          label: internalObjectGovernor.label,
+          sourceBlockIds: internalObjectGovernor.blockIds,
+        };
+        repairs.push({
+          unitId: unit.unitId,
+          action: "MATERIALIZE_SOURCE_BOUND_INTERNAL_OBJECT_GOVERNOR",
+          targetRequirementIndexes: targets.map(
+            ({ requirementIndex }) => requirementIndex
+          ),
+          governorBlockIds: internalObjectGovernor.blockIds,
+        });
+        return {
+          ...response,
+          requirements: response.requirements.map(
+            (requirement, requirementIndex) =>
+              targets.some(
+                (target) => target.requirementIndex === requirementIndex
+              )
+                ? {
+                    ...requirement,
+                    components: [...(requirement.components || []), component],
+                  }
+                : requirement
+          ),
+        };
+      }
       if (standalone.length !== 1 || targets.length === 0) return response;
       const [governor] = standalone;
       const movedComponents = governor.requirement.components || [];

@@ -8154,7 +8154,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V65");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V66");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -12551,6 +12551,218 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         .find(({ displayLabel }) => displayLabel === firstText)
         .components.some(({ type }) => type === "CONDITION")
     ).toBe(true);
+  });
+
+  test("preserves a source-bound internal object governor and the leading provenance of its continued item", () => {
+    const exactBlock = (blockId, exactText, ordinal, structuralKind) => ({
+      blockId,
+      ordinal,
+      structuralKind,
+      physicalPageNumber: 4,
+      documentStart: ordinal * 100,
+      documentEnd: ordinal * 100 + exactText.length,
+      exactText,
+      exactTextSha256: crypto
+        .createHash("sha256")
+        .update(exactText)
+        .digest("hex"),
+    });
+    const governor = exactBlock(
+      "object-governor",
+      "• bei technischen Anlagen",
+      1,
+      "LIST_GOVERNOR"
+    );
+    const lead = exactBlock(
+      "item-lead",
+      "- die am Versicherungsort vorhandenen",
+      2,
+      "LIST_ITEM"
+    );
+    const tail = exactBlock(
+      "item-tail",
+      "Einrichtungen und Zubehör;",
+      3,
+      "BODY_LINE"
+    );
+    const itemText = `${lead.exactText}\n${tail.exactText}`;
+    const combinedText = `${governor.exactText}\n${itemText}`;
+    const unit = {
+      unitId: "internal-object-governor",
+      unitOrder: 0,
+      packageOrder: [0, 0],
+      unitKind: "LIST",
+      structurePath: ["Versicherungsumfang"],
+      source: {
+        documentUuid: "doc",
+        documentSha256: "d".repeat(64),
+        documentPosition: 0,
+        documentRole: "MAIN_POLICY",
+        documentStatus: "ACTIVE",
+        blockIds: [governor.blockId, lead.blockId, tail.blockId],
+        blocks: [governor, lead, tail],
+        physicalPages: [4],
+        documentStart: governor.documentStart,
+        documentEnd: tail.documentEnd,
+        combinedText,
+        combinedTextSha256: crypto
+          .createHash("sha256")
+          .update(combinedText)
+          .digest("hex"),
+        contiguous: true,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "object-governor-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: [governor.blockId],
+          combinedText: governor.exactText,
+        },
+        {
+          segmentId: "object-item-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: [lead.blockId, tail.blockId],
+          combinedText: itemText,
+        },
+      ],
+      semanticAuthority: false,
+      initialDisposition: "PENDING_CLASSIFICATION",
+      governingContext: null,
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: itemText,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Einrichtungen",
+              sourceBlockIds: [tail.blockId],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].requirements[0].components).toEqual([
+      {
+        type: "OBJECT",
+        label: "Einrichtungen",
+        sourceBlockIds: [lead.blockId, tail.blockId],
+      },
+      {
+        type: "OBJECT",
+        label: "bei technischen Anlagen",
+        sourceBlockIds: [governor.blockId],
+      },
+    ]);
+    expect(normalized.componentRepairs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          unitId: unit.unitId,
+          action: "MATERIALIZE_SOURCE_BOUND_INTERNAL_OBJECT_GOVERNOR",
+          governorBlockIds: [governor.blockId],
+        }),
+        expect.objectContaining({
+          unitId: unit.unitId,
+          action: "COMPLETE_INTERNAL_OBJECT_LIST_LEADING_COMPONENT_SOURCE_IDS",
+          segmentId: "object-item-segment",
+          fromSourceBlockIds: [tail.blockId],
+          toSourceBlockIds: [lead.blockId, tail.blockId],
+        }),
+      ])
+    );
+
+    const plan = {
+      schemaVersion: 2,
+      contractId: A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+      runContractId: A_DRIVEN_RUN_CONTRACT_ID,
+      planSha256: "a".repeat(64),
+      documents: [{ documentUuid: "doc" }],
+      units: [unit],
+      relations: [],
+      summary: { sourceBlocks: 3 },
+    };
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: normalized.responses,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+    });
+    expect(manifest.summary).toMatchObject({
+      unresolvedUnits: 0,
+      reviewRequiredBlocks: 0,
+      allBlocksTerminal: true,
+      responseIntegrityStatus: "VALID",
+    });
+  });
+
+  test("does not turn an operative list governor into an insured object", () => {
+    const governor = {
+      blockId: "coverage-governor",
+      structuralKind: "LIST_GOVERNOR",
+      exactText: "• Versichert sind",
+    };
+    const lead = {
+      blockId: "item-lead",
+      structuralKind: "LIST_ITEM",
+      exactText: "- die am Versicherungsort vorhandenen",
+    };
+    const tail = {
+      blockId: "item-tail",
+      structuralKind: "BODY_LINE",
+      exactText: "Einrichtungen;",
+    };
+    const itemText = `${lead.exactText}\n${tail.exactText}`;
+    const unit = {
+      unitId: "operative-governor-negative",
+      unitKind: "LIST",
+      source: {
+        blockIds: [governor.blockId, lead.blockId, tail.blockId],
+        blocks: [governor, lead, tail],
+        combinedText: `${governor.exactText}\n${itemText}`,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "coverage-governor-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: [governor.blockId],
+          combinedText: governor.exactText,
+        },
+        {
+          segmentId: "object-item-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: [lead.blockId, tail.blockId],
+          combinedText: itemText,
+        },
+      ],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: itemText,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Einrichtungen",
+              sourceBlockIds: [tail.blockId],
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(normalizeUnambiguousComponentTypes([response], [unit])).toEqual({
+      responses: [response],
+      componentRepairs: [],
+    });
   });
 
   test("keeps a bounded continuation fail-closed when no component anchors its first block", () => {
