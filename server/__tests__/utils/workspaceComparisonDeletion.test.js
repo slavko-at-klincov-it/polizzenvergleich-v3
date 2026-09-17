@@ -1,3 +1,5 @@
+process.env.STORAGE_DIR = __dirname;
+
 const fs = require("fs");
 const os = require("os");
 const path = require("path");

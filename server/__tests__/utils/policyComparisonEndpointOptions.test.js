@@ -1,3 +1,5 @@
+process.env.STORAGE_DIR = __dirname;
+
 const {
   comparisonOptions,
   comparisonResultForCustomer,

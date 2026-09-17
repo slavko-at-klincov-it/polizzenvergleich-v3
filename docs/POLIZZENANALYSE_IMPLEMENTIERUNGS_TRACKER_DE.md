@@ -10398,6 +10398,13 @@ V3.8.5-Release-Gate, Deployment und Resume derselben Session 14 stehen noch
 aus. Gold-283-V2 bleibt unverändert. Der unabhängige expertengelabelte
 Mehrversicherer-Holdout ist weiterhin nicht vorhanden.
 
+Der erste vollständige Release-Gate-Versuch auf `db7121283` deckte zusätzlich
+eine reine Test-Harness-Abhängigkeit auf: Zwei bestehende Jest-Suites
+importierten Storage-Module, ohne ihr benötigtes temporäres `STORAGE_DIR`
+selbst zu setzen. Eine frühere Shell-Umgebung hatte diese Kopplung verdeckt.
+Die Suites besitzen nun wie die übrigen Storage-Tests eine explizite lokale
+Testumgebung; Produktcode und Kunden-Storage werden dadurch nicht verändert.
+
 Status: `V3.8.4 FAIL-CLOSED NACH 4/58 PASS; ECHTER FEHLERFALL UND FÜNF-BATCH-
 REPLAY UNTER V67 PASS; V3.8.5-GATE, DEPLOYMENT UND RESUME AUSSTEHEND`.
 
