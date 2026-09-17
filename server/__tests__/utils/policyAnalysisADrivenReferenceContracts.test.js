@@ -4138,7 +4138,6 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       },
     ];
     const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
-    const governorText = "Versichert sind";
     const unit = {
       unitId: "legacy-component-shaped-clause",
       unitKind: "CLAUSE",
@@ -4147,19 +4146,6 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         blockIds: blocks.map(({ blockId }) => blockId),
         combinedText,
         blocks,
-      },
-      governingContext: {
-        contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
-        relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
-        blockIds: ["coverage-governor"],
-        blocks: [
-          { blockId: "coverage-governor", exactText: governorText },
-        ],
-        combinedText: governorText,
-        combinedTextSha256: crypto
-          .createHash("sha256")
-          .update(governorText)
-          .digest("hex"),
       },
     };
     const normalized = normalizeUnambiguousComponentTypes(
@@ -4259,6 +4245,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       { blockId: "snow-limit", exactText: "bis zu € 1.000,-; " },
     ];
     const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+    const governorText = "Versichert sind";
     const unit = {
       unitId: "single-complete-list-segment",
       unitKind: "LIST",
@@ -4274,6 +4261,19 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         blockIds: blocks.map(({ blockId }) => blockId),
         combinedText,
         blocks,
+      },
+      governingContext: {
+        contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
+        relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
+        blockIds: ["coverage-governor"],
+        blocks: [
+          { blockId: "coverage-governor", exactText: governorText },
+        ],
+        combinedText: governorText,
+        combinedTextSha256: crypto
+          .createHash("sha256")
+          .update(governorText)
+          .digest("hex"),
       },
     };
     const normalized = normalizeUnambiguousComponentTypes(
