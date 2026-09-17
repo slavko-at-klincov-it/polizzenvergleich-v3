@@ -10636,6 +10636,43 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.76 Batch 36: lokale Deckungsdefinition ersetzt fremden Governor
+
+Der echte V3.9.6-Resume übernahm Batches 1 bis 35 unter V77. Batch 36 stoppte
+nach fünf gespeicherten Versuchen korrekt fail-closed. Fünf von sechs Units
+waren gültig; offen blieb `AU-2aa0ef398866c2972abc2cea`. Der Attempt-Baum
+blieb unter SHA-256
+`af641edaf2faec4dcd7263e06c1cdb1bbf4fa445ab892e977642618e6a5ec753`
+unverändert.
+
+Die Quelle enthält zuerst eine eigene positive Definition versicherter
+Sachen, erweitert sie unter einer ausdrücklichen Bedingung um ein weiteres
+Objekt und schließt anschließend weitere Objekte aus. Ein zuvor verknüpfter
+negativer Haftpflicht-Governor gehört nach dieser lokalen Deckungsdefinition
+nicht mehr zur Wirkung der Unit. Die Modellversuche lieferten entweder eine
+zusammengezogene Requirement mit falscher negativer Wirkung, nur den
+Schlussausschluss oder eine eigenständige Governor-Requirement; keiner
+erfasste alle drei Aussagen.
+
+Der allgemeine V78/V12-Fix adaptiert `CAP-A-002` und `CAP-A-003`. Nur die
+vollständige eindeutige Satzfolge mit eigener positiver Deckungsdefinition,
+bedingter Erweiterung und nachlaufendem Ausschluss wird in drei source-bound
+Requirements atomisiert. Ein geerbter negativer Governor wird nur bei einer
+wörtlich belegten eigenen positiven Deckungsdefinition verdrängt. Negative
+Formulierungen, insbesondere `nicht versichert sind`, sind durch eine eigene
+Negativgrenze ausgeschlossen. Abweichende oder unvollständige Formen bleiben
+fail-closed. V77 und der V11-Signalvertrag wurden explizit als revalidierbare
+Vorgänger erhalten.
+
+Der fokussierte Vertrag bestand auf dem Mac Studio mit 412/412 Tests. Der
+echte Batch 36 revalidierte danach ausschließlich aus den fünf vorhandenen
+Attempt-Artefakten mit 6/6 Units. Der Attempt-Tree-Hash blieb unverändert.
+
+Status: `V3.9.7-RELEASEKANDIDAT; BATCH 36 OFFLINE 6/6 REVALIDIERT; VOLLGATE,
+DEPLOYMENT UND RESUME AUSSTEHEND`.
+
+Change-Set: `LF-V397-LOCAL-COVERAGE-RESET-ATOMIZATION-20260917-001`.
+
 ### 133.75 Batch 35: eindeutige Quellspannen, Schadensüberschrift und Wiederholungsbindung
 
 Der echte V3.9.5-Resume übernahm Batches 1 bis 33 ohne neue Modellarbeit.

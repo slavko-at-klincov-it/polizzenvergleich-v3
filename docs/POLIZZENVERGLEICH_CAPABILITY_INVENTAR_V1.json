@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V396-BATCH35-EVIDENCE-BINDING-20260917-001",
+  "changeSetId": "LF-V397-LOCAL-COVERAGE-RESET-ATOMIZATION-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -749,7 +749,8 @@
         "An embedded alphabetic object list is materialized only from a contiguous server-owned intro/item segment sequence with markers starting at a), one bound external coverage governor and one explicit final benefit predicate.",
         "The immediate predecessor run contract must be explicitly allowlisted and is still revalidated against the current source plan and validator before any response is reused.",
         "An explicitly elided component label is restored only to one exact, globally unique original span inside the smallest contiguous window bounded by all model-declared owned blocks; ambiguity and external evidence remain fail-closed.",
-        "A repeated literal component is narrowed to the unique exact requirement display-label occurrence only when every selected display block was already model-declared and at least two declared blocks contain the same literal."
+        "A repeated literal component is narrowed to the unique exact requirement display-label occurrence only when every selected display block was already model-declared and at least two declared blocks contain the same literal.",
+        "A complete owned insured-things clause with a conditional extension and trailing exclusion is atomized into separate source-bound requirements; an older inherited coverage governor is suppressed only when the owned text carries an explicit positive coverage reset."
       ],
       "evidence": {
         "tests": [
@@ -772,7 +773,8 @@
           "Tracker 133.72",
           "Tracker 133.73",
           "Tracker 133.74",
-          "Tracker 133.75"
+          "Tracker 133.75",
+          "Tracker 133.76"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -797,10 +799,11 @@
           "INT-20260917-061",
           "INT-20260917-062",
           "INT-20260917-063",
-          "INT-20260917-064"
+          "INT-20260917-064",
+          "INT-20260917-065"
         ]
       },
-      "lastVerifiedCommit": "acbea5179a1392bdf993a6f540623392d0f17071",
+      "lastVerifiedCommit": "cd03deb4656b8d6d90b6b49d501a89abe4a38069",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
@@ -865,7 +868,8 @@
         "Embedded alphabetic object lists retain one requirement per server-owned logical segment; external governor evidence never changes owned segment overlap, and the final local benefit predicate remains on the final item only.",
         "A unique short damage heading directly following a layout-only bullet is materialized as DAMAGE_OR_EFFECT only when its requirement already contains an explicit coverage effect; unseen heading layouts remain a holdout gate.",
         "Layout-only bullet markers may be omitted from semantic component citations, but operative heading and body blocks remain mandatory.",
-        "The phrase 'Versicherungsschutz ... geleistet' is accepted as an inclusion-effect surface form only when the complete component remains exact and source-bound."
+        "The phrase 'Versicherungsschutz ... geleistet' is accepted as an inclusion-effect surface form only when the complete component remains exact and source-bound.",
+        "An owned positive coverage definition resets an inherited negative governor only through an explicit source phrase and is atomized with conditional and excluded objects only when the complete sentence template is unambiguous."
       ],
       "evidence": {
         "tests": [
@@ -882,7 +886,8 @@
           "Tracker 133.69",
           "Tracker 133.70",
           "Tracker 133.73",
-          "Tracker 133.75"
+          "Tracker 133.75",
+          "Tracker 133.76"
         ],
         "adrs": ["ADR-028", "ADR-031"],
         "failures": [
@@ -895,10 +900,11 @@
           "INT-20260917-058",
           "INT-20260917-059",
           "INT-20260917-062",
-          "INT-20260917-064"
+          "INT-20260917-064",
+          "INT-20260917-065"
         ]
       },
-      "lastVerifiedCommit": "acbea5179a1392bdf993a6f540623392d0f17071",
+      "lastVerifiedCommit": "cd03deb4656b8d6d90b6b49d501a89abe4a38069",
       "relations": [{ "type": "DERIVED_FROM", "target": "CAP-A-002" }],
       "activationReason": "Current V2 runner consumes this manifest directly.",
       "reactivationCriteria": "Not applicable while active."
