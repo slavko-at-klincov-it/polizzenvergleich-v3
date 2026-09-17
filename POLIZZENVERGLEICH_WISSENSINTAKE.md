@@ -155,7 +155,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-049` | Partiellen A-Resume über Releasegrenzen quellengebunden übernehmen                | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.6 installieren und Session 14 ab der ersten aktuell offenen Unit fortsetzen                                        |
 | `INT-20260917-050` | Komplementäre Duplicate-Unit-Hüllen vor Listen-Normalisierung sicher vereinigen   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.7-Produktlauf ab Batch 7 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
 | `INT-20260917-051` | Alte komponentenförmige Requirements vor fachlicher Normalisierung sicher heben   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.8-Produktlauf ab Batch 11 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
-| `INT-20260917-052` | Terminalalias in expliziter Schaden-durch-Komponente source-bound normalisieren   | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | eng gebundene Rollenregel testen, gespeicherten Batch 14 revalidieren und erst danach den Produktlauf fortsetzen          |
+| `INT-20260917-052` | Terminalalias in expliziter Schaden-durch-Komponente source-bound normalisieren   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.9-Produktlauf ab Batch 15 weiterführen und vollständiges Endergebnis getrennt prüfen                           |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -805,7 +805,7 @@ Kategorieviews -> A/B-Join` definieren, ohne zusätzliche Benutzeraktion.
 
 - Erfasst: 2026-08-24
 - Typ: `ENTSCHEIDUNGSKANDIDAT`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: Der A/B-Vergleich soll aus normalisierten Fakten deterministisch
   entstehen; der Chat schlägt zusätzlich Statuspunkte `JA=3`,
   `TEILWEISE=2`, `NEIN=0`, Gewichte und Limitvergleiche in Excel vor.
@@ -3508,5 +3508,19 @@ Vollständigkeitsbehauptung erzeugen.
   muss ohne Modellaufruf 6/6 PASS ergeben; der Attempt-Baum bleibt hashgleich.
 - Beweisgrenze: Der bekannte LF-1+9-Fehlerfall ist Regressionsevidenz, kein
   unabhängiger Generalisierungs-Holdout.
+- Umsetzung und Nachweis: V70 normalisiert ausschließlich die oben eng
+  definierte, vollständig source-bound Aliasform. Die sechs neuen
+  Positiv-/Negativfälle sowie der vollständige fokussierte Vertragslauf
+  bestanden auf dem Mac Studio 6/6 beziehungsweise 385/385 Tests. Der echte
+  gespeicherte Batch 14 wurde ohne Modellaufruf mit 6/6 Units revalidiert; der
+  Attempt-Baum blieb unter SHA-256
+  `8356d00040a6d29245ff2537bba736d23e0a353e018b8ce3e6342a963669525c`
+  unverändert. Das vollständige Release-Gate auf Commit
+  `c8260dc4c31585612725088e67fc4826d18cc0d5` bestand 212/212 Suites und
+  3.080/3.080 Tests sowie Lint, Prisma, Capability-Inventar, Frontend-Build
+  und Installer-Suite. V3.8.9 wurde über den offiziellen Updater aktiviert;
+  Doctor, API und Datenbankintegrität bestanden. Der anschließende Resume
+  materialisierte Batches 1 bis 14 im neuen Run-Root
+  `resume-9c5fa5639e94f45e49f21bbc` mit null neuen Attempt-Dateien.
 - Geplanter Change-Set:
   `LF-V389-CAUSAL-PERIL-COMPONENT-ALIAS-20260917-001`.
