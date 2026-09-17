@@ -89,6 +89,15 @@ Updates werden absichtlich nicht direkt von einem veränderlichen `main`-Branch
 eingespielt. Dafür wird ein geprüfter Release-Stand mit Sicherungs- und
 Rollbackpfad bereitgestellt.
 
+Für den Kundenbetrieb gilt ab 17. September 2026: Ein vollständig bestandenes,
+annotiert veröffentlichtes Release wird nach Abschluss seines Release-Gates
+standardmäßig unmittelbar über den offiziellen Updater auf dem Kunden-Mac
+aktiviert. Dafür ist keine zusätzliche routinemäßige Rückfrage erforderlich.
+Ein aktiver Vergleichslauf, ein nicht vollständig bestandenes Gate, eine
+fehlende Rückfallsicherung, ein abweichender Release-SHA oder ein
+fehlgeschlagener Doctor bleiben technische Hard-Stops und verhindern die
+Aktivierung bis zur sicheren Klärung.
+
 `uninstall.command` entfernt nur Dienste und Starter. Kundendaten werden nicht
 automatisch gelöscht. Laufzeitdaten liegen in `server/storage`; Upload-Hotdir,
 Konfigurationen und Logs sind nur für den installierenden macOS-Benutzer lesbar.
