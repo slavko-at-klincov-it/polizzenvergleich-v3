@@ -763,7 +763,12 @@ function governingConditionEvidence(unit, evidence) {
   ].join("\n");
   const boundary = /\s+[–—]\s+|[,;.]/u.exec(tail);
   if (!boundary || boundary.index < marker.length) return null;
-  const label = tail.slice(0, boundary.index).trim();
+  const terminalPunctuation = /^[.;]$/u.test(boundary[0])
+    ? boundary[0].length
+    : 0;
+  const label = tail
+    .slice(0, boundary.index + terminalPunctuation)
+    .trim();
   if (label.length > 400) return null;
   const sourceBlockIds = minimalSourceRange(unit, label, [
     ...governingBlockIds,
