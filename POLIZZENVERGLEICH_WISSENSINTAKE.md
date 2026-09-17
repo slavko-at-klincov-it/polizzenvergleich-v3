@@ -3553,15 +3553,21 @@ Vollständigkeitsbehauptung erzeugen.
   echte Mehrpunktlisten bleiben strikt getrennt.
 - Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-A-002` und
   `CAP-A-003`; keine Dokument-, Seiten-, ID-, Versicherer- oder
-  Wortlautsonderregel; keine Freigabe für mehrere logische Segmente, Governor,
-  unvollständige Blockfolgen, unbekannte Quellen, gemischte Hüllen oder
-  verschachtelte Komponenten.
+  Wortlautsonderregel; keine Freigabe für mehrere logische Segmente,
+  unvollständige Blockfolgen, unbekannte Quellen, gemischte Hüllen,
+  verschachtelte Komponenten oder einen vom Modell frei gewählten Governor.
+  Ein bereits vom Server unter dem gültigen Evidenzkontextvertrag abgeleiteter
+  Governor bleibt zulässig und wird erst durch die vorhandene source-bound
+  Rollenmaterialisierung ergänzt; er wird nicht aus der alten Modellhülle
+  übernommen.
 - Hard-Gates: `unitKind=LIST`; exakt ein logisches Segment vom Typ
   `LIST_ITEM_WITH_CONTINUATIONS`; dessen geordnete `blockIds` sind exakt die
-  geordnete Unit-Blockfolge; kein externer Governing Context; alle
-  Requirements entsprechen vollständig dem bereits validierten alten
-  Komponentenvertrag und sind wortgetreu an eigene Blöcke gebunden. Jede
-  Abweichung bleibt fail-closed.
+  geordnete Unit-Blockfolge; ein Governing Context fehlt oder trägt exakt den
+  aktuellen serverseitigen Evidenzkontextvertrag; alle Requirements
+  entsprechen vollständig dem bereits validierten alten Komponentenvertrag
+  und sind wortgetreu an eigene Blöcke gebunden. Governor-Evidenz darf nur
+  durch die bestehende nachgelagerte Normalisierung materialisiert werden.
+  Jede Abweichung bleibt fail-closed.
 - Beweisgrenze: Der bekannte LF-1+9-Fehlerfall ist Regressionsevidenz, kein
   unabhängiger Generalisierungs-Holdout.
 - Geplanter Change-Set:
