@@ -153,7 +153,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-047` | Internen Objekt-Listenkopf und fortgesetzten Satzanfang source-bound erhalten     | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | V66 im neuen kalten V3.8.4-Produktlauf prüfen; Holdout-Grenze getrennt offen halten                                     |
 | `INT-20260917-048` | Eingebettete Listengovernor-Gruppen positionsunabhängig begrenzen                 | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.5 installieren und denselben kalten Lauf ab den gespeicherten Artefakten fortsetzen                                |
 | `INT-20260917-049` | Partiellen A-Resume über Releasegrenzen quellengebunden übernehmen                | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.6 installieren und Session 14 ab der ersten aktuell offenen Unit fortsetzen                                        |
-| `INT-20260917-050` | Komplementäre Duplicate-Unit-Hüllen vor Listen-Normalisierung sicher vereinigen   | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | gespeicherten Batch 6 ohne erneute gültige Units revalidieren und danach begrenzt resumieren                             |
+| `INT-20260917-050` | Komplementäre Duplicate-Unit-Hüllen vor Listen-Normalisierung sicher vereinigen   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.7-Produktlauf ab Batch 7 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -663,7 +663,7 @@ Tabellen-/Fortsetzungsrelation -> Heading/Variante` folgen; ein kleines
 
 - Erfasst: 2026-08-24
 - Typ: `ENTSCHEIDUNGSKANDIDAT`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: Jedes Dokument wird zunächst isoliert und fachbereichsweise
   analysiert; erst normalisierte Fakten von A und B werden verglichen.
 - Ist-Wahrheit: `TEILWEISE` – Dokumentisolation und der spätere serverseitige
@@ -3392,7 +3392,19 @@ Vollständigkeitsbehauptung erzeugen.
   grün.
 - Entscheidung: Die vorhandene Duplicate-Hüllen-Normalisierung und die
   vorhandene Shared-Governor-Normalisierung eng erweitern; keine neue
-  Architektur und kein höheres Retry-Budget.
+  Architektur und kein höheres Retry-Budget. Die Umsetzung liegt in
+  Klassifikationslauf V68 vor. Der fokussierte Mac-Studio-Vertragslauf
+  bestand 373/373 Tests. Der echte gespeicherte Batch 6 wurde mit 6/6 Units,
+  null Diagnosen, null Modellaufrufen und unverändertem Attempt-Baum unter
+  SHA-256
+  `1baa74fdbb47819cbfbe5841dbcc21b3b720bfb3d5ca32886995fc7bb713b5ba`
+  revalidiert. Der vollständige Releasekandidat
+  `258ace3a1464927e7f239cb6dbe2e425a9fc3222` bestand auf dem Mac Studio
+  212/212 Suites, 3.068/3.068 Tests, alle Lints, Prisma,
+  Capability-Inventar, Frontend-Build und Installer-Suite. V3.8.7 wurde über
+  den offiziellen Updater installiert; Doctor und Datenbankprüfung bestanden.
+  Der produktive Resume materialisierte Batch 1 bis 6 ohne neue Attempts und
+  begann erst bei Batch 7 mit neuer Modellarbeit.
 - Beweisgrenze: Der bekannte LF-1+9-Fehlerfall ist Regressionsevidenz, kein
   unabhängiger Generalisierungs-Holdout.
 - Geplanter Change-Set:
