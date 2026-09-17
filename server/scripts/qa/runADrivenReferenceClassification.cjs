@@ -43,7 +43,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V73";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V74";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -106,6 +106,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V70",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V71",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V72",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V73",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -2344,6 +2345,88 @@ function normalizeNamedPerilDefinitionRequirements(requirements, unit) {
   return { requirements, repairs: [] };
 }
 
+function normalizePrerequisiteWithFollowingDefinition(requirements, unit) {
+  if (
+    unit?.unitKind !== "LIST" ||
+    !Array.isArray(unit.logicalSourceSegments) ||
+    unit.logicalSourceSegments.length !== 1 ||
+    !Array.isArray(requirements) ||
+    requirements.length !== 1
+  )
+    return { requirements, repairs: [] };
+  const [segment] = unit.logicalSourceSegments;
+  const sourceBlockIds = unit?.source?.blockIds || [];
+  if (
+    segment?.type !== "LIST_ITEM_WITH_CONTINUATIONS" ||
+    !Array.isArray(segment.blockIds) ||
+    segment.blockIds.length !== sourceBlockIds.length ||
+    !segment.blockIds.every((blockId, index) => blockId === sourceBlockIds[index])
+  )
+    return { requirements, repairs: [] };
+  const sourceText = String(unit?.source?.combinedText || "");
+  const match =
+    /^\s*[•▪–—-]?\s*(?<condition>(?:(?:Eine|Die)\s+)?(?:wesentliche\s+)?Voraussetzung\b[\s\S]{0,220}?\bist,\s+dass\b[\s\S]{1,500}?\.)\s*(?<definition>Unter\s+(?<term>[^,;:.!?\n]{1,100}?)\s+versteht\s+man\s+[\s\S]{1,400}?\.)\s*$/iu.exec(
+      sourceText
+    );
+  if (!match?.groups) return { requirements, repairs: [] };
+  const condition = match.groups.condition.trim();
+  const definition = match.groups.definition.trim();
+  const term = match.groups.term.trim();
+  const comparable = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim();
+  if (!comparable(condition).includes(comparable(term)))
+    return { requirements, repairs: [] };
+  const conditionSourceBlockIds = sourceBlockIdsForExactSpan(unit, condition);
+  const definitionSourceBlockIds = sourceBlockIdsForExactSpan(unit, definition);
+  if (
+    conditionSourceBlockIds.length === 0 ||
+    definitionSourceBlockIds.length === 0
+  )
+    return { requirements, repairs: [] };
+  const components = Array.isArray(requirements[0]?.components)
+    ? requirements[0].components
+    : [];
+  const retained = components.filter(
+    ({ type }) => !["CONDITION", "PERIL_OR_CAUSE", "FACT_ROLE"].includes(type)
+  );
+  return {
+    requirements: [
+      {
+        ...requirements[0],
+        components: [
+          ...retained,
+          {
+            type: "CONDITION",
+            label: condition,
+            sourceBlockIds: conditionSourceBlockIds,
+          },
+          {
+            type: "PERIL_OR_CAUSE",
+            label: term,
+            sourceBlockIds: definitionSourceBlockIds,
+          },
+          {
+            type: "FACT_ROLE",
+            label: definition,
+            sourceBlockIds: definitionSourceBlockIds,
+          },
+        ],
+      },
+    ],
+    repairs: [
+      {
+        requirementIndex: 0,
+        action: "ATOMIZE_PREREQUISITE_WITH_FOLLOWING_DEFINITION",
+        conditionSourceBlockIds,
+        definitionSourceBlockIds,
+      },
+    ],
+  };
+}
+
 function normalizeAtomicCostRoleComponents(requirements, unit) {
   const repairs = [];
   const unitSourceText = String(unit?.source?.combinedText || "");
@@ -4302,6 +4385,21 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ],
       };
     }
+    const prerequisiteDefinition =
+      normalizePrerequisiteWithFollowingDefinition(requirements, unit);
+    requirements = prerequisiteDefinition.requirements;
+    for (const repair of prerequisiteDefinition.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (prerequisiteDefinition.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []),
+            ...semanticClassesFromSourceBoundComponents(requirements, unit),
+          ]),
+        ],
+      };
     const pureQuantifiedLimit =
       normalizePureQuantifiedLimitObjectComponents(requirements);
     requirements = pureQuantifiedLimit.requirements;

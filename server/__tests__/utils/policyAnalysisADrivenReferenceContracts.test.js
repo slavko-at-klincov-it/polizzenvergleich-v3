@@ -9228,7 +9228,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V73");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V74");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -14054,6 +14054,244 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       expect(normalized.componentRepairs).not.toContainEqual(
         expect.objectContaining({
           action: "COMPLETE_TRAILING_LIST_SENTENCE_COMPONENT_SOURCE_IDS",
+        })
+      );
+    }
+  });
+
+  test("atomizes an explicit prerequisite followed by its source-bound term definition", () => {
+    const exactBlock = (blockId, exactText, ordinal, structuralKind) => ({
+      blockId,
+      ordinal,
+      structuralKind,
+      physicalPageNumber: 9,
+      documentStart: ordinal * 200,
+      documentEnd: ordinal * 200 + exactText.length,
+      exactText,
+      exactTextSha256: crypto
+        .createHash("sha256")
+        .update(exactText)
+        .digest("hex"),
+    });
+    const blocks = [
+      exactBlock(
+        "prerequisite-lead",
+        "- Eine wesentliche Voraussetzung für den Schutz ist, dass der",
+        1,
+        "LIST_ITEM"
+      ),
+      exactBlock(
+        "prerequisite-definition",
+        "Sachschaden auf einen Störfall zurückzuführen ist. Unter Störfall versteht man ein",
+        2,
+        "BODY_LINE"
+      ),
+      exactBlock(
+        "definition-tail",
+        "technisches Gebrechen oder menschliches Versagen.",
+        3,
+        "BODY_LINE"
+      ),
+    ];
+    const governor = exactBlock(
+      "coverage-governor",
+      "Zusätzlich sind mitversichert",
+      0,
+      "LIST_GOVERNOR"
+    );
+    const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+    const unit = {
+      unitId: "prerequisite-with-definition",
+      unitOrder: 0,
+      packageOrder: [0, 0],
+      unitKind: "LIST",
+      structurePath: ["Deckung"],
+      source: {
+        documentUuid: "doc",
+        documentSha256: "d".repeat(64),
+        documentPosition: 0,
+        documentRole: "MAIN_POLICY",
+        documentStatus: "ACTIVE",
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+        physicalPages: [9],
+        documentStart: blocks[0].documentStart,
+        documentEnd: blocks.at(-1).documentEnd,
+        combinedText,
+        combinedTextSha256: crypto
+          .createHash("sha256")
+          .update(combinedText)
+          .digest("hex"),
+        contiguous: true,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "prerequisite-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: blocks.map(({ blockId }) => blockId),
+          combinedText,
+        },
+      ],
+      semanticAuthority: false,
+      initialDisposition: "PENDING_CLASSIFICATION",
+      governingContext: {
+        relationType: "GOVERNS_FOLLOWING_LIST",
+        unitIds: ["coverage-governor-unit"],
+        blockIds: [governor.blockId],
+        blocks: [governor],
+        combinedText: governor.exactText,
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "CONDITION",
+      semanticClasses: ["CONDITION"],
+      requirements: [
+        {
+          displayLabel: combinedText,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Sachschaden",
+              sourceBlockIds: ["prerequisite-definition"],
+            },
+            {
+              type: "CONDITION",
+              label:
+                "auf einen Störfall zurückzuführen ist. Unter Störfall versteht man ein technisches Gebrechen oder menschliches Versagen.",
+              sourceBlockIds: [
+                "prerequisite-definition",
+                "definition-tail",
+              ],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "mitversichert",
+              sourceBlockIds: [governor.blockId],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const normalizedResponse = normalized.responses[0];
+    const components = normalizedResponse.requirements[0].components;
+
+    expect(normalizedResponse.semanticClasses).toEqual(
+      expect.arrayContaining([
+        "CONDITION",
+        "PERIL_OR_DAMAGE",
+        "DEFINITION",
+        "INSURED_OBJECT",
+      ])
+    );
+    expect(components).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          type: "CONDITION",
+          sourceBlockIds: ["prerequisite-lead", "prerequisite-definition"],
+        }),
+        {
+          type: "PERIL_OR_CAUSE",
+          label: "Störfall",
+          sourceBlockIds: ["prerequisite-definition", "definition-tail"],
+        },
+        expect.objectContaining({
+          type: "FACT_ROLE",
+          sourceBlockIds: ["prerequisite-definition", "definition-tail"],
+        }),
+      ])
+    );
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: unit.unitId,
+        action: "ATOMIZE_PREREQUISITE_WITH_FOLLOWING_DEFINITION",
+      })
+    );
+
+    const plan = {
+      schemaVersion: 2,
+      contractId: A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+      runContractId: A_DRIVEN_RUN_CONTRACT_ID,
+      planSha256: "a".repeat(64),
+      documents: [{ documentUuid: "doc" }],
+      units: [unit],
+      relations: [],
+      summary: { sourceBlocks: blocks.length },
+    };
+    expect(
+      buildADrivenSemanticManifest({
+        plan,
+        responses: normalized.responses,
+        semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+      }).summary
+    ).toMatchObject({
+      unresolvedUnits: 0,
+      reviewRequiredBlocks: 0,
+      allBlocksTerminal: true,
+      responseIntegrityStatus: "VALID",
+    });
+  });
+
+  test("keeps prerequisite-definition atomization fail-closed for mismatched terms and envelopes", () => {
+    const blocks = [
+      {
+        blockId: "lead",
+        structuralKind: "LIST_ITEM",
+        exactText: "- Voraussetzung für den Schutz ist, dass der Schaden auf einen Störfall zurückgeht.",
+      },
+      {
+        blockId: "definition",
+        structuralKind: "BODY_LINE",
+        exactText: "Unter Unfall versteht man ein plötzliches Ereignis.",
+      },
+    ];
+    const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+    const makeUnit = (overrides = {}) => ({
+      unitId: "prerequisite-negative",
+      unitKind: "LIST",
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+        combinedText,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: blocks.map(({ blockId }) => blockId),
+          combinedText,
+        },
+      ],
+      ...overrides,
+    });
+    const requirement = {
+      displayLabel: combinedText,
+      components: [
+        { type: "OBJECT", label: "Schaden", sourceBlockIds: ["lead"] },
+      ],
+    };
+    const makeResponse = (requirements = [requirement]) => ({
+      unitId: "prerequisite-negative",
+      primaryClass: "CONDITION",
+      semanticClasses: ["CONDITION"],
+      requirements,
+    });
+    const cases = [
+      { unit: makeUnit(), response: makeResponse() },
+      { unit: makeUnit({ unitKind: "CLAUSE" }), response: makeResponse() },
+      {
+        unit: makeUnit(),
+        response: makeResponse([requirement, { ...requirement }]),
+      },
+    ];
+
+    for (const { unit, response } of cases) {
+      const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+      expect(normalized.componentRepairs).not.toContainEqual(
+        expect.objectContaining({
+          action: "ATOMIZE_PREREQUISITE_WITH_FOLLOWING_DEFINITION",
         })
       );
     }
