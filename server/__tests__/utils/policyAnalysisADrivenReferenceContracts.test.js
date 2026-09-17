@@ -7651,6 +7651,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         runContractId: A_DRIVEN_RUN_CONTRACT_ID,
         documents: [],
         units: [unit],
+        summary: { sourceBlocks: 3 },
       },
       { expectedUnitIds: [unit.unitId], units: [unit] },
       normalized.responses
