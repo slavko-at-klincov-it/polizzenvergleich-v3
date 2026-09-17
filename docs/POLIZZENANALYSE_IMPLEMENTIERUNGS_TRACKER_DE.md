@@ -10677,8 +10677,25 @@ Berechnung. Der bekannte LF-1+9-Lauf bleibt Regressionsevidenz; insbesondere
 ist der noch laufende vollständige Kaltlauf notwendig, aber kein allgemeiner
 Holdout- oder 99-Prozent-Nachweis.
 
-Status: `V3.9.6-RELEASEKANDIDAT; BATCH 35 OFFLINE 6/6 REVALIDIERT; VOLLGATE,
-DEPLOYMENT UND RESUME AUSSTEHEND`.
+Der exakte Release-Commit
+`acbea5179a1392bdf993a6f540623392d0f17071` bestand auf dem Mac Studio das
+vollständige Gate mit 212/212 Testsuiten und 3.104/3.104 Tests sowie Server-,
+Frontend- und Collector-Lint, Prisma, Capability-Inventar, Prettier,
+Frontend-Build und Installer-Suite. Er wurde unverändert als `v3.9.6`
+veröffentlicht und über den offiziellen Updater im Kunden-Checkout aktiviert.
+HEAD, Tag und `origin/main` waren danach hashgleich; Doctor, API und
+SQLite-`quick_check` bestanden. Das Pre-Activation-Backup liegt unter:
+
+```text
+server/storage/backups/anythingllm-before-activation-20260917-200923.db
+```
+
+Der echte Resume materialisierte den Root
+`resume-e1ac1b841c9dd26d6c2f42f0`. Batches 1 bis 35 wurden unter V77 als PASS
+revalidiert; neue Modellarbeit begann erst beim ersten offenen Batch 36.
+
+Status: `V3.9.6 INSTALLIERT UND GESUND; BATCHES 1 BIS 35 REVALIDIERT
+ÜBERNOMMEN; KALTER PRODUKTLAUF AB BATCH 36 AKTIV`.
 
 Change-Set: `LF-V396-BATCH35-EVIDENCE-BINDING-20260917-001`.
 
