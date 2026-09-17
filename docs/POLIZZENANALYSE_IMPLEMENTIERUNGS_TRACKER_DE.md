@@ -10457,6 +10457,59 @@ MODELLAUFRUF; V3.8.7-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
 Change-Set:
 `LF-V387-COMPLEMENTARY-DUPLICATE-UNIT-MERGE-20260917-001`.
 
+### 133.67 Alte komponentenförmige Requirements in Batch 10
+
+V3.8.7 wurde nach bestandenem vollständigem Release-Gate über den offiziellen
+Updater auf dem Kunden-Mac-Studio aktiviert. Der releaseübergreifende Resume
+der kalten Session 14 materialisierte Batch 1 bis 6 ohne neue Modellversuche.
+Batch 7 bis 9 bestanden mit den begrenzten produktiven Modellaufrufen. Batch
+10 stoppte nach vier Attempts korrekt fail-closed: fünf von sechs Units waren
+gültig und resumierbar, die verbleibende Unit wurde nicht als PASS
+gespeichert.
+
+Die offene Unit ist eine konditionale Äquivalenzdefinition. Qwen lieferte sie
+wiederholt source-bound, aber in einer alten Komponentenform: `type`, `label`
+und `sourceBlockIds` lagen direkt auf Requirement-Ebene; `displayLabel` und
+das heutige befüllte `components`-Array fehlten. Die vorhandene allgemeine
+Normalisierung für „… gilt auch dann als …, wenn …“ konnte deshalb nicht
+greifen. Nach dem Heben der Hülle blieb zusätzlich der alte `OBJECT`-Alias
+erhalten, obwohl die Antwort selbst `PERIL_OR_DAMAGE` deklarierte.
+
+Der allgemeine V69-Fix adaptiert `CAP-A-002` und `CAP-A-003`. Er hebt nur eine
+vollständig alte, ausschließlich eigene Quellen zitierende `CLAUSE`-Antwort
+ohne logische Listensegmente. Gemischte Formen, unbekannte Quellen,
+zusätzliche Felder, Listen-Units und verschachtelte Komponenten bleiben
+fail-closed. Innerhalb einer belegten konditionalen Äquivalenzdefinition wird
+`OBJECT` nur dann zu `PERIL_OR_CAUSE`, wenn die vorhandene deklarierte
+Semantik `PERIL_OR_DAMAGE` enthält. Ohne Gefahrsemantik bleibt der Objekttyp
+unverändert.
+
+Mac-Studio-Nachweise auf dem exakten Implementierungsstand
+`91ee0eb833b4b29986ef3e6a68ba1727c1b538b8`:
+
+```text
+Gezielte positive/negative Vertragsfälle:  7/7 PASS
+Vollständiger fokussierter Vertragslauf:   379/379 PASS
+Prettier / Capability-JSON:                PASS / PASS
+Echter gespeicherter Batch 10:             6/6 Units, PASS
+Neue Modellaufrufe im Realartefakt-Test:   0
+Nichtblockierende Diagnose:                LOCAL_SIGNAL_COMPONENT_MATERIALIZED
+Attempt-Artefaktbaum SHA-256 vorher/nachher:
+aa0856167dff6aa10b6872c1ccffa91cecf52bd187ac8419c03ca8b7e8a7f6a5
+Vorgängerartefakte nach Revalidierung:      hashgleich
+```
+
+V3.8.8-Release-Gate, Installation und die Fortsetzung ab dem nun
+materialisierbaren Batch 10 stehen noch aus. Gold-283-V2 bleibt unverändert;
+der bekannte LF-1+9-Lauf bleibt Regression und kein unabhängiger
+Generalisierungs- oder 99-Prozent-Nachweis.
+
+Status: `BATCH-10-ROOT-CAUSE ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
+MODELLAUFRUF; V3.8.8-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+
+Change-Set:
+`LF-V388-LEGACY-REQUIREMENT-SHAPE-LIFT-20260917-001`.
+
 ### 133.64 Kalter V3.8.4-Lauf und eingebettete List-Governor-Gruppen
 
 V3.8.4 wurde als annotierter Tag veröffentlicht, `origin/main` und der

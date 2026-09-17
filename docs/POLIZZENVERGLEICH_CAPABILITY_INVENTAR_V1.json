@@ -748,7 +748,8 @@
           "Tracker 133.63",
           "Tracker 133.64",
           "Tracker 133.65",
-          "Tracker 133.66"
+          "Tracker 133.66",
+          "Tracker 133.67"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -763,7 +764,7 @@
           "INT-20260917-051"
         ]
       },
-      "lastVerifiedCommit": "3bf929702fd8726313dde47ef2a376c2a2722c5c",
+      "lastVerifiedCommit": "91ee0eb833b4b29986ef3e6a68ba1727c1b538b8",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
@@ -820,7 +821,8 @@
         "Occurrence-bound V11 role materialization still requires an unseen expert-labeled holdout for generalization proof.",
         "Internal object-list provenance is validated structurally and on the known 1+9 failure unit, but remains subject to unseen-layout holdout validation.",
         "Embedded list-governor groups are bounded by server-owned segment roles and hierarchy; their generalization remains unproven without an unseen expert-labeled holdout.",
-        "External governing context may move with an owned shared list governor only into its immediately subordinate item requirements and remains fully source-validated."
+        "External governing context may move with an owned shared list governor only into its immediately subordinate item requirements and remains fully source-validated.",
+        "A legacy OBJECT alias inside a conditional equivalence definition is relabeled as a peril only when the response already declares PERIL_OR_DAMAGE; unseen structures remain a holdout gate."
       ],
       "evidence": {
         "tests": [
@@ -832,12 +834,13 @@
           "Tracker 133.59",
           "Tracker 133.63",
           "Tracker 133.64",
-          "Tracker 133.66"
+          "Tracker 133.66",
+          "Tracker 133.67"
         ],
         "adrs": ["ADR-028", "ADR-031"],
-        "failures": ["INT-20260917-050"]
+        "failures": ["INT-20260917-050", "INT-20260917-051"]
       },
-      "lastVerifiedCommit": "3bf929702fd8726313dde47ef2a376c2a2722c5c",
+      "lastVerifiedCommit": "91ee0eb833b4b29986ef3e6a68ba1727c1b538b8",
       "relations": [{ "type": "DERIVED_FROM", "target": "CAP-A-002" }],
       "activationReason": "Current V2 runner consumes this manifest directly.",
       "reactivationCriteria": "Not applicable while active."
