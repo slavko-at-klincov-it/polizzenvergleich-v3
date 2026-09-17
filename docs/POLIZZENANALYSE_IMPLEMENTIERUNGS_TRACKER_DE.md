@@ -10636,6 +10636,62 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.70 Mehrblock-Evidenz und quantifizierte Limitbasis in Batch 21
+
+Der produktive V3.9.0-Resume materialisierte Batch 1 bis 17 ohne neue
+Modellarbeit. Batch 18 bis 20 bestanden. Batch 21 stoppte nach elf Attempts
+korrekt fail-closed: vier von sechs Units waren gültig und resumierbar, zwei
+verbleibende Units wurden nicht als PASS gespeichert.
+
+Die erste offene Unit ist erneut genau ein fortgesetztes Listensegment mit
+servergebundenem Governor. Das fachlich korrekte Objektlabel überquert eine
+physische Zweiblockgrenze, ersetzt dort aber ausschließlich den Zeilenumbruch
+durch ein Leerzeichen. Zusätzlich kommt das kurze Wirkunglabel sowohl exakt
+im Governor als auch als Wortanfang in der Unit vor. Die bisherige
+Exact-Span-Prüfung konnte den Mehrblock-Whitespacefall nicht binden und wählte
+beim kurzen Label den ersten Texttreffer statt der deklarierten Governor-ID.
+
+Die zweite offene Unit enthält zwei quantifizierte Anforderungen. In der
+ersten kombinierte Qwen Basis und Scope zu einem nicht wortgetreuen
+`LIMIT_BASIS`-Kurzlabel; die Anforderung, ihr Wert und die zweite Anforderung
+waren fachlich richtig und source-bound.
+
+Der allgemeine V72-Fix adaptiert `CAP-A-002` und `CAP-A-003`. Ein
+Mehrblocklabel darf ausschließlich über NFKC und Whitespace-Kollaps auf einer
+eindeutig kleinsten zusammenhängenden Blockspanne gebunden werden. Bei
+mehreren Texttreffern muss die vollständige Kandidatenspanne von den
+deklarierten Source-IDs umfasst sein. Andere Textänderungen bleiben
+unzulässig. Eine quantifizierte Satzform „Der/Die/Das X beträgt [Scope]
+[Wert]“ darf ein nicht wörtliches Altlabel nur dann in die exakt gefundene
+`LIMIT_BASIS` X und den optionalen `SCOPE` zerlegen, wenn genau eine gültige
+Wertkomponente im selben Requirement vorhanden ist und das Altlabel exakt
+diese beiden Teile verbindet.
+
+Mac-Studio-Nachweise auf dem exakten Implementierungsstand
+`a92aeae4f2b5da490288a7d35e7e701894595adc`:
+
+```text
+Gezielte positive/negative Vertragsfälle:  9/9 PASS
+Vollständiger fokussierter Vertragslauf:   393/393 PASS
+Echter gespeicherter Batch 21:             6/6 Units, PASS
+Restdiagnosen:                             0
+Neue Modellaufrufe im Realartefakt-Test:   0
+Attempt-Artefaktbaum SHA-256 vorher/nachher:
+c3f11c95368dc56956ddcbabedce0e9298a6b83a750e04c94deaf817927ede1e
+Vorgängerartefakte nach Revalidierung:      hashgleich
+```
+
+V3.9.1-Release-Gate, Installation und die Fortsetzung ab dem nun
+materialisierbaren Batch 21 stehen noch aus. Gold-283-V2 bleibt unverändert;
+der bekannte LF-1+9-Lauf bleibt Regression und kein unabhängiger
+Generalisierungs- oder 99-Prozent-Nachweis.
+
+Status: `BATCH-21-ROOT-CAUSES ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
+MODELLAUFRUF; V3.9.1-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+
+Change-Set:
+`LF-V391-BATCH21-EVIDENCE-NORMALIZATION-20260917-001`.
+
 ### 133.64 Kalter V3.8.4-Lauf und eingebettete List-Governor-Gruppen
 
 V3.8.4 wurde als annotierter Tag veröffentlicht, `origin/main` und der
