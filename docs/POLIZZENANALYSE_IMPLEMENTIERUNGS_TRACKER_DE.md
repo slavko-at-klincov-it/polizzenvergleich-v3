@@ -10661,10 +10661,28 @@ revalidiert. Ein expliziter V74→V76-Test beweist, dass gültige Antworten ohne
 Modellaufruf übernommen werden. Der vollständige fokussierte Vertrag bestand
 auf dem Mac Studio mit 402/402 Tests.
 
-V3.9.5-Release-Gate, Installation und erneuter Resume stehen noch aus.
+Der exakte Release-Commit
+`46a9172ab6fb9d0f5934d13b058cf14cc4643aa4` bestand auf dem Mac Studio das
+vollständige Gate mit 212/212 Testsuiten und 3.097/3.097 Tests sowie Server-,
+Frontend- und Collector-Lint, Prisma, Capability-Inventar, Prettier,
+Frontend-Build und Installer-Suite. Er wurde als `v3.9.5` veröffentlicht und
+über den offiziellen Updater im Kunden-Checkout aktiviert. HEAD, annotierter
+Tag und `origin/main` waren danach hashgleich; Doctor, API und
+SQLite-`quick_check` bestanden. Das neue Pre-Activation-Backup liegt unter:
 
-Status: `V3.9.4 INSTALLIERT UND GESUND; ERSTER RESUME VOR MODELLAUFRUF
-FAIL-CLOSED; V74-VORGÄNGERLÜCKE IN V76 BEHOBEN; V3.9.5-GATE AUSSTEHEND`.
+```text
+server/storage/backups/anythingllm-before-activation-20260917-192720.db
+```
+
+Der erneute Resume materialisierte den Run-Root
+`resume-f1f8a08a27db68b615b3b79c`. Batches 1 bis 33 wurden unter V76
+revalidiert und ohne neue Modellarbeit als PASS übernommen; anschließend
+begann der Worker erstmals wieder mit Batch 34/58. Damit ist sowohl der
+fail-closed Schutz als auch die sichere unmittelbare Vorgängerübernahme im
+echten Produktlauf belegt.
+
+Status: `V3.9.5 INSTALLIERT UND GESUND; BATCHES 1 BIS 33 REVALIDIERT
+ÜBERNOMMEN; KALTER PRODUKTLAUF AB BATCH 34 AKTIV`.
 
 Change-Set: `LF-V395-IMMEDIATE-PREDECESSOR-RESUME-20260917-001`.
 
