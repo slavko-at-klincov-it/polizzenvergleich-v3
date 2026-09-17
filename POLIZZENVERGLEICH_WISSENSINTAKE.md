@@ -4172,7 +4172,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-18
 - Typ: `FEHLER`
-- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Status: `UMGESETZT_REGRESSION_BESTANDEN`
 - Aussage: Enthält eine Requirement bereits mindestens eine wörtliche,
   source-bound und polaritätsrichtige `COVERAGE_EFFECT`-Komponente, dürfen
   zusätzliche Komponenten desselben Typs ohne tatsächlichen
@@ -4192,10 +4192,11 @@ Vollständigkeitsbehauptung erzeugen.
   Requirement; das ungültige Label enthält selbst keinen anerkannten
   Deckungs- oder Ausschlussausdruck; sämtliche Quellblöcke der zu
   entfernenden Komponente bleiben durch andere Komponenten derselben
-  Requirement zitiert. Fehlt eine gültige Deckungswirkung, geht ein
-  Quellblock verloren oder ist die Polarität nicht eindeutig, bleibt der
-  Fall fail-closed. Keine Dokument-ID, Seite, Gesellschaft oder bekannte
-  Klausel ist eine Produktionsregel.
+  Requirement zitiert. Fehlt eine gültige Deckungswirkung oder ginge ein
+  Quellblock verloren, greift diese neue Reparatur nicht; bestehende
+  unabhängige Normalisierungen und Fail-closed-Gates bleiben unverändert.
+  Keine Dokument-ID, Seite, Gesellschaft oder bekannte Klausel ist eine
+  Produktionsregel.
 - Beweisgrenze: bekannte LF-1+9-Regression; synthetische Positiv- und
   Schutzvarianten sowie Revalidierung des unveränderten Batch-55-Artefakts
   erforderlich; kein Holdout- oder 99-Prozent-Nachweis.
@@ -4205,4 +4206,12 @@ Vollständigkeitsbehauptung erzeugen.
   (`batchIndex 54`, `AUB-f32187483fc34639eff542f6`) nach drei gespeicherten
   Versuchen bei 5/6 gültigen Units korrekt fail-closed. Es trat kein Timeout
   oder Transportfehler auf.
+- Ergebnis: Der V82-Vertrag entfernt nur die redundante ungültige Rolle und
+  verwendet dafür denselben kanonischen Deckungswirkungsvalidator wie das
+  Manifest. Auf dem Mac Studio bestanden 426/426 fokussierte Tests und
+  Prettier. Der unveränderte echte Batch 55 revalidierte über 14
+  Vorgängerwurzeln mit 6/6 Units, sechs wiederverwendeten
+  Vorgängerantworten, null Modellaufrufen und null neuen Versuchen. Der
+  vollständige Release-Gate, das Deployment und der fortgesetzte Produktlauf
+  stehen noch aus.
 - Change-Set: `LF-V3911-REDUNDANT-COVERAGE-ROLE-20260918-001`.
