@@ -806,7 +806,8 @@ function materializeBulletDamageHeading(requirements, unit) {
         displayLabel.length > 160 ||
         !/^\p{L}[\p{L}\s/-]*schäden\s*$/iu.test(displayLabel) ||
         sourceText.indexOf(displayLabel) < 0 ||
-        sourceText.indexOf(displayLabel) !== sourceText.lastIndexOf(displayLabel)
+        sourceText.indexOf(displayLabel) !==
+          sourceText.lastIndexOf(displayLabel)
       )
         return requirement;
       const sourceBlockIds = sourceBlockIdsForExactSpan(unit, displayLabel);
