@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V384-INTERNAL-OBJECT-LIST-PROVENANCE-20260917-001",
+  "changeSetId": "LF-V385-EMBEDDED-LIST-GOVERNOR-GROUPS-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -726,7 +726,8 @@
         "Multiple same-role evidence occurrences must be rebound under the current semantic contract before a predecessor batch is reusable.",
         "Administrative record obligations and conditional applicability statements require source-bound deterministic normalization when a model omits mandatory labels.",
         "Parenthetical object exclusions require a separate source-bound EXCLUDED effect while retaining the containing object requirement.",
-        "Predicate-free internal object list governors and continued item-leading blocks require explicit source-bound provenance without weakening the unanchored-list fail-closed boundary."
+        "Predicate-free internal object list governors and continued item-leading blocks require explicit source-bound provenance without weakening the unanchored-list fail-closed boundary.",
+        "Embedded list governors are bounded to immediately following subordinate list items; unseen layouts remain subject to holdout validation."
       ],
       "evidence": {
         "tests": [
@@ -738,7 +739,8 @@
           "Tracker 133.59",
           "Tracker 133.61",
           "Tracker 133.62",
-          "Tracker 133.63"
+          "Tracker 133.63",
+          "Tracker 133.64"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -746,10 +748,11 @@
           "INT-20260917-044",
           "INT-20260917-045",
           "INT-20260917-046",
-          "INT-20260917-047"
+          "INT-20260917-047",
+          "INT-20260917-048"
         ]
       },
-      "lastVerifiedCommit": "9a5d6f9e4a690b2d35f4cdf5d7dac3983c98de10",
+      "lastVerifiedCommit": "026f3b8e8d6833bac22d949f881f88686d06945a",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
@@ -785,7 +788,7 @@
         "document artifacts"
       ],
       "outputs": [
-        "LF_A_DYNAMIC_SEMANTIC_MANIFEST_V15",
+        "LF_A_DYNAMIC_SEMANTIC_MANIFEST_V16",
         "terminal block/unit crosswalk"
       ],
       "sideEffects": ["CLI writes immutable private manifest"],
@@ -804,18 +807,24 @@
       "knownLimitsRisks": [
         "Known 1+9 manifest quality is regression evidence, not a holdout proof.",
         "Occurrence-bound V11 role materialization still requires an unseen expert-labeled holdout for generalization proof.",
-        "Internal object-list provenance is validated structurally and on the known 1+9 failure unit, but remains subject to unseen-layout holdout validation."
+        "Internal object-list provenance is validated structurally and on the known 1+9 failure unit, but remains subject to unseen-layout holdout validation.",
+        "Embedded list-governor groups are bounded by server-owned segment roles and hierarchy; their generalization remains unproven without an unseen expert-labeled holdout."
       ],
       "evidence": {
         "tests": [
           "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
           "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"
         ],
-        "runs": ["Tracker 133.46", "Tracker 133.59", "Tracker 133.63"],
+        "runs": [
+          "Tracker 133.46",
+          "Tracker 133.59",
+          "Tracker 133.63",
+          "Tracker 133.64"
+        ],
         "adrs": ["ADR-028", "ADR-031"],
         "failures": []
       },
-      "lastVerifiedCommit": "9a5d6f9e4a690b2d35f4cdf5d7dac3983c98de10",
+      "lastVerifiedCommit": "026f3b8e8d6833bac22d949f881f88686d06945a",
       "relations": [{ "type": "DERIVED_FROM", "target": "CAP-A-002" }],
       "activationReason": "Current V2 runner consumes this manifest directly.",
       "reactivationCriteria": "Not applicable while active."

@@ -10335,6 +10335,74 @@ Holdout-Aussage.
 
 Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
 
+### 133.64 Kalter V3.8.4-Lauf und eingebettete List-Governor-Gruppen
+
+V3.8.4 wurde als annotierter Tag veröffentlicht, `origin/main` und der
+installierte Kunden-Checkout wurden auf den vollständig geprüften
+Release-Commit `7789d0d79f63b318eaecf32d0a2fa6f939e13b01` aktualisiert. Das
+Release-Gate bestand mit 211/211 Suites und 3.059/3.059 Tests sowie sämtlichen
+Lint-, Prisma-, Inventar-, Frontend-Build- und Installer-Prüfungen. Der
+offizielle Updater endete mit `Doctor: PASS`; das Pre-Update-Backup liegt
+unter `server/storage/backups/anythingllm-before-activation-20260917-132350.db`.
+
+Der danach mit zehn erneut hochgeladenen und hashverifizierten Dokumenten
+gestartete echte kalte LF-1+9-Lauf verwendet Session 14 mit UUID
+`79211e03-d5ce-44b6-9042-199e83f589a0` und den resumierbaren Run-Root:
+
+```text
+/Users/michaelmischkot/Code/polizzenvergleich-v3/server/storage/
+  policy-comparisons/runs/79211e03-d5ce-44b6-9042-199e83f589a0/
+  resume-5ea55381415e4c2103de5daa/
+```
+
+Die ersten vier A-Batches bestanden. Damit ist insbesondere der unter
+V3.8.3 blockierende Batch 4 belegt behoben. Batch 5 stoppte korrekt
+fail-closed. Die neue Root Cause liegt in Unit
+`AU-0eb04c0f60adb44e246faef1`: Nach einem selbstständigen Listenpunkt folgt
+innerhalb derselben Unit ein `LIST_GOVERNOR` mit drei hierarchisch
+untergeordneten `LIST_ITEM`-Segmenten. Der bisherige Validator erkannte eine
+gemeinsame Governor-Gruppe nur am Unit-Anfang. Dadurch wurde Scope an den
+vorherigen Listenpunkt angehängt und der Governor zugleich als
+eigenständiges Requirement ausgegeben.
+
+V67/V16/V29 erkennt gemeinsame Governor-Gruppen an jeder serverseitig
+belegten Segmentgrenze, bindet sie aber ausschließlich an die unmittelbar
+folgenden untergeordneten Listenpunkte bis zur nächsten Grenze. Vorherige
+oder spätere selbstständige Segmente dürfen den Scope nicht tragen; ein Leak
+bleibt mit `LIST_GOVERNOR_SCOPE_LEAK` fail-closed. Die bestehende interne
+Objekt-Governor-Materialisierung ist zudem idempotent. V28-Journale werden
+unter dem neuen Vertrag neu validiert, ohne gültige Modellantworten erneut zu
+berechnen.
+
+Mac-Studio-Nachweise auf dem exakten Fix-Commit
+`026f3b8e8d6833bac22d949f881f88686d06945a`:
+
+```text
+Fokussierte Vertragssuite:        369/369 PASS
+Echte gespeicherte Problem-Unit:  OPERATIVE_MAPPED, 4 Requirements
+Eigenständiger Governor:          entfernt
+Governor-Zielsegmente:            exakt 3
+Scope-Leak zum Vorgänger:         keiner
+Replay der ersten fünf Batches:   5/5 PASS
+Neue Modellaufrufe im Replay:     0
+Verträge nach Replay:             V67 / V16 / V29
+```
+
+Ein erster Upgrade-Replay erkannte zusätzlich eine doppelte interne
+Governor-Komponente in einem bereits bestandenen Batch 4. Die allgemeine
+Materialisierung wurde daraufhin vor dem Fix-Commit idempotent gemacht; der
+vollständige Fünf-Batch-Replay bestand erst danach. Das ist ein positives
+Gate-Ergebnis, kein still übernommener Vorgängerstatus.
+
+V3.8.5-Release-Gate, Deployment und Resume derselben Session 14 stehen noch
+aus. Gold-283-V2 bleibt unverändert. Der unabhängige expertengelabelte
+Mehrversicherer-Holdout ist weiterhin nicht vorhanden.
+
+Status: `V3.8.4 FAIL-CLOSED NACH 4/58 PASS; ECHTER FEHLERFALL UND FÜNF-BATCH-
+REPLAY UNTER V67 PASS; V3.8.5-GATE, DEPLOYMENT UND RESUME AUSSTEHEND`.
+
+Change-Set: `LF-V385-EMBEDDED-LIST-GOVERNOR-GROUPS-20260917-001`.
+
 ### 133.63 Kalter V3.8.3-Lauf und interne Objektlisten-Provenienz
 
 V3.8.3 wurde als annotierter Tag veröffentlicht, `origin/main` wurde auf den
