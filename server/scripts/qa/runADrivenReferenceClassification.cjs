@@ -2577,7 +2577,11 @@ function normalizeAtomicCostRoleComponents(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
-function normalizeConditionalEquivalenceDefinition(requirements, unit) {
+function normalizeConditionalEquivalenceDefinition(
+  requirements,
+  unit,
+  semanticClasses = []
+) {
   const sourceText = String(unit?.source?.combinedText || "");
   const match =
     /^\s*(?<antecedent>[\s\S]{1,400}?)\s+(?<relation>gilt\s+auch\s+dann\s+als\s+(?<definedTerm>[^,;\n]{1,120})),\s*(?<condition>wenn\s+[\s\S]{1,300}?;?)\s*$/iu.exec(
@@ -2624,14 +2628,25 @@ function normalizeConditionalEquivalenceDefinition(requirements, unit) {
         requirementIndex,
         componentIndex: domainComponentIndex,
         action: "CANONICALIZE_CONDITIONAL_EQUIVALENCE_DEFINITION",
+        domainType:
+          domainComponent.type === "OBJECT" &&
+          semanticClasses.includes("PERIL_OR_DAMAGE")
+            ? "PERIL_OR_CAUSE"
+            : domainComponent.type,
         replacedOwnedComponents:
           components.length - inheritedComponents.length - 1,
       });
+      const domainType =
+        domainComponent.type === "OBJECT" &&
+        semanticClasses.includes("PERIL_OR_DAMAGE")
+          ? "PERIL_OR_CAUSE"
+          : domainComponent.type;
       return {
         ...requirement,
         components: [
           {
             ...domainComponent,
+            type: domainType,
             label: match.groups.antecedent,
             sourceBlockIds: sourceBlockIds[0],
           },
@@ -4081,7 +4096,8 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
       };
     const conditionalEquivalence = normalizeConditionalEquivalenceDefinition(
       requirements,
-      unit
+      unit,
+      response?.semanticClasses
     );
     requirements = conditionalEquivalence.requirements;
     for (const repair of conditionalEquivalence.repairs)

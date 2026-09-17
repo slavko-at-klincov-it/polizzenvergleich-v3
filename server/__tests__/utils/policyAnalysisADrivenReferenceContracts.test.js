@@ -4185,7 +4185,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       )
     ).toEqual([
       [
-        "OBJECT",
+        "PERIL_OR_CAUSE",
         "Eine im Inneren eines Behälters durch chemische Umsetzung hervorgerufene Explosion",
       ],
       ["FACT_ROLE", "gilt auch \ndann als Explosion"],
@@ -4196,6 +4196,42 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         "LIFT_LEGACY_COMPONENT_SHAPED_REQUIREMENTS",
         "CANONICALIZE_CONDITIONAL_EQUIVALENCE_DEFINITION",
       ])
+    );
+  });
+
+  test("does not relabel a conditional-equivalence object without peril semantics", () => {
+    const source =
+      "Ein Nebengebäude gilt auch dann als Gebäude, wenn es räumlich getrennt ist;";
+    const unit = {
+      unitId: "legacy-object-equivalence",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["block"],
+        combinedText: source,
+        blocks: [{ blockId: "block", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: [
+            {
+              type: "OBJECT",
+              label: "Gebäude",
+              sourceBlockIds: ["block"],
+              components: [],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements[0].components[0].type).toBe(
+      "OBJECT"
     );
   });
 
