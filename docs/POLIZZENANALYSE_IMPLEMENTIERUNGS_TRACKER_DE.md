@@ -10392,6 +10392,71 @@ AUSSTEHEND`.
 
 Change-Set: `LF-V386-CROSS-RELEASE-PARTIAL-A-RESUME-20260917-001`.
 
+### 133.66 Komplementäre Duplicate-Unit-Hüllen in Batch 6
+
+V3.8.6 wurde nach bestandenem Release-Gate mit 212/212 Suites und
+3.066/3.066 Tests sowie sämtlichen Lint-, Prisma-, Inventar-, Build- und
+Installer-Prüfungen über den offiziellen Updater auf dem Kunden-Mac-Studio
+aktiviert. Tag, `origin/main` und der saubere installierte Checkout zeigen auf
+`3d4b63fd858a9d4bf84aabb6e228aaa145a1c990`; Doctor, API,
+Datenbank-`quick_check` und Backup
+`server/storage/backups/anythingllm-before-activation-20260917-143343.db`
+bestanden.
+
+Der anschließende Resume der kalten Session 14 bewies den neuen
+releaseübergreifenden Pfad: Batch 1 bis 5 wurden ohne neue Modellversuche
+materialisiert. In Batch 6 blieben nach zwölf begrenzten semantischen
+Versuchen fünf von sechs Units aktuell valide. Nur
+`AU-d85b513150561995ba8786bc` blieb offen; der Lauf stoppte korrekt
+fail-closed, ohne einen unvollständigen Batch als PASS zu speichern.
+
+Ein zweiter Resume übernahm erneut exakt diese fünf Units. Qwen erzeugte für
+die letzte Unit schließlich den quantifizierten Listengovernor und das
+untergeordnete versicherte Objekt vollständig source-bound, aber als zwei
+Top-Level-Hüllen derselben `unitId`: einmal `LIMIT`, einmal `INSURED_OBJECT`,
+jeweils zusammen mit `OPERATIVE_COVERAGE_STATEMENT`. Die bestehende
+Duplicate-Normalisierung vereinigte nur Hüllen mit identischen
+Terminalklassen. Der Validator meldete deshalb ausschließlich
+`DUPLICATE_UNIT_RESPONSE` und stoppte nach drei Versuchen erneut korrekt
+fail-closed.
+
+Der allgemeine Fix adaptiert `CAP-A-002` und `CAP-A-003`. Mehrere Hüllen
+werden nur dann vereinigt, wenn ihre ID exakt im aktuellen Batch erwartet
+wird, sämtliche Klassen operative gültige Terminalklassen sind, jede
+Primärklasse im eigenen Klassenarray enthalten ist und jede Hülle ein
+Requirements-Array besitzt. Requirements und Klassen werden geordnet
+vereinigt; unbekannte IDs, nichtoperative Klassen oder ungültige Hüllen
+bleiben unverändert fail-closed. Die bestehende Shared-Governor-
+Normalisierung darf zusätzlich den explizit gebundenen äußeren
+`governingContext` gemeinsam mit dem internen Governor ausschließlich in die
+unmittelbar untergeordneten Item-Requirements verschieben. Die vollständige
+Source-, Segment-, Rollen- und Manifestvalidierung bleibt maßgeblich.
+
+Mac-Studio-Nachweise auf dem exakten Implementierungsstand
+`3bf929702fd8726313dde47ef2a376c2a2722c5c`:
+
+```text
+Fokussierter Vertragslauf:             373/373 PASS
+Prettier / Produktcode-Lint:           PASS / PASS
+Echter gespeicherter Batch 6:          6/6 Units, PASS
+Neue Modellaufrufe im Realartefakt-Test: 0
+Nichtmaterialisierte Diagnosen:        0
+Attempt-Artefaktbaum SHA-256 vorher/nachher:
+1baa74fdbb47819cbfbe5841dbcc21b3b720bfb3d5ca32886995fc7bb713b5ba
+Vorgängerartefakte nach Revalidierung:  hashgleich
+```
+
+V3.8.7-Release-Gate, Installation und die Fortsetzung ab dem nun
+materialisierbaren Batch 6 stehen noch aus. Gold-283-V2 bleibt unverändert;
+der bekannte LF-1+9-Lauf bleibt Regression und kein unabhängiger
+Generalisierungs- oder 99-Prozent-Nachweis.
+
+Status: `BATCH-6-ROOT-CAUSE ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
+MODELLAUFRUF; V3.8.7-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+
+Change-Set:
+`LF-V387-COMPLEMENTARY-DUPLICATE-UNIT-MERGE-20260917-001`.
+
 ### 133.64 Kalter V3.8.4-Lauf und eingebettete List-Governor-Gruppen
 
 V3.8.4 wurde als annotierter Tag veröffentlicht, `origin/main` und der

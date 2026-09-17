@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V386-CROSS-RELEASE-PARTIAL-A-RESUME-20260917-001",
+  "changeSetId": "LF-V387-COMPLEMENTARY-DUPLICATE-UNIT-MERGE-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -731,7 +731,8 @@
         "Parenthetical object exclusions require a separate source-bound EXCLUDED effect while retaining the containing object requirement.",
         "Predicate-free internal object list governors and continued item-leading blocks require explicit source-bound provenance without weakening the unanchored-list fail-closed boundary.",
         "Embedded list governors are bounded to immediately following subordinate list items; unseen layouts remain subject to holdout validation.",
-        "Partial predecessor answers are never trusted as PASS and must be rebound to the identical source plan and current validator before reuse."
+        "Partial predecessor answers are never trusted as PASS and must be rebound to the identical source plan and current validator before reuse.",
+        "Complementary duplicate envelopes are merged only for the same expected operative unit ID and still require complete current-contract source validation."
       ],
       "evidence": {
         "tests": [
@@ -745,7 +746,8 @@
           "Tracker 133.62",
           "Tracker 133.63",
           "Tracker 133.64",
-          "Tracker 133.65"
+          "Tracker 133.65",
+          "Tracker 133.66"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -755,10 +757,11 @@
           "INT-20260917-046",
           "INT-20260917-047",
           "INT-20260917-048",
-          "INT-20260917-049"
+          "INT-20260917-049",
+          "INT-20260917-050"
         ]
       },
-      "lastVerifiedCommit": "1d4dbbc5252fdae20613cec2391ecbeefebaeb5e",
+      "lastVerifiedCommit": "3bf929702fd8726313dde47ef2a376c2a2722c5c",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
@@ -814,7 +817,8 @@
         "Known 1+9 manifest quality is regression evidence, not a holdout proof.",
         "Occurrence-bound V11 role materialization still requires an unseen expert-labeled holdout for generalization proof.",
         "Internal object-list provenance is validated structurally and on the known 1+9 failure unit, but remains subject to unseen-layout holdout validation.",
-        "Embedded list-governor groups are bounded by server-owned segment roles and hierarchy; their generalization remains unproven without an unseen expert-labeled holdout."
+        "Embedded list-governor groups are bounded by server-owned segment roles and hierarchy; their generalization remains unproven without an unseen expert-labeled holdout.",
+        "External governing context may move with an owned shared list governor only into its immediately subordinate item requirements and remains fully source-validated."
       ],
       "evidence": {
         "tests": [
@@ -825,12 +829,13 @@
           "Tracker 133.46",
           "Tracker 133.59",
           "Tracker 133.63",
-          "Tracker 133.64"
+          "Tracker 133.64",
+          "Tracker 133.66"
         ],
         "adrs": ["ADR-028", "ADR-031"],
-        "failures": []
+        "failures": ["INT-20260917-050"]
       },
-      "lastVerifiedCommit": "026f3b8e8d6833bac22d949f881f88686d06945a",
+      "lastVerifiedCommit": "3bf929702fd8726313dde47ef2a376c2a2722c5c",
       "relations": [{ "type": "DERIVED_FROM", "target": "CAP-A-002" }],
       "activationReason": "Current V2 runner consumes this manifest directly.",
       "reactivationCriteria": "Not applicable while active."
