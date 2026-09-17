@@ -9153,11 +9153,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
   });
 
   test.each([
-    A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
-    A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
+    ["LF_A_BOUNDED_CLASSIFICATION_RUN_V12", A_DYNAMIC_MANIFEST_CONTRACT_ID_V11],
+    ["LF_A_BOUNDED_CLASSIFICATION_RUN_V12", A_DYNAMIC_MANIFEST_CONTRACT_ID_V12],
+    ["LF_A_BOUNDED_CLASSIFICATION_RUN_V74", A_DYNAMIC_MANIFEST_CONTRACT_ID],
   ])(
-    "upgrades an older run and prompt with validator %s by revalidating its responses",
-    async (validatorContractId) => {
+    "upgrades predecessor %s with validator %s by revalidating its responses",
+    async (predecessorRunContractId, validatorContractId) => {
       const temporary = fs.mkdtempSync(
         path.join(os.tmpdir(), "lf-a-classification-v12-upgrade-")
       );
@@ -9208,7 +9209,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         });
         const predecessor = {
           ...seeded,
-          contractId: "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
+          contractId: predecessorRunContractId,
           promptContractId: "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V19",
           validatorContractId,
         };
@@ -9228,7 +9229,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V75");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V76");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
