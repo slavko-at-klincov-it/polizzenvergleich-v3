@@ -24,9 +24,16 @@ revalidiert: 6/6 Units PASS, sechs Vorgängerantworten wiederverwendet, null
 Modellaufrufe und null neue Versuche. Die gespeicherten Kundenartefakte wurden
 dabei nicht verändert.
 
-Der vollständige Release-Gate, das Kundenupdate und der anschließende Resume
-des Produktlaufs sind zum Zeitpunkt dieser Releasevorbereitung noch
-ausstehend. Der bekannte LF-1+9-Lauf bleibt Regressionsevidenz und ist kein
+Der vollständige Release-Gate bestand anschließend mit 212/212 Testsuiten und
+3.115/3.115 Tests einschließlich Lints, Prisma, Capability-Inventar, Prettier,
+Frontend-Build und Installer-Suite. V3.9.9 wurde über den offiziellen Updater
+auf dem Kunden-Mac-Studio aktiviert; Doctor, API und SQLite bestanden.
+
+Der fortgesetzte Produktlauf erreichte 51/58 gültige A-Batches und stoppte in
+Batch 52 korrekt fail-closed. Fünf von sechs Units waren gültig; die offene
+Unit besaß zwei verschiedene lokale Bedingungen, von denen nur eine
+quellengebunden war. Dieser nachfolgende Befund wird in V3.9.10 allgemein
+behoben. Der bekannte LF-1+9-Lauf bleibt Regressionsevidenz und ist kein
 unabhängiger Generalisierungs- oder 99-Prozent-Nachweis.
 
 Change-Sets:

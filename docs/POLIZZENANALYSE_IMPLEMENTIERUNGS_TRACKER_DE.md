@@ -10636,6 +10636,44 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.79 Batch 52: jede lokale Bedingung source-bound belegen
+
+Der auf V3.9.9 fortgesetzte kalte LF-1+9-Lauf übernahm die vorhandene
+Resume-Kette, erreichte 51/58 gültige A-Batches und stoppte Batch 52
+(`batchIndex 51`, `AUB-95eb6c25b1e1d9b017a5381f`) korrekt fail-closed. Fünf
+von sechs Units waren gültig. Vier gespeicherte Versuche für die letzte Unit
+endeten ohne Timeout oder Transportfehler bei
+`REQUIREMENT_ROLE_EVIDENCE_UNMAPPED` für `EXPLICIT_CONDITION`.
+
+Die Ursachenanalyse zeigte keine fehlende globale Bedingung, sondern eine
+fehlende lokale Rollenbindung: Die Requirement enthielt bereits eine
+`CONDITION` aus drei späteren Quellblöcken. Ein zusätzliches explizites
+Bedingungssignal im ersten eigenen Quellblock war dagegen nur innerhalb einer
+`OBJECT`-Komponente zitiert. Eine Bedingung aus anderen Blöcken darf diesen
+zweiten Nachweis nicht erfüllen.
+
+Der V81-Laufvertrag (`8a6234457`) adaptiert `CAP-A-002` mit einer allgemeinen
+Regel. Für jedes bereits durch den bestehenden Signalvertrag erkannte lokale
+Bedingungssignal wird die vollständige Klausel ausschließlich aus den
+Quellblöcken derselben Requirement bis zur nächsten sicheren Satz-, Klausel-
+oder Listengrenze materialisiert. Bereits korrekt gebundene Bedingungen
+bleiben unverändert. Fremde Blöcke, fehlende Grenzen und Klauseln über 400
+Zeichen bleiben fail-closed. Der Vertrag wurde als V13, das dynamische
+Manifest als V17 und der Laufvertrag als V81 versioniert; V80 bleibt als
+expliziter revalidierbarer Vorgänger erhalten.
+
+Auf dem Mac Studio bestanden 423/423 fokussierte Tests und Prettier. Der
+unveränderte echte Batch 52 wurde danach read-only über 13 Vorgängerwurzeln
+revalidiert: 6/6 Units PASS, sechs Vorgängerantworten wiederverwendet, null
+Modellaufrufe und null neue Versuche. Private Kundenartefakte blieben
+unverändert.
+
+Status: `ROOT CAUSE ALLGEMEIN BEHOBEN; BATCH 52 OFFLINE 6/6 PASS; V3.9.10
+RELEASE-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND; KEIN HOLDOUT- ODER
+99-PROZENT-NACHWEIS`.
+
+Change-Set: `LF-V3910-LOCAL-CONDITION-EVIDENCE-20260918-001`.
+
 ### 133.78 Batch 38: exakte Einwort-Quellbindung und mehrstufiges Resume
 
 Der V3.9.8-Resume `resume-5b54889b5b8cf61a238f8f79` übernahm Batches 1 bis
