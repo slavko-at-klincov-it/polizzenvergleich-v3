@@ -4122,3 +4122,41 @@ Vollständigkeitsbehauptung erzeugen.
 - Beweisgrenze: technischer Resume- und Persistenzvertrag; keine Aussage über
   fachliche Generalisierung oder 99 Prozent.
 - Change-Set: `LF-V399-MULTIHOP-PARTIAL-RESUME-20260917-002`.
+
+## INT-20260918-069 — Jede explizite lokale Bedingung benötigt ihre eigene Quellbindung
+
+- Erfasst: 2026-09-18
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Aussage: Enthält der eigene, einer Requirement zugeordnete Quellbereich ein
+  eindeutiges Bedingungssignal wie `wenn`, `sofern`, `falls`, `soweit`,
+  `vorausgesetzt` oder `unter der Voraussetzung`, muss genau diese lokale
+  Bedingung durch eine `CONDITION`-Komponente aus den betroffenen eigenen
+  Quellblöcken belegt sein. Eine andere `CONDITION` derselben Requirement aus
+  anderen Blöcken erfüllt diesen Nachweis nicht.
+- Ist-Wahrheit: `JA` als Ursache des fail-closed V3.9.9-Batch-52-Abbruchs.
+  Fünf von sechs Units sind gültig. Die offene Unit besitzt eine
+  `CONDITION` aus drei späteren Quellblöcken, während ein zusätzliches
+  explizites Bedingungssignal im ersten eigenen Quellblock nur innerhalb
+  einer `OBJECT`-Komponente vorkommt. Vier Versuche ließen diese konkrete
+  lokale Rollenbindung offen; der Validator meldete deshalb weiterhin
+  `REQUIREMENT_ROLE_EVIDENCE_UNMAPPED` für `EXPLICIT_CONDITION`.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002`; ausschließlich ein
+  bereits vom bestehenden Signalvertrag erkanntes explizites
+  Bedingungssignal; vollständige Bedingungsklausel bis zur nächsten sicheren
+  Satz-, Klausel- oder Listengrenze; ausschließlich eigene beziehungsweise
+  ausdrücklich zugeordnete Quellblöcke; keine Übernahme aus Nachbar-
+  Requirements. Bereits korrekt gebundene Bedingungen bleiben unverändert.
+  Mehrdeutige, überlange oder nicht vollständig source-bound Klauseln bleiben
+  fail-closed. Keine Dokument-ID, Seite, Gesellschaft oder bekannte
+  Objektbezeichnung ist eine Produktionsregel.
+- Beweisgrenze: bekannte LF-1+9-Regression; synthetische positive und negative
+  Grenzvarianten sowie Revalidierung des unveränderten Batch-52-Artefakts
+  erforderlich; kein Holdout- oder 99-Prozent-Nachweis.
+- Laufbeleg: V3.9.9-Resume
+  `resume-f09a1ec6dbdb7df224f7504e` erreichte 51/58 gültige A-Batches und
+  stoppte Batch 52 (`batchIndex 51`,
+  `AUB-95eb6c25b1e1d9b017a5381f`) nach vier gespeicherten Versuchen bei 5/6
+  gültigen Units korrekt fail-closed. Es trat kein Timeout oder
+  Transportfehler auf.
+- Change-Set: `LF-V3910-LOCAL-CONDITION-EVIDENCE-20260918-001`.
