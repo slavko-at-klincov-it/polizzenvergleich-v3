@@ -10636,6 +10636,55 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.71 Nachlaufende Satzfortsetzung in Batch 29 source-bound vervollständigt
+
+Der produktive V3.9.1-Resume materialisierte Batches 1 bis 21 ohne neue
+Modellarbeit. Batches 22 bis 28 bestanden. Batch 29 stoppte nach sechs
+gespeicherten Versuchen korrekt fail-closed: fünf von sechs Units waren
+gültig, eine Unit blieb resumierbar offen. Der Attempt-Baum blieb unter
+SHA-256
+`d9b25a76fbc0d1592ecb9be8552cf09152d6f7f49cc9547dae27f127c1e7c69b`
+unverändert.
+
+Die offene Unit ist genau ein `LIST_ITEM_WITH_CONTINUATIONS` mit vier
+Quellblöcken und einer Anforderung. Objekt, Deckungswirkung, Bedingung,
+Ursache, Wirkung und Fachrolle waren wörtlich und source-bound. Ausschließlich
+der vierte `BODY_LINE`-Block, der den im dritten Block begonnenen Satz
+abschließt, blieb ohne Komponentenbeleg. Die vorhandene Regel konnte einen
+solchen Fortsetzungsnachlauf nur bei genau einer Komponente vervollständigen.
+
+Der allgemeine V73-Vertrag adaptiert `CAP-A-002` und `CAP-A-003`. Ein fehlendes
+nachlaufendes Suffix darf ausschließlich bei genau einem logischen
+Fortsetzungssegment und genau einer Anforderung ergänzt werden. Alle fehlenden
+Blöcke müssen ein zusammenhängendes `BODY_LINE`-Suffix ohne neue Listenmarke
+bilden; die Satzgrenze davor muss offen und das Segmentende abgeschlossen
+sein. Das Suffix wird nur dem eindeutig letzten wörtlichen Komponentenanker
+im letzten bereits belegten Block zugeordnet. Innenlücken, abgeschlossene
+Sätze, mehrere Anforderungen oder gleichrangige letzte Anker bleiben
+fail-closed.
+
+Mac-Studio-Nachweise auf Implementierungscommit
+`459b3c055c40a7555ede8fd4ec079a4b258ef443`:
+
+```text
+Syntax und Prettier:                       PASS
+Vollständiger A-Referenzvertrag:           395/395 PASS
+Echter gespeicherter Batch 29:             6/6 Units, PASS
+Restdiagnosen:                             0
+Neue Modellaufrufe im Realartefakt-Test:   0
+Attempt-Artefaktbaum vorher/nachher:       hashgleich
+```
+
+V3.9.2-Release-Gate, Installation und Fortsetzung ab Batch 30 stehen noch
+aus. Gold-283-V2 bleibt unverändert; der bekannte LF-1+9-Lauf bleibt
+Regression und kein unabhängiger Generalisierungs- oder 99-Prozent-Nachweis.
+
+Status: `BATCH-29-ROOT-CAUSE ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
+MODELLAUFRUF; V3.9.2-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+
+Change-Set:
+`LF-V392-TRAILING-LIST-SENTENCE-PROVENANCE-20260917-001`.
+
 ### 133.70 Mehrblock-Evidenz und quantifizierte Limitbasis in Batch 21
 
 Der produktive V3.9.0-Resume materialisierte Batch 1 bis 17 ohne neue

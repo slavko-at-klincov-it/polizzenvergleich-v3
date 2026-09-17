@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V391-BATCH21-EVIDENCE-NORMALIZATION-20260917-001",
+  "changeSetId": "LF-V392-TRAILING-LIST-SENTENCE-PROVENANCE-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -736,7 +736,8 @@
         "Legacy component-shaped requirements are lifted only for wholly legacy, source-bound CLAUSE responses without logical list segments or a single complete continued-list segment; components may cite only owned blocks or exact blocks from a governor carrying the server evidence-context contract, while mixed, multi-segment or unbound shapes remain fail-closed.",
         "PERIL_OR_DAMAGE is normalized from an invalid component alias only when its exact source-bound label contains an explicit causal damage relation; ambiguous labels remain fail-closed.",
         "A legacy multi-block label may cross physical blocks only through NFKC and whitespace collapse on one unique minimal contiguous source span; when the literal also occurs elsewhere, a candidate is valid only if its full block span is covered by the model-declared evidence IDs; wording changes remain invalid.",
-        "A paraphrased quantified LIMIT_BASIS is rebound only from an exact 'Der/Die/Das X beträgt [Scope] Wert' source pattern with one exact value component."
+        "A paraphrased quantified LIMIT_BASIS is rebound only from an exact 'Der/Die/Das X beträgt [Scope] Wert' source pattern with one exact value component.",
+        "A trailing BODY_LINE suffix may complete exactly one continued-list requirement only across an open sentence boundary and only through the uniquely latest literal component anchor; interior gaps, closed sentences and ambiguous anchors remain fail-closed."
       ],
       "evidence": {
         "tests": [
@@ -754,7 +755,8 @@
           "Tracker 133.66",
           "Tracker 133.67",
           "Tracker 133.69",
-          "Tracker 133.70"
+          "Tracker 133.70",
+          "Tracker 133.71"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -770,10 +772,11 @@
           "INT-20260917-052",
           "INT-20260917-053",
           "INT-20260917-054",
-          "INT-20260917-055"
+          "INT-20260917-055",
+          "INT-20260917-056"
         ]
       },
-      "lastVerifiedCommit": "a92aeae4f2b5da490288a7d35e7e701894595adc",
+      "lastVerifiedCommit": "459b3c055c40a7555ede8fd4ec079a4b258ef443",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
