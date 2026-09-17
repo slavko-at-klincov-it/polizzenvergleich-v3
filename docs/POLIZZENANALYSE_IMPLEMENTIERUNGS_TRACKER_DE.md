@@ -10336,6 +10336,69 @@ Holdout-Aussage.
 
 Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
 
+### 133.63 Kalter V3.8.3-Lauf und interne Objektlisten-Provenienz
+
+V3.8.3 wurde als annotierter Tag veröffentlicht, `origin/main` wurde auf den
+vollständig geprüften Release-Commit
+`fb96d2439977a154cfb22e12240bbc077552adbd` aktualisiert und der Tag über den
+offiziellen Updater auf dem Kunden-Mac-Studio installiert. Der Updater endete
+mit `Doctor: PASS`; Checkout und Tag waren identisch, die Datenbank bestand
+`quick_check`, und das Pre-Update-Backup liegt unter
+`server/storage/backups/anythingllm-before-activation-20260917-121111.db`.
+
+Der anschließend über API, Queue und Worker gestartete echte kalte
+LF-1+9-Lauf verwendete zehn hashgeprüfte Dokumente. Session 13 trägt die UUID
+`f171cfa8-0566-4f25-bf04-d6ce93bd5454`; der Run-Root lautet:
+
+```text
+/Users/michaelmischkot/Code/polizzenvergleich-v3/server/storage/
+  policy-comparisons/runs/
+  f171cfa8-0566-4f25-bf04-d6ce93bd5454/
+  resume-78a062ef3b80749fd5c0117d/
+```
+
+Die ersten drei von 58 A-Batches bestanden. Batch 4 stoppte korrekt
+fail-closed. Ein kontrollierter Resume übernahm alle drei PASS-Batches und
+fünf bereits gültige Units des unvollständigen Batches; nur die eine offene
+Unit wurde erneut geprüft. Qwen wiederholte in zwei Zyklen mit insgesamt sechs
+semantischen Versuchen deterministisch denselben Quellenbindungsfehler. Es
+gab keinen Timeout, keinen Abort und keine verlorenen Artefakte.
+
+Die Unit bestand aus einem predicate-freien internen Objekt-Listenkopf und
+einem darunterliegenden, über mehrere Blöcke fortgesetzten Listenpunkt. Die
+fachlichen Objektkomponenten waren vorhanden, aber der Listenkopf und der
+erste Satzblock blieben aus der Komponentenprovenienz ausgespart. Der
+quellenidentische, zuvor bestandene V3.8.2-Batch bestätigte die fehlenden
+Bindungen unabhängig.
+
+Der allgemeine Fix ist als Klassifikationslauf V66 implementiert. Er
+materialisiert einen source-bound internen Objekt-Governor der Form `bei …`
+nur bei bereits belegter `INSURED_OBJECT`-Semantik und erweitert die
+Provenienz der eindeutig frühesten Objektkomponente nur innerhalb desselben
+serverseitig gebundenen Fortsetzungssegments. Operative Deckungs-Governors
+und ungebundene Einzel-Segment-Listen bleiben Negativgrenzen.
+
+Der exakte Fix-Commit
+`9a5d6f9e4a690b2d35f4cdf5d7dac3983c98de10` bestand auf dem Mac Studio:
+
+```text
+Prettier:                         PASS
+A-Vertragssuite:                 366/366 PASS
+Gespeicherte reale Problem-Unit: OPERATIVE_MAPPED
+Interner Governor gebunden:      JA
+Führender Satzblock gebunden:    JA
+Neuer Modellaufruf für Replay:   NEIN
+```
+
+V3.8.4-Release-Gate, Deployment und ein neuer kalter Produktlauf stehen noch
+aus. Gold-283-V2 bleibt unverändert. Der nicht vorhandene unabhängige,
+expertengelabelte Mehrversicherer-Holdout bleibt ein separates offenes Gate.
+
+Status: `V3.8.3 FAIL-CLOSED NACH 3/58 PASS; ROOT CAUSE UNTER V66 BEHOBEN;
+V3.8.4-GATE UND NEUER KALTER LAUF AUSSTEHEND`.
+
+Change-Set: `LF-V384-INTERNAL-OBJECT-LIST-PROVENANCE-20260917-001`.
+
 ### 133.62 Kalter V3.8.2-Lauf und parenthetische Objektausnahmen
 
 V3.8.2 wurde am 17. September 2026 über den offiziellen Updater auf dem
