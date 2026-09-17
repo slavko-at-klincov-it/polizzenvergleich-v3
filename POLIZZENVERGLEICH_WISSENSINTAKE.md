@@ -152,7 +152,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-046` | Parenthetische Objektausnahmen als lokale Ausschlusswirkung materialisieren       | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | source-bound Negativgrenzen testen und den kalten Lauf ab erstem unvollständigem A-Batch fortsetzen                     |
 | `INT-20260917-047` | Internen Objekt-Listenkopf und fortgesetzten Satzanfang source-bound erhalten     | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | V66 im neuen kalten V3.8.4-Produktlauf prüfen; Holdout-Grenze getrennt offen halten                                     |
 | `INT-20260917-048` | Eingebettete Listengovernor-Gruppen positionsunabhängig begrenzen                 | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.5 installieren und denselben kalten Lauf ab den gespeicherten Artefakten fortsetzen                                |
-| `INT-20260917-049` | Partiellen A-Resume über Releasegrenzen quellengebunden übernehmen                | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | Vorgängerevidenz read-only binden, revalidieren und erst ab der ersten offenen Unit fortsetzen                          |
+| `INT-20260917-049` | Partiellen A-Resume über Releasegrenzen quellengebunden übernehmen                | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.6 installieren und Session 14 ab der ersten aktuell offenen Unit fortsetzen                                        |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -606,7 +606,7 @@ Tabellen-/Fortsetzungsrelation -> Heading/Variante` folgen; ein kleines
 
 - Erfasst: 2026-08-24
 - Typ: `EVIDENZHINWEIS`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: Ein geteilter Claude-Verlauf enthält einen umfangreichen Kandidatenkatalog
   für WEG-Gebäudeversicherungen. Die ausgebaute Fassung umfasst 202
   Tabellenpunkte: 190 fachliche Vergleichs-/Intake-Kandidaten und 12
@@ -3338,7 +3338,13 @@ Vollständigkeitsbehauptung erzeugen.
   noch offene Unit betreffen; Vorgängerartefakte bleiben unverändert.
 - Entscheidung: Vorhandene Resume-, Journal- und
   Vorgänger-Revalidierungslogik wiederverwenden und im produktiven Worker
-  verdrahten; keine neue Cache-Architektur.
+  verdrahten; keine neue Cache-Architektur. Die fokussierten Mac-Studio-Tests
+  bestanden 386/386. Der Realartefakt-Replay materialisierte Batches 1–5 mit
+  30 aktuell revalidierten Vorgänger-Units und null Modellaufrufen; Plan- und
+  Klassifikationsbaum blieben hashgleich. Der exakte V3.8.6-Release-Kandidat
+  `3d4b63fd858a9d4bf84aabb6e228aaa145a1c990` bestand 212/212 Suites,
+  3.066/3.066 Tests, alle Lints, Prisma, Capability-Inventar,
+  Frontend-Build und Installer-Suite.
 - Beweisgrenze: Dieses Gate beweist Resume-Korrektheit für kompatible
   revisionsgebundene Läufe, nicht fachliche Generalisierung.
 - Geplanter Change-Set:

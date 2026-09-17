@@ -5315,6 +5315,58 @@ darf nicht als Generalisierungsnachweis ausgegeben werden.
 
 Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
 
+## 101. V3.8.6-Gate: partieller A-Resume über Releasegrenzen
+
+Der erste produktive Resume derselben Session 14 unter V3.8.5 legte wegen
+der releasegebundenen Run-Signatur korrekt einen neuen Run-Root an, band aber
+die vorhandene partielle V3.8.4-A-Evidenz nicht ein. Er begann dadurch
+fälschlich wieder mit Batch 1. Der Worker wurde über den offiziellen
+Cancel-Endpunkt beendet; die Vorgängerartefakte blieben unverändert.
+
+Der Fix wählt read-only einen Vorgängerlauf derselben Session mit identischer
+releaseunabhängiger Run-Identität. Modus, Produktprofil, Dokumenthashes,
+Rollen und Reihenfolge, Modellkontext und Embeddingvertrag müssen
+übereinstimmen. Source- und Batchplan werden exakt gebunden; jede alte
+Batch- oder Journalantwort wird unter dem aktuellen Vertrag neu validiert.
+
+Der Realartefakt-Replay bestand Batches 1–5 mit 30/30 aktuell gültigen
+Vorgänger-Units und null Modellaufrufen. Die Vorgängerbäume blieben
+hashgleich:
+
+```text
+Planbaum SHA-256:
+19235cdc9200535196b60f459371deec7ec9dd4143f653377c31feedd770ad04
+Klassifikationsbaum SHA-256:
+22df1be588cd95e96e208ede445ff8ed89a561b9449a861511da70ad4fae995b
+```
+
+Das vollständige Mac-Studio-Gate auf exakt
+`3d4b63fd858a9d4bf84aabb6e228aaa145a1c990` bestand:
+
+```text
+Jest:                    212/212 Suites, 3.066/3.066 Tests
+Server-/Frontend-Lint:   PASS / PASS
+Collector-Lint:          PASS
+Prisma:                  PASS
+Capability-Inventar:     PASS
+Frontend-Build:          PASS
+macOS-Installer-Suite:   PASS
+```
+
+**Positive Erkenntnis:** Releasebindung und Resume schließen einander nicht
+aus, wenn Vorgängerevidenz read-only ausgewählt und vollständig unter dem
+aktuellen Vertrag revalidiert wird.
+
+**Negative Erkenntnis:** Ein resumierbarer Klassifikator allein genügt
+nicht; der produktive Worker muss den kompatiblen Vorgängerlauf explizit bis
+an diese Grenze verdrahten.
+
+**Beweisgrenze:** Der Nachweis betrifft technische Resume-Korrektheit und das
+bekannte 1+9-Set. Er ist kein unabhängiger Generalisierungs- oder
+99-Prozent-Nachweis.
+
+Change-Set: `LF-V386-CROSS-RELEASE-PARTIAL-A-RESUME-20260917-001`.
+
 ## 100. V3.8.5-Gate: eingebettete Listengovernor-Gruppen
 
 Der kalte V3.8.4-Lauf bestand die ersten vier A-Batches und stoppte im
