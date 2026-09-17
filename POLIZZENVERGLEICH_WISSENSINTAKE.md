@@ -152,6 +152,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-046` | Parenthetische Objektausnahmen als lokale Ausschlusswirkung materialisieren       | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | source-bound Negativgrenzen testen und den kalten Lauf ab erstem unvollständigem A-Batch fortsetzen                     |
 | `INT-20260917-047` | Internen Objekt-Listenkopf und fortgesetzten Satzanfang source-bound erhalten     | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | V66 im neuen kalten V3.8.4-Produktlauf prüfen; Holdout-Grenze getrennt offen halten                                     |
 | `INT-20260917-048` | Eingebettete Listengovernor-Gruppen positionsunabhängig begrenzen                 | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.5 installieren und denselben kalten Lauf ab den gespeicherten Artefakten fortsetzen                                |
+| `INT-20260917-049` | Partiellen A-Resume über Releasegrenzen quellengebunden übernehmen                | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | Vorgängerevidenz read-only binden, revalidieren und erst ab der ersten offenen Unit fortsetzen                          |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3253,7 +3254,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-17
 - Typ: `BEOBACHTUNG`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: Ein `LIST_GOVERNOR` kann innerhalb einer bereits begonnenen
   Listen-Unit eine neue untergeordnete Gruppe eröffnen. Seine fachlichen
   Komponenten gelten dann ausschließlich für die unmittelbar nachfolgenden
@@ -3299,3 +3300,46 @@ Vollständigkeitsbehauptung erzeugen.
   Generalisierungs-Holdout.
 - Geplanter Change-Set:
   `LF-V385-EMBEDDED-LIST-GOVERNOR-GROUPS-20260917-001`.
+
+## INT-20260917-049 — Partiellen A-Resume über Releasegrenzen quellengebunden übernehmen
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Ein neuer Release ändert bewusst die Run-Signatur und damit den
+  revisionsgebundenen Resume-Ordner. Der produktive Startpfad muss dennoch
+  bereits gespeicherte, quell- und vertragsgebundene Teilresultate derselben
+  Session als read-only Vorgängerevidenz finden, unter dem aktuellen Vertrag
+  neu validieren und ausschließlich offene Units neu berechnen.
+- Ist-Wahrheit: `NEIN` für den aktuellen produktiven Resume-Pfad. Der Start
+  derselben Session 14 unter V3.8.5 erzeugte korrekt einen neuen Run-Root,
+  übergab dem A-Klassifikator aber keine Vorgängerevidenz. Dadurch begann er
+  entgegen dem Laufvertrag mit neuen Versuchen für Batch 1. Der Worker wurde
+  sofort über den offiziellen Cancel-Endpunkt beendet; der Fehlstart gilt
+  nicht als Fortschritt und veränderte die ursprünglichen V3.8.4-Artefakte
+  nicht.
+- Quelle: Session `79211e03-d5ce-44b6-9042-199e83f589a0`, ursprünglicher
+  Run-Root `resume-5ea55381415e4c2103de5daa`, abgebrochener V3.8.5-Run-Root
+  `resume-fc635fee2d2b72be84bbb9ce` auf dem Mac Studio.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Ein Release-Fix setzt
+  lange Läufe an der ersten fachlich offenen Unit fort, ohne bereits gültige
+  Modellarbeit erneut zu bezahlen oder deren Evidenz zu überschreiben.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-ORCH-001`,
+  `CAP-CACHE-001` und `CAP-A-002`; keine neue Laufarchitektur; kein Kopieren
+  vollständiger Kundendokumente; keine blinde Übernahme alter PASS-Labels;
+  keine Wiederverwendung bei abweichenden Dokument-, Modell-, Embedding- oder
+  Produktverträgen.
+- Hard-Gates: Vorgänger-Run und Dateien dürfen keine Symlinks sein; Session,
+  Dokumenthashes, Rollen, Reihenfolge, Modus, Produktprofil, Modellkontext und
+  Embeddingidentität müssen übereinstimmen; Source-Plan und Batchplan müssen
+  kryptografisch und strukturell binden; jede Vorgängerantwort wird unter dem
+  aktuellen Validator erneut geprüft; verspätete oder ungültige Antworten
+  bleiben ausgeschlossen; der erste neue Modellaufruf darf erst die erste
+  noch offene Unit betreffen; Vorgängerartefakte bleiben unverändert.
+- Entscheidung: Vorhandene Resume-, Journal- und
+  Vorgänger-Revalidierungslogik wiederverwenden und im produktiven Worker
+  verdrahten; keine neue Cache-Architektur.
+- Beweisgrenze: Dieses Gate beweist Resume-Korrektheit für kompatible
+  revisionsgebundene Läufe, nicht fachliche Generalisierung.
+- Geplanter Change-Set:
+  `LF-V386-CROSS-RELEASE-PARTIAL-A-RESUME-20260917-001`.
