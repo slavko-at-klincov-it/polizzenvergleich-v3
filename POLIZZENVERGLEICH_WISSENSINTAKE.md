@@ -3740,3 +3740,83 @@ Vollständigkeitsbehauptung erzeugen.
   getrennte nächste Nachweise.
 - Geplanter Change-Set:
   `LF-V393-PREREQUISITE-DEFINITION-ATOMIZATION-20260917-001`.
+
+## INT-20260917-058 — Gleichrangige Komponentenanker teilen eine begrenzte Blockspanne
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Enthält genau ein serverseitig begrenztes
+  `LIST_ITEM_WITH_CONTINUATIONS` genau eine Anforderung und beginnen mehrere
+  eigenständige, wörtlich belegte Komponenten im selben Quellblock, darf die
+  Blockpositionsgleichheit die ansonsten eindeutige Provenienzvervollständigung
+  nicht verhindern. Die Komponenten desselben Ankerblocks erhalten gemeinsam
+  nur die bis zum nächsten späteren Anker beziehungsweise Segmentende
+  begrenzte Blockspanne.
+- Ist-Wahrheit: `JA` als erste Ursache des fail-closed Batch-33-Abbruchs im
+  kalten V3.9.3-Produktlauf. Die Unit beschreibt Kosten öffentlich-rechtlicher
+  Sanierungsverpflichtungen und mehrere Arten von Umweltschäden. Alle
+  fachlichen Komponenten und die geerbte Deckungswirkung sind vorhanden; zwei
+  eigenständige Schadensarten beginnen im selben vorletzten Quellblock. Der
+  bisherige V74-Vertrag verwirft deshalb die gesamte ansonsten eindeutige
+  bounded-source-Vervollständigung und lässt Zwischenblöcke unzitiert.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002` und `CAP-A-003`;
+  genau ein fortgesetztes Segment und eine Requirement, deren Displaylabel das
+  vollständige Segment ist; ausschließlich wörtlich in den bereits
+  deklarierten eigenen Blöcken belegte Nicht-Wirkungskomponenten; identische
+  erste Blockpositionen werden gruppiert; Gruppen bleiben streng geordnet und
+  ihre begrenzten Spannen dürfen keine fremden Blöcke aufnehmen. Unvollständige
+  Labels, fremde Quellen, mehrere Segmente oder überkreuzte Anker bleiben
+  fail-closed.
+- Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
+- Ergebnis: V75 vervollständigt gleiche Blockanker nur bei einer realen
+  Provenienzlücke und lässt bereits vollständig belegte Segmente unverändert.
+  Zusammen mit INT-059 bestanden 401/401 fokussierte Vertragstests auf dem
+  Mac Studio. Der echte Batch 33 revalidierte ohne Modellaufruf 6/6 Units;
+  der Attempt-Baum blieb unter SHA-256
+  `14221202067bc834b5cde5f49a32e78f5d33876e4af62a9f465a3cd83bf7ee86`
+  unverändert.
+- Geplanter Change-Set:
+  `LF-V394-BATCH33-LIST-PROVENANCE-AND-EMBEDDED-OBJECTS-20260917-001`.
+
+## INT-20260917-059 — Eingebettete alphabetische Objektliste vollständig atomisieren
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Verfeinert der serverseitige Evidenzplan eine Deckungsklausel mit
+  wörtlicher Objekteinleitung, lückenloser alphabetischer Unterliste und einem
+  gemeinsamen abschließenden Leistungsprädikat in Einleitungs- und
+  Unterpunktsegmente, bleibt jeder Unterpunkt eine eigene Anforderung. Der
+  externe Deckungs-Governor wird source-bound an jeden abhängigen Unterpunkt
+  gebunden; das eigene abschließende Leistungsprädikat bleibt zusätzlich nur
+  beim letzten Segment. Physische Zeilenumbrüche oder eine vom Modell
+  herausgelöste letzte Unterposition dürfen die Punkte davor nicht verlieren.
+- Ist-Wahrheit: `JA` als zweite Ursache des fail-closed Batch-33-Abbruchs im
+  kalten V3.9.3-Produktlauf. Das Modell erkannte Einleitung, Gefahr, geerbte
+  Wirkung und den letzten von fünf Objektpunkten, teilte diese aber in zwei
+  Requirements und ließ die Punkte a bis d sowie das eigene abschließende
+  Leistungsprädikat unzitiert. Der Source-Plan besitzt dagegen genau ein
+  Rohsegment; der produktive Evidenzplan verfeinert es korrekt in eine
+  Einleitung und fünf alphabetische Unterpunktsegmente.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002` und `CAP-A-003`;
+  exakt geordnete, lückenlos die Unit besitzende Einleitungs-/Unterpunktfolge;
+  eine wörtliche Einleitung mit Doppelpunkt; lückenlose alphabetische Marker
+  ab `a)` mit mindestens zwei Punkten; jeder Punkt und das gemeinsame Prädikat
+  werden über vollständige Satz-/Listen- und Blockgrenzen source-bound
+  extrahiert; jede Requirement überlappt genau ein logisches Segment;
+  vorhandene gültige Komponenten werden nur erhalten, wenn sie innerhalb
+  dieses Segments oder des servergebundenen Governors liegen. Fehlende Marker,
+  unvollständige Aufzählungen, nicht lückenlose Segmentbesitzfolge, nicht
+  eindeutige Prädikate oder fremde Quellen bleiben fail-closed. Keine bekannte
+  ID, Seite, Gesellschaft oder feste Zahl von Unterpunkten ist Produktionsregel.
+- Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
+- Ergebnis: V75 materialisiert die serverseitig getrennte Einleitung und jeden
+  alphabetischen Unterpunkt als eigene Requirement. Der externe Governor
+  wird nur als gebundene Wirkungsevidenz wiederverwendet; das lokale
+  „leistet … Ersatz“-Prädikat bleibt beim letzten Segment. Positive,
+  negative und bestehende Regressionsfälle bestanden im vollständigen
+  fokussierten Lauf 401/401. Der echte Batch 33 bestand ohne neuen
+  Modellaufruf 6/6 bei hashgleichem Attempt-Baum.
+- Geplanter Change-Set:
+  `LF-V394-BATCH33-LIST-PROVENANCE-AND-EMBEDDED-OBJECTS-20260917-001`.
