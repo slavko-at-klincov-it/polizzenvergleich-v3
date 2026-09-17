@@ -4127,7 +4127,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-18
 - Typ: `FEHLER`
-- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Status: `UMGESETZT_REGRESSION_BESTANDEN`
 - Aussage: Enthält der eigene, einer Requirement zugeordnete Quellbereich ein
   eindeutiges Bedingungssignal wie `wenn`, `sofern`, `falls`, `soweit`,
   `vorausgesetzt` oder `unter der Voraussetzung`, muss genau diese lokale
@@ -4159,4 +4159,11 @@ Vollständigkeitsbehauptung erzeugen.
   `AUB-95eb6c25b1e1d9b017a5381f`) nach vier gespeicherten Versuchen bei 5/6
   gültigen Units korrekt fail-closed. Es trat kein Timeout oder
   Transportfehler auf.
+- Ergebnis: Der V81-Vertrag materialisiert jede eindeutig begrenzte lokale
+  Bedingung ausschließlich aus den eigenen Requirement-Quellblöcken. Auf dem
+  Mac Studio bestanden 423/423 fokussierte Tests und Prettier. Der
+  unveränderte echte Batch 52 revalidierte über 13 Vorgängerwurzeln mit 6/6
+  Units, sechs wiederverwendeten Vorgängerantworten, null Modellaufrufen und
+  null neuen Versuchen. Der vollständige Release-Gate, das Deployment und der
+  fortgesetzte Produktlauf stehen noch aus.
 - Change-Set: `LF-V3910-LOCAL-CONDITION-EVIDENCE-20260918-001`.
