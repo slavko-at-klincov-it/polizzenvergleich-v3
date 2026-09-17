@@ -1274,7 +1274,7 @@ describe("requirement-local semantic evidence completeness", () => {
       [
         "Seite 1\nDarüber hinaus gilt der Exklusivschutz, wobei die Versicherungssummen nicht addiert werden und nur einmal pro Schadenfall zur Anwendung kommen.\n",
       ],
-      "n"
+      "e"
     );
     const plan = buildADrivenSourceUnitPlan({
       documents: [document("source", 0, source)],
