@@ -156,6 +156,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-050` | Komplementäre Duplicate-Unit-Hüllen vor Listen-Normalisierung sicher vereinigen   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.7-Produktlauf ab Batch 7 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
 | `INT-20260917-051` | Alte komponentenförmige Requirements vor fachlicher Normalisierung sicher heben   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.8-Produktlauf ab Batch 11 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
 | `INT-20260917-052` | Terminalalias in expliziter Schaden-durch-Komponente source-bound normalisieren   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.9-Produktlauf ab Batch 15 weiterführen und vollständiges Endergebnis getrennt prüfen                           |
+| `INT-20260917-053` | Alte Komponentenform für exakt ein vollständiges Listensegment sicher heben       | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | Segmentvollständigkeit eng binden, Batch 17 ohne Modellaufruf revalidieren und erst dann resumieren                        |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3524,3 +3525,44 @@ Vollständigkeitsbehauptung erzeugen.
   `resume-9c5fa5639e94f45e49f21bbc` mit null neuen Attempt-Dateien.
 - Geplanter Change-Set:
   `LF-V389-CAUSAL-PERIL-COMPONENT-ALIAS-20260917-001`.
+
+## INT-20260917-053 — Alte Komponentenform für exakt ein vollständiges Listensegment sicher heben
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Eine `LIST`-Unit mit exakt einem serverseitig abgegrenzten
+  `LIST_ITEM_WITH_CONTINUATIONS`, dessen Blockfolge die gesamte Unit exakt
+  besitzt, hat keine interne fachliche Listengrenze zu verlieren. Liefert das
+  Modell hierfür ausschließlich vollständig source-bound Komponenten in der
+  alten Requirement-Hülle, dürfen sie wie bei einer einteiligen Klausel zu
+  genau einer aktuellen Anforderung gehoben werden.
+- Ist-Wahrheit: `JA` als alleinige verbleibende Ursache des fail-closed
+  Batch-17-Abbruchs im kalten V3.8.9-Produktlauf. Fünf von sechs Units sind
+  gültig gespeichert. Die offene Unit besitzt zwei physische Blöcke, aber
+  exakt ein logisches Listensegment; alle drei Modellversuche lieferten
+  dieselben drei gültigen, eigenen Komponenten für Objekt, Wert und Wirkung
+  in der alten Hüllenform. Der bisherige V69-Vertrag sperrt pauschal jede
+  `LIST`-Unit und kann diesen atomaren Einsegmentfall deshalb nicht heben.
+- Quelle: private, resumierbare Batch-17-Attempt-Artefakte und Source-Plan der
+  Session `79211e03-d5ce-44b6-9042-199e83f589a0` auf dem Mac Studio. Nur die
+  einzelne erforderliche Originalpassage wurde temporär source-bound geprüft.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Ein logisch einzelner,
+  über eine physische Fortsetzungszeile laufender Listenpunkt bleibt eine
+  Anforderung und geht nicht wegen eines alten Modell-Ausgabeformats verloren;
+  echte Mehrpunktlisten bleiben strikt getrennt.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-A-002` und
+  `CAP-A-003`; keine Dokument-, Seiten-, ID-, Versicherer- oder
+  Wortlautsonderregel; keine Freigabe für mehrere logische Segmente, Governor,
+  unvollständige Blockfolgen, unbekannte Quellen, gemischte Hüllen oder
+  verschachtelte Komponenten.
+- Hard-Gates: `unitKind=LIST`; exakt ein logisches Segment vom Typ
+  `LIST_ITEM_WITH_CONTINUATIONS`; dessen geordnete `blockIds` sind exakt die
+  geordnete Unit-Blockfolge; kein externer Governing Context; alle
+  Requirements entsprechen vollständig dem bereits validierten alten
+  Komponentenvertrag und sind wortgetreu an eigene Blöcke gebunden. Jede
+  Abweichung bleibt fail-closed.
+- Beweisgrenze: Der bekannte LF-1+9-Fehlerfall ist Regressionsevidenz, kein
+  unabhängiger Generalisierungs-Holdout.
+- Geplanter Change-Set:
+  `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
