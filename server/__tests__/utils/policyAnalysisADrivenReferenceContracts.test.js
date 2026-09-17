@@ -7646,7 +7646,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       [unit]
     );
     const validation = validateBatchResponses(
-      { units: [unit] },
+      {
+        contractId: A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+        runContractId: A_DRIVEN_RUN_CONTRACT_ID,
+        documents: [],
+        units: [unit],
+      },
       { expectedUnitIds: [unit.unitId], units: [unit] },
       normalized.responses
     );
@@ -8563,7 +8568,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V67");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V68");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
