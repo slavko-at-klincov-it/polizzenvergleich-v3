@@ -10295,9 +10295,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
 
-    expect(
-      normalized.responses[0].requirements[0].components[0]
-    ).toEqual(response.requirements[0].components[0]);
+    expect(normalized.responses[0].requirements[0].components[0]).toEqual(
+      response.requirements[0].components[0]
+    );
     expect(normalized.componentRepairs).not.toContainEqual(
       expect.objectContaining({
         action: "RESTORE_EXACT_ELIDED_COMPONENT_SPAN",
@@ -10453,9 +10453,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
 
-    expect(
-      normalized.responses[0].requirements[0].components[0]
-    ).toEqual(component);
+    expect(normalized.responses[0].requirements[0].components[0]).toEqual(
+      component
+    );
     expect(normalized.componentRepairs).not.toContainEqual(
       expect.objectContaining({
         action: "NARROW_REPEATED_COMPONENT_TO_DISPLAY_SOURCE",
