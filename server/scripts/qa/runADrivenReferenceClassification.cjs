@@ -33,6 +33,7 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
   buildADrivenSemanticManifest,
+  COMPONENT_TYPES,
   hasCoverageEffectEvidence,
   sharedListGovernorGroups,
   TERMINAL_CLASSES,
@@ -42,7 +43,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V68";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V69";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -100,6 +101,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V65",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V66",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V67",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V68",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -3082,6 +3084,79 @@ function normalizeUnambiguousSemanticClassAliases(response) {
   };
 }
 
+function liftLegacyComponentShapedRequirements(requirements, unit) {
+  if (
+    unit?.unitKind !== "CLAUSE" ||
+    (Array.isArray(unit?.logicalSourceSegments) &&
+      unit.logicalSourceSegments.length > 0) ||
+    !Array.isArray(requirements) ||
+    requirements.length === 0
+  )
+    return { requirements, repairs: [] };
+  const ownedBlockIds = new Set(unit?.source?.blockIds || []);
+  const componentKeys = new Set([
+    "type",
+    "label",
+    "sourceBlockIds",
+    "rawValue",
+    "unit",
+    "coverageEffect",
+    "qualifier",
+    "components",
+  ]);
+  const isLegacyComponent = (requirement) => {
+    if (
+      !requirement ||
+      typeof requirement !== "object" ||
+      Array.isArray(requirement) ||
+      Object.hasOwn(requirement, "displayLabel") ||
+      !COMPONENT_TYPES.has(requirement.type) ||
+      typeof requirement.label !== "string" ||
+      requirement.label.length === 0 ||
+      !Array.isArray(requirement.sourceBlockIds) ||
+      requirement.sourceBlockIds.length === 0 ||
+      !Array.isArray(requirement.components) ||
+      requirement.components.length > 0 ||
+      Object.keys(requirement).some((key) => !componentKeys.has(key)) ||
+      requirement.sourceBlockIds.some(
+        (blockId) => typeof blockId !== "string" || !ownedBlockIds.has(blockId)
+      )
+    )
+      return false;
+    const exactSpanBlockIds = sourceBlockIdsForExactSpan(
+      unit,
+      requirement.label
+    );
+    return (
+      exactSpanBlockIds.length > 0 &&
+      exactSpanBlockIds.every((blockId) =>
+        requirement.sourceBlockIds.includes(blockId)
+      )
+    );
+  };
+  if (!requirements.every(isLegacyComponent))
+    return { requirements, repairs: [] };
+  const components = requirements.map(({ components: _components, ...item }) =>
+    Object.fromEntries(
+      Object.entries(item).filter(([, value]) => value !== undefined)
+    )
+  );
+  return {
+    requirements: [
+      {
+        displayLabel: String(unit.source.combinedText || ""),
+        components,
+      },
+    ],
+    repairs: [
+      {
+        action: "LIFT_LEGACY_COMPONENT_SHAPED_REQUIREMENTS",
+        components: components.length,
+      },
+    ],
+  };
+}
+
 function normalizeListSegmentComponentBoundaries(requirements, unit) {
   if (
     unit?.unitKind !== "LIST" ||
@@ -3651,6 +3726,13 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     let requirements = Array.isArray(response?.requirements)
       ? response.requirements
       : [];
+    const legacyRequirementShape = liftLegacyComponentShapedRequirements(
+      requirements,
+      unit
+    );
+    requirements = legacyRequirementShape.requirements;
+    for (const repair of legacyRequirementShape.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
     const parentheticalObjectExclusions =
       materializeParentheticalObjectExclusions(requirements, unit);
     requirements = parentheticalObjectExclusions.requirements;

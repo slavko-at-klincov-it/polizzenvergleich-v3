@@ -4124,6 +4124,170 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     }
   );
 
+  test("lifts a fully source-bound legacy component shape before conditional-equivalence normalization", () => {
+    const blocks = [
+      {
+        blockId: "first",
+        exactText:
+          "Eine im Inneren eines Behälters durch chemische Umsetzung hervorgerufene Explosion gilt auch ",
+      },
+      {
+        blockId: "second",
+        exactText:
+          "dann als Explosion, wenn die Wandung des Behälters nicht zerrissen ist; ",
+      },
+    ];
+    const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+    const unit = {
+      unitId: "legacy-component-shaped-clause",
+      unitKind: "CLAUSE",
+      logicalSourceSegments: [],
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        combinedText,
+        blocks,
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "PERIL_OR_DAMAGE",
+          semanticClasses: ["PERIL_OR_DAMAGE"],
+          requirements: [
+            {
+              type: "OBJECT",
+              label: "Explosion ",
+              sourceBlockIds: ["first"],
+              components: [],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "gilt auch ",
+              sourceBlockIds: ["first"],
+              coverageEffect: "INCLUDED",
+              components: [],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE", "DEFINITION", "CONDITION"],
+      requirements: [{ displayLabel: combinedText }],
+    });
+    expect(
+      normalized.responses[0].requirements[0].components.map(
+        ({ type, label }) => [type, label]
+      )
+    ).toEqual([
+      [
+        "OBJECT",
+        "Eine im Inneren eines Behälters durch chemische Umsetzung hervorgerufene Explosion",
+      ],
+      ["FACT_ROLE", "gilt auch \ndann als Explosion"],
+      ["CONDITION", "wenn die Wandung des Behälters nicht zerrissen ist;"],
+    ]);
+    expect(normalized.componentRepairs.map(({ action }) => action)).toEqual(
+      expect.arrayContaining([
+        "LIFT_LEGACY_COMPONENT_SHAPED_REQUIREMENTS",
+        "CANONICALIZE_CONDITIONAL_EQUIVALENCE_DEFINITION",
+      ])
+    );
+  });
+
+  test.each([
+    {
+      name: "mixed current and legacy shapes",
+      unitKind: "CLAUSE",
+      requirements: [
+        {
+          type: "OBJECT",
+          label: "Explosion",
+          sourceBlockIds: ["block"],
+          components: [],
+        },
+        { displayLabel: "Explosion", components: [] },
+      ],
+    },
+    {
+      name: "an out-of-scope source block",
+      unitKind: "CLAUSE",
+      requirements: [
+        {
+          type: "OBJECT",
+          label: "Explosion",
+          sourceBlockIds: ["unknown"],
+          components: [],
+        },
+      ],
+    },
+    {
+      name: "a list unit",
+      unitKind: "LIST",
+      requirements: [
+        {
+          type: "OBJECT",
+          label: "Explosion",
+          sourceBlockIds: ["block"],
+          components: [],
+        },
+      ],
+    },
+    {
+      name: "nested components",
+      unitKind: "CLAUSE",
+      requirements: [
+        {
+          type: "OBJECT",
+          label: "Explosion",
+          sourceBlockIds: ["block"],
+          components: [
+            {
+              type: "OBJECT",
+              label: "Explosion",
+              sourceBlockIds: ["block"],
+            },
+          ],
+        },
+      ],
+    },
+  ])("keeps legacy-shape lifting fail-closed for $name", (fixture) => {
+    const unit = {
+      unitId: "legacy-shape-negative",
+      unitKind: fixture.unitKind,
+      logicalSourceSegments: [],
+      source: {
+        blockIds: ["block"],
+        combinedText: "Explosion",
+        blocks: [{ blockId: "block", exactText: "Explosion" }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements: fixture.requirements,
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements).toEqual(fixture.requirements);
+    expect(normalized.componentRepairs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "LIFT_LEGACY_COMPONENT_SHAPED_REQUIREMENTS",
+        }),
+      ])
+    );
+  });
+
   test("leaves a non-equivalence peril statement unchanged", () => {
     const source = "Eine Explosion gilt nicht als Brand;";
     const unit = {

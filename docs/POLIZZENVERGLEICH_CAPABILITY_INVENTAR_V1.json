@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V387-COMPLEMENTARY-DUPLICATE-UNIT-MERGE-20260917-001",
+  "changeSetId": "LF-V388-LEGACY-REQUIREMENT-SHAPE-LIFT-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -732,7 +732,8 @@
         "Predicate-free internal object list governors and continued item-leading blocks require explicit source-bound provenance without weakening the unanchored-list fail-closed boundary.",
         "Embedded list governors are bounded to immediately following subordinate list items; unseen layouts remain subject to holdout validation.",
         "Partial predecessor answers are never trusted as PASS and must be rebound to the identical source plan and current validator before reuse.",
-        "Complementary duplicate envelopes are merged only for the same expected operative unit ID and still require complete current-contract source validation."
+        "Complementary duplicate envelopes are merged only for the same expected operative unit ID and still require complete current-contract source validation.",
+        "Legacy component-shaped requirements are lifted only for wholly legacy, source-bound CLAUSE responses without logical list segments; mixed or unbound shapes remain fail-closed."
       ],
       "evidence": {
         "tests": [
@@ -758,7 +759,8 @@
           "INT-20260917-047",
           "INT-20260917-048",
           "INT-20260917-049",
-          "INT-20260917-050"
+          "INT-20260917-050",
+          "INT-20260917-051"
         ]
       },
       "lastVerifiedCommit": "3bf929702fd8726313dde47ef2a376c2a2722c5c",
