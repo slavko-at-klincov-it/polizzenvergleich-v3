@@ -46,7 +46,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V81";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V82";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -117,6 +117,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V78",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V79",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V80",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V81",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -1016,6 +1017,36 @@ function completeComponentSourceBlockIds(unit, component) {
   return unique[0];
 }
 
+const EXPLICIT_NEGATIVE_COVERAGE_EFFECT_PATTERN =
+  /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|nicht\s+(?:ersetz(?:t|en|ten)|erstatt(?:et|en))|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz|Entschädigung)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu;
+const EXPLICIT_POSITIVE_COVERAGE_EFFECT_PATTERN =
+  /\b(?:(?:zusätzlich\s+)?(?:mit)?versichert(?:\s+sind)?|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf|(?:werden\s+)?(?:ersetzt|erstattet))\b/iu;
+
+function sourceBoundLiteralCoverageEffect(unit, component) {
+  if (
+    component?.type !== "COVERAGE_EFFECT" ||
+    !Array.isArray(component.sourceBlockIds) ||
+    component.sourceBlockIds.length === 0
+  )
+    return false;
+  const selectedIds = new Set(component.sourceBlockIds);
+  const blocks = normalizationEvidenceBlocks(unit).filter(({ blockId }) =>
+    selectedIds.has(blockId)
+  );
+  if (blocks.length !== selectedIds.size) return false;
+  const normalize = (value) =>
+    String(value || "")
+      .replace(/\s+/gu, " ")
+      .trim();
+  const label = normalize(component.label);
+  const sourceText = normalize(blocks.map(({ exactText }) => exactText).join("\n"));
+  if (!label || !sourceText.includes(label)) return false;
+  const negative = EXPLICIT_NEGATIVE_COVERAGE_EFFECT_PATTERN.test(label);
+  const positive = EXPLICIT_POSITIVE_COVERAGE_EFFECT_PATTERN.test(label);
+  if (negative === positive) return false;
+  return component.coverageEffect === (negative ? "EXCLUDED" : "INCLUDED");
+}
+
 function explicitCoverageEffectRepair(unit, component) {
   if (
     component?.type !== "COVERAGE_EFFECT" ||
@@ -1029,17 +1060,15 @@ function explicitCoverageEffectRepair(unit, component) {
   );
   if (blocks.length !== selectedIds.size) return null;
   const sourceText = blocks.map(({ exactText }) => exactText).join("\n");
-  const negativePattern =
-    /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|nicht\s+(?:mit)?versichert|nicht\s+(?:ersetz(?:t|en|ten)|erstatt(?:et|en))|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz|Entschädigung)|erstreckt\s+sich(?:\s+dabei)?\s+nicht)\b/iu;
-  const positivePattern =
-    /\b(?:(?:zusätzlich\s+)?(?:mit)?versichert(?:\s+sind)?|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf|(?:werden\s+)?(?:ersetzt|erstattet))\b/iu;
-  const negative = negativePattern.exec(sourceText);
+  const negative = EXPLICIT_NEGATIVE_COVERAGE_EFFECT_PATTERN.exec(sourceText);
   const positiveEvidenceText = negative
     ? `${sourceText.slice(0, negative.index)}${" ".repeat(
         negative[0].length
       )}${sourceText.slice(negative.index + negative[0].length)}`
     : sourceText;
-  const positive = positivePattern.exec(positiveEvidenceText);
+  const positive = EXPLICIT_POSITIVE_COVERAGE_EFFECT_PATTERN.exec(
+    positiveEvidenceText
+  );
   if ((negative && positive) || (!negative && !positive)) return null;
   const evidence = negative || positive;
   const coverageEffect = negative ? "EXCLUDED" : "INCLUDED";
@@ -1048,7 +1077,9 @@ function explicitCoverageEffectRepair(unit, component) {
     .replace(/\s+/gu, " ")
     .trim();
   const labelCarriesEffect = (
-    negative ? negativePattern : positivePattern
+    negative
+      ? EXPLICIT_NEGATIVE_COVERAGE_EFFECT_PATTERN
+      : EXPLICIT_POSITIVE_COVERAGE_EFFECT_PATTERN
   ).test(component.label);
   if (
     component.coverageEffect === coverageEffect &&
@@ -5760,6 +5791,32 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       toCoverageEffect: coverageEffectRepair.coverageEffect,
                     });
                     return [{ ...component, ...coverageEffectRepair }];
+                  }
+                  const redundantInvalidCoverageEffect =
+                    component?.type === "COVERAGE_EFFECT" &&
+                    !sourceBoundLiteralCoverageEffect(unit, component) &&
+                    requirement.components.some(
+                      (candidate) =>
+                        candidate !== component &&
+                        sourceBoundLiteralCoverageEffect(unit, candidate)
+                    ) &&
+                    component.sourceBlockIds.every((blockId) =>
+                      requirement.components.some(
+                        (candidate) =>
+                          candidate !== component &&
+                          candidate.sourceBlockIds?.includes(blockId) &&
+                          (candidate.type !== "COVERAGE_EFFECT" ||
+                            sourceBoundLiteralCoverageEffect(unit, candidate))
+                      )
+                    );
+                  if (redundantInvalidCoverageEffect) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "DROP_REDUNDANT_INVALID_COVERAGE_EFFECT",
+                    });
+                    return [];
                   }
                   if (
                     component?.type === "COVERAGE_EFFECT" &&

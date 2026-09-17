@@ -8905,6 +8905,197 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
   });
 
+  test("drops invalid redundant coverage roles only when literal effect and provenance remain", () => {
+    const unit = {
+      unitId: "redundant-coverage-effects",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["effect", "condition", "precedence"],
+        blocks: [
+          { blockId: "effect", exactText: "Schäden sind mitversichert." },
+          {
+            blockId: "condition",
+            exactText: "sofern sie unverzüglich gemeldet werden;",
+          },
+          {
+            blockId: "precedence",
+            exactText:
+              "In Ergänzung bestehender Bestimmungen gilt diese Regel.",
+          },
+        ],
+        combinedText:
+          "Schäden sind mitversichert.\nsofern sie unverzüglich gemeldet werden;\nIn Ergänzung bestehender Bestimmungen gilt diese Regel.",
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: [
+        "OPERATIVE_COVERAGE_STATEMENT",
+        "CONDITION",
+        "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+      ],
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Schäden",
+              sourceBlockIds: ["effect"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "mitversichert",
+              coverageEffect: "INCLUDED",
+              sourceBlockIds: ["effect"],
+            },
+            {
+              type: "CONDITION",
+              label: "sofern sie unverzüglich gemeldet werden",
+              sourceBlockIds: ["condition"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "sofern",
+              coverageEffect: "CONDITIONAL",
+              sourceBlockIds: ["condition"],
+            },
+            {
+              type: "PRECEDENCE_OR_REPLACEMENT",
+              label: "In Ergänzung bestehender Bestimmungen",
+              sourceBlockIds: ["precedence"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "gilt diese Regel",
+              coverageEffect: "CONDITIONAL",
+              sourceBlockIds: ["precedence"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements[0].components.filter(
+        ({ type }) => type === "COVERAGE_EFFECT"
+      )
+    ).toEqual([
+      expect.objectContaining({
+        label: "mitversichert",
+        coverageEffect: "INCLUDED",
+      }),
+    ]);
+    expect(
+      normalized.componentRepairs.filter(
+        ({ action }) =>
+          action === "DROP_REDUNDANT_INVALID_COVERAGE_EFFECT"
+      )
+    ).toHaveLength(2);
+  });
+
+  test("keeps an invalid coverage role fail-closed without a literal sibling effect", () => {
+    const unit = {
+      unitId: "sole-invalid-coverage-effect",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["condition"],
+        blocks: [
+          {
+            blockId: "condition",
+            exactText: "sofern sie unverzüglich gemeldet werden.",
+          },
+        ],
+        combinedText: "sofern sie unverzüglich gemeldet werden.",
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "CONDITION"],
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "CONDITION",
+              label: "sofern sie unverzüglich gemeldet werden.",
+              sourceBlockIds: ["condition"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "sofern",
+              coverageEffect: "CONDITIONAL",
+              sourceBlockIds: ["condition"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements[0].components
+    ).toContainEqual(response.requirements[0].components[1]);
+    expect(normalized.componentRepairs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "DROP_REDUNDANT_INVALID_COVERAGE_EFFECT",
+        }),
+      ])
+    );
+  });
+
+  test("keeps an invalid redundant coverage role when it is the only citation of its block", () => {
+    const unit = {
+      unitId: "orphaned-invalid-coverage-effect",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["effect", "orphan"],
+        blocks: [
+          { blockId: "effect", exactText: "Schäden sind mitversichert." },
+          { blockId: "orphan", exactText: "Diese Regel gilt ergänzend." },
+        ],
+        combinedText: "Schäden sind mitversichert.\nDiese Regel gilt ergänzend.",
+      },
+    };
+    const invalid = {
+      type: "COVERAGE_EFFECT",
+      label: "gilt ergänzend",
+      coverageEffect: "CONDITIONAL",
+      sourceBlockIds: ["orphan"],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "COVERAGE_EFFECT",
+              label: "mitversichert",
+              coverageEffect: "INCLUDED",
+              sourceBlockIds: ["effect"],
+            },
+            invalid,
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(
+      normalized.responses[0].requirements[0].components
+    ).toContainEqual(invalid);
+  });
+
   test("drops redundant definition, duration and agreement effects only beside their semantic owners", async () => {
     const source = artifact(
       [
@@ -9615,7 +9806,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V81");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V82");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
