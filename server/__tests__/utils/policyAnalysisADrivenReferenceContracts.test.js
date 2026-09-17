@@ -1917,7 +1917,7 @@ describe("requirement-local semantic evidence completeness", () => {
   test("keeps V12 local-condition replay behavior frozen", () => {
     const unit = evidenceUnit(
       ["condition-head", "Sachen, sofern sie vom Versicherungsnehmer"],
-      ["condition-tail", "wiederbeschafft werden, bleiben zugeordnet."],
+      ["condition-tail", "wiederbeschafft werden, bleiben zugeordnet."]
     );
     const input = [
       requirement(
@@ -1937,7 +1937,7 @@ describe("requirement-local semantic evidence completeness", () => {
   test("does not materialize a local condition across an unowned block", () => {
     const unit = evidenceUnit(
       ["owned", "Sachen, sofern sie vom Versicherungsnehmer"],
-      ["foreign", "wiederbeschafft werden, bleiben zugeordnet."],
+      ["foreign", "wiederbeschafft werden, bleiben zugeordnet."]
     );
     const input = [
       requirement(

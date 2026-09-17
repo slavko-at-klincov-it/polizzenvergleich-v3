@@ -1055,12 +1055,16 @@ function materializeSharedSignalComponents(
           ? inheritedConditionEvidence.sourceBlockIds
           : exactLocalConditionEvidence
             ? exactLocalConditionEvidence.sourceBlockIds
-          : authoritativeLimitBasisEvidence
-            ? minimalSourceRange(unit, label, matchedEvidenceBlockIds(evidence))
-            : authoritativeSourceEvidence
-              ? [...matchedEvidenceBlockIds(evidence)]
-              : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
-                (localComponent ? [...localComponent.sourceBlockIds] : null);
+            : authoritativeLimitBasisEvidence
+              ? minimalSourceRange(
+                  unit,
+                  label,
+                  matchedEvidenceBlockIds(evidence)
+                )
+              : authoritativeSourceEvidence
+                ? [...matchedEvidenceBlockIds(evidence)]
+                : minimalSourceRange(unit, label, requirement.sourceBlockIds) ||
+                  (localComponent ? [...localComponent.sourceBlockIds] : null);
         const allowedSourceBlockIds = new Set([
           ...requirement.sourceBlockIds,
           ...(unit.governingContext?.blockIds || []),
