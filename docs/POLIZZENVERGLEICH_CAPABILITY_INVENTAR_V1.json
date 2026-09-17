@@ -691,9 +691,9 @@
       "activationStatus": "ACTIVE_PRODUCTION",
       "activationByMode": { "LF": "ACTIVE_PRODUCTION", "AB": "INACTIVE" },
       "implementationFiles": [
-    "server/utils/policyAnalysis/aDrivenClassificationContract.js",
-    "server/utils/policyAnalysis/aDrivenSemanticManifest.js",
-    "server/scripts/qa/runADrivenReferenceClassification.cjs"
+        "server/utils/policyAnalysis/aDrivenClassificationContract.js",
+        "server/utils/policyAnalysis/aDrivenSemanticManifest.js",
+        "server/scripts/qa/runADrivenReferenceClassification.cjs"
       ],
       "publicEntrypoints": [
         {
@@ -757,8 +757,8 @@
         "A complete owned insured-things clause with a conditional extension and trailing exclusion is atomized into separate source-bound requirements; an older inherited coverage governor is suppressed only when the owned text carries an explicit positive coverage reset.",
         "A numbered pure structural heading or direct numbered question terminates an older operative heading governor; numbered operative assertions remain under the normal source-bound evidence rules.",
         "A single morphologically close model word is restored only from one unique contiguous span inside already declared owned source blocks; numbers, number words, negation, coverage polarity, modality, multiple differences and ambiguity remain fail-closed.",
-    "A partial resume revalidates every explicit plan-identical predecessor in its bounded chain so valid units from older attempts are not recomputed.",
-    "Every explicit local condition occurrence must be bound to its own complete source clause; another CONDITION component from different blocks in the same requirement does not satisfy that occurrence."
+        "A partial resume revalidates every explicit plan-identical predecessor in its bounded chain so valid units from older attempts are not recomputed.",
+        "Every explicit local condition occurrence must be bound to its own complete source clause; another CONDITION component from different blocks in the same requirement does not satisfy that occurrence."
       ],
       "evidence": {
         "tests": [
@@ -784,8 +784,8 @@
           "Tracker 133.75",
           "Tracker 133.76",
           "Tracker 133.77",
-      "Tracker 133.78",
-      "Tracker 133.79"
+          "Tracker 133.78",
+          "Tracker 133.79"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -814,11 +814,11 @@
           "INT-20260917-065",
           "INT-20260917-066",
           "INT-20260917-067",
-      "INT-20260917-068",
-      "INT-20260918-069"
+          "INT-20260917-068",
+          "INT-20260918-069"
         ]
       },
-  "lastVerifiedCommit": "8a6234457caae34edf18fa997092994954e84b32",
+      "lastVerifiedCommit": "8a6234457caae34edf18fa997092994954e84b32",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
