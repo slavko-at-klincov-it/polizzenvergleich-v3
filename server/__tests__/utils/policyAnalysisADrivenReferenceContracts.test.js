@@ -368,6 +368,134 @@ describe("A-driven classification evidence recovery", () => {
     expect(recovered.classificationEvidenceContext.recoveredContexts).toBe(5);
   });
 
+  test("ends an operative heading governor at a numbered structural section boundary", () => {
+    const source = (
+      documentUuid,
+      combinedText,
+      blockId,
+      structuralKind = "BODY_LINE"
+    ) => ({
+      documentUuid,
+      blockIds: [blockId],
+      blocks: [{ blockId, exactText: combinedText, structuralKind }],
+      combinedText,
+    });
+    const negativeHeading = "8.4. Nicht versichert sind:";
+    const plan = {
+      units: [
+        {
+          unitId: "negative-heading",
+          unitKind: "HEADING",
+          structurePath: [negativeHeading],
+          source: source(
+            "bounded-doc",
+            negativeHeading,
+            "negative-heading-block",
+            "HEADING_CANDIDATE"
+          ),
+        },
+        {
+          unitId: "excluded-before-boundary",
+          unitKind: "CLAUSE",
+          structurePath: [negativeHeading],
+          source: source(
+            "bounded-doc",
+            "Schäden durch Vorsatz.",
+            "excluded-before-boundary-block"
+          ),
+        },
+        {
+          unitId: "numbered-structure-boundary",
+          unitKind: "LIST",
+          structurePath: [negativeHeading],
+          governingContext: {
+            relationType: "GOVERNS_FOLLOWING_LIST",
+            unitIds: ["negative-heading"],
+            blockIds: ["negative-heading-block"],
+            blocks: [
+              {
+                blockId: "negative-heading-block",
+                exactText: negativeHeading,
+              },
+            ],
+          },
+          source: source(
+            "bounded-doc",
+            "1. Wann gilt die Versicherung?",
+            "numbered-structure-boundary-block",
+            "HEADING_CANDIDATE"
+          ),
+        },
+        {
+          unitId: "positive-after-boundary",
+          unitKind: "CLAUSE",
+          structurePath: [negativeHeading],
+          source: source(
+            "bounded-doc",
+            "Der Versicherungsschutz erstreckt sich auf Schadenfälle in Österreich.",
+            "positive-after-boundary-block"
+          ),
+        },
+        {
+          unitId: "second-negative-heading",
+          unitKind: "HEADING",
+          structurePath: [negativeHeading],
+          source: source(
+            "operative-doc",
+            negativeHeading,
+            "second-negative-heading-block",
+            "HEADING_CANDIDATE"
+          ),
+        },
+        {
+          unitId: "numbered-operative-clause",
+          unitKind: "LIST",
+          structurePath: [negativeHeading],
+          source: source(
+            "operative-doc",
+            "1. Versicherungsschutz besteht nur bei rechtzeitiger Meldung.",
+            "numbered-operative-clause-block",
+            "HEADING_CANDIDATE"
+          ),
+        },
+        {
+          unitId: "dependent-after-operative-clause",
+          unitKind: "CLAUSE",
+          structurePath: [negativeHeading],
+          source: source(
+            "operative-doc",
+            "Schäden durch verspätete Meldung.",
+            "dependent-after-operative-clause-block"
+          ),
+        },
+      ],
+    };
+
+    const recovered = deriveClassificationEvidencePlan(plan);
+    const byId = new Map(recovered.units.map((unit) => [unit.unitId, unit]));
+
+    expect(byId.get("excluded-before-boundary").governingContext).toMatchObject(
+      {
+        unitIds: ["negative-heading"],
+      }
+    );
+    expect(
+      byId.get("numbered-structure-boundary").governingContext
+    ).toBeUndefined();
+    expect(byId.get("positive-after-boundary").governingContext).toBeUndefined();
+    expect(byId.get("numbered-operative-clause").governingContext).toMatchObject(
+      {
+        unitIds: ["second-negative-heading"],
+      }
+    );
+    expect(
+      byId.get("dependent-after-operative-clause").governingContext
+    ).toMatchObject({ unitIds: ["second-negative-heading"] });
+    expect(
+      recovered.classificationEvidenceContext.numberedHeadingGovernorBoundaries
+    ).toBe(1);
+  });
+
   test("recovers a positive coverage heading expressed as Versicherung erstreckt sich auf", () => {
     const source = (combinedText, blockId) => ({
       documentUuid: "doc",
@@ -484,8 +612,9 @@ describe("A-driven classification evidence recovery", () => {
     });
     expect(byId.get("unrelated-list").governingContext).toBeUndefined();
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V7",
       recoveredContexts: 2,
+      numberedHeadingGovernorBoundaries: 0,
       refinedListUnits: 0,
       additionalLogicalSegments: 0,
     });
@@ -553,8 +682,9 @@ describe("A-driven classification evidence recovery", () => {
         blockIds: ["governor"],
       });
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V7",
       recoveredContexts: 3,
+      numberedHeadingGovernorBoundaries: 0,
       refinedListUnits: 0,
       additionalLogicalSegments: 0,
     });
@@ -605,8 +735,9 @@ describe("A-driven classification evidence recovery", () => {
       blockIds: ["governor"],
     });
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V7",
       recoveredContexts: 2,
+      numberedHeadingGovernorBoundaries: 0,
       refinedListUnits: 0,
       additionalLogicalSegments: 0,
     });
@@ -674,8 +805,9 @@ describe("A-driven classification evidence recovery", () => {
       blockIds: ["positive-governor"],
     });
     expect(recovered.classificationEvidenceContext).toEqual({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V7",
       recoveredContexts: 2,
+      numberedHeadingGovernorBoundaries: 0,
       refinedListUnits: 0,
       additionalLogicalSegments: 0,
     });
@@ -4426,7 +4558,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         blocks,
       },
       governingContext: {
-        contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
+        contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V7",
         relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
         blockIds: ["coverage-governor"],
         blocks: [{ blockId: "coverage-governor", exactText: governorText }],
@@ -9392,7 +9524,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V78");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V79");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -11309,7 +11441,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       "sofern sie in Verwahrung genommen wurden"
     );
     expect(recovered.classificationEvidenceContext).toMatchObject({
-      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
+      contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V7",
       refinedListUnits: 1,
       additionalLogicalSegments: 2,
     });

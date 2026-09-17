@@ -44,7 +44,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V78";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V79";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -112,6 +112,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V75",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V76",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V77",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V78",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -165,7 +166,7 @@ const DEFAULT_MODEL_RECOVERY_TIMEOUT_MS = 180_000;
 const MAXIMUM_ATTEMPTS = 8;
 const TRANSPORT_CONTRACT_ID = "LF_A_CLASSIFICATION_TRANSPORT_V1";
 const CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID =
-  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6";
+  "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V7";
 const execFile = promisify(childProcess.execFile);
 
 function fail(message) {
@@ -4613,6 +4614,21 @@ function completeInternalObjectListLeadingComponentSources(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function isNumberedHeadingWithoutPredicate(unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  return (
+    unit?.unitKind === "LIST" &&
+    unit.source?.blocks?.length > 0 &&
+    unit.source.blocks.every(
+      ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
+    ) &&
+    /^\s*\d+[.)]\s/u.test(sourceText) &&
+    !/\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|versichert|mitversichert|ausgeschlossen|ersetzt|leistet|verzichtet)\b/iu.test(
+      sourceText
+    )
+  );
+}
+
 function normalizeUnambiguousComponentTypes(responses, units = []) {
   const repairs = [];
   const unitsById = new Map(units.map((unit) => [unit.unitId, unit]));
@@ -4670,15 +4686,7 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
       };
     }
     const numberedHeadingWithoutPredicate =
-      unit?.unitKind === "LIST" &&
-      unit.source?.blocks?.length > 0 &&
-      unit.source.blocks.every(
-        ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
-      ) &&
-      /^\s*\d+[.)]\s/u.test(sourceText) &&
-      !/\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|versichert|mitversichert|ausgeschlossen|ersetzt|leistet|verzichtet)\b/iu.test(
-        sourceText
-      );
+      isNumberedHeadingWithoutPredicate(unit);
     if (numberedHeadingWithoutPredicate) {
       if (
         response?.primaryClass !== "STRUCTURE" ||
@@ -6270,6 +6278,7 @@ function deriveClassificationEvidencePlan(plan) {
     contentUnitsByDocument.set(documentUuid, entries);
   }
   let recoveredContexts = 0;
+  let numberedHeadingGovernorBoundaries = 0;
   for (const contentUnits of contentUnitsByDocument.values())
     for (let index = 1; index < contentUnits.length; index += 1) {
       const current = contentUnits[index];
@@ -6304,6 +6313,12 @@ function deriveClassificationEvidencePlan(plan) {
         activeHeading = current;
         continue;
       }
+      if (isNumberedHeadingWithoutPredicate(current)) {
+        delete current.governingContext;
+        activeHeading = null;
+        numberedHeadingGovernorBoundaries += 1;
+        continue;
+      }
       const context = operativeHeadingGovernorContext(activeHeading, current);
       if (!context) continue;
       current.governingContext = context;
@@ -6316,6 +6331,7 @@ function deriveClassificationEvidencePlan(plan) {
     classificationEvidenceContext: {
       contractId: CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID,
       recoveredContexts,
+      numberedHeadingGovernorBoundaries,
       refinedListUnits,
       additionalLogicalSegments,
     },
