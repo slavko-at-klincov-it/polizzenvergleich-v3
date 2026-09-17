@@ -10609,13 +10609,29 @@ be05dd92dd2c71989e79f3320ee60e729045d8c7f0c8e7a37e3f1d63078cefe1
 Vorgängerartefakte nach Revalidierung:      hashgleich
 ```
 
-V3.9.0-Release-Gate, Installation und die Fortsetzung ab dem nun
-materialisierbaren Batch 17 stehen noch aus. Gold-283-V2 bleibt unverändert;
-der bekannte LF-1+9-Lauf bleibt Regression und kein unabhängiger
-Generalisierungs- oder 99-Prozent-Nachweis.
+Das vollständige Release-Gate auf Commit
+`b7654206815675afb80e8dc59a1986dc2d80b6fc` bestand 212/212 Suites und
+3.084/3.084 Tests sowie Server-, Frontend- und Collector-Lint, Prisma,
+Capability-Inventar, Prettier, Frontend-Build und Installer-Suite. Der
+annotierte Tag `v3.9.0` und `origin/main` zeigen auf denselben Commit. Der
+offizielle Updater aktivierte diesen Stand auf dem Kunden-Mac-Studio; Doctor,
+API und Datenbank-`quick_check` bestanden. Das Pre-Activation-Backup liegt
+unter:
 
-Status: `BATCH-17-ROOT-CAUSE ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
-MODELLAUFRUF; V3.9.0-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+```text
+server/storage/backups/anythingllm-before-activation-20260917-165816.db
+```
+
+Der anschließende Resume der Session 14 verwendet den neuen Run-Root
+`resume-5a180ec2f38e5a68a8e6e456`. Batches 1 bis 17 wurden dort mit null neuen
+Attempt-Dateien materialisiert. Der erste neue Modellversuch betraf wie
+verlangt erst Batch 18; dieser bestand. Der Lauf wird ab Batch 19 produktiv
+fortgesetzt. Gold-283-V2 bleibt unverändert; der bekannte LF-1+9-Lauf bleibt
+Regressionsevidenz und kein unabhängiger Generalisierungs- oder
+99-Prozent-Nachweis.
+
+Status: `V3.9.0 PRODUKTIV AKTIV; DOCTOR PASS; BATCHES 1 BIS 17 OHNE NEUE
+MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
