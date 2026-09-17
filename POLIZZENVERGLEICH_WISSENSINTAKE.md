@@ -156,7 +156,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-050` | Komplementäre Duplicate-Unit-Hüllen vor Listen-Normalisierung sicher vereinigen   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.7-Produktlauf ab Batch 7 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
 | `INT-20260917-051` | Alte komponentenförmige Requirements vor fachlicher Normalisierung sicher heben   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.8-Produktlauf ab Batch 11 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
 | `INT-20260917-052` | Terminalalias in expliziter Schaden-durch-Komponente source-bound normalisieren   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.9-Produktlauf ab Batch 15 weiterführen und vollständiges Endergebnis getrennt prüfen                           |
-| `INT-20260917-053` | Alte Komponentenform für exakt ein vollständiges Listensegment sicher heben       | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | Segmentvollständigkeit eng binden, Batch 17 ohne Modellaufruf revalidieren und erst dann resumieren                        |
+| `INT-20260917-053` | Alte Komponentenform für exakt ein vollständiges Listensegment sicher heben       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.9.0-Produktlauf ab Batch 18 weiterführen und vollständiges Endergebnis getrennt prüfen                            |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -886,7 +886,7 @@ Kategorieviews -> A/B-Join` definieren, ohne zusätzliche Benutzeraktion.
 
 - Erfasst: 2026-08-24
 - Typ: `EVIDENZHINWEIS`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: Der Chat korrigiert das Modell auf Qwen 3.8 27B, nennt 262.144
   native Kontexttokens, `xhigh` als Standard-Reasoning und empfiehlt für die
   Extraktion abweichend vom Hersteller `temperature=0.3`,
@@ -3570,5 +3570,20 @@ Vollständigkeitsbehauptung erzeugen.
   Governor-Komponenten bleiben fail-closed.
 - Beweisgrenze: Der bekannte LF-1+9-Fehlerfall ist Regressionsevidenz, kein
   unabhängiger Generalisierungs-Holdout.
+- Umsetzung und Nachweis: V71 hebt den alten Komponentenvertrag nur unter den
+  dokumentierten Segment-, Block-, Governor- und Quellenbindungen. Die neun
+  gezielten Positiv-/Negativfälle sowie der vollständige fokussierte
+  Vertragslauf bestanden auf dem Mac Studio 9/9 beziehungsweise 389/389
+  Tests. Der echte gespeicherte Batch 17 wurde ohne Modellaufruf mit 6/6
+  Units revalidiert; der Attempt-Baum blieb unter SHA-256
+  `be05dd92dd2c71989e79f3320ee60e729045d8c7f0c8e7a37e3f1d63078cefe1`
+  unverändert. Das vollständige Release-Gate auf Commit
+  `b7654206815675afb80e8dc59a1986dc2d80b6fc` bestand 212/212 Suites und
+  3.084/3.084 Tests sowie Lint, Prisma, Capability-Inventar, Frontend-Build
+  und Installer-Suite. V3.9.0 wurde über den offiziellen Updater aktiviert;
+  Doctor, API und Datenbankintegrität bestanden. Der anschließende Resume
+  materialisierte Batches 1 bis 17 im neuen Run-Root
+  `resume-5a180ec2f38e5a68a8e6e456` mit null neuen Attempt-Dateien; der erste neue
+  Attempt betraf wie verlangt Batch 18, der anschließend PASS erreichte.
 - Geplanter Change-Set:
   `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
