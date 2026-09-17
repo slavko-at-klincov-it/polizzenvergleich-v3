@@ -5315,6 +5315,55 @@ darf nicht als Generalisierungsnachweis ausgegeben werden.
 
 Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
 
+## 100. V3.8.5-Gate: eingebettete Listengovernor-Gruppen
+
+Der kalte V3.8.4-Lauf bestand die ersten vier A-Batches und stoppte im
+fünften Batch korrekt fail-closed. Der neue Fall enthält innerhalb derselben
+Listen-Unit erst ein selbstständiges Item, dann einen internen Governor und
+danach drei untergeordnete Items. Der frühere Vertrag behandelte gemeinsame
+Governors nur am Unit-Anfang und ließ deshalb Scope in das vorherige Item
+auslaufen.
+
+V67/V16/V29 erkennt die Gruppe positionsunabhängig anhand der
+servergebundenen Segmentrollen und Hierarchie. Der Governor gilt nur für
+unmittelbar folgende untergeordnete Items bis zur nächsten Grenze. Ein
+eigenständiges Governor-Requirement wird entfernt; ein Scope-Leak bleibt
+fail-closed. Die Materialisierung interner Objekt-Governors ist idempotent.
+
+Der echte gespeicherte Fehlerfall bestand ohne neuen Modellaufruf. Ein Replay
+der ersten fünf Batches bestand 5/5 und materialisierte alle fünf unter den
+neuen Verträgen mit null Qwen-Aufrufen. Der erste Upgrade-Replay deckte eine
+doppelte Vorgängerkomponente auf; erst nach der allgemeinen idempotenten
+Korrektur wurde der Fünf-Batch-Replay akzeptiert.
+
+Das vollständige Mac-Studio-Gate auf exakt
+`b19df17def47e02f3897da36899fbc4393c0ac3c` bestand:
+
+```text
+Jest:                    211/211 Suites, 3.062/3.062 Tests
+Server-/Frontend-Lint:   PASS / PASS
+Collector-Lint:          PASS
+Prisma:                  PASS
+Capability-Inventar:     PASS
+Frontend-Build:          PASS
+macOS-Installer-Suite:   PASS
+```
+
+Zwei ältere Storage-Tests waren zunächst von einem ambient gesetzten
+`STORAGE_DIR` abhängig. Das Gate machte diese reine Harness-Kopplung sichtbar;
+beide Tests setzen ihre temporäre Umgebung nun selbst. Produktcode und
+Kunden-Storage wurden dadurch nicht verändert.
+
+**Positive Erkenntnis:** Gespeicherte Modellantworten können bei einem
+Vertragsupgrade source-bound neu validiert werden, ohne bestandene Batches
+neu zu berechnen.
+
+**Beweisgrenze:** Der bekannte LF-1+9-Lauf ist weiterhin Regression. Der
+fortgesetzte kalte Produktlauf und ein unabhängiger expertengelabelter
+Mehrversicherer-Holdout bleiben getrennte Nachweise.
+
+Change-Set: `LF-V385-EMBEDDED-LIST-GOVERNOR-GROUPS-20260917-001`.
+
 ## 99. Gold-283-V2 und V3.8.1-Release-Gate
 
 Gold-283-V2 wurde auf dem Mac Studio aus den bestehenden hashgebundenen
