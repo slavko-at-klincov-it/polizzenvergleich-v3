@@ -150,7 +150,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-044` | Mehrere Rollen-Evidenzvorkommen occurrence-gebunden materialisieren     | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | V11-Vertrag am kalten Produktlauf und an Segmentierungsvarianten validieren                                               |
 | `INT-20260917-045` | Administrative Pflichten und Anwendbarkeitsbedingungen source-bound normalisieren | `BEOBACHTUNG` | `IN_PRÜFUNG` | allgemeinen Bedingungsvertrag testen und ab erstem unvollständigem A-Batch erneut materialisieren                         |
 | `INT-20260917-046` | Parenthetische Objektausnahmen als lokale Ausschlusswirkung materialisieren | `BEOBACHTUNG` | `IN_PRÜFUNG` | source-bound Negativgrenzen testen und den kalten Lauf ab erstem unvollständigem A-Batch fortsetzen                       |
-| `INT-20260917-047` | Internen Objekt-Listenkopf und fortgesetzten Satzanfang source-bound erhalten | `BEOBACHTUNG` | `IN_PRÜFUNG` | allgemeine Strukturregel mit Positiv-/Negativfällen testen und die gespeicherte Problem-Unit revalidieren                 |
+| `INT-20260917-047` | Internen Objekt-Listenkopf und fortgesetzten Satzanfang source-bound erhalten | `BEOBACHTUNG` | `IN_PRÜFUNG` | V66 im neuen kalten V3.8.4-Produktlauf prüfen; Holdout-Grenze getrennt offen halten                                      |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3233,7 +3233,16 @@ Vollständigkeitsbehauptung erzeugen.
   bestehender PASS-Batches beim Resume.
 - Entscheidung: Nur die vorhandene Listen-Provenienznormalisierung und die
   vorhandene interne-Governor-Normalisierung erweitern; keine neue
-  Architektur. Implementierung und Mac-Studio-Validierung stehen aus.
+  Architektur. V66 ist im Produkt-Commit
+  `9a5d6f9e4a690b2d35f4cdf5d7dac3983c98de10` implementiert. Der fokussierte
+  Mac-Studio-Vertragscheck bestand mit 366/366 Tests; die gespeicherte
+  Real-Unit wurde ohne neuen Modellaufruf mit gebundenem Governor,
+  gebundenem Satzanfang und null Validierungsdiagnosen revalidiert. Der
+  vollständige Releasekandidat
+  `7789d0d79f63b318eaecf32d0a2fa6f939e13b01` bestand auf dem Mac Studio
+  211/211 Suites, 3.059/3.059 Tests, alle Lints, Prisma, Capability-Inventar,
+  Frontend-Build und Installer-Suite. Der neue kalte V3.8.4-Produktlauf steht
+  noch aus.
 - Beweisgrenze: Der bekannte LF-1+9-Lauf ist Regression und kein
   unabhängiger Generalisierungs-Holdout.
 - Geplanter Change-Set:
