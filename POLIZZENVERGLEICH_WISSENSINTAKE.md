@@ -4017,5 +4017,12 @@ Vollständigkeitsbehauptung erzeugen.
   lokale positive Deckungsdefinition verdrängt; `nicht versichert sind` ist
   durch eine eigene Negativgrenze ausgeschlossen. 412/412 fokussierte Tests
   bestanden auf dem Mac Studio. Der echte Batch 36 revalidierte ohne neuen
-  Modellaufruf mit 6/6 Units; der Attempt-Tree-Hash blieb unverändert.
+  Modellaufruf mit 6/6 Units; der Attempt-Tree-Hash blieb unverändert. Der
+  vollständige Release-Gate auf
+  `ebb98ed5b7ba4f1c291d54a8be72290edd75ffca` bestand anschließend mit
+  212/212 Testsuiten und 3.107/3.107 Tests einschließlich Lints, Prisma,
+  Capability-Inventar, Prettier, Frontend-Build und Installer. V3.9.7 wurde
+  über den offiziellen Updater aktiviert; Doctor, API und SQLite bestanden.
+  Im Resume `resume-d4a5422a492af4769c12cdd4` wurden Batches 1 bis 36
+  revalidiert, und erst Batch 37 begann neue Modellarbeit.
 - Change-Set: `LF-V397-LOCAL-COVERAGE-RESET-ATOMIZATION-20260917-001`.
