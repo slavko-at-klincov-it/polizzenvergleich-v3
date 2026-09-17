@@ -4095,3 +4095,30 @@ Vollständigkeitsbehauptung erzeugen.
   die verbleibende Unit stoppten korrekt fail-closed; es trat kein Timeout
   oder Transportfehler auf.
 - Change-Set: `LF-V399-EXACT-SINGLE-TOKEN-SOURCE-ALIGNMENT-20260917-001`.
+
+## INT-20260917-068 — Mehrstufiges Resume muss alle gültigen Vorgängerantworten erhalten
+
+- Erfasst: 2026-09-17
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Aussage: Wird ein unvollständiger Batch mehrfach über neue Laufwurzeln
+  fortgesetzt, muss der aktuelle Lauf die hash- und planidentische
+  Vorgängerkette vollständig revalidieren. Gültige Antworten eines älteren
+  Vorgängers dürfen nicht verloren gehen, nur weil der unmittelbar vorherige
+  Resume-Lauf ausschließlich die damals noch offenen Units angefragt hat.
+- Ist-Wahrheit: `JA` im V3.9.8-Batch 38. Der ältere Resume enthält zwei
+  gültige Units; der unmittelbar folgende Resume enthält vier andere gültige
+  Units in seinem Attempt-Journal. Die read-only Vereinigung ist unter V80
+  6/6 PASS. Eine nur einstufige Wiederaufnahme sieht dagegen lediglich die
+  vier unmittelbar gespeicherten Units und würde zwei bereits gültige
+  Antworten unnötig erneut berechnen.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-ORCH-001` und `CAP-A-002`;
+  ausschließlich explizite `LF_A_PARTIAL_RESUME_SOURCE_V1`-Ketten; jede
+  Planwurzel und jeder Batchplan muss byte-semantisch mit dem aktuellen Plan
+  übereinstimmen; Verzeichnisse dürfen keine Symlinks sein; Zyklen und mehr als
+  64 Vorgänger stoppen fail-closed. Neueste gültige Antwort gewinnt, ältere
+  Quellen füllen nur noch fehlende Unit-IDs. Kein Ergebnis wird ohne aktuelle
+  Einzelunit-Validierung übernommen.
+- Beweisgrenze: technischer Resume- und Persistenzvertrag; keine Aussage über
+  fachliche Generalisierung oder 99 Prozent.
+- Change-Set: `LF-V399-MULTIHOP-PARTIAL-RESUME-20260917-002`.
