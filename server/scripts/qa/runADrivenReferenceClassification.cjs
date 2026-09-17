@@ -35,13 +35,14 @@ const {
   buildADrivenSemanticManifest,
   hasCoverageEffectEvidence,
   sharedListGovernorGroups,
+  TERMINAL_CLASSES,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
   A_SOURCE_UNIT_PLAN_CONTRACT_ID,
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V67";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V68";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -98,6 +99,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V64",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V65",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V66",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V67",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -477,7 +479,20 @@ function parseJsonArray(modelText) {
   return { responses: parsed, syntaxRepair };
 }
 
-function mergeCompatibleDuplicateUnitResponses(responses) {
+function mergeCompatibleDuplicateUnitResponses(
+  responses,
+  expectedUnitIds = null
+) {
+  const expected = Array.isArray(expectedUnitIds)
+    ? new Set(expectedUnitIds)
+    : null;
+  const terminalClasses = new Set(TERMINAL_CLASSES);
+  const nonMergeableClasses = new Set([
+    "STRUCTURE",
+    "METADATA",
+    "DUPLICATE",
+    "UNRESOLVED",
+  ]);
   const grouped = new Map();
   for (const response of responses) {
     const records = grouped.get(response?.unitId) || [];
@@ -491,22 +506,35 @@ function mergeCompatibleDuplicateUnitResponses(responses) {
     const unitId = response?.unitId;
     if (emitted.has(unitId)) continue;
     const records = grouped.get(unitId) || [];
+    const classificationsAreValid = records.every(
+      (record) =>
+        terminalClasses.has(record?.primaryClass) &&
+        Array.isArray(record?.semanticClasses) &&
+        record.semanticClasses.length > 0 &&
+        record.semanticClasses.includes(record.primaryClass) &&
+        record.semanticClasses.every(
+          (semanticClass) =>
+            terminalClasses.has(semanticClass) &&
+            !nonMergeableClasses.has(semanticClass)
+        )
+    );
     const compatible =
       records.length > 1 &&
-      records.every(
-        (record) =>
-          record?.primaryClass === records[0]?.primaryClass &&
-          stableStringify(record?.semanticClasses) ===
-            stableStringify(records[0]?.semanticClasses) &&
-          Array.isArray(record?.requirements)
-      );
+      typeof unitId === "string" &&
+      (!expected || expected.has(unitId)) &&
+      classificationsAreValid &&
+      records.every((record) => Array.isArray(record?.requirements));
     if (!compatible) {
       normalized.push(...records);
       emitted.add(unitId);
       continue;
     }
+    const semanticClasses = [
+      ...new Set(records.flatMap((record) => record.semanticClasses)),
+    ];
     normalized.push({
       ...records[0],
+      semanticClasses,
       requirements: records.flatMap(({ requirements }) => requirements),
     });
     mergedUnitIds.push(unitId);
@@ -4587,6 +4615,9 @@ function normalizeStandaloneListGovernorRequirements(responses, units = []) {
       const internalObjectGovernor = internalObjectListGovernor(unit);
       for (const { governorSegment, itemSegments } of governorGroups) {
         const governorBlockIds = new Set(governorSegment.blockIds);
+        const externalGovernorBlockIds = new Set(
+          unit.governingContext?.blockIds || []
+        );
         const itemBlockIds = new Set(
           itemSegments.flatMap(({ blockIds }) => blockIds)
         );
@@ -4602,8 +4633,13 @@ function normalizeStandaloneListGovernorRequirements(responses, units = []) {
         const standalone = indexed.filter(
           ({ sourceBlockIds }) =>
             sourceBlockIds.size > 0 &&
-            [...sourceBlockIds].every((blockId) =>
+            [...sourceBlockIds].some((blockId) =>
               governorBlockIds.has(blockId)
+            ) &&
+            ![...sourceBlockIds].some((blockId) => itemBlockIds.has(blockId)) &&
+            [...sourceBlockIds].every((blockId) =>
+              governorBlockIds.has(blockId) ||
+              externalGovernorBlockIds.has(blockId)
             )
         );
         const targets = indexed.filter(
@@ -4662,7 +4698,8 @@ function normalizeStandaloneListGovernorRequirements(responses, units = []) {
           ({ sourceBlockIds }) =>
             (sourceBlockIds || []).length > 0 &&
             (sourceBlockIds || []).every((blockId) =>
-              governorBlockIds.has(blockId)
+              governorBlockIds.has(blockId) ||
+              externalGovernorBlockIds.has(blockId)
             )
         );
         if (movedComponents.length === 0) continue;
@@ -5436,8 +5473,10 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
     )
       continue;
     const journalResponses = normalizeUnambiguousComponentTypes(
-      mergeCompatibleDuplicateUnitResponses(artifact.attempt.responses)
-        .responses,
+      mergeCompatibleDuplicateUnitResponses(
+        artifact.attempt.responses,
+        batch.expectedUnitIds
+      ).responses,
       plan.units
     ).responses;
     for (const response of journalResponses) {
@@ -5940,7 +5979,8 @@ async function runBatch({
         workingBatch.expectedUnitIds
       );
       const duplicateRepair = mergeCompatibleDuplicateUnitResponses(
-        fragmentRepair.responses
+        fragmentRepair.responses,
+        workingBatch.expectedUnitIds
       );
       const mergedResponsesFromEnvelope = duplicateRepair.responses;
       const envelopeRepair =
@@ -6516,6 +6556,7 @@ module.exports = {
   createAttemptRecorder,
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
+  mergeCompatibleDuplicateUnitResponses,
   normalizeStandaloneListGovernorRequirements,
   normalizeUnambiguousComponentTypes,
   parseJsonArray,

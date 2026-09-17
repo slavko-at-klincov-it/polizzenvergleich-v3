@@ -66,6 +66,7 @@ const {
   compatibleSeedResponses,
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
+  mergeCompatibleDuplicateUnitResponses,
   normalizeStandaloneListGovernorRequirements,
   normalizeUnambiguousComponentTypes,
   parseJsonArray,
@@ -7509,6 +7510,200 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       strategy: "COMPATIBLE_DUPLICATE_UNIT_ENVELOPES",
       mergedUnitIds: [unit.unitId],
     });
+  });
+
+  test("merges complementary operative unit envelopes before source-bound governor normalization", () => {
+    const unit = {
+      unitId: "complementary-list-unit",
+      unitOrder: 0,
+      packageOrder: [0, 0],
+      unitKind: "LIST",
+      structurePath: [],
+      source: {
+        documentUuid: "doc",
+        documentSha256: "d".repeat(64),
+        documentPosition: 0,
+        documentRole: "MAIN_POLICY",
+        documentStatus: "ACTIVE",
+        blockIds: ["limit", "item", "continuation"],
+        blocks: [
+          {
+            blockId: "limit",
+            structuralKind: "LIST_GOVERNOR",
+            exactText:
+              "• bis zu jeweils 5% der Gebäudeversicherungssumme auf Erstes Risiko",
+          },
+          {
+            blockId: "item",
+            structuralKind: "LIST_ITEM",
+            exactText:
+              "- Nebengebäude mit einer betrieblich genutzten Fläche von höchstens der Hälfte ",
+          },
+          {
+            blockId: "continuation",
+            structuralKind: "BODY_LINE",
+            exactText: "der Gesamtfläche;",
+          },
+        ],
+        combinedText:
+          "• bis zu jeweils 5% der Gebäudeversicherungssumme auf Erstes Risiko\n- Nebengebäude mit einer betrieblich genutzten Fläche von höchstens der Hälfte \nder Gesamtfläche;",
+      },
+      logicalSourceSegments: [
+        { segmentId: "limit-segment", blockIds: ["limit"] },
+        {
+          segmentId: "item-segment",
+          blockIds: ["item", "continuation"],
+        },
+      ],
+      semanticAuthority: false,
+      initialDisposition: "PENDING_CLASSIFICATION",
+      governingContext: {
+        relationType: "GOVERNS_FOLLOWING_LIST",
+        blockIds: ["context"],
+        blocks: [
+          {
+            blockId: "context",
+            structuralKind: "BODY_LINE",
+            exactText:
+              "Zusätzlich sind mitversichert, wenn der Versicherungsnehmer ersatzpflichtig ist:",
+          },
+        ],
+        combinedText:
+          "Zusätzlich sind mitversichert, wenn der Versicherungsnehmer ersatzpflichtig ist:",
+      },
+    };
+    const responses = [
+      {
+        unitId: unit.unitId,
+        primaryClass: "LIMIT",
+        semanticClasses: ["LIMIT", "OPERATIVE_COVERAGE_STATEMENT"],
+        requirements: [
+          {
+            displayLabel:
+              "• bis zu jeweils 5% der Gebäudeversicherungssumme auf Erstes Risiko",
+            components: [
+              {
+                type: "VALUE_AND_UNIT",
+                label: "bis zu jeweils 5%",
+                rawValue: "bis zu jeweils 5%",
+                sourceBlockIds: ["limit"],
+              },
+              {
+                type: "LIMIT_BASIS",
+                label: "der Gebäudeversicherungssumme auf Erstes Risiko",
+                sourceBlockIds: ["limit"],
+              },
+              {
+                type: "CONDITION",
+                label: "wenn der Versicherungsnehmer ersatzpflichtig ist",
+                sourceBlockIds: ["context"],
+              },
+              {
+                type: "COVERAGE_EFFECT",
+                label: "mitversichert",
+                sourceBlockIds: ["context"],
+                coverageEffect: "INCLUDED",
+              },
+            ],
+          },
+        ],
+      },
+      {
+        unitId: unit.unitId,
+        primaryClass: "INSURED_OBJECT",
+        semanticClasses: [
+          "INSURED_OBJECT",
+          "OPERATIVE_COVERAGE_STATEMENT",
+        ],
+        requirements: [
+          {
+            displayLabel:
+              "- Nebengebäude mit einer betrieblich genutzten Fläche von höchstens der Hälfte \nder Gesamtfläche;",
+            components: [
+              {
+                type: "OBJECT",
+                label:
+                  "Nebengebäude mit einer betrieblich genutzten Fläche von höchstens der Hälfte \nder Gesamtfläche",
+                sourceBlockIds: ["item", "continuation"],
+              },
+              {
+                type: "COVERAGE_EFFECT",
+                label: "mitversichert",
+                sourceBlockIds: ["context"],
+                coverageEffect: "INCLUDED",
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    const merged = mergeCompatibleDuplicateUnitResponses(responses, [
+      unit.unitId,
+    ]);
+    const normalized = normalizeUnambiguousComponentTypes(
+      merged.responses,
+      [unit]
+    );
+    const validation = validateBatchResponses(
+      { units: [unit] },
+      { expectedUnitIds: [unit.unitId], units: [unit] },
+      normalized.responses
+    );
+
+    expect(merged.responses).toHaveLength(1);
+    expect(merged.responses[0].semanticClasses).toEqual([
+      "LIMIT",
+      "OPERATIVE_COVERAGE_STATEMENT",
+      "INSURED_OBJECT",
+    ]);
+    expect(normalized.responses[0].requirements).toHaveLength(1);
+    expect(
+      normalized.responses[0].requirements[0].components.map(({ type }) =>
+        type
+      )
+    ).toEqual(
+      expect.arrayContaining([
+        "OBJECT",
+        "VALUE_AND_UNIT",
+        "LIMIT_BASIS",
+        "CONDITION",
+        "COVERAGE_EFFECT",
+      ])
+    );
+    expect(validation.passed).toBe(true);
+    expect(validation.diagnostics).toEqual([]);
+  });
+
+  test("keeps unknown and non-operative duplicate unit envelopes fail-closed", () => {
+    const unknown = [
+      {
+        unitId: "unknown",
+        primaryClass: "LIMIT",
+        semanticClasses: ["LIMIT"],
+        requirements: [],
+      },
+      {
+        unitId: "unknown",
+        primaryClass: "INSURED_OBJECT",
+        semanticClasses: ["INSURED_OBJECT"],
+        requirements: [],
+      },
+    ];
+    const nonOperative = unknown.map((response) => ({
+      ...response,
+      unitId: "known",
+      primaryClass: "STRUCTURE",
+      semanticClasses: ["STRUCTURE"],
+    }));
+
+    expect(
+      mergeCompatibleDuplicateUnitResponses(unknown, ["known"]).responses
+    ).toHaveLength(2);
+    expect(
+      mergeCompatibleDuplicateUnitResponses(nonOperative, ["known"])
+        .responses
+    ).toHaveLength(2);
   });
 
   test("normalizes only an exclusion terminal used as a component type", async () => {
