@@ -10336,6 +10336,53 @@ Holdout-Aussage.
 
 Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
 
+### 133.59 Kalter V3.8.0-Produktlauf deckt occurrence-gebundene A-Limitlücke auf
+
+Der erste neue Lauf über den echten Kundenpfad wurde am 17. September 2026
+mit einer neuen Workspace-, Session- und Run-Identität gestartet. Die zehn
+Eingangsdokumente waren gegen das eingefrorene 1+9-Manifest hashgleich. Der
+installierte V3.8.0-Worker extrahierte alle 108 Seiten und stoppte danach
+korrekt fail-closed im dritten von 58 A-Klassifikationsbatches. Batch 1 und 2
+waren vollständig `PASS`; sämtliche Versuche des unvollständigen dritten
+Batches blieben resumierbar erhalten.
+
+Die Ursache ist weder ein fehlender Qwen-Text noch ein Retrievalproblem. Eine
+Anforderung enthielt zwei ausdrückliche nichtnumerische Limits. Der breite
+`SCOPE` zitierte beide vollständig, doch der servereigene Materializer nahm
+für beide Evidenzvorkommen stets den ersten Regex-Treffer. Dadurch wurde
+„Versicherungssummen nicht addiert“ zweimal auf den ersten Quellblock
+materialisiert und „nur einmal pro Schadenfall“ auf dem zweiten Block blieb
+ohne eigene `LIMIT_BASIS`-Rolle.
+
+Der allgemeine Fix wird als `LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V11`,
+Manifest V15 und Klassifikationslauf V63 versioniert. Nichtnumerische Limits
+sind jetzt occurrence-gebunden: Typ, konkrete Textstelle und Quellblock müssen
+gemeinsam passen. Ein breites Limit darf mehrere Vorkommen nur dann tragen,
+wenn sein eigenes Label alle betreffenden Aussagen tatsächlich enthält. V10,
+Manifest V14 und Lauf V62 bleiben für historische Revalidierung unverändert.
+Tests decken den echten Zwei-Block-Fall, dieselbe Aussage in einem Block,
+breite und zu enge vorhandene Rollenkomponenten, V10-Replay und vollständige
+Manifestmaterialisierung ab.
+
+Parallel wird das unveränderte Gold-283-V1 über einen getrennten QA-only-
+Korrekturvertrag zu Gold-283-V2 fortgeschrieben. Exakt `VS-15`, `AV-06` und
+`AV-22` werden aufgrund der bereits hashgebundenen Vollkorpus-Abwesenheit von
+`FOUND` auf `NOT_FOUND` korrigiert; die übrigen 280 Zeilen müssen kanonisch
+unverändert bleiben. Diese Korrektur verändert keine Produktregel.
+
+Der vorhandene Dokumentbestand enthält keinen echten unabhängigen,
+expertengelabelten Mehrversicherer-Holdout. UNIQA, DONAU und weitere
+verfügbare Dokumente wurden bereits in der Entwicklung verwendet oder
+besitzen kein eingefrorenes Fach-Oracle. Sie dürfen höchstens als
+explorativer Kalt-Smoke, nicht als Generalisierungs- oder 99-Prozent-Nachweis
+bezeichnet werden.
+
+Status: `KALTER PRODUKTLAUF FAIL-CLOSED NACH 2/58 PASS; ROOT CAUSE BEHOBEN,
+MAC-STUDIO-GATE UND V3.8.1-RESUME AUSSTEHEND; GOLD-283-V2 VORBEREITET; KEIN
+UNABHÄNGIGER HOLDOUT VORHANDEN`.
+
+Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
+
 ### 133.58 V3.8.0 auf dem Kunden-Mac-Studio aktiviert
 
 Der kontrollierte Kunden-MVP wurde am 16. September 2026 über den offiziellen,

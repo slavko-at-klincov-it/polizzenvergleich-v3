@@ -5,6 +5,7 @@ const {
 } = require("./aDrivenBinaryReferenceResult");
 const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V14,
   validateADrivenSemanticManifest,
 } = require("./aDrivenSemanticManifest");
 const { stableStringify } = require("./aDrivenSourceUnitPlan");
@@ -16,6 +17,13 @@ const A_DRIVEN_GOLD_REGRESSION_CONTRACT_ID =
   "LF_A_DRIVEN_GOLD_283_REGRESSION_V2";
 const GOLD_CONTRACT_ID = "LF_1PLUS9_GOLD_283_V1";
 const GOLD_STATUS = "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS";
+const GOLD_V2_CONTRACT_ID = "LF_1PLUS9_GOLD_283_V2";
+const GOLD_V2_STATUS =
+  "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS_V2";
+const SUPPORTED_GOLD_CONTRACTS = Object.freeze({
+  [GOLD_CONTRACT_ID]: GOLD_STATUS,
+  [GOLD_V2_CONTRACT_ID]: GOLD_V2_STATUS,
+});
 
 const LEGACY_ROLE_TO_DYNAMIC_TYPES = Object.freeze({
   INSURED_OBJECT: Object.freeze(["OBJECT"]),
@@ -73,9 +81,22 @@ function locationContainsPage(location, page) {
 }
 
 function goldRows(gold, expectedGoldSha256) {
+  const expectedStatus = SUPPORTED_GOLD_CONTRACTS[gold?.contractId];
+  const versionSpecificContractValid =
+    gold?.contractId === GOLD_CONTRACT_ID ||
+    (gold?.contractId === GOLD_V2_CONTRACT_ID &&
+      gold.schemaVersion === 2 &&
+      gold.summary?.correctionsApplied === 3 &&
+      gold.supersedes?.contractId === GOLD_CONTRACT_ID &&
+      gold.supersedes?.status === GOLD_STATUS &&
+      gold.supersedes?.predecessorPreservedUnchanged === true &&
+      validSha(gold.bindings?.predecessorGold?.fileSha256) &&
+      validSha(gold.bindings?.predecessorGold?.goldSha256) &&
+      validSha(gold.bindings?.correctionSetSha256));
   if (
-    gold?.contractId !== GOLD_CONTRACT_ID ||
-    gold.status !== GOLD_STATUS ||
+    !expectedStatus ||
+    !versionSpecificContractValid ||
+    gold.status !== expectedStatus ||
     gold.goldAuthority !== true ||
     gold.qaOnly !== true ||
     gold.productionRule !== false ||
@@ -91,6 +112,28 @@ function goldRows(gold, expectedGoldSha256) {
   )
     throw regressionError("LF_A_DRIVEN_GOLD_INPUT_INVALID");
   return gold.rows;
+}
+
+function validateRegressionManifest(manifest) {
+  if (manifest?.contractId === A_DYNAMIC_MANIFEST_CONTRACT_ID)
+    return validateADrivenSemanticManifest(manifest);
+  if (
+    manifest?.contractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID_V14 ||
+    !Array.isArray(manifest.requirements) ||
+    !Array.isArray(manifest.unitTerminals) ||
+    !Array.isArray(manifest.blockTerminals) ||
+    !validSha(manifest.manifestSha256)
+  )
+    throw regressionError("LF_A_DRIVEN_GOLD_MANIFEST_INVALID");
+  const { manifestSha256, ...payload } = manifest;
+  if (
+    manifestSha256 !==
+    sha256(
+      `${A_DYNAMIC_MANIFEST_CONTRACT_ID_V14}\u0000${stableStringify(payload)}`
+    )
+  )
+    throw regressionError("LF_A_DRIVEN_GOLD_MANIFEST_DIGEST_INVALID");
+  return manifest;
 }
 
 function rowBlockIds(row) {
@@ -464,9 +507,7 @@ function buildADrivenGoldRegression({
   expectedGoldSha256,
   result,
 } = {}) {
-  validateADrivenSemanticManifest(manifest);
-  if (manifest.contractId !== A_DYNAMIC_MANIFEST_CONTRACT_ID)
-    throw regressionError("LF_A_DRIVEN_GOLD_MANIFEST_INVALID");
+  validateRegressionManifest(manifest);
   const rows = goldRows(gold, expectedGoldSha256);
   const crosswalk = buildCrosswalk(manifest, rows);
   const resultRows = validateBinaryResult(result, manifest);
@@ -497,6 +538,8 @@ function buildADrivenGoldRegression({
 module.exports = {
   A_DRIVEN_GOLD_REGRESSION_CONTRACT_ID,
   GOLD_CONTRACT_ID,
+  GOLD_V2_CONTRACT_ID,
   LEGACY_ROLE_TO_DYNAMIC_TYPES,
+  SUPPORTED_GOLD_CONTRACTS,
   buildADrivenGoldRegression,
 };

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V2-PRODUCTION-ACTIVATION-20260916-001",
+  "changeSetId": "LF-V381-COLD-E2E-CORRECTIONS-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -65,7 +65,7 @@
       "path": "server/utils/policyAnalysis/aDrivenClassificationContract.js"
     },
     {
-      "id": "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V14",
+      "id": "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V15",
       "path": "server/utils/policyAnalysis/aDrivenSemanticManifest.js"
     },
     {
@@ -722,16 +722,17 @@
       },
       "knownLimitsRisks": [
         "Model-valid output is not automatically fachlich optimal.",
-        "Unseen structures remain a generalization gate."
+        "Unseen structures remain a generalization gate.",
+        "Multiple same-role evidence occurrences must be rebound under the current semantic contract before a predecessor batch is reusable."
       ],
       "evidence": {
         "tests": [
           "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
           "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"
         ],
-        "runs": ["Tracker 133.46"],
+        "runs": ["Tracker 133.46", "Tracker 133.59"],
         "adrs": ["ADR-031"],
-        "failures": ["FAIL-001"]
+        "failures": ["FAIL-001", "INT-20260917-044"]
       },
       "lastVerifiedCommit": "c87aadf9d483d72ddce0bc67aacd529c19b54788",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
@@ -769,7 +770,7 @@
         "document artifacts"
       ],
       "outputs": [
-        "LF_A_DYNAMIC_SEMANTIC_MANIFEST_V14",
+        "LF_A_DYNAMIC_SEMANTIC_MANIFEST_V15",
         "terminal block/unit crosswalk"
       ],
       "sideEffects": ["CLI writes immutable private manifest"],
@@ -786,14 +787,15 @@
         "gpu": "NONE"
       },
       "knownLimitsRisks": [
-        "Known 1+9 manifest quality is regression evidence, not a holdout proof."
+        "Known 1+9 manifest quality is regression evidence, not a holdout proof.",
+        "Occurrence-bound V11 role materialization still requires an unseen expert-labeled holdout for generalization proof."
       ],
       "evidence": {
         "tests": [
           "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
           "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"
         ],
-        "runs": ["Tracker 133.46"],
+        "runs": ["Tracker 133.46", "Tracker 133.59"],
         "adrs": ["ADR-028", "ADR-031"],
         "failures": []
       },
@@ -1650,18 +1652,29 @@
       "implementationFiles": [
         "server/utils/policyAnalysis/aDrivenGoldRegression.js",
         "server/utils/policyAnalysis/aDrivenRequirementPlanGoldRegression.js",
-        "server/utils/policyAnalysis/lfReferenceGoldOracle.js"
+        "server/utils/policyAnalysis/lfReferenceGoldOracle.js",
+        "server/utils/policyAnalysis/lfKnownFixtureGold283Correction.js",
+        "server/scripts/qa/materializeLfKnownFixtureGold283V2.cjs",
+        "server/qa/lf-1plus9-gold-283-corrections.v1.json"
       ],
       "publicEntrypoints": [
         {
           "path": "server/utils/policyAnalysis/aDrivenRequirementPlanGoldRegression.js",
           "symbol": "buildADrivenRequirementPlanGoldRegression"
+        },
+        {
+          "path": "server/utils/policyAnalysis/lfKnownFixtureGold283Correction.js",
+          "symbol": "buildLfKnownFixtureGold283V2"
         }
       ],
       "callers": [
         {
           "path": "server/scripts/qa/evaluateADrivenRequirementPlanGoldRegression.cjs",
           "contains": "aDrivenRequirementPlanGoldRegression"
+        },
+        {
+          "path": "server/scripts/qa/materializeLfKnownFixtureGold283V2.cjs",
+          "contains": "buildLfKnownFixtureGold283V2"
         }
       ],
       "inputs": ["frozen Gold", "dynamic run artifacts"],
@@ -1680,11 +1693,14 @@
         "gpu": "NONE unless an explicit reviewer run is separately started"
       },
       "knownLimitsRisks": [
-        "Gold-283 is regression for one known 1+9 set and never a production template or holdout proof."
+        "Gold-283 is regression for one known 1+9 set and never a production template or holdout proof.",
+        "Gold-283-V1 remains immutable; later source-bound corrections require a separately hashed correction set and a new Gold contract version."
       ],
       "evidence": {
         "tests": [
+          "server/__tests__/scripts/qa/lfGold283V2Materializer.test.js",
           "server/__tests__/utils/policyAnalysis/lfReferenceGoldOracle.test.js",
+          "server/__tests__/utils/policyAnalysis/lfKnownFixtureGold283Correction.test.js",
           "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"
         ],
         "runs": [

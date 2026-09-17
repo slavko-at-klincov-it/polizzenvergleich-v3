@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "contractId": "LF_1PLUS9_GOLD_283_CORRECTION_DECISIONS_V1",
+  "status": "APPROVED_SOURCE_BOUND_CORRECTIONS_FOR_KNOWN_LF_1PLUS9",
+  "scope": "KNOWN_LF_1PLUS9_THREE_GOLD_CORRECTIONS_ONLY",
+  "qaOnly": true,
+  "productionRule": false,
+  "generalizationProof": false,
+  "bindings": {
+    "baseGoldSha256": "d9475c0e8145b5f326ae54ffaab58e5b2c2d154521837452993fc72712257179",
+    "baseGoldFileSha256": "9ed4ab6ba3dbd896de48ecf94e6874881391600ef2cc027afae5af5d21123a55",
+    "gold30FileSha256": "cff20090e2382b1131454f8d9a47f5dba3ca252deb8a1f8d5b95258dfec74f71",
+    "completeBCorpusFileSha256": "44adf1b282fabe65debd58c3e53b48877ffa4c2480655d71864f9a7dd0825e11",
+    "finalDecisionsFileSha256": "e04211668273b01fc7f416782fc62f5952d0d9f8b3c62968636c7833f694fbe8",
+    "baseRegressionFileSha256": "2dbbf6cbf8a69942d465d9a43a33594494c7c13691cd27812f50f798f784f0fd"
+  },
+  "rows": [
+    {
+      "requirementId": "VS-15",
+      "dynamicRequirementId": "AR-e1f4952dd8c510e1918bab3e",
+      "expectedBaseOutcome": "FULL_COUNTERPART",
+      "expectedBaseSourceRefs": ["Ebuilding", "Etech"],
+      "correctedOutcome": "NO_COUNTERPART_ESTABLISHED",
+      "reviewedAndRejectedBaseSourceRefs": ["Ebuilding", "Etech"],
+      "rationale": "Die bisherigen Goldquellen beschreiben allgemeine Gebäude und Haustechnik, nicht Keller- oder Abstellabteile samt Türen und den Ausschluss ihres Inhalts. Die vollständige Prüfung des bekannten B-Korpus hat für dieses fachliche Element kein Gegenstück etabliert."
+    },
+    {
+      "requirementId": "AV-06",
+      "dynamicRequirementId": "AR-8d0d0655a460ac81b0aee35e",
+      "expectedBaseOutcome": "FULL_COUNTERPART",
+      "expectedBaseSourceRefs": ["RAK16", "RAK34"],
+      "correctedOutcome": "NO_COUNTERPART_ESTABLISHED",
+      "reviewedAndRejectedBaseSourceRefs": ["RAK16", "RAK34"],
+      "rationale": "Die bisherigen Goldquellen sind Günstigkeits- und Auslegungsklauseln. Sie gewähren weder das Recht zur Umstellung auf neue Bedingungen oder Tarife noch die verlangte Prämienherabsetzung mit den Bedingungen der LF-Bestklausel."
+    },
+    {
+      "requirementId": "AV-22",
+      "dynamicRequirementId": "AR-e25145d1003197079fdb1fa4",
+      "expectedBaseOutcome": "PARTIAL_COUNTERPART",
+      "expectedBaseSourceRefs": ["RAK17", "Enew", "Ecostpay"],
+      "correctedOutcome": "NO_COUNTERPART_ESTABLISHED",
+      "reviewedAndRejectedBaseSourceRefs": ["RAK17", "Enew", "Ecostpay"],
+      "rationale": "Die bisherigen Goldquellen erlauben Arbeiten durch eigenes Personal oder beschreiben allgemeine Ersatzleistungen. Sie belegen weder einen Gemeinkostenzuschlag für Eigenpersonal noch dessen Begrenzung auf den Preis einer Fachfirma."
+    }
+  ],
+  "limitation": "These decisions correct only three source-bound rows in the exact known LF 1+9 regression fixture. They are not production rules, deployment approval, holdout evidence, arbitrary-policy generalization proof or a 99-percent claim."
+}

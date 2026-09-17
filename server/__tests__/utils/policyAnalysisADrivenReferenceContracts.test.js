@@ -8,12 +8,14 @@ const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V14,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V6,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
   buildADrivenSemanticManifest,
   materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
@@ -1111,6 +1113,230 @@ describe("requirement-local semantic evidence completeness", () => {
       );
     }
   );
+
+  test.each([
+    {
+      name: "across physical blocks",
+      blocks: [
+        [
+          "head",
+          "Darüber hinaus gilt der Exklusivschutz, wobei die Versicherungssummen nicht addiert",
+        ],
+        ["tail", "werden und nur einmal pro Schadenfall zur Anwendung kommen."],
+      ],
+      sourceBlockIds: ["head", "tail"],
+    },
+    {
+      name: "inside one physical block",
+      blocks: [
+        [
+          "single",
+          "Darüber hinaus gilt der Exklusivschutz, wobei die Versicherungssummen nicht addiert werden und nur einmal pro Schadenfall zur Anwendung kommen.",
+        ],
+      ],
+      sourceBlockIds: ["single"],
+    },
+  ])(
+    "materializes every non-numeric limit occurrence $name",
+    ({ blocks, sourceBlockIds }) => {
+      const unit = evidenceUnit(...blocks);
+      const displayLabel = blocks.map(([, value]) => value).join("\n");
+      const result = materializeSharedSignalComponents(unit, [
+        {
+          ...requirement(sourceBlockIds, [
+            {
+              type: "PRECEDENCE_OR_REPLACEMENT",
+              label: "Darüber hinaus gilt der Exklusivschutz",
+              sourceBlockIds: [sourceBlockIds[0]],
+            },
+            {
+              type: "SCOPE",
+              label: displayLabel,
+              sourceBlockIds,
+            },
+          ]),
+          displayLabel,
+        },
+      ]);
+
+      expect(
+        result.requirements[0].components
+          .filter(({ type }) => type === "LIMIT_BASIS")
+          .map(({ label, sourceBlockIds: ids }) => [label, ids])
+      ).toEqual([
+        ["Versicherungssummen nicht addiert", [sourceBlockIds[0]]],
+        ["nur einmal pro Schadenfall", [sourceBlockIds.at(-1)]],
+      ]);
+      expect(requirementRoleEvidenceDiagnostics(unit, result.requirements)).toEqual(
+        []
+      );
+    }
+  );
+
+  test("allows one broad limit component to bind both explicit occurrences", () => {
+    const source =
+      "Die Versicherungssummen nicht addiert werden und nur einmal pro Schadenfall zur Anwendung kommen.";
+    const unit = evidenceUnit(["single", source]);
+    const requirements = [
+      {
+        ...requirement(
+          ["single"],
+          [component("LIMIT_BASIS", "single", { label: source })]
+        ),
+        displayLabel: source,
+      },
+    ];
+
+    expect(requirementRoleEvidenceDiagnostics(unit, requirements)).toEqual([]);
+    expect(
+      materializeSharedSignalComponents(unit, requirements).requirements[0]
+        .components
+    ).toHaveLength(1);
+  });
+
+  test("does not let the first limit occurrence absorb a second one", () => {
+    const source =
+      "Die Versicherungssummen nicht addiert werden und nur einmal pro Schadenfall zur Anwendung kommen.";
+    const unit = evidenceUnit(["single", source]);
+    const requirements = [
+      {
+        ...requirement(
+          ["single"],
+          [
+            component("LIMIT_BASIS", "single", {
+              label: "Versicherungssummen nicht addiert",
+            }),
+          ]
+        ),
+        displayLabel: source,
+      },
+    ];
+
+    expect(requirementRoleEvidenceDiagnostics(unit, requirements)).toEqual([
+      expect.objectContaining({
+        signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
+        matchedEvidence: [
+          expect.objectContaining({ match: "nur einmal pro Schadenfall" }),
+        ],
+      }),
+    ]);
+  });
+
+  test("keeps the V10 non-numeric limit replay behavior unchanged", () => {
+    const unit = evidenceUnit(
+      [
+        "head",
+        "Darüber hinaus gilt der Exklusivschutz, wobei die Versicherungssummen nicht addiert",
+      ],
+      ["tail", "werden und nur einmal pro Schadenfall zur Anwendung kommen."]
+    );
+    const displayLabel = unit.source.blocks
+      .map(({ exactText }) => exactText)
+      .join("\n");
+    const result = materializeSharedSignalComponents(
+      unit,
+      [
+        {
+          ...requirement(
+            ["head", "tail"],
+            [
+              {
+                type: "SCOPE",
+                label: displayLabel,
+                sourceBlockIds: ["head", "tail"],
+              },
+            ]
+          ),
+          displayLabel,
+        },
+      ],
+      { semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID_V10 }
+    );
+
+    expect(
+      requirementRoleEvidenceDiagnostics(unit, result.requirements, {
+        semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
+      })
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          signalId: "EXPLICIT_NON_NUMERIC_LIMIT",
+          matchedEvidence: [
+            expect.objectContaining({ match: "nur einmal pro Schadenfall" }),
+          ],
+        }),
+      ])
+    );
+  });
+
+  test("maps the real multi-occurrence limit response to a terminal manifest requirement", () => {
+    const source = artifact(
+      [
+        "Seite 1\nDarüber hinaus gilt der Exklusivschutz, wobei die Versicherungssummen nicht addiert werden und nur einmal pro Schadenfall zur Anwendung kommen.\n",
+      ],
+      "n"
+    );
+    const plan = buildADrivenSourceUnitPlan({
+      documents: [document("source", 0, source)],
+    });
+    const target = plan.units.find(
+      ({ initialDisposition, source: unitSource }) =>
+        initialDisposition === "PENDING_CLASSIFICATION" &&
+        unitSource.combinedText.includes("nur einmal pro Schadenfall")
+    );
+    expect(target).toBeDefined();
+    const responses = plan.units
+      .filter(
+        ({ initialDisposition }) =>
+          initialDisposition === "PENDING_CLASSIFICATION"
+      )
+      .map((unit) => {
+        if (unit.unitId !== target.unitId) return validResponse(unit);
+        const sourceBlockIds = unit.source.blocks.map(({ blockId }) => blockId);
+        const firstBlockId = unit.source.blocks.find(({ exactText }) =>
+          exactText.includes("gilt der Exklusivschutz")
+        ).blockId;
+        return {
+          unitId: unit.unitId,
+          primaryClass: "DOCUMENT_PRECEDENCE_OR_REPLACEMENT",
+          semanticClasses: ["DOCUMENT_PRECEDENCE_OR_REPLACEMENT", "LIMIT"],
+          requirements: [
+            {
+              displayLabel: unit.source.combinedText,
+              components: [
+                {
+                  type: "PRECEDENCE_OR_REPLACEMENT",
+                  label: "gilt der Exklusivschutz",
+                  sourceBlockIds: [firstBlockId],
+                },
+                {
+                  type: "SCOPE",
+                  label: unit.source.combinedText,
+                  sourceBlockIds,
+                },
+              ],
+            },
+          ],
+        };
+      });
+    const manifest = buildADrivenSemanticManifest({ plan, responses });
+    const terminal = manifest.unitTerminals.find(
+      ({ unitId }) => unitId === target.unitId
+    );
+    const mapped = manifest.requirements.find(({ sourceUnitIds }) =>
+      sourceUnitIds.includes(target.unitId)
+    );
+
+    expect(terminal.terminalDisposition).toBe("OPERATIVE_MAPPED");
+    expect(
+      mapped.components
+        .filter(({ type }) => type === "LIMIT_BASIS")
+        .map(({ label }) => label)
+    ).toEqual([
+      "Versicherungssummen nicht addiert",
+      "nur einmal pro Schadenfall",
+    ]);
+  });
 
   test("requires an exclusion effect for an explicit negative reimbursement clause", () => {
     const source =
@@ -7923,7 +8149,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V62");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V63");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -18011,19 +18237,40 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
-  function syntheticGold(manifest) {
+  function syntheticGold(manifest, version = 1) {
     const requirement = manifest.requirements[0];
     const component = requirement.components[0];
     return {
-      contractId: "LF_1PLUS9_GOLD_283_V1",
-      status: "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS",
+      schemaVersion: version,
+      contractId: `LF_1PLUS9_GOLD_283_V${version}`,
+      status:
+        version === 1
+          ? "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS"
+          : "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS_V2",
       goldAuthority: true,
       qaOnly: true,
       productionRule: false,
       releaseApproval: false,
       generalizationProof: false,
       goldSha256: "9".repeat(64),
-      summary: { rows: 1 },
+      summary: { rows: 1, ...(version === 2 ? { correctionsApplied: 3 } : {}) },
+      ...(version === 2
+        ? {
+            bindings: {
+              predecessorGold: {
+                fileSha256: "7".repeat(64),
+                goldSha256: "8".repeat(64),
+              },
+              correctionSetSha256: "6".repeat(64),
+            },
+            supersedes: {
+              contractId: "LF_1PLUS9_GOLD_283_V1",
+              status:
+                "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS",
+              predecessorPreservedUnchanged: true,
+            },
+          }
+        : {}),
       rows: [
         {
           analysisRowId: "LR01-001",
@@ -18075,6 +18322,63 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
       },
       resultRegression: null,
     });
+  });
+
+  test("accepts the versioned V2 correction Gold without weakening V1", () => {
+    const manifest = searchEligibleManifest();
+    const goldV1 = syntheticGold(manifest);
+    const goldV2 = syntheticGold(manifest, 2);
+    goldV2.rows[0].goldDecision = {
+      customerFound: false,
+      outcome: "NO_COUNTERPART_ESTABLISHED",
+      sources: [],
+      absenceSearch: { certifiedForKnownFixture: true },
+    };
+
+    expect(
+      buildADrivenGoldRegression({
+        manifest,
+        gold: goldV1,
+        expectedGoldSha256: goldV1.goldSha256,
+      }).goldContractId
+    ).toBe("LF_1PLUS9_GOLD_283_V1");
+    expect(
+      buildADrivenGoldRegression({
+        manifest,
+        gold: goldV2,
+        expectedGoldSha256: goldV2.goldSha256,
+      }).goldContractId
+    ).toBe("LF_1PLUS9_GOLD_283_V2");
+  });
+
+  test("replays Gold V2 against the frozen V14 manifest without weakening product validation", () => {
+    const currentManifest = searchEligibleManifest();
+    const { manifestSha256: _currentSha256, ...currentPayload } =
+      currentManifest;
+    const legacyPayload = {
+      ...currentPayload,
+      contractId: A_DYNAMIC_MANIFEST_CONTRACT_ID_V14,
+    };
+    const legacyManifest = {
+      ...legacyPayload,
+      manifestSha256: crypto
+        .createHash("sha256")
+        .update(
+          `${A_DYNAMIC_MANIFEST_CONTRACT_ID_V14}\u0000${stableStringify(
+            legacyPayload
+          )}`
+        )
+        .digest("hex"),
+    };
+    const goldV2 = syntheticGold(legacyManifest, 2);
+
+    expect(
+      buildADrivenGoldRegression({
+        manifest: legacyManifest,
+        gold: goldV2,
+        expectedGoldSha256: goldV2.goldSha256,
+      }).dynamicManifestSha256
+    ).toBe(legacyManifest.manifestSha256);
   });
 
   test("measures the requirement-level V6 binary result without changing Gold", () => {
@@ -18201,6 +18505,15 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
         manifest,
         gold,
         expectedGoldSha256: "8".repeat(64),
+      })
+    ).toThrow("LF_A_DRIVEN_GOLD_INPUT_INVALID");
+
+    const unsupported = syntheticGold(manifest, 3);
+    expect(() =>
+      buildADrivenGoldRegression({
+        manifest,
+        gold: unsupported,
+        expectedGoldSha256: unsupported.goldSha256,
       })
     ).toThrow("LF_A_DRIVEN_GOLD_INPUT_INVALID");
   });

@@ -16,8 +16,10 @@ const A_DYNAMIC_MANIFEST_CONTRACT_ID_V12 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V12";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID_V13 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V13";
-const A_DYNAMIC_MANIFEST_CONTRACT_ID =
+const A_DYNAMIC_MANIFEST_CONTRACT_ID_V14 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V14";
+const A_DYNAMIC_MANIFEST_CONTRACT_ID =
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V15";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V1 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V1";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V2 =
@@ -36,8 +38,10 @@ const A_SEMANTIC_SIGNAL_CONTRACT_ID_V8 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V8";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V9 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V9";
-const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+const A_SEMANTIC_SIGNAL_CONTRACT_ID_V10 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V10";
+const A_SEMANTIC_SIGNAL_CONTRACT_ID =
+  "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V11";
 
 const TERMINAL_CLASSES = Object.freeze([
   "OPERATIVE_COVERAGE_STATEMENT",
@@ -241,6 +245,19 @@ const REQUIREMENT_ROLE_SIGNALS_V10 = Object.freeze(
       : signal
   )
 );
+const EXPLICIT_NON_NUMERIC_LIMIT_SIGNAL_V11 = Object.freeze({
+  ...REQUIREMENT_ROLE_SIGNALS_V10.find(
+    ({ signalId }) => signalId === "EXPLICIT_NON_NUMERIC_LIMIT"
+  ),
+  evidenceOccurrenceBound: true,
+});
+const REQUIREMENT_ROLE_SIGNALS_V11 = Object.freeze(
+  REQUIREMENT_ROLE_SIGNALS_V10.map((signal) =>
+    signal.signalId === "EXPLICIT_NON_NUMERIC_LIMIT"
+      ? EXPLICIT_NON_NUMERIC_LIMIT_SIGNAL_V11
+      : signal
+  )
+);
 const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -251,6 +268,7 @@ const SUPPORTED_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
 
@@ -269,8 +287,10 @@ function requirementRoleSignals(semanticSignalContractId) {
     return REQUIREMENT_ROLE_SIGNALS_V8;
   if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V9)
     return REQUIREMENT_ROLE_SIGNALS_V9;
-  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID_V10)
     return REQUIREMENT_ROLE_SIGNALS_V10;
+  if (semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID)
+    return REQUIREMENT_ROLE_SIGNALS_V11;
   return REQUIREMENT_ROLE_SIGNALS_V2;
 }
 
@@ -471,6 +491,13 @@ function componentSupportsSignal(signal, component, matchedEvidence) {
           )))
     );
   if (!hasSignalSource) return false;
+  if (signal.evidenceOccurrenceBound === true)
+    return (
+      signal.requiredComponentTypes.includes(component.type) &&
+      comparableSignalText(component.label).includes(
+        comparableSignalText(matchedEvidence.match)
+      )
+    );
   if (signal.signalId === "EXPLICIT_EXCLUSION")
     return (
       component.type === "COVERAGE_EFFECT" &&
@@ -809,7 +836,7 @@ function materializeSharedSignalComponents(
           "EXPLICIT_QUANTIFIED_VALUE",
           "EXPLICIT_CONTRACTUAL_BENEFIT",
           "EXPLICIT_INTENTIONAL_DAMAGE",
-        ].includes(signal.signalId);
+        ].includes(signal.signalId) || signal.evidenceOccurrenceBound === true;
         const exactEvidenceBinding =
           evidenceBackedSignal &&
           [
@@ -841,6 +868,9 @@ function materializeSharedSignalComponents(
             A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
             A_SEMANTIC_SIGNAL_CONTRACT_ID,
           ].includes(semanticSignalContractId);
+        const authoritativeOccurrenceEvidence =
+          signal.evidenceOccurrenceBound === true &&
+          semanticSignalContractId === A_SEMANTIC_SIGNAL_CONTRACT_ID;
         const inheritedConditionEvidence =
           signal.signalId === "EXPLICIT_CONDITION"
             ? governingConditionEvidence(unit, evidence)
@@ -849,9 +879,12 @@ function materializeSharedSignalComponents(
           authoritativeBenefitEvidence ||
           authoritativeQuantifiedEvidence ||
           authoritativeLimitBasisEvidence ||
+          authoritativeOccurrenceEvidence ||
           Boolean(inheritedConditionEvidence);
         const localText =
-          exactEvidenceBinding || authoritativeLimitBasisEvidence
+          exactEvidenceBinding ||
+          authoritativeLimitBasisEvidence ||
+          authoritativeOccurrenceEvidence
             ? evidence.match
             : inheritedConditionEvidence?.label ||
               localComponent?.label ||
@@ -873,6 +906,7 @@ function materializeSharedSignalComponents(
               "EXPLICIT_PERIL_OR_CAUSE",
               "EXPLICIT_QUANTIFIED_VALUE",
               "EXPLICIT_LIMIT_BASIS",
+              "EXPLICIT_NON_NUMERIC_LIMIT",
               "EXPLICIT_CONTRACTUAL_BENEFIT",
               "EXPLICIT_INTENTIONAL_DAMAGE",
             ].includes(signal.signalId))
@@ -906,6 +940,7 @@ function materializeSharedSignalComponents(
                     : localMatches[0];
         const authoritativeSourceEvidence =
           authoritativeQuantifiedEvidence ||
+          authoritativeOccurrenceEvidence ||
           (signal.signalId === "EXPLICIT_CONTRACTUAL_BENEFIT" &&
             [
               A_SEMANTIC_SIGNAL_CONTRACT_ID_V3,
@@ -1957,6 +1992,7 @@ module.exports = {
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V11,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V14,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -1967,6 +2003,7 @@ module.exports = {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V7,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V8,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
+  A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
