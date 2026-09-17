@@ -160,6 +160,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-054` | Mehrblocklabel in alter Hülle nur über Whitespace normalisiert exakt binden        | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | vollständigen kalten Produktlauf ab Batch 22 fortsetzen und Endergebnis getrennt prüfen                                    |
 | `INT-20260917-055` | Quantifizierte Limitbasis aus wörtlichem Satzsubjekt statt Paraphrase binden       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | vollständigen kalten Produktlauf ab Batch 22 fortsetzen und Endergebnis getrennt prüfen                                    |
 | `INT-20260917-056` | Nachlaufende Satzfortsetzung dem eindeutig letzten Komponentenanker zuordnen       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.9.2-Gate abschließen, installieren und den kalten Produktlauf ab Batch 30 fortsetzen                                    |
+| `INT-20260917-057` | Explizite Voraussetzung mit direkt folgender Begriffsdefinition atomisieren        | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | allgemeinen Bedingungs-/Definitionsvertrag testen und offene Batch-32-Unit revalidieren                                    |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3702,3 +3703,33 @@ Vollständigkeitsbehauptung erzeugen.
   `resume-8870c114ac674319d26d6875`.
 - Geplanter Change-Set:
   `LF-V392-TRAILING-LIST-SENTENCE-PROVENANCE-20260917-001`.
+
+## INT-20260917-057 — Explizite Voraussetzung mit direkt folgender Begriffsdefinition atomisieren
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Enthält genau ein fortgesetztes Listensegment eine ausdrücklich
+  formulierte Voraussetzung und unmittelbar danach eine vollständige
+  „Unter X versteht man Y“-Definition, sind beide Aussagen innerhalb der
+  einen Segment-Anforderung getrennt source-bound zu materialisieren: die
+  Voraussetzung als `CONDITION`, X als `PERIL_OR_CAUSE` und die vollständige
+  Definition als `FACT_ROLE`.
+- Ist-Wahrheit: `JA` als Ursache der einzigen offenen Batch-32-Unit. Fünf von
+  sechs Units waren gültig. Die verbleibende Antwort erhielt Objekt und
+  geerbte Deckungswirkung, verband aber das Ende der Voraussetzung mit der
+  nachfolgenden Definition zu einer überbreiten CONDITION und ließ den
+  einleitenden Voraussetzungenblock unzitiert. Alle Versuche und 31 vorherige
+  PASS-Batches bleiben resumierbar erhalten.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002` und `CAP-A-003`;
+  genau ein Fortsetzungssegment und eine Anforderung; vollständige
+  Satzgrenzen; ausdrückliches Voraussetzungssignal mit „ist, dass“;
+  unmittelbar folgende vollständige „Unter X versteht man Y“-Definition;
+  X muss wörtlich in der Voraussetzung vorkommen; sämtliche Komponenten und
+  Blockspannen müssen exakt source-bound sein. Termabweichungen, mehrere
+  Definitionen, unvollständige Sätze oder mehrere Requirements bleiben
+  fail-closed. Keine Dokument-ID, Seite, Versichererbezeichnung oder bekannte
+  Kundenformulierung als Produktionsregel.
+- Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
+- Geplanter Change-Set:
+  `LF-V393-PREREQUISITE-DEFINITION-ATOMIZATION-20260917-001`.
