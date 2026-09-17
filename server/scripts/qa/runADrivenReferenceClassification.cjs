@@ -39,7 +39,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V63";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V64";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -92,6 +92,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V60",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V61",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V62",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V63",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -767,6 +768,80 @@ function sourceBlockIdsForExactSpan(unit, exactSpan) {
     blockStart = blockEnd + (index < blocks.length - 1 ? 1 : 0);
     return result;
   });
+}
+
+function authoritativeAdministrativeOrApplicabilityRequirement(unit) {
+  const sourceText = String(unit?.source?.combinedText || "");
+  const exactSourceText = sourceText.trim();
+  const ownedSourceBlockIds = [...(unit?.source?.blockIds || [])];
+  if (!exactSourceText || ownedSourceBlockIds.length === 0) return null;
+
+  const explicitCoverageEffect =
+    /\b(?:mitversichert|versichert|ausgeschlossen|unversichert|Versicherungsschutz|Entschädigung|entschädigt|ersetzt|erstattet)\b/iu.test(
+      exactSourceText
+    );
+  if (explicitCoverageEffect) return null;
+
+  const administrativeRecordObligation =
+    /\b(?:wird|werden|muss|müssen)\b[\s\S]{0,320}\b(?:vermerkt|angeführt|ausgewiesen|dokumentiert|bekanntgegeben)\b/iu.test(
+      exactSourceText
+    ) &&
+    /\b(?:Antrag|Polizze|Versicherungsschein|Nachtrag|Vertrag(?:sdokument)?|Dokument)\b/iu.test(
+      exactSourceText
+    );
+  if (administrativeRecordObligation)
+    return {
+      action: "NORMALIZE_ADMINISTRATIVE_RECORD_OBLIGATION",
+      response: {
+        primaryClass: "OBLIGATION",
+        semanticClasses: ["OBLIGATION"],
+        requirements: [
+          {
+            displayLabel: exactSourceText,
+            components: [
+              {
+                type: "CONDITION",
+                label: exactSourceText,
+                sourceBlockIds: ownedSourceBlockIds,
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+  const conditionalApplicability =
+    /\bgilt\b[\s\S]{0,1200}\bunter\s+(?:(?:den|der)\s+)?(?:folgenden\s+)?Voraussetzungen\b/iu.test(
+      exactSourceText
+    ) && /\b(?:dass|sofern|wenn|falls)\b/iu.test(exactSourceText);
+  if (!conditionalApplicability) return null;
+
+  const exactCondition = exactSourceText
+    .replace(
+      /\s*,?\s*(?:folgender|nachstehender)\s+Deckungsumfang\s*:?\s*$/iu,
+      ""
+    )
+    .trim();
+  if (!exactCondition) return null;
+  return {
+    action: "NORMALIZE_CONDITIONAL_APPLICABILITY_RULE",
+    response: {
+      primaryClass: "CONDITION",
+      semanticClasses: ["CONDITION"],
+      requirements: [
+        {
+          displayLabel: exactCondition,
+          components: [
+            {
+              type: "CONDITION",
+              label: exactCondition,
+              sourceBlockIds: ownedSourceBlockIds,
+            },
+          ],
+        },
+      ],
+    },
+  };
 }
 
 function normalizeProductConfigurationFactRelation(components, unit) {
@@ -3230,6 +3305,18 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
       });
     const unit = unitsById.get(response?.unitId);
     const sourceText = String(unit?.source?.combinedText || "");
+    const authoritativeAdministrativeOrApplicability =
+      authoritativeAdministrativeOrApplicabilityRequirement(unit);
+    if (authoritativeAdministrativeOrApplicability) {
+      repairs.push({
+        unitId: response?.unitId,
+        action: authoritativeAdministrativeOrApplicability.action,
+      });
+      return {
+        unitId: response?.unitId,
+        ...authoritativeAdministrativeOrApplicability.response,
+      };
+    }
     const pureConsumedCoverageGovernor =
       consumedGovernorUnitIds.has(response?.unitId) &&
       unit?.unitKind === "CLAUSE" &&

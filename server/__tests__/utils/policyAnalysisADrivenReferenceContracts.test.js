@@ -8154,7 +8154,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V63");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V64");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -11344,6 +11344,148 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         }),
       ])
     );
+  });
+
+  test("materializes a split administrative record obligation without trusting a malformed model label", () => {
+    const first =
+      "Die gewählte Tarifbezeichnung wird bei neuen Anträgen im Antrag";
+    const second = "und im Versicherungsschein dokumentiert.";
+    const unit = {
+      unitId: "administrative-record-obligation",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["record-1", "record-2"],
+        combinedText: `${first}\n${second}`,
+        blocks: [
+          { blockId: "record-1", exactText: first },
+          { blockId: "record-2", exactText: second },
+        ],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "DEFINITION",
+          semanticClasses: ["DEFINITION"],
+          requirements: [{ components: [] }],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0]).toEqual({
+      unitId: unit.unitId,
+      primaryClass: "OBLIGATION",
+      semanticClasses: ["OBLIGATION"],
+      requirements: [
+        {
+          displayLabel: `${first}\n${second}`,
+          components: [
+            {
+              type: "CONDITION",
+              label: `${first}\n${second}`,
+              sourceBlockIds: ["record-1", "record-2"],
+            },
+          ],
+        },
+      ],
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "NORMALIZE_ADMINISTRATIVE_RECORD_OBLIGATION",
+    });
+  });
+
+  test("materializes a source-bound applicability condition before its coverage schedule", () => {
+    const first =
+      "Für alle Verträge gilt unter den folgenden Voraussetzungen, dass die Betreuung";
+    const second = "durch eine bevollmächtigte Stelle erfolgt,";
+    const third = "folgender Deckungsumfang:";
+    const unit = {
+      unitId: "conditional-applicability-rule",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["condition-1", "condition-2", "condition-3"],
+        combinedText: [first, second, third].join("\n"),
+        blocks: [
+          { blockId: "condition-1", exactText: first },
+          { blockId: "condition-2", exactText: second },
+          { blockId: "condition-3", exactText: third },
+        ],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "DEFINITION",
+          semanticClasses: ["DEFINITION"],
+          requirements: [],
+        },
+      ],
+      [unit]
+    );
+    const exactCondition = `${first}\n${second}`.replace(/,$/u, "");
+
+    expect(normalized.responses[0]).toEqual({
+      unitId: unit.unitId,
+      primaryClass: "CONDITION",
+      semanticClasses: ["CONDITION"],
+      requirements: [
+        {
+          displayLabel: exactCondition,
+          components: [
+            {
+              type: "CONDITION",
+              label: exactCondition,
+              sourceBlockIds: ["condition-1", "condition-2", "condition-3"],
+            },
+          ],
+        },
+      ],
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      action: "NORMALIZE_CONDITIONAL_APPLICABILITY_RULE",
+    });
+  });
+
+  test("does not treat an explicit coverage statement as an administrative record obligation", () => {
+    const unit = {
+      unitId: "coverage-record-negative-control",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["coverage-record"],
+        combinedText:
+          "Der Versicherungsschutz wird im Versicherungsschein dokumentiert.",
+        blocks: [
+          {
+            blockId: "coverage-record",
+            exactText:
+              "Der Versicherungsschutz wird im Versicherungsschein dokumentiert.",
+          },
+        ],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "DEFINITION",
+          semanticClasses: ["DEFINITION"],
+          requirements: [],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "NORMALIZE_ADMINISTRATIVE_RECORD_OBLIGATION",
+      })
+    );
+    expect(normalized.responses[0].primaryClass).toBe("DEFINITION");
   });
 
   test("normalizes a product configuration without effect evidence to definition and variant", () => {
