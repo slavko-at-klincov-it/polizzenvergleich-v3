@@ -63,6 +63,9 @@ const {
 const {
   loadHybridShadowContract,
 } = require("../utils/policyAnalysis/hybridShadowSearch");
+const {
+  selectADrivenPartialResumeSource,
+} = require("../utils/policyComparison/aDrivenPartialResumeSource");
 
 const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const RUNNER = path.join(REPOSITORY_ROOT, "run-all-categories-quality.command");
@@ -210,6 +213,7 @@ function resumableRun({
     return {
       runRoot,
       signature,
+      contract,
       generatedAt: embeddingContractIdentity
         ? existing.generatedAt
         : generatedAt,
@@ -220,7 +224,7 @@ function resumableRun({
       embeddingContractIdentity ? { ...contract, generatedAt } : contract
     );
   }
-  return { runRoot, signature, generatedAt };
+  return { runRoot, signature, contract, generatedAt };
 }
 
 function configuredADrivenEmbeddingContract() {
@@ -424,6 +428,7 @@ function runADrivenReferenceProduct({
   runSignature,
   generatedAt,
   logFile,
+  partialResumeSource = null,
 }) {
   return new Promise((resolve, reject) => {
     const log = fs.openSync(logFile, "a", 0o600);
@@ -445,7 +450,18 @@ function runADrivenReferenceProduct({
       ],
       {
         cwd: REPOSITORY_ROOT,
-        env: { ...process.env, V3_NODE_BIN: process.execPath },
+        env: {
+          ...process.env,
+          V3_NODE_BIN: process.execPath,
+          ...(partialResumeSource
+            ? {
+                LF_A_CLASSIFICATION_RESUME_PLAN_ROOT:
+                  partialResumeSource.planRoot,
+                LF_A_CLASSIFICATION_RESUME_OUTPUT_ROOT:
+                  partialResumeSource.outputRoot,
+              }
+            : {}),
+        },
         stdio: ["ignore", log, log],
       }
     );
@@ -518,6 +534,7 @@ async function main() {
   const {
     runRoot,
     signature: resumeSignature,
+    contract: runContract,
     generatedAt,
   } = resumableRun({
     sessionUuid,
@@ -528,6 +545,26 @@ async function main() {
   const embeddingContractFile = aDrivenReferenceMode
     ? snapshotADrivenEmbeddingContract({ runRoot, ...embedding })
     : null;
+  const partialResumeSource = aDrivenReferenceMode
+    ? selectADrivenPartialResumeSource({
+        sessionRunsRoot: path.join(policyComparisonsPath, "runs", sessionUuid),
+        currentRunRoot: runRoot,
+        currentContract: runContract,
+      })
+    : null;
+  if (partialResumeSource)
+    writePrivateJson(
+      path.join(runRoot, "a-driven-partial-resume.private.json"),
+      {
+        schemaVersion: 1,
+        contractId: "LF_A_PARTIAL_RESUME_SOURCE_V1",
+        sourceRunRoot: partialResumeSource.runRoot,
+        sourcePlanRoot: partialResumeSource.planRoot,
+        sourceOutputRoot: partialResumeSource.outputRoot,
+        completedBatchArtifacts: partialResumeSource.completedBatchArtifacts,
+        attemptArtifacts: partialResumeSource.attemptArtifacts,
+      }
+    );
   const responseCacheDirectory =
     referenceMode && !aDrivenReferenceMode
       ? path.join(
@@ -628,6 +665,7 @@ async function main() {
       runSignature: resumeSignature,
       generatedAt,
       logFile,
+      partialResumeSource,
     });
     const resultDirectory = path.join(runRoot, "result");
     const published = validatePublishedComparisonArtifactSet(resultDirectory);

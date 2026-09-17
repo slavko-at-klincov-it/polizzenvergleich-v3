@@ -62,6 +62,7 @@ const {
 const {
   attachTopLevelRequirementFragments,
   batchResultFile,
+  compatiblePartialResume,
   compatibleSeedResponses,
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
@@ -8808,6 +8809,142 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       expect(results[0].responses).toEqual(valid);
       expect(results[0].resumedAcceptedUnits).toBe(1);
       expect(fs.existsSync(batchResultFile(temporary, batch))).toBe(true);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
+  test("revalidates a partial predecessor output read-only across release run roots", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-cross-release-partial-resume-")
+    );
+    try {
+      const currentOutput = path.join(temporary, "current");
+      const predecessorOutput = path.join(temporary, "predecessor");
+      const predecessorPlanRoot = path.join(temporary, "predecessor-plan");
+      fs.mkdirSync(predecessorPlanRoot, { recursive: true });
+      const sourcePlan = buildADrivenSourceUnitPlan({
+        documents: [
+          document(
+            "source",
+            0,
+            artifact(["Seite 1\nVersichert sind Gebäude.\n"], "r")
+          ),
+        ],
+      });
+      const plan = deriveClassificationEvidencePlan(sourcePlan);
+      const built = buildADrivenClassificationBatches(sourcePlan);
+      const batches = { ...built, batches: built.batches.slice(0, 1) };
+      const batch = batches.batches[0];
+      fs.writeFileSync(
+        path.join(predecessorPlanRoot, "source-unit-plan.private.json"),
+        `${JSON.stringify(sourcePlan, null, 2)}\n`
+      );
+      fs.writeFileSync(
+        path.join(predecessorPlanRoot, "classification-batches.private.json"),
+        `${JSON.stringify(batches, null, 2)}\n`
+      );
+      const args = {
+        output: currentOutput,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+      const responses = batch.expectedUnitIds.map((unitId) =>
+        validResponse(plan.units.find((unit) => unit.unitId === unitId))
+      );
+      const predecessor = await runBatch({
+        client: {
+          chat: {
+            completions: {
+              create: jest.fn(async () => ({
+                model: args.model,
+                choices: [{ message: { content: JSON.stringify(responses) } }],
+                usage: {},
+              })),
+            },
+          },
+        },
+        model: args.model,
+        modelContext: args.modelContext,
+        plan,
+        batch,
+        maximumAttempts: 1,
+      });
+      const predecessorFile = batchResultFile(predecessorOutput, batch);
+      fs.mkdirSync(path.dirname(predecessorFile), { recursive: true });
+      fs.writeFileSync(
+        predecessorFile,
+        `${JSON.stringify(predecessor, null, 2)}\n`,
+        { mode: 0o600 }
+      );
+      const predecessorBytes = fs.readFileSync(predecessorFile, "utf8");
+      const partialResume = compatiblePartialResume({
+        resumePlanRoot: predecessorPlanRoot,
+        resumeOutputRoot: predecessorOutput,
+        sourcePlan,
+        batches,
+      });
+      const client = { chat: { completions: { create: jest.fn() } } };
+
+      const [result] = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client,
+        recoverModelAfterAbort: jest.fn(),
+        partialResume,
+      });
+
+      expect(client.chat.completions.create).not.toHaveBeenCalled();
+      expect(result.validation.passed).toBe(true);
+      expect(result.predecessorAcceptedUnits).toBe(responses.length);
+      expect(result.attempts).toEqual([]);
+      expect(fs.readFileSync(predecessorFile, "utf8")).toBe(predecessorBytes);
+      expect(fs.existsSync(batchResultFile(currentOutput, batch))).toBe(true);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
+  test("fails closed when a partial predecessor plan differs", () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-cross-release-plan-mismatch-")
+    );
+    try {
+      const predecessorPlanRoot = path.join(temporary, "plan");
+      const predecessorOutput = path.join(temporary, "output");
+      fs.mkdirSync(predecessorPlanRoot, { recursive: true });
+      fs.mkdirSync(predecessorOutput, { recursive: true });
+      const sourcePlan = buildADrivenSourceUnitPlan({
+        documents: [
+          document(
+            "source",
+            0,
+            artifact(["Seite 1\nVersichert sind Gebäude.\n"], "s")
+          ),
+        ],
+      });
+      const batches = buildADrivenClassificationBatches(sourcePlan);
+      fs.writeFileSync(
+        path.join(predecessorPlanRoot, "source-unit-plan.private.json"),
+        JSON.stringify({ ...sourcePlan, planSha256: "0".repeat(64) })
+      );
+      fs.writeFileSync(
+        path.join(predecessorPlanRoot, "classification-batches.private.json"),
+        JSON.stringify(batches)
+      );
+
+      expect(() =>
+        compatiblePartialResume({
+          resumePlanRoot: predecessorPlanRoot,
+          resumeOutputRoot: predecessorOutput,
+          sourcePlan,
+          batches,
+        })
+      ).toThrow("LF_A_PARTIAL_RESUME_PLAN_MISMATCH");
     } finally {
       fs.rmSync(temporary, { recursive: true, force: true });
     }

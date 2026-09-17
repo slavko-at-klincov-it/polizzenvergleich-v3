@@ -185,6 +185,8 @@ function argumentsFrom(argv) {
     "lmStudioSdk",
     "qwenModelKey",
     "seedShadowRoot",
+    "resumePlanRoot",
+    "resumeOutputRoot",
   ]);
   const unknown = Object.keys(values).filter((key) => !allowed.has(key));
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
@@ -219,6 +221,10 @@ function argumentsFrom(argv) {
     fail(
       "--lmStudioSdk und --qwenModelKey sind für sichere Timeouts erforderlich"
     );
+  if (Boolean(values.resumePlanRoot) !== Boolean(values.resumeOutputRoot))
+    fail(
+      "--resumePlanRoot und --resumeOutputRoot müssen gemeinsam gesetzt sein"
+    );
   return {
     shadowRoot: path.resolve(values.shadowRoot),
     output: path.resolve(values.output),
@@ -232,6 +238,12 @@ function argumentsFrom(argv) {
     qwenModelKey: values.qwenModelKey,
     seedShadowRoot: values.seedShadowRoot
       ? path.resolve(values.seedShadowRoot)
+      : null,
+    resumePlanRoot: values.resumePlanRoot
+      ? path.resolve(values.resumePlanRoot)
+      : null,
+    resumeOutputRoot: values.resumeOutputRoot
+      ? path.resolve(values.resumeOutputRoot)
       : null,
   };
 }
@@ -5658,6 +5670,47 @@ function compatibleSeedResponses({ seedShadowRoot, plan }) {
   };
 }
 
+function compatiblePartialResume({
+  resumePlanRoot,
+  resumeOutputRoot,
+  sourcePlan,
+  batches,
+}) {
+  if (!resumePlanRoot && !resumeOutputRoot)
+    return {
+      planRoot: null,
+      outputRoot: null,
+      sourceUnitPlanSha256: null,
+      classificationBatchesSha256: null,
+    };
+  if (!resumePlanRoot || !resumeOutputRoot)
+    throw new Error("LF_A_PARTIAL_RESUME_PATHS_INCOMPLETE");
+  for (const directory of [resumePlanRoot, resumeOutputRoot]) {
+    const stat = fs.lstatSync(directory);
+    if (!stat.isDirectory() || stat.isSymbolicLink())
+      throw new Error("LF_A_PARTIAL_RESUME_DIRECTORY_INVALID");
+  }
+  const predecessorPlan = readJson(
+    path.join(resumePlanRoot, "source-unit-plan.private.json"),
+    "LF_A_PARTIAL_RESUME_SOURCE_PLAN"
+  );
+  const predecessorBatches = readJson(
+    path.join(resumePlanRoot, "classification-batches.private.json"),
+    "LF_A_PARTIAL_RESUME_BATCH_PLAN"
+  );
+  if (
+    stableStringify(predecessorPlan) !== stableStringify(sourcePlan) ||
+    stableStringify(predecessorBatches) !== stableStringify(batches)
+  )
+    throw new Error("LF_A_PARTIAL_RESUME_PLAN_MISMATCH");
+  return {
+    planRoot: resumePlanRoot,
+    outputRoot: resumeOutputRoot,
+    sourceUnitPlanSha256: sourcePlan.planSha256,
+    classificationBatchesSha256: sha256(JSON.stringify(batches)),
+  };
+}
+
 function archiveSupersededBatchResult(file, output, batch, reason) {
   const raw = fs.readFileSync(file, "utf8");
   const directory = path.join(output, "superseded-batches");
@@ -6162,6 +6215,7 @@ async function processClassificationBatches({
   client,
   recoverModelAfterAbort,
   seed,
+  partialResume = null,
 }) {
   const batchResults = [];
   for (const batch of batches.batches) {
@@ -6207,6 +6261,32 @@ async function processClassificationBatches({
         batch,
         args,
       });
+      let predecessorResponses = [];
+      let predecessorJournalResponses = [];
+      if (partialResume?.outputRoot) {
+        const predecessorFile = batchResultFile(
+          partialResume.outputRoot,
+          batch
+        );
+        if (fs.existsSync(predecessorFile))
+          predecessorResponses = predecessorBatchResponses(
+            predecessorFile,
+            plan,
+            batch,
+            args
+          );
+        predecessorJournalResponses = acceptedResponsesFromAttemptJournal({
+          output: partialResume.outputRoot,
+          plan,
+          batch: contextualBatch,
+          args,
+        });
+      }
+      const predecessorAcceptedResponses = currentlyValidResponses(
+        plan,
+        contextualBatch,
+        [...predecessorResponses, ...predecessorJournalResponses]
+      );
       const seedAcceptedResponses = currentlyValidResponses(
         plan,
         contextualBatch,
@@ -6217,6 +6297,7 @@ async function processClassificationBatches({
         ...supersededResponses,
         ...archivedResponses,
         ...journalResponses,
+        ...predecessorAcceptedResponses,
       ]);
       result = await runBatch({
         client,
@@ -6243,6 +6324,7 @@ async function processClassificationBatches({
       result.seedResponsesSha256 =
         seedAcceptedResponses.length > 0 ? seed.responsesSha256 : null;
       result.seededAcceptedUnits = seedAcceptedResponses.length;
+      result.predecessorAcceptedUnits = predecessorAcceptedResponses.length;
       if (!result.validation.passed) {
         const failure = new Error(
           `LF_A_CLASSIFICATION_BATCH_FAILED_CLOSED:${batch.batchIndex}:${batch.batchId}`
@@ -6280,6 +6362,12 @@ async function run() {
   const seed = compatibleSeedResponses({
     seedShadowRoot: args.seedShadowRoot,
     plan: sourcePlan,
+  });
+  const partialResume = compatiblePartialResume({
+    resumePlanRoot: args.resumePlanRoot,
+    resumeOutputRoot: args.resumeOutputRoot,
+    sourcePlan,
+    batches,
   });
   if (fs.existsSync(path.join(args.output, "summary.private.json"))) {
     const summary = validateCompletedRun({
@@ -6328,6 +6416,7 @@ async function run() {
     client,
     recoverModelAfterAbort,
     seed,
+    partialResume,
   });
   const responses = batchResults.flatMap(({ responses: items }) => items);
   const manifest = buildADrivenSemanticManifest({
@@ -6382,6 +6471,15 @@ async function run() {
         0
       ),
     },
+    partialResume: {
+      sourceUnitPlanSha256: partialResume.sourceUnitPlanSha256,
+      classificationBatchesSha256: partialResume.classificationBatchesSha256,
+      acceptedUnits: batchResults.reduce(
+        (sum, { predecessorAcceptedUnits = 0 }) =>
+          sum + predecessorAcceptedUnits,
+        0
+      ),
+    },
     semanticRequirements: manifest.summary.semanticRequirements,
     semanticComponents: manifest.summary.semanticComponents,
     unresolvedUnits: manifest.summary.unresolvedUnits,
@@ -6413,6 +6511,7 @@ module.exports = {
   batchResultFile,
   classificationBatch,
   compatibleSeedResponses,
+  compatiblePartialResume,
   createLmStudioRecovery,
   createAttemptRecorder,
   deriveClassificationEvidencePlan,

@@ -163,6 +163,18 @@ mkdir -p "$OUTPUT_ROOT"
 "$LMS_BIN" server start >/dev/null 2>&1 || true
 ensure_qwen
 
+A_CLASSIFICATION_RESUME_ARGS=()
+if [ -n "${LF_A_CLASSIFICATION_RESUME_PLAN_ROOT:-}" ] || [ -n "${LF_A_CLASSIFICATION_RESUME_OUTPUT_ROOT:-}" ]; then
+  [ -n "${LF_A_CLASSIFICATION_RESUME_PLAN_ROOT:-}" ] && [ -n "${LF_A_CLASSIFICATION_RESUME_OUTPUT_ROOT:-}" ] || {
+    printf '%s\n' "Partielle A-Resume-Pfade müssen gemeinsam gesetzt sein." >&2
+    exit 1
+  }
+  A_CLASSIFICATION_RESUME_ARGS=(
+    --resumePlanRoot "$LF_A_CLASSIFICATION_RESUME_PLAN_ROOT"
+    --resumeOutputRoot "$LF_A_CLASSIFICATION_RESUME_OUTPUT_ROOT"
+  )
+fi
+
 run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/buildADrivenReferenceShadow.cjs" \
   --runRoot "$RUN_ROOT" \
   --output "$A_PLAN_ROOT"
@@ -177,7 +189,8 @@ run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceClassifi
   --abortSettlementTimeoutMs "${LF_A_QWEN_ABORT_SETTLEMENT_TIMEOUT_MS:-15000}" \
   --modelRecoveryTimeoutMs "${LF_A_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
   --lmStudioSdk "$LMSTUDIO_SDK" \
-  --qwenModelKey "$QWEN_MODEL_KEY"
+  --qwenModelKey "$QWEN_MODEL_KEY" \
+  "${A_CLASSIFICATION_RESUME_ARGS[@]}"
 
 "$NODE_BIN" -e '
   const fs = require("fs");
