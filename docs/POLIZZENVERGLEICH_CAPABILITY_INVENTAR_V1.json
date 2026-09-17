@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V385-EMBEDDED-LIST-GOVERNOR-GROUPS-20260917-001",
+  "changeSetId": "LF-V386-CROSS-RELEASE-PARTIAL-A-RESUME-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -65,7 +65,7 @@
       "path": "server/utils/policyAnalysis/aDrivenClassificationContract.js"
     },
     {
-      "id": "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V15",
+      "id": "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V16",
       "path": "server/utils/policyAnalysis/aDrivenSemanticManifest.js"
     },
     {
@@ -182,6 +182,7 @@
         "server/models/policyComparison.js",
         "server/utils/policyComparison/modes.js",
         "server/utils/policyComparison/workerSupervisor.js",
+        "server/utils/policyComparison/aDrivenPartialResumeSource.js",
         "server/scripts/policyComparisonWorker.cjs"
       ],
       "publicEntrypoints": [
@@ -234,19 +235,21 @@
       },
       "knownLimitsRisks": [
         "Configured worker concurrency does not override the global local-model lock.",
-        "A session PASS does not prove fachliche correctness."
+        "A session PASS does not prove fachliche correctness.",
+        "Cross-release partial resume is allowed only for an exact release-independent run identity and requires current-contract revalidation."
       ],
       "evidence": {
         "tests": [
           "server/__tests__/scripts/qa/policyComparisonWorkerContract.test.js",
+          "server/__tests__/utils/policyComparisonADrivenPartialResumeSource.test.js",
           "server/__tests__/utils/policyComparisonWorkerSupervisor.test.js",
           "server/__tests__/models/policyComparison.test.js"
         ],
-        "runs": ["Tracker 133.45", "Tracker 133.47"],
+        "runs": ["Tracker 133.45", "Tracker 133.47", "Tracker 133.65"],
         "adrs": ["ADR-009", "ADR-027", "ADR-031"],
-        "failures": []
+        "failures": ["INT-20260917-049"]
       },
-      "lastVerifiedCommit": "c87aadf9d483d72ddce0bc67aacd529c19b54788",
+      "lastVerifiedCommit": "1d4dbbc5252fdae20613cec2391ecbeefebaeb5e",
       "relations": [{ "type": "REFINES", "target": "CAP-LEGACY-001" }],
       "activationReason": "Endpoint and worker route both persisted product modes; V3.8.0 activates LF V2 for controlled customer production.",
       "reactivationCriteria": "Not applicable while active."
@@ -727,7 +730,8 @@
         "Administrative record obligations and conditional applicability statements require source-bound deterministic normalization when a model omits mandatory labels.",
         "Parenthetical object exclusions require a separate source-bound EXCLUDED effect while retaining the containing object requirement.",
         "Predicate-free internal object list governors and continued item-leading blocks require explicit source-bound provenance without weakening the unanchored-list fail-closed boundary.",
-        "Embedded list governors are bounded to immediately following subordinate list items; unseen layouts remain subject to holdout validation."
+        "Embedded list governors are bounded to immediately following subordinate list items; unseen layouts remain subject to holdout validation.",
+        "Partial predecessor answers are never trusted as PASS and must be rebound to the identical source plan and current validator before reuse."
       ],
       "evidence": {
         "tests": [
@@ -740,7 +744,8 @@
           "Tracker 133.61",
           "Tracker 133.62",
           "Tracker 133.63",
-          "Tracker 133.64"
+          "Tracker 133.64",
+          "Tracker 133.65"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -749,10 +754,11 @@
           "INT-20260917-045",
           "INT-20260917-046",
           "INT-20260917-047",
-          "INT-20260917-048"
+          "INT-20260917-048",
+          "INT-20260917-049"
         ]
       },
-      "lastVerifiedCommit": "026f3b8e8d6833bac22d949f881f88686d06945a",
+      "lastVerifiedCommit": "1d4dbbc5252fdae20613cec2391ecbeefebaeb5e",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
@@ -1453,7 +1459,9 @@
       },
       "implementationFiles": [
         "server/utils/policyAnalysis/validatedModelResponseCache.js",
+        "server/utils/policyComparison/aDrivenPartialResumeSource.js",
         "server/scripts/policyComparisonWorker.cjs",
+        "server/scripts/qa/runADrivenReferenceClassification.cjs",
         "server/scripts/qa/runADrivenRequirementCounterpartDecisions.cjs"
       ],
       "publicEntrypoints": [
@@ -1498,22 +1506,25 @@
       },
       "knownLimitsRisks": [
         "Speeds identical replays, not first runs on new documents.",
-        "Cross-plan requirement reuse requires a complete terminal seed plus byte-identical current rows and current-contract revalidation."
+        "Cross-plan requirement reuse requires a complete terminal seed plus byte-identical current rows and current-contract revalidation.",
+        "Partial A reuse across releases is limited to the same session and exact release-independent run identity; mismatched plans fail closed."
       ],
       "evidence": {
         "tests": [
           "server/__tests__/utils/policyAnalysis/validatedModelResponseCache.test.js",
-          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
+          "server/__tests__/utils/policyComparisonADrivenPartialResumeSource.test.js"
         ],
         "runs": [
           "Tests section 59",
           "Tracker 133.47",
-          "Tracker 133.55; 361/363 cross-plan requirement decisions reused"
+          "Tracker 133.55; 361/363 cross-plan requirement decisions reused",
+          "Tracker 133.65; first five real A batches revalidated with zero model calls"
         ],
         "adrs": ["ADR-030"],
-        "failures": []
+        "failures": ["INT-20260917-049"]
       },
-      "lastVerifiedCommit": "fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33",
+      "lastVerifiedCommit": "1d4dbbc5252fdae20613cec2391ecbeefebaeb5e",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Both current worker paths reuse validated work under exact identities.",
       "reactivationCriteria": "Not applicable while active."

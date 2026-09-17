@@ -10335,6 +10335,63 @@ Holdout-Aussage.
 
 Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
 
+### 133.65 Releaseübergreifender partieller A-Resume
+
+Der vollständig geprüfte Release V3.8.5 wurde auf dem Kunden-Mac-Studio
+installiert. Tag, `origin/main` und der saubere Kunden-Checkout zeigen auf
+`b19df17def47e02f3897da36899fbc4393c0ac3c`; Doctor, API, Dienste,
+Datenbank-`quick_check` und das neue Backup
+`server/storage/backups/anythingllm-before-activation-20260917-141108.db`
+bestanden.
+
+Beim anschließenden Start derselben Session 14 entstand wegen der bewusst
+releasegebundenen Run-Signatur ein neuer Run-Root. Der produktive Worker
+übergab die vorhandenen V3.8.4-Teilresultate jedoch nicht an den
+A-Klassifikator. Dadurch begann er neue Versuche für Batch 1. Der Worker wurde
+sofort über den offiziellen Cancel-Endpunkt beendet; die Session ist
+`CANCELLED`, kein Prozess läuft, und die ursprünglichen Vorgängerartefakte
+blieben unverändert. Dieser Fehlstart ist kein fachlicher Fortschritt.
+
+Der allgemeine Fix adaptiert `CAP-ORCH-001`, `CAP-CACHE-001` und
+`CAP-A-002`. Der Worker wählt innerhalb derselben Session den
+releaseunabhängig identischen Vorgängerlauf mit den meisten vollständigen
+Batchartefakten. Gebunden werden Modus, Produktprofil, Dokumenthashes,
+Reihenfolge und Rollen, Modell und Kontext sowie Embeddingvertrag. Symlinks
+und abweichende Verträge werden ausgeschlossen.
+
+Der Klassifikator liest Vorgänger-Plan, Batches, PASS-Artefakte und
+Versuchsjournale ausschließlich read-only. Source- und Batchplan müssen exakt
+übereinstimmen. Jede einzelne Antwort wird unter V67/V16/V29 neu validiert;
+erst danach wird ein neues revisionsgebundenes Batchartefakt geschrieben.
+Der erste Modellaufruf darf nur die erste weiterhin offene Unit betreffen.
+
+Mac-Studio-Nachweise auf dem Implementierungsstand
+`1d4dbbc5252fdae20613cec2391ecbeefebaeb5e`:
+
+```text
+Fokussierte Suites:                    3/3 PASS
+Fokussierte Tests:                     386/386 PASS
+Prettier / Produktcode-Lint:           PASS / PASS
+Realartefakt-Replay Batches:           5/5 PASS
+Aktuell revalidierte Vorgänger-Units:  30
+Neue Modellaufrufe:                    0
+Vorgänger-Planbaum SHA-256:
+19235cdc9200535196b60f459371deec7ec9dd4143f653377c31feedd770ad04
+Vorgänger-Klassifikationsbaum SHA-256:
+22df1be588cd95e96e208ede445ff8ed89a561b9449a861511da70ad4fae995b
+Vorgängerartefakte nach Replay:         hashgleich
+```
+
+V3.8.6-Release-Gate, Deployment und derselbe kontrollierte Resume stehen noch
+aus. Gold-283-V2 bleibt unverändert; der nicht vorhandene unabhängige
+expertengelabelte Mehrversicherer-Holdout bleibt ein separates Gate.
+
+Status: `V3.8.5 INSTALLIERT; FALSCHEN NEUSTART KONTROLLIERT ABGEBROCHEN;
+CROSS-RELEASE-RESUME IM REALARTEFAKT-REPLAY 5/5 PASS; V3.8.6-GATE UND RESUME
+AUSSTEHEND`.
+
+Change-Set: `LF-V386-CROSS-RELEASE-PARTIAL-A-RESUME-20260917-001`.
+
 ### 133.64 Kalter V3.8.4-Lauf und eingebettete List-Governor-Gruppen
 
 V3.8.4 wurde als annotierter Tag veröffentlicht, `origin/main` und der
