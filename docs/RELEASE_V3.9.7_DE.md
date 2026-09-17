@@ -1,7 +1,6 @@
 # Polizzenvergleich V3.9.7
 
-V3.9.7 behebt den fail-closed Stopp des kalten dynamischen A-Laufs in Batch
-36. Fünf von sechs Units waren bereits gültig. Die offene Unit enthielt drei
+V3.9.7 behebt den fail-closed Stopp des kalten dynamischen A-Laufs in Batch 36. Fünf von sechs Units waren bereits gültig. Die offene Unit enthielt drei
 fachlich getrennte Aussagen: eine positive Definition versicherter Sachen,
 eine bedingte zusätzliche Objektdeckung und einen nachlaufenden Ausschluss.
 Keiner der fünf gespeicherten Modellversuche erfasste alle drei Aussagen
