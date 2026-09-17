@@ -10681,13 +10681,29 @@ c3f11c95368dc56956ddcbabedce0e9298a6b83a750e04c94deaf817927ede1e
 Vorgängerartefakte nach Revalidierung:      hashgleich
 ```
 
-V3.9.1-Release-Gate, Installation und die Fortsetzung ab dem nun
-materialisierbaren Batch 21 stehen noch aus. Gold-283-V2 bleibt unverändert;
-der bekannte LF-1+9-Lauf bleibt Regression und kein unabhängiger
-Generalisierungs- oder 99-Prozent-Nachweis.
+Das vollständige Release-Gate auf dem exakten Release-Commit
+`793f9eb1672e572b9585c4fb2207a6361336d14a` bestand 212/212 Suites und
+3.088/3.088 Tests sowie Server-, Frontend- und Collector-Lint, Prisma,
+Capability-Inventar, Frontend-Build und macOS-Installer-Suite. Der annotierte
+Tag `v3.9.1`, `origin/main` und der installierte Kunden-Checkout zeigen auf
+denselben Commit. Der offizielle Updater endete mit `Doctor: PASS`; API und
+SQLite-`quick_check` bestanden. Das Pre-Update-Backup liegt unter:
 
-Status: `BATCH-21-ROOT-CAUSES ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
-MODELLAUFRUF; V3.9.1-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+```text
+server/storage/backups/anythingllm-before-activation-20260917-173059.db
+```
+
+Der anschließende Resume verwendet den neuen Run-Root
+`resume-2f481dbd5ffe28de52c42533`. Dort wurden Batches 1 bis 21 als 21
+vorhandene Batchdateien und mit null neuen Attempt-Verzeichnissen
+materialisiert. Der erste neue Modellversuch betraf ausschließlich
+`0021-AUB-847ea63efd5585a34caa621c`, also Batch 22. Der Worker läuft ab dort
+weiter. Gold-283-V2 bleibt unverändert; der bekannte LF-1+9-Lauf bleibt
+Regression und kein unabhängiger Generalisierungs- oder 99-Prozent-Nachweis.
+
+Status: `V3.9.1 PRODUKTIV AKTIV; DOCTOR/API/DB PASS; BATCHES 1 BIS 21 OHNE
+NEUE MODELLARBEIT ÜBERNOMMEN; ERSTER NEUER ATTEMPT BATCH 22; KALTER
+PRODUKTLAUF AKTIV`.
 
 Change-Set:
 `LF-V391-BATCH21-EVIDENCE-NORMALIZATION-20260917-001`.
