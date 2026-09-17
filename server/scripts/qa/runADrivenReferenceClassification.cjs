@@ -39,7 +39,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V64";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V65";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -93,6 +93,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V61",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V62",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V63",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V64",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -842,6 +843,74 @@ function authoritativeAdministrativeOrApplicabilityRequirement(unit) {
       ],
     },
   };
+}
+
+function materializeParentheticalObjectExclusions(requirements, unit) {
+  if (!Array.isArray(requirements) || requirements.length === 0)
+    return { requirements, repairs: [] };
+  const sourceText = String(unit?.source?.combinedText || "");
+  if (
+    /\b(?:nicht\s+(?:mit)?versichert|ausgeschlossen|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz))\b/iu.test(
+      sourceText
+    )
+  )
+    return { requirements, repairs: [] };
+  const repairs = [];
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const displayLabel = String(requirement?.displayLabel || "");
+      const hasObject = (requirement?.components || []).some(
+        ({ type }) => type === "OBJECT"
+      );
+      if (!hasObject) return requirement;
+      const existingExclusions = (requirement.components || []).filter(
+        ({ type, coverageEffect }) =>
+          type === "COVERAGE_EFFECT" && coverageEffect === "EXCLUDED"
+      );
+      const exclusions = [
+        ...displayLabel.matchAll(
+          /\(\s*(?<exclusion>(?:ausgenommen|exklusive)\s+[^()]{1,200}?)\s*\)/giu
+        ),
+      ];
+      if (exclusions.length === 0) return requirement;
+      const additions = exclusions.flatMap((match) => {
+        const label = match.groups?.exclusion?.trim();
+        if (!label) return [];
+        const sourceBlockIds = sourceBlockIdsForExactSpan(unit, label);
+        if (sourceBlockIds.length === 0) return [];
+        const comparableLabel = label.replace(/\s+/gu, " ").trim();
+        if (
+          existingExclusions.some(
+            (component) =>
+              String(component.label || "")
+                .replace(/\s+/gu, " ")
+                .trim() === comparableLabel
+          )
+        )
+          return [];
+        repairs.push({
+          requirementIndex,
+          action: "MATERIALIZE_PARENTHETICAL_OBJECT_EXCLUSION",
+          sourceBlockIds,
+        });
+        return [
+          {
+            type: "COVERAGE_EFFECT",
+            label,
+            sourceBlockIds,
+            coverageEffect: "EXCLUDED",
+          },
+        ];
+      });
+      return additions.length > 0
+        ? {
+            ...requirement,
+            components: [...(requirement.components || []), ...additions],
+          }
+        : requirement;
+    }
+  );
+  return { requirements: normalizedRequirements, repairs };
 }
 
 function normalizeProductConfigurationFactRelation(components, unit) {
@@ -3392,6 +3461,18 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
     let requirements = Array.isArray(response?.requirements)
       ? response.requirements
       : [];
+    const parentheticalObjectExclusions =
+      materializeParentheticalObjectExclusions(requirements, unit);
+    requirements = parentheticalObjectExclusions.requirements;
+    for (const repair of parentheticalObjectExclusions.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (parentheticalObjectExclusions.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([...(response.semanticClasses || []), "EXCLUSION"]),
+        ],
+      };
     const listSegmentBoundaries = normalizeListSegmentComponentBoundaries(
       requirements,
       unit

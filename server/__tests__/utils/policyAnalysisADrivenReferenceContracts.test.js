@@ -8154,7 +8154,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V64");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V65");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -11395,6 +11395,138 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       unitId: unit.unitId,
       action: "NORMALIZE_ADMINISTRATIVE_RECORD_OBLIGATION",
     });
+  });
+
+  test("materializes a parenthetical exclusion inside an independently bounded object-list item", () => {
+    const first = "- Lagertanks;";
+    const second = "- Abstellflächen;";
+    const thirdLead =
+      "- Sämtliche Versorgungsrohre (ausgenommen Brennstoffleitungen), insbesondere";
+    const thirdTail = "Zu- und Ableitungsrohre sowie Sammelkanäle;";
+    const unit = {
+      unitId: "parenthetical-object-exclusion",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["item-1", "item-2", "item-3a", "item-3b"],
+        combinedText: [first, second, thirdLead, thirdTail].join("\n"),
+        blocks: [
+          { blockId: "item-1", structuralKind: "LIST_ITEM", exactText: first },
+          { blockId: "item-2", structuralKind: "LIST_ITEM", exactText: second },
+          {
+            blockId: "item-3a",
+            structuralKind: "LIST_ITEM",
+            exactText: thirdLead,
+          },
+          {
+            blockId: "item-3b",
+            structuralKind: "BODY_LINE",
+            exactText: thirdTail,
+          },
+        ],
+      },
+      logicalSourceSegments: [
+        { segmentId: "segment-1", blockIds: ["item-1"], combinedText: first },
+        { segmentId: "segment-2", blockIds: ["item-2"], combinedText: second },
+        {
+          segmentId: "segment-3",
+          blockIds: ["item-3a", "item-3b"],
+          combinedText: `${thirdLead}\n${thirdTail}`,
+        },
+      ],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: first,
+          components: [
+            { type: "OBJECT", label: first, sourceBlockIds: ["item-1"] },
+          ],
+        },
+        {
+          displayLabel: second,
+          components: [
+            { type: "OBJECT", label: second, sourceBlockIds: ["item-2"] },
+          ],
+        },
+        {
+          displayLabel: `${thirdLead}\n${thirdTail}`,
+          components: [
+            {
+              type: "OBJECT",
+              label: `${thirdLead}\n${thirdTail}`,
+              sourceBlockIds: ["item-3a", "item-3b"],
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "INSURED_OBJECT",
+      "EXCLUSION",
+    ]);
+    expect(normalized.responses[0].requirements).toHaveLength(3);
+    expect(normalized.responses[0].requirements[2].components).toContainEqual({
+      type: "COVERAGE_EFFECT",
+      label: "ausgenommen Brennstoffleitungen",
+      sourceBlockIds: ["item-3a"],
+      coverageEffect: "EXCLUDED",
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 2,
+      action: "MATERIALIZE_PARENTHETICAL_OBJECT_EXCLUSION",
+      sourceBlockIds: ["item-3a"],
+    });
+  });
+
+  test("does not invert an exception inside an already negative coverage clause", () => {
+    const sourceText =
+      "Nicht versichert sind Schäden an Leitungen (ausgenommen Schäden durch Brand).";
+    const unit = {
+      unitId: "negative-clause-parenthetical-exception",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["negative-clause"],
+        combinedText: sourceText,
+        blocks: [{ blockId: "negative-clause", exactText: sourceText }],
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "EXCLUSION",
+      semanticClasses: ["EXCLUSION", "INSURED_OBJECT"],
+      requirements: [
+        {
+          displayLabel: sourceText,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Leitungen",
+              sourceBlockIds: ["negative-clause"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "Nicht versichert",
+              sourceBlockIds: ["negative-clause"],
+              coverageEffect: "EXCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "MATERIALIZE_PARENTHETICAL_OBJECT_EXCLUSION",
+      })
+    );
+    expect(normalized.responses[0].requirements[0].components).toHaveLength(2);
   });
 
   test("materializes a source-bound applicability condition before its coverage schedule", () => {
