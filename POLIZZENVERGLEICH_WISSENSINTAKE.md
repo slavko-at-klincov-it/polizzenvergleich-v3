@@ -4167,3 +4167,42 @@ Vollständigkeitsbehauptung erzeugen.
   null neuen Versuchen. Der vollständige Release-Gate, das Deployment und der
   fortgesetzte Produktlauf stehen noch aus.
 - Change-Set: `LF-V3910-LOCAL-CONDITION-EVIDENCE-20260918-001`.
+
+## INT-20260918-070 — Redundante ungültige Deckungswirkung nur bei vollständiger Rollenabdeckung entfernen
+
+- Erfasst: 2026-09-18
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Aussage: Enthält eine Requirement bereits mindestens eine wörtliche,
+  source-bound und polaritätsrichtige `COVERAGE_EFFECT`-Komponente, dürfen
+  zusätzliche Komponenten desselben Typs ohne tatsächlichen
+  Deckungswirkungsausdruck nur dann entfernt werden, wenn jeder ihrer
+  Quellblöcke durch eine andere fachlich passende Komponente derselben
+  Requirement erhalten bleibt.
+- Ist-Wahrheit: `JA` als Ursache des fail-closed V3.9.10-Batch-55-Abbruchs.
+  Fünf von sechs Units sind gültig. Die offene Unit enthält eine gültige
+  positive Deckungswirkung sowie zwei zusätzliche `CONDITIONAL`-Wirkungen,
+  deren Labels vom Validator korrekt als
+  `COVERAGE_EFFECT_LABEL_INVALID` abgelehnt werden. Dieselben Blöcke sind
+  bereits durch `CONDITION`, `PRECEDENCE_OR_REPLACEMENT` und `SCOPE`
+  source-bound belegt. Drei Modellversuche entfernten die falschen Rollen
+  nicht.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002`; mindestens eine
+  andere wörtlich gültige und polaritätsrichtige Deckungswirkung derselben
+  Requirement; das ungültige Label enthält selbst keinen anerkannten
+  Deckungs- oder Ausschlussausdruck; sämtliche Quellblöcke der zu
+  entfernenden Komponente bleiben durch andere Komponenten derselben
+  Requirement zitiert. Fehlt eine gültige Deckungswirkung, geht ein
+  Quellblock verloren oder ist die Polarität nicht eindeutig, bleibt der
+  Fall fail-closed. Keine Dokument-ID, Seite, Gesellschaft oder bekannte
+  Klausel ist eine Produktionsregel.
+- Beweisgrenze: bekannte LF-1+9-Regression; synthetische Positiv- und
+  Schutzvarianten sowie Revalidierung des unveränderten Batch-55-Artefakts
+  erforderlich; kein Holdout- oder 99-Prozent-Nachweis.
+- Laufbeleg: V3.9.10-Resume
+  `resume-a4c6a08c7648d8c2596f455c` übernahm Batches 1 bis 52 ohne neuen
+  Modellversuch, erreichte 54/58 gültige A-Batches und stoppte Batch 55
+  (`batchIndex 54`, `AUB-f32187483fc34639eff542f6`) nach drei gespeicherten
+  Versuchen bei 5/6 gültigen Units korrekt fail-closed. Es trat kein Timeout
+  oder Transportfehler auf.
+- Change-Set: `LF-V3911-REDUNDANT-COVERAGE-ROLE-20260918-001`.
