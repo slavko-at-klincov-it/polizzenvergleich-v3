@@ -844,7 +844,11 @@ function exactSingleTokenComponentRepair(unit, component) {
     candidates.push({ exactLabel, sourceBlockIds });
   }
   if (candidates.length !== 1) return null;
-  return { ...component, ...candidates[0] };
+  return {
+    ...component,
+    label: candidates[0].exactLabel,
+    sourceBlockIds: candidates[0].sourceBlockIds,
+  };
 }
 
 function narrowRepeatedComponentToDisplayLabelSource(
