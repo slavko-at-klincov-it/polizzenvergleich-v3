@@ -10636,6 +10636,38 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.74 V3.9.4-Resume fail-closed und unmittelbarer V74-Vorgänger ergänzt
+
+V3.9.4 wurde nach vollständig grünem Release-Gate auf dem Kunden-Mac-Studio
+aktiviert. Der annotierte Tag, `origin/main` und der installierte Checkout
+zeigen auf `ed8c1ff88410b4c1bbefe0393d9234271f3e8903`; Doctor, API und
+SQLite-`quick_check` bestanden. Das Pre-Activation-Backup liegt unter:
+
+```text
+server/storage/backups/anythingllm-before-activation-20260917-191532.db
+```
+
+Der anschließende Resume erzeugte den neuen Run-Root
+`resume-aeb4a972927722bcd0fe3890`, stoppte aber noch vor jedem Modellaufruf
+mit `LF_A_CLASSIFICATION_PREDECESSOR_BINDING_INVALID`. Die Root Cause ist eine
+Lücke in der expliziten Vorgänger-Allowlist: V12 bis V73 und V75 waren
+enthalten, der unmittelbar vorherige V74-Vertrag fehlte.
+
+Der enge V76-Hotfix adaptiert `CAP-ORCH-001` und `CAP-A-002`: V74 und V75
+werden in die vorhandene Allowlist aufgenommen. Sämtliche Source-Plan-,
+Batch-, Modell-, Kontext-, Prompt-, Validator-, ID- und Hashbindungen bleiben
+unverändert; alte Antworten werden unter dem aktuellen Validator
+revalidiert. Ein expliziter V74→V76-Test beweist, dass gültige Antworten ohne
+Modellaufruf übernommen werden. Der vollständige fokussierte Vertrag bestand
+auf dem Mac Studio mit 402/402 Tests.
+
+V3.9.5-Release-Gate, Installation und erneuter Resume stehen noch aus.
+
+Status: `V3.9.4 INSTALLIERT UND GESUND; ERSTER RESUME VOR MODELLAUFRUF
+FAIL-CLOSED; V74-VORGÄNGERLÜCKE IN V76 BEHOBEN; V3.9.5-GATE AUSSTEHEND`.
+
+Change-Set: `LF-V395-IMMEDIATE-PREDECESSOR-RESUME-20260917-001`.
+
 ### 133.73 Batch 33: gemeinsame Anker und eingebettete alphabetische Objektliste
 
 Der produktive V3.9.3-Resume übernahm Batches 1 bis 32 ohne neue

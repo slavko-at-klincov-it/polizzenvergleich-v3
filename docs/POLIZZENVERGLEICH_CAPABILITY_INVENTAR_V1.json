@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V394-BATCH33-LIST-PROVENANCE-AND-EMBEDDED-OBJECTS-20260917-001",
+  "changeSetId": "LF-V395-IMMEDIATE-PREDECESSOR-RESUME-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -236,7 +236,8 @@
       "knownLimitsRisks": [
         "Configured worker concurrency does not override the global local-model lock.",
         "A session PASS does not prove fachliche correctness.",
-        "Cross-release partial resume is allowed only for an exact release-independent run identity and requires current-contract revalidation."
+        "Cross-release partial resume is allowed only for an exact release-independent run identity and requires current-contract revalidation.",
+        "Every run-contract bump must retain the immediately preceding contract in the explicit predecessor allowlist; omission fails closed before model work."
       ],
       "evidence": {
         "tests": [
@@ -245,11 +246,16 @@
           "server/__tests__/utils/policyComparisonWorkerSupervisor.test.js",
           "server/__tests__/models/policyComparison.test.js"
         ],
-        "runs": ["Tracker 133.45", "Tracker 133.47", "Tracker 133.65"],
+        "runs": [
+          "Tracker 133.45",
+          "Tracker 133.47",
+          "Tracker 133.65",
+          "Tracker 133.74"
+        ],
         "adrs": ["ADR-009", "ADR-027", "ADR-031"],
-        "failures": ["INT-20260917-049"]
+        "failures": ["INT-20260917-049", "INT-20260917-060"]
       },
-      "lastVerifiedCommit": "1d4dbbc5252fdae20613cec2391ecbeefebaeb5e",
+      "lastVerifiedCommit": "74f9a621ef1af002bda980fbc0f99e0e3c239cf0",
       "relations": [{ "type": "REFINES", "target": "CAP-LEGACY-001" }],
       "activationReason": "Endpoint and worker route both persisted product modes; V3.8.0 activates LF V2 for controlled customer production.",
       "reactivationCriteria": "Not applicable while active."
@@ -740,7 +746,8 @@
         "A trailing BODY_LINE suffix may complete exactly one continued-list requirement only across an open sentence boundary and only through the uniquely latest literal component anchor; interior gaps, closed sentences and ambiguous anchors remain fail-closed.",
         "An explicit prerequisite followed immediately by an 'Unter X versteht man Y' definition is atomized only when sentence boundaries, repeated term X and every source span match exactly; mismatched terms and multi-requirement envelopes remain fail-closed.",
         "Multiple literal components anchored in the same source block share only the bounded span up to the next later anchor, and only when the segment still has a real provenance gap.",
-        "An embedded alphabetic object list is materialized only from a contiguous server-owned intro/item segment sequence with markers starting at a), one bound external coverage governor and one explicit final benefit predicate."
+        "An embedded alphabetic object list is materialized only from a contiguous server-owned intro/item segment sequence with markers starting at a), one bound external coverage governor and one explicit final benefit predicate.",
+        "The immediate predecessor run contract must be explicitly allowlisted and is still revalidated against the current source plan and validator before any response is reused."
       ],
       "evidence": {
         "tests": [
@@ -761,7 +768,8 @@
           "Tracker 133.70",
           "Tracker 133.71",
           "Tracker 133.72",
-          "Tracker 133.73"
+          "Tracker 133.73",
+          "Tracker 133.74"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -781,10 +789,11 @@
           "INT-20260917-056",
           "INT-20260917-057",
           "INT-20260917-058",
-          "INT-20260917-059"
+          "INT-20260917-059",
+          "INT-20260917-060"
         ]
       },
-      "lastVerifiedCommit": "1aae110e1a6f505c89e9ab406ef7d753707de0e5",
+      "lastVerifiedCommit": "74f9a621ef1af002bda980fbc0f99e0e3c239cf0",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
