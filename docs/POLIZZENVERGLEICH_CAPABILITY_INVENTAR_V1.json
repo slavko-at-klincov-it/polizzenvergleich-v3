@@ -841,11 +841,7 @@
           "Tracker 133.67"
         ],
         "adrs": ["ADR-028", "ADR-031"],
-        "failures": [
-          "INT-20260917-050",
-          "INT-20260917-051",
-          "INT-20260917-052"
-        ]
+        "failures": ["INT-20260917-050", "INT-20260917-051", "INT-20260917-052"]
       },
       "lastVerifiedCommit": "ae5b8a826e3c08f5b983393bd331f930ac469fac",
       "relations": [{ "type": "DERIVED_FROM", "target": "CAP-A-002" }],
