@@ -4266,9 +4266,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
         relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
         blockIds: ["coverage-governor"],
-        blocks: [
-          { blockId: "coverage-governor", exactText: governorText },
-        ],
+        blocks: [{ blockId: "coverage-governor", exactText: governorText }],
         combinedText: governorText,
         combinedTextSha256: crypto
           .createHash("sha256")
