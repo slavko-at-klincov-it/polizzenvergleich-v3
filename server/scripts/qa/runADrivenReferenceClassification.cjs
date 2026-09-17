@@ -7070,32 +7070,66 @@ function compatiblePartialResume({
       outputRoot: null,
       sourceUnitPlanSha256: null,
       classificationBatchesSha256: null,
+      sources: [],
     };
   if (!resumePlanRoot || !resumeOutputRoot)
     throw new Error("LF_A_PARTIAL_RESUME_PATHS_INCOMPLETE");
-  for (const directory of [resumePlanRoot, resumeOutputRoot]) {
-    const stat = fs.lstatSync(directory);
-    if (!stat.isDirectory() || stat.isSymbolicLink())
-      throw new Error("LF_A_PARTIAL_RESUME_DIRECTORY_INVALID");
+  const sources = [];
+  const seen = new Set();
+  let planRoot = resumePlanRoot;
+  let outputRoot = resumeOutputRoot;
+  while (planRoot && outputRoot) {
+    const identity = `${path.resolve(planRoot)}\u0000${path.resolve(outputRoot)}`;
+    if (seen.has(identity)) throw new Error("LF_A_PARTIAL_RESUME_CHAIN_CYCLE");
+    if (sources.length >= 64)
+      throw new Error("LF_A_PARTIAL_RESUME_CHAIN_TOO_DEEP");
+    seen.add(identity);
+    for (const directory of [planRoot, outputRoot]) {
+      const stat = fs.lstatSync(directory);
+      if (!stat.isDirectory() || stat.isSymbolicLink())
+        throw new Error("LF_A_PARTIAL_RESUME_DIRECTORY_INVALID");
+    }
+    const predecessorPlan = readJson(
+      path.join(planRoot, "source-unit-plan.private.json"),
+      "LF_A_PARTIAL_RESUME_SOURCE_PLAN"
+    );
+    const predecessorBatches = readJson(
+      path.join(planRoot, "classification-batches.private.json"),
+      "LF_A_PARTIAL_RESUME_BATCH_PLAN"
+    );
+    if (
+      stableStringify(predecessorPlan) !== stableStringify(sourcePlan) ||
+      stableStringify(predecessorBatches) !== stableStringify(batches)
+    )
+      throw new Error("LF_A_PARTIAL_RESUME_PLAN_MISMATCH");
+    sources.push({ planRoot, outputRoot });
+    if (
+      path.basename(outputRoot) !== "a-classification" ||
+      path.basename(path.dirname(outputRoot)) !== "a-driven-v2"
+    )
+      break;
+    const markerFile = path.join(
+      path.dirname(path.dirname(outputRoot)),
+      "a-driven-partial-resume.private.json"
+    );
+    if (!fs.existsSync(markerFile)) break;
+    const marker = readJson(markerFile, "LF_A_PARTIAL_RESUME_CHAIN_SOURCE");
+    if (
+      marker?.schemaVersion !== 1 ||
+      marker?.contractId !== "LF_A_PARTIAL_RESUME_SOURCE_V1" ||
+      typeof marker.sourcePlanRoot !== "string" ||
+      typeof marker.sourceOutputRoot !== "string"
+    )
+      throw new Error("LF_A_PARTIAL_RESUME_CHAIN_SOURCE_INVALID");
+    planRoot = marker.sourcePlanRoot;
+    outputRoot = marker.sourceOutputRoot;
   }
-  const predecessorPlan = readJson(
-    path.join(resumePlanRoot, "source-unit-plan.private.json"),
-    "LF_A_PARTIAL_RESUME_SOURCE_PLAN"
-  );
-  const predecessorBatches = readJson(
-    path.join(resumePlanRoot, "classification-batches.private.json"),
-    "LF_A_PARTIAL_RESUME_BATCH_PLAN"
-  );
-  if (
-    stableStringify(predecessorPlan) !== stableStringify(sourcePlan) ||
-    stableStringify(predecessorBatches) !== stableStringify(batches)
-  )
-    throw new Error("LF_A_PARTIAL_RESUME_PLAN_MISMATCH");
   return {
     planRoot: resumePlanRoot,
     outputRoot: resumeOutputRoot,
     sourceUnitPlanSha256: sourcePlan.planSha256,
     classificationBatchesSha256: sha256(JSON.stringify(batches)),
+    sources,
   };
 }
 
@@ -7650,31 +7684,42 @@ async function processClassificationBatches({
         batch,
         args,
       });
-      let predecessorResponses = [];
-      let predecessorJournalResponses = [];
-      if (partialResume?.outputRoot) {
-        const predecessorFile = batchResultFile(
-          partialResume.outputRoot,
-          batch
-        );
-        if (fs.existsSync(predecessorFile))
-          predecessorResponses = predecessorBatchResponses(
-            predecessorFile,
-            plan,
-            batch,
-            args
-          );
-        predecessorJournalResponses = acceptedResponsesFromAttemptJournal({
-          output: partialResume.outputRoot,
-          plan,
-          batch: contextualBatch,
-          args,
-        });
-      }
+      const predecessorSources = partialResume?.sources?.length
+        ? partialResume.sources
+        : partialResume?.outputRoot
+          ? [partialResume]
+          : [];
+      const predecessorCandidates = predecessorSources.flatMap(
+        ({ outputRoot }) => {
+          const predecessorFile = batchResultFile(outputRoot, batch);
+          const predecessorResponses = fs.existsSync(predecessorFile)
+            ? predecessorBatchResponses(predecessorFile, plan, batch, args)
+            : [];
+          const predecessorJournalResponses =
+            acceptedResponsesFromAttemptJournal({
+              output: outputRoot,
+              plan,
+              batch: contextualBatch,
+              args,
+            });
+          const predecessorSupersededResponses =
+            responsesFromSupersededBatchArtifacts({
+              output: outputRoot,
+              plan,
+              batch,
+              args,
+            });
+          return [
+            ...predecessorResponses,
+            ...predecessorJournalResponses,
+            ...predecessorSupersededResponses,
+          ];
+        }
+      );
       const predecessorAcceptedResponses = currentlyValidResponses(
         plan,
         contextualBatch,
-        [...predecessorResponses, ...predecessorJournalResponses]
+        predecessorCandidates
       );
       const seedAcceptedResponses = currentlyValidResponses(
         plan,

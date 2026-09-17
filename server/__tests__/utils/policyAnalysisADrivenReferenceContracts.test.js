@@ -10068,6 +10068,138 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     }
   });
 
+  test("reuses valid responses across a multi-hop partial-resume chain", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-multihop-partial-resume-")
+    );
+    try {
+      const sourcePlan = buildADrivenSourceUnitPlan({
+        documents: [
+          document(
+            "source",
+            0,
+            artifact(
+              [
+                "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Garagen.\n",
+              ],
+              "m"
+            )
+          ),
+        ],
+      });
+      const plan = deriveClassificationEvidencePlan(sourcePlan);
+      const built = buildADrivenClassificationBatches(sourcePlan);
+      const batches = { ...built, batches: built.batches.slice(0, 1) };
+      const batch = batches.batches[0];
+      const contextualBatch = {
+        ...batch,
+        units: batch.expectedUnitIds.map((unitId) =>
+          plan.units.find((unit) => unit.unitId === unitId)
+        ),
+      };
+      expect(batch.expectedUnitIds).toHaveLength(2);
+      const valid = batch.expectedUnitIds.map((unitId) =>
+        validResponse(plan.units.find((unit) => unit.unitId === unitId))
+      );
+      const roots = ["first", "second"].map((name) => {
+        const runRoot = path.join(temporary, name);
+        const planRoot = path.join(runRoot, "a-driven-v2", "a-plan");
+        const outputRoot = path.join(
+          runRoot,
+          "a-driven-v2",
+          "a-classification"
+        );
+        fs.mkdirSync(planRoot, { recursive: true });
+        fs.writeFileSync(
+          path.join(planRoot, "source-unit-plan.private.json"),
+          `${JSON.stringify(sourcePlan, null, 2)}\n`
+        );
+        fs.writeFileSync(
+          path.join(planRoot, "classification-batches.private.json"),
+          `${JSON.stringify(batches, null, 2)}\n`
+        );
+        return { runRoot, planRoot, outputRoot };
+      });
+      const partialResult = async (response) =>
+        runBatch({
+          client: {
+            chat: {
+              completions: {
+                create: jest.fn(async () => ({
+                  model: "qwen/qwen3.6-35b-a3b",
+                  choices: [
+                    { message: { content: JSON.stringify([response]) } },
+                  ],
+                  usage: {},
+                })),
+              },
+            },
+          },
+          model: "qwen/qwen3.6-35b-a3b",
+          modelContext: 42_496,
+          plan,
+          batch: contextualBatch,
+          maximumAttempts: 1,
+        });
+      for (let index = 0; index < roots.length; index += 1) {
+        const file = batchResultFile(roots[index].outputRoot, batch);
+        fs.mkdirSync(path.dirname(file), { recursive: true });
+        fs.writeFileSync(
+          file,
+          `${JSON.stringify(await partialResult(valid[index]), null, 2)}\n`,
+          { mode: 0o600 }
+        );
+      }
+      fs.writeFileSync(
+        path.join(roots[1].runRoot, "a-driven-partial-resume.private.json"),
+        `${JSON.stringify(
+          {
+            schemaVersion: 1,
+            contractId: "LF_A_PARTIAL_RESUME_SOURCE_V1",
+            sourcePlanRoot: roots[0].planRoot,
+            sourceOutputRoot: roots[0].outputRoot,
+          },
+          null,
+          2
+        )}\n`,
+        { mode: 0o600 }
+      );
+      const currentOutput = path.join(temporary, "current");
+      const args = {
+        output: currentOutput,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+      const partialResume = compatiblePartialResume({
+        resumePlanRoot: roots[1].planRoot,
+        resumeOutputRoot: roots[1].outputRoot,
+        sourcePlan,
+        batches,
+      });
+      const client = { chat: { completions: { create: jest.fn() } } };
+
+      const [result] = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client,
+        recoverModelAfterAbort: jest.fn(),
+        partialResume,
+      });
+
+      expect(partialResume.sources).toHaveLength(2);
+      expect(client.chat.completions.create).not.toHaveBeenCalled();
+      expect(result.validation.passed).toBe(true);
+      expect(result.predecessorAcceptedUnits).toBe(2);
+      expect(result.responses).toEqual(valid);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
   test("fails closed when a partial predecessor plan differs", () => {
     const temporary = fs.mkdtempSync(
       path.join(os.tmpdir(), "lf-a-cross-release-plan-mismatch-")
