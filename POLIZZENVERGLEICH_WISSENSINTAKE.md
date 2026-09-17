@@ -148,6 +148,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260915-037` | Schemafeste semantische Reparatur ohne Verlust gültiger Batches         | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | Reparaturhinweis präzisieren und am ersten unvollständigen Batch resumieren                                               |
 | `INT-20260916-038` | Identitätskern mit getrennt belegten Modifier-Abweichungen normalisieren | `BEOBACHTUNG`           | `PROMOTED`    | vollständigen Primärlauf und anschließende Gold-/Endergebnisprüfung abschließen                                          |
 | `INT-20260917-044` | Mehrere Rollen-Evidenzvorkommen occurrence-gebunden materialisieren     | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | V11-Vertrag am kalten Produktlauf und an Segmentierungsvarianten validieren                                               |
+| `INT-20260917-045` | Administrative Pflichten und Anwendbarkeitsbedingungen source-bound normalisieren | `BEOBACHTUNG` | `IN_PRÜFUNG` | allgemeinen Bedingungsvertrag testen und ab erstem unvollständigem A-Batch erneut materialisieren                         |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3109,3 +3110,45 @@ Vollständigkeitsbehauptung erzeugen.
 - Kanonischer Ausgang: Change-Set
   `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`; Mac-Studio-Gate und finaler
   Produktlauf stehen noch aus.
+
+## INT-20260917-045 — Administrative Pflichten und Anwendbarkeitsbedingungen source-bound normalisieren
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Rein administrative Vermerk-/Dokumentationspflichten sowie
+  Anwendbarkeitsregeln, die ausdrücklich unter Voraussetzungen gelten, sind
+  keine Deckungswirkung und keine Definition. Wenn der vollständige
+  Quellwortlaut und seine Blockgrenzen eindeutig sind, dürfen sie
+  deterministisch als `OBLIGATION` beziehungsweise `CONDITION` mit einer
+  wörtlichen `CONDITION`-Komponente materialisiert werden.
+- Ist-Wahrheit: `JA` für den kalten V3.8.1-Lauf. Qwen lieferte für zwei
+  frühe A-Einheiten wiederholt fehlende `displayLabel`-Felder oder
+  unpassende Klassen, obwohl die Originalaussagen vollständig vorlagen. Es
+  gab sechs valide Transportantworten, keinen Timeout und keinen Abort.
+- Quelle: private, resumierbare Batch-2-Attempt-Artefakte der V3.8.1-
+  Produktsitzung auf dem Mac Studio. Kundentext wird in der Knowledge Base
+  nicht vervielfältigt.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Frühe administrative
+  Vertragsvoraussetzungen bleiben als eigene dynamische A-Anforderungen
+  erhalten, ohne als Deckung oder versichertes Objekt fehlklassifiziert zu
+  werden und ohne den Lauf an wiederholbaren Schemafehlern zu stoppen.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-A-002` und
+  `CAP-A-003`; keine kunden-, seiten- oder ID-spezifische Regel, keine
+  Lockerung der Quellenbindung, keine automatische B-Gleichsetzung.
+- Hard-Gates: positive Varianten für Vermerk-/Dokumentationspflicht und
+  voraussetzungsgebundene Anwendbarkeit; negative Varianten mit echter
+  Deckungswirkung; exakte Block- und Textbindung; unveränderte bisherige
+  A-Vertragstests; Resume ohne Neuberechnung gültiger Batches; erneuter
+  echter Produktlauf.
+- Entscheidung: Der allgemeine V64-Normalisierer ist implementiert. Der
+  fokussierte Mac-Studio-Vertragscheck bestand mit 362/362 Tests; der echte
+  gespeicherte Fehlerbatch wurde ohne neuen Modellaufruf aus den vorhandenen
+  Versuchsartefakten mit 6/6 Units und null Diagnosen als `PASS`
+  revalidiert. Vollständiges Release-Gate und neuer kalter Produktlauf stehen
+  noch aus.
+- Beweisgrenze: Der bekannte LF-1+9-Lauf kann den Regelvertrag
+  falsifizieren, ist aber kein unabhängiger Generalisierungs-Holdout.
+- Kanonischer Ausgang: Change-Set
+  `LF-V382-ADMIN-CONDITION-NORMALIZATION-20260917-001`; Produktfix und
+  Releaseprüfung ausstehend.
