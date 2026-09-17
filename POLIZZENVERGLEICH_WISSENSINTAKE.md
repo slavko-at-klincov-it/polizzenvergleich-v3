@@ -938,7 +938,7 @@ Kategorieviews -> A/B-Join` definieren, ohne zusätzliche Benutzeraktion.
 
 - Erfasst: 2026-08-24
 - Typ: `IDEE`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: Leitungswasser eignet sich wegen Innen-/Außenabgrenzung,
   Rohrbruch/Folgeschaden, Such-/Wiederherstellungskosten, Altersabzug,
   Rückstau und Obliegenheiten als anspruchsvoller erster Kategorienpilot.
@@ -3854,3 +3854,118 @@ Vollständigkeitsbehauptung erzeugen.
   ersten offenen Batch 34.
 - Geplanter Change-Set:
   `LF-V395-IMMEDIATE-PREDECESSOR-RESUME-20260917-001`.
+
+## INT-20260917-061 — Eindeutige Auslassungslabels auf wörtliche Quellspanne zurückführen
+
+- Erfasst: 2026-09-17
+- Typ: `FEHLER`
+- Status: `IN_PRÜFUNG`
+- Aussage: Gibt das Modell in einem Komponentenlabel eine ausdrückliche
+  Auslassung (`...` oder `…`) zwischen mindestens zwei wörtlichen Fragmenten
+  aus, darf der Server das Label nur dann auf die vollständige Originalspanne
+  zurückführen, wenn innerhalb des kleinsten durch die deklarierten
+  Quellblöcke begrenzten Fensters genau eine geordnete Übereinstimmung
+  existiert. Die resultierende Originalspanne muss im gesamten Unit-Quelltext
+  eindeutig sein und alle deklarierten Blöcke einschließen.
+- Ist-Wahrheit: `JA` als gemeinsame Ursache der drei nach Batch 35 offen
+  gebliebenen Units. Die gespeicherten Antworten enthalten Auslassungslabels
+  für eine Deckungswirkung, eine mehrblockige Schadensbeschreibung und eine
+  mehrblockige Leistungswirkung; die vollständigen Originalpassagen sind
+  vorhanden und eindeutig gebunden.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002`; keine semantische
+  Ergänzung, keine Synonyme und keine freie Paraphrase; mindestens zwei
+  nichtleere Fragmente; nur owned Source-Blöcke; kleinstes zusammenhängendes
+  Blockfenster; exakt ein Match; maximale Zwischenlänge je Auslassung;
+  resultierende Quellspanne global eindeutig. Mehrdeutigkeit, falsche
+  Reihenfolge, unbekannte Block-ID oder externe Governor-Evidenz bleiben
+  unverändert fail-closed.
+- Beweisgrenze: bekannte LF-1+9-Regression und synthetische Positiv-/Negativ-
+  Varianten; kein Holdout- oder 99-Prozent-Nachweis.
+- Ergebnis: Der V77-Vertrag führt nur bei exakt einer passenden Spanne auf
+  den vollständigen Originaltext zurück. Positive und mehrdeutige
+  Negativvarianten bestanden im fokussierten Mac-Studio-Lauf. Zusammen mit
+  INT-062 bis INT-064 bestanden 409/409 Tests; der echte Batch 35
+  revalidierte ohne Modellaufruf mit 6/6 Units und null Diagnosen. Der
+  Attempt-Baum blieb unter SHA-256
+  `64bc381721de32f585b80202556ece14c1c33984093ca080be43835bbe90641f`
+  unverändert.
+- Change-Set: `LF-V396-BATCH35-EVIDENCE-BINDING-20260917-001`.
+
+## INT-20260917-062 — Kurze Schadensüberschrift nach Layout-Bullet source-bound materialisieren
+
+- Erfasst: 2026-09-17
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Ist das eindeutige Displaylabel einer Requirement eine kurze
+  `...schäden`-Überschrift, steht sie unmittelbar nach einem reinen
+  Bullet-Block und enthält die Requirement bereits eine ausdrückliche
+  Deckungswirkung, muss die Überschrift als eigene wörtliche
+  `DAMAGE_OR_EFFECT`-Komponente gebunden werden. Der reine Bullet ist Layout,
+  keine semantische Aussage.
+- Ist-Wahrheit: `JA` als Restursache der Batch-35-Unit zu
+  Allmählichkeitsschäden. Die Modellantwort besaß Wirkung, Objekte,
+  Ausschluss, Bedingung und Limit, ließ aber die eindeutige operative
+  Schadensüberschrift unzitiert; zusätzlich wurde der reine Bullet als
+  vermeintlich unzitierter Fachblock beanstandet.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002` und `CAP-A-003`;
+  eindeutiges kurzes Displaylabel; enger Schadenssuffix; exakt ein eigener
+  Quellenblock; unmittelbar vorher nur ein layout-only Bullet; bereits
+  vorhandene Deckungswirkung; keine neue freie Interpretation. Andere
+  Überschriften, fehlende Wirkung, mehrdeutige Stellen oder operative
+  Vorgänger bleiben fail-closed.
+- Beweisgrenze: bekannte LF-1+9-Regression und synthetische Positivvariante;
+  kein Holdout- oder 99-Prozent-Nachweis.
+- Ergebnis: Gemeinsam mit INT-061, INT-063 und INT-064 409/409 fokussierte
+  Tests und echte Batch-35-Revalidierung 6/6 ohne Modellaufruf bei
+  unverändertem Attempt-Tree-Hash.
+- Change-Set: `LF-V396-BATCH35-EVIDENCE-BINDING-20260917-001`.
+
+## INT-20260917-063 — Wiederholtes Komponentenliteral an eindeutige Displaylabel-Quelle binden
+
+- Erfasst: 2026-09-17
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Kommt dasselbe wörtliche Komponentenlabel in mehreren bereits vom
+  Modell deklarierten eigenen Quellblöcken vor, darf es nur dann auf weniger
+  Blöcke verengt werden, wenn das vollständige Requirement-Displaylabel im
+  Unit-Quelltext eindeutig ist und seine exakte Blockspanne vollständig in
+  den deklarierten Komponentenblöcken liegt.
+- Ist-Wahrheit: `JA` als Restursache der Batch-35-Unit zu
+  Müllsammelgefäßen. Das Objektwort kam in Titel und Fließtext vor; das Modell
+  deklarierte beide Blöcke, während die Requirement eindeutig den Titel als
+  Displaylabel verwendete.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002`; keine Ellipsen;
+  mindestens zwei deklarierte eigene Blöcke mit demselben Literal; genau ein
+  vollständiges Displaylabel-Vorkommen; Zielspanne muss Teil der bereits
+  deklarierten Blöcke sein. Mehrdeutige Displaylabels, nicht deklarierte
+  Zielblöcke oder externe Evidenz bleiben fail-closed.
+- Beweisgrenze: bekannte LF-1+9-Regression sowie synthetische Positiv- und
+  Mehrdeutigkeitsvariante; kein Holdout- oder 99-Prozent-Nachweis.
+- Ergebnis: Gemeinsam mit INT-061, INT-062 und INT-064 409/409 fokussierte
+  Tests und echte Batch-35-Revalidierung 6/6 ohne Modellaufruf bei
+  unverändertem Attempt-Tree-Hash.
+- Change-Set: `LF-V396-BATCH35-EVIDENCE-BINDING-20260917-001`.
+
+## INT-20260917-064 — „Versicherungsschutz ... geleistet“ als positive Wirkung erkennen
+
+- Erfasst: 2026-09-17
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Eine vollständig wörtliche Komponente der Form
+  `Versicherungsschutz ... geleistet` ist eine positive Deckungswirkung,
+  sofern sie exact source-bound bleibt. Die Form darf nicht mit freier
+  Paraphrase oder Synonymersetzung erzeugt werden.
+- Ist-Wahrheit: `JA` als zweite Restursache derselben Batch-35-Unit zu
+  Müllsammelgefäßen. Die vorhandene positive Neuwertwirkung war vollständig
+  und wörtlich belegt, wurde vom bisherigen Wirkungsvalidator aber nicht als
+  zulässige Oberflächenform erkannt.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-003`; enger Abstand
+  zwischen `Versicherungsschutz` und `geleistet`; vollständige Originalquelle
+  und weiterhin alle normalen Rollen-, Komponenten- und
+  Provenienzvalidatoren. Kein pauschales Akzeptieren des Verbs `geleistet`.
+- Beweisgrenze: bekannte LF-1+9-Regression und synthetische Positivvariante;
+  kein Holdout- oder 99-Prozent-Nachweis.
+- Ergebnis: Gemeinsam mit INT-061 bis INT-063 409/409 fokussierte Tests und
+  echte Batch-35-Revalidierung 6/6 ohne Modellaufruf bei unverändertem
+  Attempt-Tree-Hash.
+- Change-Set: `LF-V396-BATCH35-EVIDENCE-BINDING-20260917-001`.
