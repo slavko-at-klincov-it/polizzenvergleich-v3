@@ -8828,7 +8828,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           document(
             "source",
             0,
-            artifact(["Seite 1\nVersichert sind Gebäude.\n"], "r")
+            artifact(["Seite 1\nVersichert sind Gebäude.\n"], "a")
           ),
         ],
       });
@@ -8923,7 +8923,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           document(
             "source",
             0,
-            artifact(["Seite 1\nVersichert sind Gebäude.\n"], "s")
+            artifact(["Seite 1\nVersichert sind Gebäude.\n"], "b")
           ),
         ],
       });
