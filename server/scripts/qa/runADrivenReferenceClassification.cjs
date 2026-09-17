@@ -44,7 +44,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V79";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V80";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -113,6 +113,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V76",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V77",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V78",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V79",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -747,6 +748,103 @@ function exactElidedComponentRepair(unit, component) {
   )
     return null;
   return { ...component, label: exactLabel, sourceBlockIds };
+}
+
+const SOURCE_ALIGNMENT_PROTECTED_WORD =
+  /^(?:nicht|nie|kein(?:e|er|en|em|es)?|ohne|ausgenommen|ausgeschlossen|versichert|mitversichert|gedeckt|ungedeckt|einschluss|ausschluss|einbezogen|muss|müssen|darf|dürfen|kann|können|wird|werden|ist|sind|besteht|bestehen|einschließlich|ausschließlich|maximal|mindestens|höchstens|bis|ab|vor|nach|null|ein|eine|einer|eines|einem|einen|eins|zwei|drei|vier|fünf|sechs|sieben|acht|neun|zehn|hundert|tausend|million(?:en)?)$/iu;
+
+function exactSingleTokenComponentRepair(unit, component) {
+  const label = String(component?.label || "").trim();
+  const declaredIds = [...new Set(component?.sourceBlockIds || [])];
+  const sourceBlocks = Array.isArray(unit?.source?.blocks)
+    ? unit.source.blocks
+    : [];
+  if (
+    !label ||
+    /(?:\.{3}|…)/u.test(label) ||
+    declaredIds.length === 0 ||
+    declaredIds.length !== (component?.sourceBlockIds || []).length ||
+    sourceBlocks.length === 0
+  )
+    return null;
+  const indexes = declaredIds.map((blockId) =>
+    sourceBlocks.findIndex((block) => block.blockId === blockId)
+  );
+  if (indexes.some((index) => index < 0)) return null;
+  const firstIndex = Math.min(...indexes);
+  const lastIndex = Math.max(...indexes);
+  const boundedBlocks = sourceBlocks.slice(firstIndex, lastIndex + 1);
+  if (
+    boundedBlocks.length !== declaredIds.length ||
+    boundedBlocks.some((block) => !declaredIds.includes(block.blockId))
+  )
+    return null;
+  const sourceText = String(unit?.source?.combinedText || "");
+  if (!sourceText || sourceText.includes(label)) return null;
+  const tokenSpans = (value) =>
+    [...String(value || "").matchAll(/[\p{L}\p{N}]+/gu)].map((match) => ({
+      value: match[0],
+      normalized: match[0].normalize("NFKC").toLocaleLowerCase("de-AT"),
+      start: match.index,
+      end: match.index + match[0].length,
+    }));
+  const labelTokens = tokenSpans(label);
+  if (labelTokens.length < 5 || labelTokens.length > 80) return null;
+  const sourceTokens = tokenSpans(sourceText);
+  const edgeSimilarity = (left, right) => {
+    let prefix = 0;
+    while (
+      prefix < left.length &&
+      prefix < right.length &&
+      left[prefix] === right[prefix]
+    )
+      prefix += 1;
+    let suffix = 0;
+    while (
+      suffix < left.length - prefix &&
+      suffix < right.length - prefix &&
+      left[left.length - 1 - suffix] === right[right.length - 1 - suffix]
+    )
+      suffix += 1;
+    return {
+      prefix,
+      sharedRatio: (prefix + suffix) / Math.max(left.length, right.length),
+    };
+  };
+  const candidates = [];
+  for (
+    let start = 0;
+    start + labelTokens.length <= sourceTokens.length;
+    start += 1
+  ) {
+    const window = sourceTokens.slice(start, start + labelTokens.length);
+    const mismatches = window.flatMap((token, index) =>
+      token.normalized === labelTokens[index].normalized
+        ? []
+        : [{ source: token.normalized, label: labelTokens[index].normalized }]
+    );
+    if (mismatches.length !== 1) continue;
+    const mismatch = mismatches[0];
+    if (
+      /\p{N}/u.test(mismatch.source) ||
+      /\p{N}/u.test(mismatch.label) ||
+      SOURCE_ALIGNMENT_PROTECTED_WORD.test(mismatch.source) ||
+      SOURCE_ALIGNMENT_PROTECTED_WORD.test(mismatch.label)
+    )
+      continue;
+    const similarity = edgeSimilarity(mismatch.source, mismatch.label);
+    if (similarity.prefix < 3 || similarity.sharedRatio < 0.6) continue;
+    const exactLabel = sourceText.slice(window[0].start, window.at(-1).end);
+    const sourceBlockIds = sourceBlockIdsForExactSpan(unit, exactLabel);
+    if (
+      sourceBlockIds.length === 0 ||
+      sourceBlockIds.some((blockId) => !declaredIds.includes(blockId))
+    )
+      continue;
+    candidates.push({ exactLabel, sourceBlockIds });
+  }
+  if (candidates.length !== 1) return null;
+  return { ...component, ...candidates[0] };
 }
 
 function narrowRepeatedComponentToDisplayLabelSource(
@@ -5495,6 +5593,17 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       toSourceBlockIds: displayBoundComponent.sourceBlockIds,
                     });
                     return [displayBoundComponent];
+                  }
+                  const exactSingleTokenComponent =
+                    exactSingleTokenComponentRepair(unit, component);
+                  if (exactSingleTokenComponent) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "RESTORE_EXACT_SINGLE_TOKEN_SOURCE_SPAN",
+                    });
+                    return [exactSingleTokenComponent];
                   }
                   const completeSourceBlockIds =
                     completeComponentSourceBlockIds(unit, component);

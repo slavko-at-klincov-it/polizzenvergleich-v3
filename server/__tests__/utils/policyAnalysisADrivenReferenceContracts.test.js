@@ -9453,6 +9453,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ["LF_A_BOUNDED_CLASSIFICATION_RUN_V74", A_DYNAMIC_MANIFEST_CONTRACT_ID],
     ["LF_A_BOUNDED_CLASSIFICATION_RUN_V76", A_DYNAMIC_MANIFEST_CONTRACT_ID],
     ["LF_A_BOUNDED_CLASSIFICATION_RUN_V77", A_DYNAMIC_MANIFEST_CONTRACT_ID],
+    ["LF_A_BOUNDED_CLASSIFICATION_RUN_V79", A_DYNAMIC_MANIFEST_CONTRACT_ID],
   ])(
     "upgrades predecessor %s with validator %s by revalidating its responses",
     async (predecessorRunContractId, validatorContractId) => {
@@ -9526,7 +9527,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V79");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V80");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -10597,6 +10598,135 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(normalized.componentRepairs).not.toContainEqual(
       expect.objectContaining({
         action: "RESTORE_EXACT_ELIDED_COMPONENT_SPAN",
+      })
+    );
+  });
+
+  test("restores one morphologically close word from a unique declared source span", () => {
+    const blocks = [
+      {
+        blockId: "lead",
+        structuralKind: "BODY_LINE",
+        exactText: "Für Umweltsachschäden gilt die Feststellung während der",
+      },
+      {
+        blockId: "temporal",
+        structuralKind: "BODY_LINE",
+        exactText:
+          "Wirksamkeit  des  Versicherungsschutzes  oder  spätestens  zwei  Jahre  danach  festgestellt  wird.",
+      },
+    ];
+    const unit = {
+      unitId: "single-token-source-alignment",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+      },
+      logicalSourceSegments: [],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "DURATION",
+      semanticClasses: ["DURATION"],
+      requirements: [
+        {
+          displayLabel: unit.source.combinedText,
+          components: [
+            {
+              type: "TEMPORAL_VALIDITY",
+              label:
+                "Wirklichkeit des Versicherungsschutzes oder spätestens zwei Jahre danach festgestellt wird",
+              sourceBlockIds: ["lead", "temporal"],
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].requirements[0].components[0]).toEqual({
+      type: "TEMPORAL_VALIDITY",
+      label:
+        "Wirksamkeit  des  Versicherungsschutzes  oder  spätestens  zwei  Jahre  danach  festgestellt  wird",
+      sourceBlockIds: ["temporal"],
+    });
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      componentIndex: 0,
+      action: "RESTORE_EXACT_SINGLE_TOKEN_SOURCE_SPAN",
+    });
+  });
+
+  test.each([
+    {
+      name: "polarity word",
+      source: "Versicherungsschutz besteht nicht für diese Schäden heute",
+      label: "Versicherungsschutz besteht auch für diese Schäden heute",
+    },
+    {
+      name: "number word",
+      source: "Der Schutz endet spätestens zwei Jahre nach dem Ereignis",
+      label: "Der Schutz endet spätestens drei Jahre nach dem Ereignis",
+    },
+    {
+      name: "more than one word",
+      source:
+        "Die Wirksamkeit des Versicherungsschutzes endet heute verbindlich",
+      label:
+        "Die Wirklichkeit des Versicherungsschutzes beginnt heute verbindlich",
+    },
+    {
+      name: "ambiguous source span",
+      source:
+        "Die Wirksamkeit des Versicherungsschutzes endet heute. Die Wirksamkeit des Versicherungsschutzes endet heute.",
+      label: "Die Wirklichkeit des Versicherungsschutzes endet heute",
+    },
+  ])("keeps unsafe $name alignment fail-closed", ({ source, label }) => {
+    const unit = {
+      unitId: "unsafe-single-token-alignment",
+      unitKind: "CLAUSE",
+      source: {
+        combinedText: source,
+        blockIds: ["source"],
+        blocks: [
+          {
+            blockId: "source",
+            structuralKind: "BODY_LINE",
+            exactText: source,
+          },
+        ],
+      },
+      logicalSourceSegments: [],
+    };
+    const component = {
+      type: "TEMPORAL_VALIDITY",
+      label,
+      sourceBlockIds: ["source"],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "DURATION",
+      semanticClasses: ["DURATION"],
+      requirements: [
+        {
+          displayLabel: source,
+          components: [component],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+
+    expect(normalized.responses[0].requirements[0].components[0]).toEqual(
+      component
+    );
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "RESTORE_EXACT_SINGLE_TOKEN_SOURCE_SPAN",
       })
     );
   });
