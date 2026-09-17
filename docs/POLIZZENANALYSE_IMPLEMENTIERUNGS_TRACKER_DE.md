@@ -10636,6 +10636,40 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.77 Batch 38: nummerierte Struktur beendet fremden Governor
+
+Der V3.9.7-Resume `resume-d4a5422a492af4769c12cdd4` revalidierte Batches 1
+bis 36 und berechnete Batch 37 vollständig. Batch 38 stoppte nach zehn
+gespeicherten Versuchen korrekt fail-closed: 2/6 Units waren gültig, vier
+blieben offen. Der Resume dauerte 493.565 ms; es gab keine Timeouts.
+
+Die vier offenen Units liegen nach den nummerierten Abschnittsüberschriften
+`1. Wann gilt die Versicherung?` oder `2. Wo gilt die Versicherung?`. Diese
+Units wurden bereits als `STRUCTURE` ohne Requirements normalisiert. Weil sie
+im Quellplan technisch als `LIST` vorlagen, beendeten sie den zuvor aktiven
+operativen Heading-Governor jedoch nicht. Die negative Überschrift aus einem
+älteren Abschnitt wurde dadurch als fremde Evidenz an positive Zeit-,
+Rückwirkungs- und Ortsklauseln angehängt.
+
+Der allgemeine V79/V7-Fix adaptiert `CAP-A-002`. Die bereits vorhandene enge
+Strukturerkennung ist nun zugleich eine Evidenzgrenze: vollständig aus
+`HEADING_CANDIDATE`-Blöcken bestehende nummerierte Units ohne operatives
+Prädikat sowie nummerierte direkte Fragen beenden den aktiven
+Überschriften-Governor. Nummerierte operative Aussagesätze bleiben
+unverändert. Es gibt keine Dokument-, Seiten-, ID- oder Versichererregel.
+
+Der vollständige fokussierte Vertrag bestand auf dem Mac Studio mit 413/413
+Tests. Die echten Attempt-Bäume blieben bei der Offline-Revalidierung
+unverändert. Batch 37 besitzt unter dem neuen Evidenzkontext 5/6 weiterhin
+gültige Units; Batch 38 besitzt 2/6. Damit werden beim Resume nur die unter
+dem neuen Vertrag fehlenden Units neu berechnet.
+
+Status: `V3.9.8-RELEASEKANDIDAT; 413/413 FOKUSSIERTE TESTS PASS; VOLLGATE,
+DEPLOYMENT UND RESUME AUSSTEHEND`.
+
+Change-Set:
+`LF-V398-NUMBERED-HEADING-GOVERNOR-BOUNDARY-20260917-001`.
+
 ### 133.76 Batch 36: lokale Deckungsdefinition ersetzt fremden Governor
 
 Der echte V3.9.6-Resume übernahm Batches 1 bis 35 unter V77. Batch 36 stoppte

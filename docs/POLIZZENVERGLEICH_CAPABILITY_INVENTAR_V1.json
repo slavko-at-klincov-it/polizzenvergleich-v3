@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V397-LOCAL-COVERAGE-RESET-ATOMIZATION-20260917-001",
+  "changeSetId": "LF-V398-NUMBERED-HEADING-GOVERNOR-BOUNDARY-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -750,7 +750,8 @@
         "The immediate predecessor run contract must be explicitly allowlisted and is still revalidated against the current source plan and validator before any response is reused.",
         "An explicitly elided component label is restored only to one exact, globally unique original span inside the smallest contiguous window bounded by all model-declared owned blocks; ambiguity and external evidence remain fail-closed.",
         "A repeated literal component is narrowed to the unique exact requirement display-label occurrence only when every selected display block was already model-declared and at least two declared blocks contain the same literal.",
-        "A complete owned insured-things clause with a conditional extension and trailing exclusion is atomized into separate source-bound requirements; an older inherited coverage governor is suppressed only when the owned text carries an explicit positive coverage reset."
+        "A complete owned insured-things clause with a conditional extension and trailing exclusion is atomized into separate source-bound requirements; an older inherited coverage governor is suppressed only when the owned text carries an explicit positive coverage reset.",
+        "A numbered pure structural heading or direct numbered question terminates an older operative heading governor; numbered operative assertions remain under the normal source-bound evidence rules."
       ],
       "evidence": {
         "tests": [
@@ -774,7 +775,8 @@
           "Tracker 133.73",
           "Tracker 133.74",
           "Tracker 133.75",
-          "Tracker 133.76"
+          "Tracker 133.76",
+          "Tracker 133.77"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -800,10 +802,11 @@
           "INT-20260917-062",
           "INT-20260917-063",
           "INT-20260917-064",
-          "INT-20260917-065"
+          "INT-20260917-065",
+          "INT-20260917-066"
         ]
       },
-      "lastVerifiedCommit": "ebb98ed5b7ba4f1c291d54a8be72290edd75ffca",
+      "lastVerifiedCommit": "66ab098e3",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
