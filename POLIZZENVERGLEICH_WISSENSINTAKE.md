@@ -3557,17 +3557,17 @@ Vollständigkeitsbehauptung erzeugen.
   unvollständige Blockfolgen, unbekannte Quellen, gemischte Hüllen,
   verschachtelte Komponenten oder einen vom Modell frei gewählten Governor.
   Ein bereits vom Server unter dem gültigen Evidenzkontextvertrag abgeleiteter
-  Governor bleibt zulässig und wird erst durch die vorhandene source-bound
-  Rollenmaterialisierung ergänzt; er wird nicht aus der alten Modellhülle
-  übernommen.
+  Governor bleibt zulässig. Eine alte Komponente darf dessen exakte Block-ID
+  nur dann zitieren, wenn ihr Label dort wortgetreu belegt ist; ansonsten kann
+  die vorhandene source-bound Rollenmaterialisierung den Governor ergänzen.
 - Hard-Gates: `unitKind=LIST`; exakt ein logisches Segment vom Typ
   `LIST_ITEM_WITH_CONTINUATIONS`; dessen geordnete `blockIds` sind exakt die
   geordnete Unit-Blockfolge; ein Governing Context fehlt oder trägt exakt den
   aktuellen serverseitigen Evidenzkontextvertrag; alle Requirements
   entsprechen vollständig dem bereits validierten alten Komponentenvertrag
-  und sind wortgetreu an eigene Blöcke gebunden. Governor-Evidenz darf nur
-  durch die bestehende nachgelagerte Normalisierung materialisiert werden.
-  Jede Abweichung bleibt fail-closed.
+  und sind wortgetreu an eigene Blöcke oder die exakt servergebundenen
+  Governor-Blöcke gebunden. Fremde IDs und nicht wortgetreu belegte
+  Governor-Komponenten bleiben fail-closed.
 - Beweisgrenze: Der bekannte LF-1+9-Fehlerfall ist Regressionsevidenz, kein
   unabhängiger Generalisierungs-Holdout.
 - Geplanter Change-Set:
