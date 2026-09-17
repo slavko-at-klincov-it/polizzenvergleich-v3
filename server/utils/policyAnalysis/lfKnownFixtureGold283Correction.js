@@ -5,8 +5,7 @@ const BASE_GOLD_STATUS =
   "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS";
 const CORRECTION_DECISIONS_CONTRACT_ID =
   "LF_1PLUS9_GOLD_283_CORRECTION_DECISIONS_V1";
-const CORRECTION_SET_CONTRACT_ID =
-  "LF_1PLUS9_GOLD_283_CORRECTION_SET_V1";
+const CORRECTION_SET_CONTRACT_ID = "LF_1PLUS9_GOLD_283_CORRECTION_SET_V1";
 const CORRECTION_SET_STATUS =
   "FROZEN_SOURCE_BOUND_CORRECTION_SET_FOR_KNOWN_LF_1PLUS9";
 const OUTPUT_GOLD_CONTRACT_ID = "LF_1PLUS9_GOLD_283_V2";
@@ -547,11 +546,7 @@ function buildLfKnownFixtureGold283V2({
       correctionScopeExpandedBeyondOriginal76: true,
     },
     summary,
-    gold30Comparison: buildGold30Comparison(
-      rows,
-      gold30,
-      gold30FileSha256
-    ),
+    gold30Comparison: buildGold30Comparison(rows, gold30, gold30FileSha256),
     rows,
     limitation:
       "This V2 Gold is a source-bound regression oracle only for the exact SHA-bound LF 1+9 fixture. It preserves Gold-283-V1 unchanged and applies the separately hashed three-row correction set. It is not a production template, deployment approval, holdout proof, arbitrary-policy generalization proof or 99-percent claim.",

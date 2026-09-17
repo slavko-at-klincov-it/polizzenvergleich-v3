@@ -67,9 +67,7 @@ function baseRow(requirementId, outcome, sourceRefs = []) {
       rationale: `Basis ${requirementId}`,
       sources,
       reviewedSources: sources,
-      absenceSearch: customerFound
-        ? null
-        : { certifiedForKnownFixture: true },
+      absenceSearch: customerFound ? null : { certifiedForKnownFixture: true },
     },
     evidenceHistory: {},
   };
@@ -79,18 +77,12 @@ function fixture() {
   const rows = [
     baseRow("VS-15", "FULL_COUNTERPART", ["Ebuilding", "Etech"]),
     baseRow("AV-06", "FULL_COUNTERPART", ["RAK16", "RAK34"]),
-    baseRow("AV-22", "PARTIAL_COUNTERPART", [
-      "RAK17",
-      "Enew",
-      "Ecostpay",
-    ]),
+    baseRow("AV-22", "PARTIAL_COUNTERPART", ["RAK17", "Enew", "Ecostpay"]),
     ...Array.from({ length: 149 }, (_, index) =>
       baseRow(`FULL-${index}`, "FULL_COUNTERPART", [`FULL-${index}`])
     ),
     ...Array.from({ length: 113 }, (_, index) =>
-      baseRow(`PARTIAL-${index}`, "PARTIAL_COUNTERPART", [
-        `PARTIAL-${index}`,
-      ])
+      baseRow(`PARTIAL-${index}`, "PARTIAL_COUNTERPART", [`PARTIAL-${index}`])
     ),
     ...Array.from({ length: 8 }, (_, index) =>
       baseRow(`CONTRADICTED-${index}`, "CONTRADICTED", [

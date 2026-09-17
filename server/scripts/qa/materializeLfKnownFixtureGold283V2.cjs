@@ -119,8 +119,7 @@ function run() {
     baseRegression: inputs.baseRegression.value,
     baseRegressionFileSha256: inputs.baseRegression.fileSha256,
     correctionDecisions: inputs.correctionDecisions.value,
-    correctionDecisionsFileSha256:
-      inputs.correctionDecisions.fileSha256,
+    correctionDecisionsFileSha256: inputs.correctionDecisions.fileSha256,
   });
   const published = publishImmutableDirectory(args.outputDir, values);
   console.log(

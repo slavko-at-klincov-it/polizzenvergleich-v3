@@ -829,14 +829,16 @@ function materializeSharedSignalComponents(
         ];
         const localComponent =
           localCandidates.length === 1 ? localCandidates[0] : null;
-        const evidenceBackedSignal = [
-          "EXPLICIT_DEFINITION",
-          "EXPLICIT_COPULAR_DEFINITION",
-          "EXPLICIT_PERIL_OR_CAUSE",
-          "EXPLICIT_QUANTIFIED_VALUE",
-          "EXPLICIT_CONTRACTUAL_BENEFIT",
-          "EXPLICIT_INTENTIONAL_DAMAGE",
-        ].includes(signal.signalId) || signal.evidenceOccurrenceBound === true;
+        const evidenceBackedSignal =
+          [
+            "EXPLICIT_DEFINITION",
+            "EXPLICIT_COPULAR_DEFINITION",
+            "EXPLICIT_PERIL_OR_CAUSE",
+            "EXPLICIT_QUANTIFIED_VALUE",
+            "EXPLICIT_CONTRACTUAL_BENEFIT",
+            "EXPLICIT_INTENTIONAL_DAMAGE",
+          ].includes(signal.signalId) ||
+          signal.evidenceOccurrenceBound === true;
         const exactEvidenceBinding =
           evidenceBackedSignal &&
           [

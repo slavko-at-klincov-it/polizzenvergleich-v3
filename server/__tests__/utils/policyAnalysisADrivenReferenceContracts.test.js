@@ -1167,9 +1167,9 @@ describe("requirement-local semantic evidence completeness", () => {
         ["Versicherungssummen nicht addiert", [sourceBlockIds[0]]],
         ["nur einmal pro Schadenfall", [sourceBlockIds.at(-1)]],
       ]);
-      expect(requirementRoleEvidenceDiagnostics(unit, result.requirements)).toEqual(
-        []
-      );
+      expect(
+        requirementRoleEvidenceDiagnostics(unit, result.requirements)
+      ).toEqual([]);
     }
   );
 
@@ -1319,7 +1319,11 @@ describe("requirement-local semantic evidence completeness", () => {
           ],
         };
       });
-    const manifest = buildADrivenSemanticManifest({ plan, responses });
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+    });
     const terminal = manifest.unitTerminals.find(
       ({ unitId }) => unitId === target.unitId
     );
@@ -18265,8 +18269,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 Gold regression boundary", () => {
             },
             supersedes: {
               contractId: "LF_1PLUS9_GOLD_283_V1",
-              status:
-                "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS",
+              status: "FROZEN_SOURCE_BOUND_GOLD_FOR_KNOWN_LF_1PLUS9_283_ROWS",
               predecessorPreservedUnchanged: true,
             },
           }
