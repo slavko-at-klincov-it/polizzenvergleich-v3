@@ -151,6 +151,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-045` | Administrative Pflichten und Anwendbarkeitsbedingungen source-bound normalisieren | `BEOBACHTUNG` | `IN_PRÜFUNG` | allgemeinen Bedingungsvertrag testen und ab erstem unvollständigem A-Batch erneut materialisieren                         |
 | `INT-20260917-046` | Parenthetische Objektausnahmen als lokale Ausschlusswirkung materialisieren | `BEOBACHTUNG` | `IN_PRÜFUNG` | source-bound Negativgrenzen testen und den kalten Lauf ab erstem unvollständigem A-Batch fortsetzen                       |
 | `INT-20260917-047` | Internen Objekt-Listenkopf und fortgesetzten Satzanfang source-bound erhalten | `BEOBACHTUNG` | `IN_PRÜFUNG` | V66 im neuen kalten V3.8.4-Produktlauf prüfen; Holdout-Grenze getrennt offen halten                                      |
+| `INT-20260917-048` | Eingebettete Listengovernor-Gruppen positionsunabhängig begrenzen | `BEOBACHTUNG` | `IN_PRÜFUNG` | V67 gegen den gespeicherten Batch 5 sowie vorangestellte und gleichrangige Negativfälle prüfen                           |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3247,3 +3248,46 @@ Vollständigkeitsbehauptung erzeugen.
   unabhängiger Generalisierungs-Holdout.
 - Geplanter Change-Set:
   `LF-V384-INTERNAL-OBJECT-LIST-PROVENANCE-20260917-001`.
+
+## INT-20260917-048 — Eingebettete Listengovernor-Gruppen positionsunabhängig begrenzen
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Ein `LIST_GOVERNOR` kann innerhalb einer bereits begonnenen
+  Listen-Unit eine neue untergeordnete Gruppe eröffnen. Seine fachlichen
+  Komponenten gelten dann ausschließlich für die unmittelbar nachfolgenden
+  typografisch untergeordneten `LIST_ITEM`-Segmente bis zur nächsten
+  Governor- oder Strukturgrenze. Ein davor liegender gleichrangiger
+  Listenpunkt bleibt eigenständig.
+- Ist-Wahrheit: `JA` für den kalten V3.8.4-Lauf. Batch 5 enthielt zunächst
+  einen eigenständigen Item-Punkt, danach einen internen Scope-Governor und
+  mehrere untergeordnete Item-Segmente. Der bestehende Validator behandelte
+  nur einen Governor am Unit-Anfang als gemeinsam. Dadurch wurde der
+  Governorblock zugleich als eigenes Segment und als Quelle mehrerer
+  Requirements gezählt und der Batch stoppte nach begrenzten Retries korrekt
+  fail-closed.
+- Quelle: private, resumierbare Batch-5-Artefakte der V3.8.4-Produktsitzung
+  `79211e03-d5ce-44b6-9042-199e83f589a0` auf dem Mac Studio. Kundentext wird
+  in der Knowledge Base nicht vervielfältigt.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Verschachtelte oder
+  typografisch gruppierte Objektlisten behalten ihren Scope, ohne vorherige
+  Punkte fälschlich mitzuerfassen, den Governor als Kundenzeile zu
+  duplizieren oder mehrere Items zu verschmelzen.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-A-002` und
+  `CAP-A-003`; keine Dokument-, Seiten-, ID-, Versicherer- oder
+  Wortlautsonderregel; keine Lockerung der Segmentvollständigkeit; keine
+  Wirkung auf gleichrangige `LIST_GOVERNOR`-Zeilen ohne untergeordnete Items.
+- Hard-Gates: Governor muss von mindestens einem typografisch
+  untergeordneten `LIST_ITEM` gefolgt werden; Wirkung endet an der nächsten
+  Governor-/Strukturgrenze; vorangehende Items bleiben frei von der
+  Governor-Komponente; jedes Item bleibt genau eine Requirement; gespeicherter
+  Realbatch muss ohne neuen Modellaufruf bestehen; bestehende PASS-Batches
+  müssen unverändert wiederverwendbar bleiben.
+- Entscheidung: Vorhandene Governor-Gruppierung,
+  Segmentgrenzen-Normalisierung und Manifestvalidierung gemeinsam auf
+  positionsunabhängige Gruppen erweitern; keine neue Architektur.
+- Beweisgrenze: Der bekannte LF-1+9-Lauf ist Regression und kein unabhängiger
+  Generalisierungs-Holdout.
+- Geplanter Change-Set:
+  `LF-V385-EMBEDDED-LIST-GOVERNOR-GROUPS-20260917-001`.
