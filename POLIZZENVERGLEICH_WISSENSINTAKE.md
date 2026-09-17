@@ -149,6 +149,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260916-038` | Identitätskern mit getrennt belegten Modifier-Abweichungen normalisieren | `BEOBACHTUNG`           | `PROMOTED`    | vollständigen Primärlauf und anschließende Gold-/Endergebnisprüfung abschließen                                          |
 | `INT-20260917-044` | Mehrere Rollen-Evidenzvorkommen occurrence-gebunden materialisieren     | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | V11-Vertrag am kalten Produktlauf und an Segmentierungsvarianten validieren                                               |
 | `INT-20260917-045` | Administrative Pflichten und Anwendbarkeitsbedingungen source-bound normalisieren | `BEOBACHTUNG` | `IN_PRÜFUNG` | allgemeinen Bedingungsvertrag testen und ab erstem unvollständigem A-Batch erneut materialisieren                         |
+| `INT-20260917-046` | Parenthetische Objektausnahmen als lokale Ausschlusswirkung materialisieren | `BEOBACHTUNG` | `IN_PRÜFUNG` | source-bound Negativgrenzen testen und den kalten Lauf ab erstem unvollständigem A-Batch fortsetzen                       |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3152,3 +3153,43 @@ Vollständigkeitsbehauptung erzeugen.
 - Kanonischer Ausgang: Change-Set
   `LF-V382-ADMIN-CONDITION-NORMALIZATION-20260917-001`; Produktfix und
   Releaseprüfung ausstehend.
+
+## INT-20260917-046 — Parenthetische Objektausnahmen als lokale Ausschlusswirkung materialisieren
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Enthält ein eigenständiger Objekt-Listenpunkt eine wörtliche,
+  parenthetische Ausnahme der Form `ausgenommen …` oder `exklusive …`, muss
+  diese neben der gültigen `OBJECT`-Komponente als lokale source-bound
+  `COVERAGE_EFFECT` mit `EXCLUDED` erhalten bleiben. Die Ausnahme darf nicht
+  als eigener B-only-Punkt erfunden und nicht aus Struktur abgeleitet werden.
+- Ist-Wahrheit: `JA` für den kalten V3.8.2-Lauf. Der fünfte A-Batch enthielt
+  drei korrekt getrennte Requirements und drei korrekt segmentgebundene
+  Objektkomponenten. Nur die im dritten Listenpunkt ausdrücklich vorhandene
+  parenthetische Ausnahme blieb ohne eigene Ausschlusswirkung und führte
+  nach begrenzten Retries zum korrekten fail-closed Stopp.
+- Quelle: private, resumierbare Batch-5-Artefakte des V3.8.2-Kaltlaufs auf
+  dem Mac Studio; nur die kleinste erforderliche Originalpassage wurde
+  temporär geprüft.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Eingeschlossene
+  Objektfamilie und ausdrücklich ausgenommenes Teilobjekt bleiben in einer
+  dynamischen A-Zeile fachlich unterscheidbar und können in B quellengebunden
+  als `FULL`, `PARTIAL`, `CONTRADICTED` oder fehlend geprüft werden.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-A-002` und
+  `CAP-A-003`; keine dokument-, seiten-, ID- oder versichererspezifische
+  Regel; keine Behandlung bloßer Überschriften; keine Umkehr einer bereits
+  negativen Deckungsklausel.
+- Hard-Gates: positive parenthetische Varianten; negative Kontrolle für
+  bereits negative Deckung; keine doppelte Ausschlusskomponente; exakte
+  Text-/Blockbindung; unveränderte Segmentgrenzen; Wiederverwendung aller
+  vollständig gültigen Batches.
+- Entscheidung: V65 ist implementiert. Der fokussierte Mac-Studio-
+  Vertragscheck bestand mit 364/364 Tests; der echte gespeicherte Fehlerfall
+  wurde ohne neuen Modellaufruf mit drei unveränderten Requirements, exakt
+  einer ergänzten `EXCLUDED`-Wirkung und null Diagnosen als `PASS`
+  revalidiert. Vollständiges Release-Gate und neuer kalter Lauf stehen aus.
+- Beweisgrenze: Der bekannte LF-1+9-Lauf ist Regression und kein unabhängiger
+  Generalisierungs-Holdout.
+- Kanonischer Ausgang: Change-Set
+  `LF-V383-PARENTHETICAL-OBJECT-EXCLUSION-20260917-001`.
