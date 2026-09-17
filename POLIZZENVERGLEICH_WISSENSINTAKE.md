@@ -3974,3 +3974,48 @@ Vollständigkeitsbehauptung erzeugen.
   echte Batch-35-Revalidierung 6/6 ohne Modellaufruf bei unverändertem
   Attempt-Tree-Hash.
 - Change-Set: `LF-V396-BATCH35-EVIDENCE-BINDING-20260917-001`.
+
+## INT-20260917-065 — Eigene Deckungsdefinition ersetzt fremden Vorgänger-Governor und wird vollständig atomisiert
+
+- Erfasst: 2026-09-17
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Beginnt eine eigene, vollständig source-bound Unit mit einer
+  positiven Definition versicherter Sachen, darf eine zuvor verknüpfte
+  negative Governor-Überschrift diese lokale Deckungssemantik nicht
+  überschreiben. Enthält die Unit anschließend eine bedingte zusätzliche
+  Objektdeckung und einen ausdrücklichen Ausschluss, müssen positive
+  Grundobjekte, bedingte Zusatzobjekte und ausgeschlossene Objekte getrennt
+  mit ihren eigenen Wirkungen materialisiert werden.
+- Ist-Wahrheit: `JA` als Ursache des fail-closed Batch-36-Abbruchs. Fünf von
+  sechs Units sind gültig. Die offene Unit enthält die vollständige Folge
+  „Als versicherte Sachen gelten ...“, „sofern ... auch ...“ und
+  „Ausgenommen bleiben jedoch ...“. Die fünf gespeicherten Versuche lieferten
+  entweder eine zusammengezogene Requirement mit falscher negativer Wirkung,
+  nur den Schlussausschluss oder eine unzulässige eigenständige Requirement
+  aus dem fremden Governor. Kein Versuch erfasste alle drei Aussagen korrekt.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002` und `CAP-A-003`;
+  vollständige eigene Satzfolge; wörtliche lokale positive Deckungsdefinition;
+  eindeutige Bedingungs- und Ausschlussgrenzen; jede Objekt-, Wirkungs- und
+  Bedingungskomponente muss aus der Original-Unit stammen. Der fremde
+  Governor wird nur verdrängt, wenn die lokale positive Deckungsdefinition
+  vollständig und vor den lokalen Detailaussagen belegt ist. Unvollständige,
+  mehrdeutige oder anders strukturierte Klauseln bleiben fail-closed. Keine
+  Dokument-ID, Seite, Gesellschaft oder bekannte Objektbezeichnung ist eine
+  Produktionsregel.
+- Beweisgrenze: bekannte LF-1+9-Regression; positive, negative und
+  Mutationsvarianten erforderlich; kein Holdout- oder 99-Prozent-Nachweis.
+- Laufbeleg: Batch 36 (`batchIndex 35`,
+  `AUB-df748ce90a20b8fc5bb3eb59`) besitzt 5/6 gültige Units und fünf
+  gespeicherte Versuche. Der Attempt-Baum blieb bei der Offline-Diagnose unter
+  SHA-256
+  `af641edaf2faec4dcd7263e06c1cdb1bbf4fa445ab892e977642618e6a5ec753`
+  unverändert.
+- Ergebnis: Der V78/V12-Vertrag atomisiert ausschließlich die vollständige
+  eindeutige Satzfolge und bindet alle drei Requirements an eigene
+  Originalspannen. Ein negativer Governor wird nur durch eine wörtliche
+  lokale positive Deckungsdefinition verdrängt; `nicht versichert sind` ist
+  durch eine eigene Negativgrenze ausgeschlossen. 412/412 fokussierte Tests
+  bestanden auf dem Mac Studio. Der echte Batch 36 revalidierte ohne neuen
+  Modellaufruf mit 6/6 Units; der Attempt-Tree-Hash blieb unverändert.
+- Change-Set: `LF-V397-LOCAL-COVERAGE-RESET-ATOMIZATION-20260917-001`.
