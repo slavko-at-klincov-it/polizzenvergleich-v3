@@ -3888,7 +3888,12 @@ Vollständigkeitsbehauptung erzeugen.
   revalidierte ohne Modellaufruf mit 6/6 Units und null Diagnosen. Der
   Attempt-Baum blieb unter SHA-256
   `64bc381721de32f585b80202556ece14c1c33984093ca080be43835bbe90641f`
-  unverändert.
+  unverändert. Der exakte V3.9.6-Release-Commit
+  `acbea5179a1392bdf993a6f540623392d0f17071` bestand das vollständige
+  Mac-Studio-Gate mit 212/212 Testsuiten und 3.104/3.104 Tests, wurde über
+  den offiziellen Updater installiert und endete mit Doctor PASS. Im echten
+  Resume-Root `resume-e1ac1b841c9dd26d6c2f42f0` wurden Batches 1 bis 35
+  unter V77 als PASS übernommen; neue Modellarbeit begann bei Batch 36.
 - Change-Set: `LF-V396-BATCH35-EVIDENCE-BINDING-20260917-001`.
 
 ## INT-20260917-062 — Kurze Schadensüberschrift nach Layout-Bullet source-bound materialisieren
