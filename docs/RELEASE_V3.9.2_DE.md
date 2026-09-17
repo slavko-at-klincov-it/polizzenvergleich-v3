@@ -33,6 +33,18 @@ Attempt-Artefaktbaum blieb unter SHA-256
 `d9b25a76fbc0d1592ecb9be8552cf09152d6f7f49cc9547dae27f127c1e7c69b`
 unverändert.
 
+Das vollständige Release-Gate auf Commit
+`fa04b026eb4e9fa1475439fe4ab8cfdce83b644e` bestand 212/212 Suites und
+3.090/3.090 Tests sowie sämtliche Lint-, Prisma-, Inventar-, Prettier-, Build-
+und Installer-Gates. `v3.9.2`, `origin/main` und der installierte Checkout
+zeigen auf diesen Commit. Der offizielle Updater endete mit `Doctor: PASS`;
+API und Datenbankintegrität bestanden. Das Pre-Update-Backup liegt unter
+`server/storage/backups/anythingllm-before-activation-20260917-181424.db`.
+
+Der Produktlauf wurde in `resume-8870c114ac674319d26d6875` fortgesetzt.
+Batches 1 bis 29 wurden ohne neue Attempts materialisiert; der erste neue
+Versuch ist `0029-AUB-e5857bba7fac925aab8015e5`, also Batch 30.
+
 Gold-283-V2 und die binäre Kundenlogik ändern sich nicht. Der bekannte
 LF-1+9-Lauf bleibt Regressionsevidenz und kein unabhängiger
 Generalisierungs- oder 99-Prozent-Nachweis.

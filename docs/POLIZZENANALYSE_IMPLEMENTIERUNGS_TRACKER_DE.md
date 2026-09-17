@@ -10675,12 +10675,35 @@ Neue Modellaufrufe im Realartefakt-Test:   0
 Attempt-Artefaktbaum vorher/nachher:       hashgleich
 ```
 
-V3.9.2-Release-Gate, Installation und Fortsetzung ab Batch 30 stehen noch
-aus. Gold-283-V2 bleibt unverändert; der bekannte LF-1+9-Lauf bleibt
+Das vollständige Release-Gate auf dem exakten Release-Commit
+`fa04b026eb4e9fa1475439fe4ab8cfdce83b644e` bestand 212/212 Suites und
+3.090/3.090 Tests sowie Server-, Frontend- und Collector-Lint, Prisma,
+Capability-Inventar, Prettier, Frontend-Build und macOS-Installer-Suite. Ein
+erster Gate-Versuch außerhalb der Login-Shell fand das installierte FFmpeg
+nicht und stoppte ausschließlich mit drei umgebungsbedingten FFmpeg-Fehlern;
+derselbe unveränderte Commit bestand anschließend in der dokumentierten
+`zsh -lic`-Umgebung vollständig.
+
+Der annotierte Tag `v3.9.2`, `origin/main` und der installierte
+Kunden-Checkout zeigen auf den Release-Commit. Der offizielle Updater endete
+mit `Doctor: PASS`; API und SQLite-`quick_check` bestanden. Das
+Pre-Update-Backup liegt unter:
+
+```text
+server/storage/backups/anythingllm-before-activation-20260917-181424.db
+```
+
+Der anschließende Resume verwendet den neuen Run-Root
+`resume-8870c114ac674319d26d6875`. Batches 1 bis 29 wurden dort als 29
+vorhandene Batchdateien und mit null neuen Attempt-Verzeichnissen
+materialisiert. Der erste neue Modellversuch betraf ausschließlich
+`0029-AUB-e5857bba7fac925aab8015e5`, also Batch 30. Der Worker läuft ab dort
+weiter. Gold-283-V2 bleibt unverändert; der bekannte LF-1+9-Lauf bleibt
 Regression und kein unabhängiger Generalisierungs- oder 99-Prozent-Nachweis.
 
-Status: `BATCH-29-ROOT-CAUSE ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
-MODELLAUFRUF; V3.9.2-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+Status: `V3.9.2 PRODUKTIV AKTIV; DOCTOR/API/DB PASS; BATCHES 1 BIS 29 OHNE
+NEUE MODELLARBEIT ÜBERNOMMEN; ERSTER NEUER ATTEMPT BATCH 30; KALTER
+PRODUKTLAUF AKTIV`.
 
 Change-Set:
 `LF-V392-TRAILING-LIST-SENTENCE-PROVENANCE-20260917-001`.
