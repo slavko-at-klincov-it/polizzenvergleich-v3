@@ -153,6 +153,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-047` | Internen Objekt-Listenkopf und fortgesetzten Satzanfang source-bound erhalten     | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | V66 im neuen kalten V3.8.4-Produktlauf prüfen; Holdout-Grenze getrennt offen halten                                     |
 | `INT-20260917-048` | Eingebettete Listengovernor-Gruppen positionsunabhängig begrenzen                 | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.5 installieren und denselben kalten Lauf ab den gespeicherten Artefakten fortsetzen                                |
 | `INT-20260917-049` | Partiellen A-Resume über Releasegrenzen quellengebunden übernehmen                | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.6 installieren und Session 14 ab der ersten aktuell offenen Unit fortsetzen                                        |
+| `INT-20260917-050` | Komplementäre Duplicate-Unit-Hüllen vor Listen-Normalisierung sicher vereinigen   | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | gespeicherten Batch 6 ohne erneute gültige Units revalidieren und danach begrenzt resumieren                             |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3349,3 +3350,50 @@ Vollständigkeitsbehauptung erzeugen.
   revisionsgebundene Läufe, nicht fachliche Generalisierung.
 - Geplanter Change-Set:
   `LF-V386-CROSS-RELEASE-PARTIAL-A-RESUME-20260917-001`.
+
+## INT-20260917-050 — Komplementäre Duplicate-Unit-Hüllen vor Listen-Normalisierung sicher vereinigen
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Ein Modell kann mehrere fachlich getrennte Requirements derselben
+  erwarteten Source-Unit als mehrere Top-Level-Objekte mit identischer
+  `unitId`, aber komplementären Terminalklassen ausgeben. Sind alle Hüllen
+  strukturell gültig und gehört die ID exakt zum angeforderten Batch, dürfen
+  die Requirements unter einer Hülle vereinigt und die Terminalklassen
+  mengenweise zusammengeführt werden, bevor die bestehenden source-bound
+  Listen- und Governor-Normalisierungen greifen.
+- Ist-Wahrheit: `JA` für den begrenzten Resume von Batch 6 des kalten
+  V3.8.6-Laufs. Fünf von sechs Units waren bereits gültig. Für die letzte
+  Unit gab Qwen im dritten Resume-Versuch den quantifizierten Listengovernor
+  und das untergeordnete versicherte Objekt vollständig und quellengebunden
+  aus, jedoch als zwei Objekte derselben `unitId` mit `LIMIT` beziehungsweise
+  `INSURED_OBJECT`. Der Validator stoppte korrekt mit
+  `DUPLICATE_UNIT_RESPONSE`; kein Batch-PASS wurde geschrieben.
+- Quelle: private, resumierbare Batch-6-Attempt-Artefakte der Session
+  `79211e03-d5ce-44b6-9042-199e83f589a0` auf dem Mac Studio. Kundentext wird
+  in der Knowledge Base nicht vervielfältigt.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Fachlich vollständige,
+  source-bound Teilanforderungen gehen nicht allein wegen einer falschen
+  Top-Level-Hüllengrenze verloren; bereits gültige Units und Batches bleiben
+  wiederverwendbar.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-A-002` und
+  `CAP-A-003`; keine Dokument-, Seiten-, ID-, Versicherer- oder
+  Wortlautsonderregel; kein Merge unterschiedlicher oder unbekannter
+  `unitId`s; keine Erfindung von Komponenten, Quellen oder Requirements; keine
+  Lockerung der anschließenden semantischen Manifestvalidierung.
+- Hard-Gates: ausschließlich identische bekannte `unitId`; jede Hülle besitzt
+  ein Requirements-Array und eine gültige Terminalklasse; geordnete
+  Klassenvereinigung ohne Alias- oder Komponentenraten; Source-Bindung und
+  Governor-Scope werden anschließend unverändert vollständig validiert;
+  unbekannte IDs, fehlende Requirements oder unvereinbare nichtterminale
+  Formen bleiben fail-closed; gespeicherter Real-Attempt muss ohne Modellaufruf
+  PASS ergeben; bestehende kompatible und inkompatible Duplicate-Tests bleiben
+  grün.
+- Entscheidung: Die vorhandene Duplicate-Hüllen-Normalisierung und die
+  vorhandene Shared-Governor-Normalisierung eng erweitern; keine neue
+  Architektur und kein höheres Retry-Budget.
+- Beweisgrenze: Der bekannte LF-1+9-Fehlerfall ist Regressionsevidenz, kein
+  unabhängiger Generalisierungs-Holdout.
+- Geplanter Change-Set:
+  `LF-V387-COMPLEMENTARY-DUPLICATE-UNIT-MERGE-20260917-001`.
