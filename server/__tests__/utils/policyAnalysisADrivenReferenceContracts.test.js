@@ -9228,7 +9228,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V74");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V75");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -11900,6 +11900,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     "erwirbt den Anspruch auf Zahlung",
     "erfolgt die Entschädigung nach dem Zeitwert",
     "Neuwertentschädigung geleistet wird",
+    "leistet der Versicherer ohne Rücksicht auf die Haftungsfrage Ersatz",
     "zum Neuwert zu ersetzten",
   ])("accepts a source-bound indemnity effect: %s", (effectLabel) => {
     const source = artifact(
@@ -14054,6 +14055,325 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       expect(normalized.componentRepairs).not.toContainEqual(
         expect.objectContaining({
           action: "COMPLETE_TRAILING_LIST_SENTENCE_COMPONENT_SOURCE_IDS",
+        })
+      );
+    }
+  });
+
+  test("completes bounded provenance when multiple components share one source-block anchor", () => {
+    const block = (blockId, exactText, ordinal, structuralKind) => ({
+      blockId,
+      exactText,
+      ordinal,
+      structuralKind,
+    });
+    const blocks = [
+      block("lead", "• Kosten für die Wiederherstellung von", 1, "LIST_ITEM"),
+      block("causes", "Boden und Gewässer sowie Schäden an", 2, "BODY_LINE"),
+      block("detail", "natürlichen Ressourcen einschließlich", 3, "BODY_LINE"),
+      block("damage", "Arten und Lebensräumen sind", 4, "BODY_LINE"),
+      block("effect", "mitversichert.", 5, "BODY_LINE"),
+    ];
+    const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+    const unit = {
+      unitId: "shared-block-anchors",
+      unitKind: "LIST",
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+        combinedText,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "shared-anchors-segment",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: blocks.map(({ blockId }) => blockId),
+          combinedText,
+        },
+      ],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: [
+        "OPERATIVE_COVERAGE_STATEMENT",
+        "COST",
+        "PERIL_OR_DAMAGE",
+      ],
+      requirements: [
+        {
+          displayLabel: combinedText,
+          components: [
+            { type: "FACT_ROLE", label: "Kosten", sourceBlockIds: ["lead"] },
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Boden",
+              sourceBlockIds: ["causes"],
+            },
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Gewässer",
+              sourceBlockIds: ["causes"],
+            },
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Arten",
+              sourceBlockIds: ["damage"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "mitversichert",
+              sourceBlockIds: ["effect"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const components = normalized.responses[0].requirements[0].components;
+
+    expect(components[1].sourceBlockIds).toEqual([
+      "causes",
+      "detail",
+      "damage",
+    ]);
+    expect(components[2].sourceBlockIds).toEqual([
+      "causes",
+      "detail",
+      "damage",
+    ]);
+    expect(normalized.componentRepairs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "COMPLETE_BOUNDED_LIST_SEGMENT_COMPONENT_SOURCE_IDS",
+          segmentId: "shared-anchors-segment",
+          componentIndex: 1,
+        }),
+        expect.objectContaining({
+          action: "COMPLETE_BOUNDED_LIST_SEGMENT_COMPONENT_SOURCE_IDS",
+          segmentId: "shared-anchors-segment",
+          componentIndex: 2,
+        }),
+      ])
+    );
+    expect(
+      normalizeUnambiguousComponentTypes(normalized.responses, [unit]).responses
+    ).toEqual(normalized.responses);
+  });
+
+  test("atomizes a complete embedded alphabetic object list under one shared benefit predicate", () => {
+    const block = (blockId, exactText, ordinal, structuralKind) => ({
+      blockId,
+      exactText,
+      ordinal,
+      structuralKind,
+    });
+    const blocks = [
+      block(
+        "intro",
+        "• Schäden durch Regen: Bei Schäden an Gebäudeteilen wie an",
+        1,
+        "LIST_ITEM"
+      ),
+      block("item-a", "a) Wandverputz,", 2, "BODY_LINE"),
+      block("item-b-lead", "b) Tapeten sowie", 3, "BODY_LINE"),
+      block(
+        "item-b-tail",
+        "Bodenbelägen leistet der Versicherer ohne Rücksicht auf die Haftung Ersatz.",
+        4,
+        "BODY_LINE"
+      ),
+    ];
+    const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+    const governor = block(
+      "governor",
+      "Zusätzlich sind mitversichert",
+      0,
+      "LIST_GOVERNOR"
+    );
+    const unit = {
+      unitId: "embedded-alphabetic-objects",
+      unitKind: "LIST",
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+        combinedText,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "embedded-object-intro",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["intro"],
+          combinedText: blocks[0].exactText,
+        },
+        {
+          segmentId: "embedded-object-a",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["item-a"],
+          combinedText: blocks[1].exactText,
+        },
+        {
+          segmentId: "embedded-object-b",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["item-b-lead", "item-b-tail"],
+          combinedText: blocks
+            .slice(2)
+            .map(({ exactText }) => exactText)
+            .join("\n"),
+        },
+      ],
+      governingContext: {
+        unitIds: ["governor-unit"],
+        blockIds: [governor.blockId],
+        blocks: [governor],
+        combinedText: governor.exactText,
+      },
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT", "PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: blocks[0].exactText,
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Schäden durch Regen",
+              sourceBlockIds: ["intro"],
+            },
+            {
+              type: "OBJECT",
+              label: "Gebäudeteilen",
+              sourceBlockIds: ["intro"],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "mitversichert",
+              sourceBlockIds: ["governor"],
+              coverageEffect: "INCLUDED",
+            },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const requirements = normalized.responses[0].requirements;
+    const itemRequirements = requirements.slice(1);
+
+    expect(normalized.responses[0]).toMatchObject({
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: expect.arrayContaining([
+        "OPERATIVE_COVERAGE_STATEMENT",
+        "INSURED_OBJECT",
+        "PERIL_OR_DAMAGE",
+      ]),
+    });
+    expect(requirements).toHaveLength(3);
+    expect(requirements.map(({ displayLabel }) => displayLabel)).toEqual([
+      blocks[0].exactText,
+      blocks[1].exactText,
+      blocks
+        .slice(2)
+        .map(({ exactText }) => exactText)
+        .join("\n"),
+    ]);
+    expect(itemRequirements.flatMap(({ components }) => components)).toEqual(
+      expect.arrayContaining([
+        {
+          type: "OBJECT",
+          label: "Wandverputz",
+          sourceBlockIds: ["item-a"],
+        },
+        {
+          type: "OBJECT",
+          label: "Tapeten sowie\nBodenbelägen",
+          sourceBlockIds: ["item-b-lead", "item-b-tail"],
+        },
+        {
+          type: "COVERAGE_EFFECT",
+          label:
+            "leistet der Versicherer ohne Rücksicht auf die Haftung Ersatz.",
+          sourceBlockIds: ["item-b-tail"],
+          coverageEffect: "INCLUDED",
+        },
+      ])
+    );
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        action: "ATOMIZE_EMBEDDED_ALPHABETIC_OBJECT_LIST",
+        introSegmentId: "embedded-object-intro",
+        itemSegmentIds: ["embedded-object-a", "embedded-object-b"],
+        itemCount: 2,
+      })
+    );
+  });
+
+  test("keeps embedded alphabetic object-list atomization fail-closed outside its exact envelope", () => {
+    const makeUnit = (combinedText, segments = null) => {
+      const lines = combinedText.split("\n");
+      const blocks = lines.map((exactText, index) => ({
+        blockId: `block-${index}`,
+        exactText,
+        structuralKind: index === 0 ? "LIST_ITEM" : "BODY_LINE",
+      }));
+      return {
+        unitId: "embedded-negative",
+        unitKind: "LIST",
+        source: {
+          blockIds: blocks.map(({ blockId }) => blockId),
+          blocks,
+          combinedText,
+        },
+        logicalSourceSegments: segments || [
+          {
+            segmentId: "segment",
+            type: "LIST_ITEM_WITH_CONTINUATIONS",
+            blockIds: blocks.map(({ blockId }) => blockId),
+            combinedText,
+          },
+        ],
+      };
+    };
+    const makeResponse = (unit, sourceBlockIds = ["block-0"]) => ({
+      unitId: unit.unitId,
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE"],
+      requirements: [
+        {
+          displayLabel: unit.source.blocks[0].exactText,
+          components: [
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Regen",
+              sourceBlockIds,
+            },
+          ],
+        },
+      ],
+    });
+    const skippedMarker = makeUnit(
+      "• Schäden durch Regen: bei Teilen wie an\na) Wänden,\nc) Böden leistet der Versicherer Ersatz."
+    );
+    const missingPredicate = makeUnit(
+      "• Schäden durch Regen: bei Teilen wie an\na) Wänden,\nb) Böden."
+    );
+    const foreignEvidence = makeUnit(
+      "• Schäden durch Regen: bei Teilen wie an\na) Wänden,\nb) Böden leistet der Versicherer Ersatz."
+    );
+
+    for (const [unit, response] of [
+      [skippedMarker, makeResponse(skippedMarker)],
+      [missingPredicate, makeResponse(missingPredicate)],
+      [foreignEvidence, makeResponse(foreignEvidence, ["foreign"])],
+    ]) {
+      const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+      expect(normalized.componentRepairs).not.toContainEqual(
+        expect.objectContaining({
+          action: "ATOMIZE_EMBEDDED_ALPHABETIC_OBJECT_LIST",
         })
       );
     }

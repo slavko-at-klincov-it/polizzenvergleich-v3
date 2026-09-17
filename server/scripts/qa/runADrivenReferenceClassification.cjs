@@ -43,7 +43,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V74";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V75";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -2429,6 +2429,270 @@ function normalizePrerequisiteWithFollowingDefinition(requirements, unit) {
   };
 }
 
+function normalizeEmbeddedAlphabeticObjectList(requirements, unit) {
+  if (
+    unit?.unitKind !== "LIST" ||
+    !Array.isArray(unit.logicalSourceSegments) ||
+    unit.logicalSourceSegments.length < 3 ||
+    !Array.isArray(requirements) ||
+    requirements.length < 1
+  )
+    return { requirements, repairs: [] };
+  const [introSegment, ...itemSegments] = unit.logicalSourceSegments;
+  const sourceBlockIds = unit?.source?.blockIds || [];
+  if (
+    unit.logicalSourceSegments.some(
+      (segment) =>
+        segment?.type !== "LIST_ITEM_WITH_CONTINUATIONS" ||
+        !Array.isArray(segment.blockIds) ||
+        segment.blockIds.length === 0
+    ) ||
+    stableStringify(
+      unit.logicalSourceSegments.flatMap(({ blockIds }) => blockIds)
+    ) !== stableStringify(sourceBlockIds)
+  )
+    return { requirements, repairs: [] };
+  const sourceBlocks = unit?.source?.blocks || [];
+  if (
+    sourceBlocks.length !== sourceBlockIds.length ||
+    !["LIST_ITEM", "LIST_GOVERNOR"].includes(sourceBlocks[0]?.structuralKind) ||
+    sourceBlocks
+      .slice(1)
+      .some(({ structuralKind }) => structuralKind !== "BODY_LINE")
+  )
+    return { requirements, repairs: [] };
+  const introText = String(introSegment.combinedText || "");
+  if (
+    !/:/.test(introText) ||
+    !/(?:wie\s+an|insbesondere|zum\s+Beispiel|beispielsweise)\s*$/iu.test(
+      introText
+    )
+  )
+    return { requirements, repairs: [] };
+  const parsedItems = itemSegments.map((segment, index) => {
+    const match = /^\s*(?<letter>[a-z])\)\s+(?<content>[\s\S]+?)\s*$/iu.exec(
+      String(segment.combinedText || "")
+    );
+    return {
+      segment,
+      match,
+      expectedLetter: String.fromCharCode("a".charCodeAt(0) + index),
+    };
+  });
+  if (
+    parsedItems.some(
+      ({ match, expectedLetter }) =>
+        !match?.groups?.content ||
+        match.groups.letter.toLocaleLowerCase("de-AT") !== expectedLetter
+    )
+  )
+    return { requirements, repairs: [] };
+  const lastItem = parsedItems.at(-1);
+  const predicateMatch =
+    /\b(?<predicate>(?:leistet|leisten|ersetzt|ersetzen|erstattet|erstatten)\s+(?:der\s+)?Versicherer\b[\s\S]{0,320}?\b(?:Ersatz|Entschädigung|Erstattung)\b[^.!?]*[.!?])\s*$/iu.exec(
+      lastItem.match.groups.content
+    );
+  if (!predicateMatch?.groups?.predicate) return { requirements, repairs: [] };
+  const predicate = predicateMatch.groups.predicate;
+  const predicateSourceBlockIds = sourceBlockIdsForExactSpan(unit, predicate);
+  if (predicateSourceBlockIds.length === 0)
+    return { requirements, repairs: [] };
+  const items = parsedItems.map(({ segment, match }, index) => {
+    const content =
+      index === parsedItems.length - 1
+        ? match.groups.content.slice(0, predicateMatch.index)
+        : match.groups.content;
+    const label = content
+      .trim()
+      .replace(/[,;]\s*$/u, "")
+      .trim();
+    const itemSourceBlockIds = sourceBlockIdsForExactSpan(unit, label);
+    return { segment, label, sourceBlockIds: itemSourceBlockIds };
+  });
+  if (
+    items.some(
+      ({ label, sourceBlockIds: itemSourceBlockIds }) =>
+        !label || itemSourceBlockIds.length === 0
+    )
+  )
+    return { requirements, repairs: [] };
+  const allowedBlockIds = new Set([
+    ...sourceBlockIds,
+    ...(unit?.governingContext?.blockIds || []),
+  ]);
+  const inputComponents = requirements.flatMap(({ components }) =>
+    Array.isArray(components) ? components : []
+  );
+  if (
+    inputComponents.some(
+      ({ sourceBlockIds: componentSourceBlockIds }) =>
+        !Array.isArray(componentSourceBlockIds) ||
+        componentSourceBlockIds.length === 0 ||
+        componentSourceBlockIds.some((blockId) => !allowedBlockIds.has(blockId))
+    )
+  )
+    return { requirements, repairs: [] };
+  const sourceBlocksById = new Map(
+    sourceBlocks.map((block) => [block.blockId, block])
+  );
+  const governingBlockIds = new Set(unit?.governingContext?.blockIds || []);
+  const inheritedEffects = inputComponents.filter(
+    (component) =>
+      component.type === "COVERAGE_EFFECT" &&
+      component.sourceBlockIds.every((blockId) =>
+        governingBlockIds.has(blockId)
+      )
+  );
+  const uniqueInheritedEffects = [
+    ...new Map(
+      inheritedEffects.map((component) => [
+        stableStringify(component),
+        component,
+      ])
+    ).values(),
+  ];
+  if (uniqueInheritedEffects.length !== 1) return { requirements, repairs: [] };
+  const componentsInside = (segment) => {
+    const segmentBlockIds = new Set(segment.blockIds);
+    return inputComponents.filter((component) => {
+      const localIds = component.sourceBlockIds.filter((blockId) =>
+        segmentBlockIds.has(blockId)
+      );
+      return (
+        localIds.length > 0 &&
+        component.sourceBlockIds.every(
+          (blockId) =>
+            segmentBlockIds.has(blockId) || governingBlockIds.has(blockId)
+        )
+      );
+    });
+  };
+  const dedupeComponents = (components) =>
+    components.filter(
+      (component, index, all) =>
+        all.findIndex(
+          (candidate) =>
+            stableStringify(candidate) === stableStringify(component)
+        ) === index
+    );
+  const introComponents = dedupeComponents([
+    ...componentsInside(introSegment),
+    ...uniqueInheritedEffects,
+  ]);
+  const introCoveredIds = new Set(
+    introComponents.flatMap(({ sourceBlockIds: componentBlockIds }) =>
+      componentBlockIds.filter((blockId) =>
+        introSegment.blockIds.includes(blockId)
+      )
+    )
+  );
+  if (
+    introComponents.length === 0 ||
+    introSegment.blockIds.some((blockId) => !introCoveredIds.has(blockId))
+  )
+    return { requirements, repairs: [] };
+  const itemRequirements = items.map(({ segment, label }, itemIndex) => {
+    const existingLocal = componentsInside(segment).filter(
+      ({ type }) => type !== "COVERAGE_EFFECT"
+    );
+    const existingObjects = existingLocal.filter(
+      ({ type }) => type === "OBJECT"
+    );
+    const parentheticalCondition =
+      /(?<condition>\((?:sofern|wenn|falls|soweit)\b[\s\S]+\))\s*$/iu.exec(
+        label
+      );
+    const objectLabel = parentheticalCondition
+      ? label
+          .slice(0, parentheticalCondition.index)
+          .trim()
+          .replace(/[,;]\s*$/u, "")
+          .trim()
+      : label;
+    const splitObjectLabels = coordinatedObjectLabels(objectLabel);
+    const synthesizedObjects = (
+      splitObjectLabels.length > 0 ? splitObjectLabels : [objectLabel]
+    ).map((objectComponentLabel) => ({
+      type: "OBJECT",
+      label: objectComponentLabel,
+      sourceBlockIds: sourceBlockIdsForExactSpan(unit, objectComponentLabel),
+    }));
+    const objectComponents =
+      existingObjects.length > 0 ? existingObjects : synthesizedObjects;
+    const conditionComponents = parentheticalCondition
+      ? [
+          {
+            type: "CONDITION",
+            label: parentheticalCondition.groups.condition,
+            sourceBlockIds: sourceBlockIdsForExactSpan(
+              unit,
+              parentheticalCondition.groups.condition
+            ),
+          },
+        ]
+      : [];
+    const localOtherComponents = existingLocal.filter(
+      ({ type }) => !["OBJECT", "CONDITION"].includes(type)
+    );
+    const effectComponents =
+      itemIndex === items.length - 1
+        ? [
+            ...uniqueInheritedEffects,
+            {
+              type: "COVERAGE_EFFECT",
+              label: predicate,
+              sourceBlockIds: predicateSourceBlockIds,
+              coverageEffect: "INCLUDED",
+            },
+          ]
+        : uniqueInheritedEffects;
+    const components = dedupeComponents([
+      ...objectComponents,
+      ...conditionComponents,
+      ...localOtherComponents,
+      ...effectComponents,
+    ]);
+    const coveredIds = new Set(
+      components.flatMap(({ sourceBlockIds: componentBlockIds }) =>
+        componentBlockIds.filter((blockId) =>
+          segment.blockIds.includes(blockId)
+        )
+      )
+    );
+    if (
+      components.some(
+        ({ label: componentLabel, sourceBlockIds: componentBlockIds }) =>
+          !componentLabel ||
+          componentBlockIds.length === 0 ||
+          componentBlockIds.some(
+            (blockId) =>
+              !sourceBlocksById.has(blockId) && !governingBlockIds.has(blockId)
+          )
+      ) ||
+      segment.blockIds.some((blockId) => !coveredIds.has(blockId))
+    )
+      return null;
+    return { displayLabel: segment.combinedText, components };
+  });
+  if (itemRequirements.some((requirement) => !requirement))
+    return { requirements, repairs: [] };
+  return {
+    requirements: [
+      { displayLabel: introSegment.combinedText, components: introComponents },
+      ...itemRequirements,
+    ],
+    repairs: [
+      {
+        action: "ATOMIZE_EMBEDDED_ALPHABETIC_OBJECT_LIST",
+        introSegmentId: introSegment.segmentId,
+        itemSegmentIds: itemSegments.map(({ segmentId }) => segmentId),
+        itemCount: items.length,
+        predicateSourceBlockIds,
+      },
+    ],
+  };
+}
+
 function normalizeAtomicCostRoleComponents(requirements, unit) {
   const repairs = [];
   const unitSourceText = String(unit?.source?.combinedText || "");
@@ -3806,6 +4070,17 @@ function completeBoundedListSegmentComponentSources(requirements, unit) {
       const components = Array.isArray(requirement?.components)
         ? requirement.components
         : [];
+      const alreadyCoveredBlockIds = new Set(
+        components.flatMap(({ sourceBlockIds }) =>
+          (Array.isArray(sourceBlockIds) ? sourceBlockIds : []).filter(
+            (blockId) => segmentIndexByBlockId.has(blockId)
+          )
+        )
+      );
+      if (
+        segment.blockIds.every((blockId) => alreadyCoveredBlockIds.has(blockId))
+      )
+        return requirement;
       const localComponents = components.flatMap(
         (component, componentIndex) => {
           if (component?.type === "COVERAGE_EFFECT") return [];
@@ -3850,32 +4125,40 @@ function completeBoundedListSegmentComponentSources(requirements, unit) {
           left.lastIndex - right.lastIndex ||
           left.componentIndex - right.componentIndex
       );
+      const grouped = [...new Set(ordered.map(({ firstIndex }) => firstIndex))]
+        .sort((left, right) => left - right)
+        .map((firstIndex) => ({
+          firstIndex,
+          entries: ordered.filter((entry) => entry.firstIndex === firstIndex),
+        }));
       if (
-        ordered[0].firstIndex !== 0 ||
-        new Set(ordered.map(({ firstIndex }) => firstIndex)).size !==
-          ordered.length ||
-        ordered.some(
-          (entry, index) =>
-            index < ordered.length - 1 &&
-            entry.lastIndex > ordered[index + 1].firstIndex
+        grouped[0].firstIndex !== 0 ||
+        grouped.some(
+          (group, index) =>
+            index < grouped.length - 1 &&
+            group.entries.some(
+              ({ lastIndex }) => lastIndex > grouped[index + 1].firstIndex
+            )
         )
       )
         return requirement;
       const replacements = new Map();
-      for (const [index, entry] of ordered.entries()) {
+      for (const [index, group] of grouped.entries()) {
         const endIndex =
-          index < ordered.length - 1
-            ? ordered[index + 1].firstIndex
+          index < grouped.length - 1
+            ? grouped[index + 1].firstIndex
             : segment.blockIds.length - 1;
         const desiredIds = segment.blockIds.slice(
-          entry.firstIndex,
+          group.firstIndex,
           endIndex + 1
         );
-        const desiredSet = new Set([...entry.declaredIds, ...desiredIds]);
-        const completedIds = segment.blockIds.filter((blockId) =>
-          desiredSet.has(blockId)
-        );
-        replacements.set(entry.componentIndex, completedIds);
+        for (const entry of group.entries) {
+          const desiredSet = new Set([...entry.declaredIds, ...desiredIds]);
+          const completedIds = segment.blockIds.filter((blockId) =>
+            desiredSet.has(blockId)
+          );
+          replacements.set(entry.componentIndex, completedIds);
+        }
       }
       const coveredIds = new Set(
         [...replacements.values()].flatMap((blockIds) => blockIds)
@@ -4387,6 +4670,26 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ],
       };
     }
+    const embeddedAlphabeticObjects = normalizeEmbeddedAlphabeticObjectList(
+      requirements,
+      unit
+    );
+    requirements = embeddedAlphabeticObjects.requirements;
+    for (const repair of embeddedAlphabeticObjects.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (embeddedAlphabeticObjects.repairs.length > 0)
+      response = {
+        ...response,
+        primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []),
+            ...semanticClassesFromSourceBoundComponents(requirements, unit),
+            "OPERATIVE_COVERAGE_STATEMENT",
+            "INSURED_OBJECT",
+          ]),
+        ],
+      };
     const prerequisiteDefinition = normalizePrerequisiteWithFollowingDefinition(
       requirements,
       unit
@@ -7137,6 +7440,7 @@ module.exports = {
   deriveClassificationEvidencePlan,
   listSegmentRepairSkeletons,
   mergeCompatibleDuplicateUnitResponses,
+  normalizeEmbeddedAlphabeticObjectList,
   normalizeStandaloneListGovernorRequirements,
   normalizeUnambiguousComponentTypes,
   parseJsonArray,
