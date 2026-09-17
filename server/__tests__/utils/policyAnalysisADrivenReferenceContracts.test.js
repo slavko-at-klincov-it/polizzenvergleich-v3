@@ -4300,9 +4300,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
             },
             {
               type: "COVERAGE_EFFECT",
-              label: "bis zu",
+              label: governorText,
               coverageEffect: "INCLUDED",
-              sourceBlockIds: ["snow-limit"],
+              sourceBlockIds: ["coverage-governor"],
               components: [],
             },
           ],

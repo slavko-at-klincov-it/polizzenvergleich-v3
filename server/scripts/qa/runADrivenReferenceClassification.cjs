@@ -3166,7 +3166,12 @@ function liftLegacyComponentShapedRequirements(requirements, unit) {
     requirements.length === 0
   )
     return { requirements, repairs: [] };
-  const ownedBlockIds = new Set(sourceBlockIds);
+  const permittedBlockIds = new Set([
+    ...sourceBlockIds,
+    ...(singleCompleteListSegment && governingContextIsBound
+      ? governingContext?.blockIds || []
+      : []),
+  ]);
   const componentKeys = new Set([
     "type",
     "label",
@@ -3192,7 +3197,8 @@ function liftLegacyComponentShapedRequirements(requirements, unit) {
       requirement.components.length > 0 ||
       Object.keys(requirement).some((key) => !componentKeys.has(key)) ||
       requirement.sourceBlockIds.some(
-        (blockId) => typeof blockId !== "string" || !ownedBlockIds.has(blockId)
+        (blockId) =>
+          typeof blockId !== "string" || !permittedBlockIds.has(blockId)
       )
     )
       return false;
