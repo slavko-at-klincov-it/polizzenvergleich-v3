@@ -3130,6 +3130,24 @@ function liftLegacyComponentShapedRequirements(requirements, unit) {
   const sourceBlockIds = Array.isArray(unit?.source?.blockIds)
     ? unit.source.blockIds
     : [];
+  const governingContext = unit?.governingContext;
+  const governingContextIsBound =
+    !governingContext ||
+    (governingContext.contractId ===
+      CLASSIFICATION_EVIDENCE_CONTEXT_CONTRACT_ID &&
+      Array.isArray(governingContext.blockIds) &&
+      governingContext.blockIds.length > 0 &&
+      Array.isArray(governingContext.blocks) &&
+      governingContext.blocks.length === governingContext.blockIds.length &&
+      governingContext.blocks.every(
+        (block, index) =>
+          block?.blockId === governingContext.blockIds[index] &&
+          typeof block?.exactText === "string"
+      ) &&
+      governingContext.combinedText ===
+        governingContext.blocks.map(({ exactText }) => exactText).join("\n") &&
+      governingContext.combinedTextSha256 ===
+        sha256(governingContext.combinedText));
   const singleCompleteListSegment =
     unit?.unitKind === "LIST" &&
     logicalSourceSegments.length === 1 &&
@@ -3139,8 +3157,7 @@ function liftLegacyComponentShapedRequirements(requirements, unit) {
     logicalSourceSegments[0].blockIds.every(
       (blockId, index) => blockId === sourceBlockIds[index]
     ) &&
-    (!Array.isArray(unit?.governingContext?.blockIds) ||
-      unit.governingContext.blockIds.length === 0);
+    governingContextIsBound;
   const clauseWithoutLogicalSegments =
     unit?.unitKind === "CLAUSE" && logicalSourceSegments.length === 0;
   if (

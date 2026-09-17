@@ -4138,6 +4138,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       },
     ];
     const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+    const governorText = "Versichert sind";
     const unit = {
       unitId: "legacy-component-shaped-clause",
       unitKind: "CLAUSE",
@@ -4146,6 +4147,19 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         blockIds: blocks.map(({ blockId }) => blockId),
         combinedText,
         blocks,
+      },
+      governingContext: {
+        contractId: "LF_A_CLASSIFICATION_EVIDENCE_CONTEXT_V6",
+        relationType: "RECOVERS_ADJACENT_LIST_GOVERNOR",
+        blockIds: ["coverage-governor"],
+        blocks: [
+          { blockId: "coverage-governor", exactText: governorText },
+        ],
+        combinedText: governorText,
+        combinedTextSha256: crypto
+          .createHash("sha256")
+          .update(governorText)
+          .digest("hex"),
       },
     };
     const normalized = normalizeUnambiguousComponentTypes(
@@ -4301,11 +4315,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(normalized.responses[0].requirements[0]).toMatchObject({
       displayLabel: combinedText,
       components: [
-        { type: "OBJECT", sourceBlockIds: ["snow-removal"] },
+        { type: "FACT_ROLE", sourceBlockIds: ["snow-removal"] },
         { type: "VALUE_AND_UNIT", sourceBlockIds: ["snow-limit"] },
         {
           type: "COVERAGE_EFFECT",
-          sourceBlockIds: ["snow-limit"],
+          sourceBlockIds: ["coverage-governor"],
           coverageEffect: "INCLUDED",
         },
       ],
@@ -4346,7 +4360,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       ],
     },
     {
-      name: "external governing context",
+      name: "an unbound external governing context",
       logicalSourceSegments: [
         {
           segmentId: "complete",
