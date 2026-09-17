@@ -3820,3 +3820,37 @@ Vollständigkeitsbehauptung erzeugen.
   Modellaufruf 6/6 bei hashgleichem Attempt-Baum.
 - Geplanter Change-Set:
   `LF-V394-BATCH33-LIST-PROVENANCE-AND-EMBEDDED-OBJECTS-20260917-001`.
+
+## INT-20260917-060 — Unmittelbaren Klassifikationsvorgänger beim Vertragsbump resumierbar halten
+
+- Erfasst: 2026-09-17
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_UMGESETZT`
+- Aussage: Wird der gebundene A-Klassifikationslaufvertrag erhöht, muss der
+  unmittelbar vorherige Laufvertrag explizit in der vorhandenen
+  Vorgänger-Allowlist verbleiben. Seine gespeicherten Antworten werden nicht
+  blind übernommen, sondern erneut gegen den aktuellen Source-Plan und
+  Validator geprüft.
+- Ist-Wahrheit: `JA` als Ursache des ersten V3.9.4-Resume-Abbruchs. Die
+  Allowlist enthielt V12 bis V73 und den neuen V75-Vertrag, ließ aber V74 aus.
+  Der neue Run-Root stoppte vor jedem Modellaufruf mit
+  `LF_A_CLASSIFICATION_PREDECESSOR_BINDING_INVALID`; dadurch wurden keine
+  Antworten überschrieben oder neu berechnet.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002` und `CAP-ORCH-001`;
+  ausschließlich Aufnahme von V74 in die bestehende versionierte
+  Vorgänger-Allowlist; Source-Plan-, Batch-, Modell-, Kontext-, Prompt-,
+  Validator-, ID- und Raw-Response-Bindungen bleiben unverändert; jede
+  Antwort wird unter dem aktuellen Vertrag revalidiert. Kein Bypass und keine
+  pauschale Akzeptanz alter PASS-Marker.
+- Beweisgrenze: technischer Resume-Vertrag; keine Aussage über fachliche
+  Generalisierung oder 99 Prozent.
+- Ergebnis: Der V76-Vertrag nimmt V74 und V75 explizit auf. Der fokussierte
+  A-Vertrag bestand auf dem Mac Studio mit 402/402 Tests; der exakte
+  V3.9.5-Release-Commit
+  `46a9172ab6fb9d0f5934d13b058cf14cc4643aa4` bestand das vollständige Gate
+  mit 212/212 Testsuiten und 3.097/3.097 Tests. Im echten Resume-Root
+  `resume-f1f8a08a27db68b615b3b79c` wurden Batches 1 bis 33 unter V76 ohne
+  neuen Modellaufruf revalidiert übernommen; die Modellarbeit begann beim
+  ersten offenen Batch 34.
+- Geplanter Change-Set:
+  `LF-V395-IMMEDIATE-PREDECESSOR-RESUME-20260917-001`.
