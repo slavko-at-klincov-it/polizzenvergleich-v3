@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V381-COLD-E2E-CORRECTIONS-20260917-001",
+  "changeSetId": "LF-V383-PARENTHETICAL-OBJECT-EXCLUSION-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -724,19 +724,26 @@
         "Model-valid output is not automatically fachlich optimal.",
         "Unseen structures remain a generalization gate.",
         "Multiple same-role evidence occurrences must be rebound under the current semantic contract before a predecessor batch is reusable.",
-        "Administrative record obligations and conditional applicability statements require source-bound deterministic normalization when a model omits mandatory labels."
+        "Administrative record obligations and conditional applicability statements require source-bound deterministic normalization when a model omits mandatory labels.",
+        "Parenthetical object exclusions require a separate source-bound EXCLUDED effect while retaining the containing object requirement."
       ],
       "evidence": {
         "tests": [
           "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
           "server/__tests__/utils/policyAnalysisADrivenMutationContracts.test.js"
         ],
-        "runs": ["Tracker 133.46", "Tracker 133.59", "Tracker 133.61"],
+        "runs": [
+          "Tracker 133.46",
+          "Tracker 133.59",
+          "Tracker 133.61",
+          "Tracker 133.62"
+        ],
         "adrs": ["ADR-031"],
         "failures": [
           "FAIL-001",
           "INT-20260917-044",
-          "INT-20260917-045"
+          "INT-20260917-045",
+          "INT-20260917-046"
         ]
       },
       "lastVerifiedCommit": "c87aadf9d483d72ddce0bc67aacd529c19b54788",

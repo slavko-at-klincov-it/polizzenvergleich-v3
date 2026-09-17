@@ -10336,6 +10336,51 @@ Holdout-Aussage.
 
 Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
 
+### 133.62 Kalter V3.8.2-Lauf und parenthetische Objektausnahmen
+
+V3.8.2 wurde am 17. September 2026 über den offiziellen Updater auf dem
+Kunden-Mac-Studio aktiviert. Der exakte Release-Commit
+`a0a8150ea1c7f3f1cac15733d000b89e469d3849`, Datenbank-Quick-Check,
+geschütztes Pre-Update-Backup, Loopback-Dienste und Doctor bestanden. Der
+danach über API, Queue und Worker gestartete neue kalte LF-1+9-Lauf verwendete
+zehn erneut hochgeladene, hashgleiche Eingangsdokumente.
+
+Der zuvor blockierende zweite A-Batch bestand unter V64 mit 6/6 terminalen
+Units und null Diagnosen. Der Lauf stoppte später im fünften A-Batch korrekt
+fail-closed; die ersten vier Batches blieben vollständig gültig und
+resumierbar.
+
+Die neue Root Cause war eng begrenzt: Drei selbstständige Objekt-Listenpunkte
+waren bereits als drei Requirements mit korrekten Segment- und Blockgrenzen
+klassifiziert. In einem Listenpunkt blieb ausschließlich eine wörtliche
+parenthetische Ausnahme ohne eigene `EXCLUDED`-Wirkung. V65 materialisiert
+nun parenthetische `ausgenommen …`-/`exklusive …`-Aussagen als source-bound
+`COVERAGE_EFFECT`, ohne Objekt-Requirement oder Listenfortsetzung zu ändern.
+Bereits negative Deckungsklauseln bilden eine harte Negativgrenze; identische
+vorhandene Ausschlusswirkungen werden nicht dupliziert.
+
+Der gespeicherte echte Fehlerfall wurde im isolierten Mac-Studio-Worktree auf
+Commit `74454a388` ohne neuen Modellaufruf revalidiert:
+
+```text
+Requirements:          3 unverändert
+Primärklasse:           INSURED_OBJECT
+Semantische Klassen:   INSURED_OBJECT + EXCLUSION
+Neue Ausschlusswirkung: exakt 1
+Diagnosen:              0
+Unitstatus:             PASS
+```
+
+Der fokussierte Vertragscheck bestand mit 364/364 Tests; Prettier bestand.
+V3.8.3-Release-Gate, Deployment und ein neuer kalter Lauf stehen noch aus.
+Gold-283-V2 bleibt unverändert; der unabhängige expertengelabelte Holdout ist
+weiterhin nicht vorhanden.
+
+Status: `V3.8.2 FAIL-CLOSED NACH 4/58 PASS; ECHTER FEHLERFALL UNTER V65 PASS;
+V3.8.3-GATE UND NEUER KALTER LAUF AUSSTEHEND`.
+
+Change-Set: `LF-V383-PARENTHETICAL-OBJECT-EXCLUSION-20260917-001`.
+
 ### 133.61 Kalter V3.8.1-Lauf und allgemeine administrative A-Normalisierung
 
 V3.8.1 wurde am 17. September 2026 mit dem offiziellen Updater auf dem
