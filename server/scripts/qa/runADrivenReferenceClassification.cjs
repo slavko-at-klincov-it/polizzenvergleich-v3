@@ -788,7 +788,7 @@ function causalPerilComponentAlias(component, unit) {
     typeof component.label !== "string" ||
     !Array.isArray(component.sourceBlockIds) ||
     component.sourceBlockIds.length === 0 ||
-    !/\b(?:Schäden?|Beschädigungen?)\b[\s\S]{0,240}\b(?:durch|infolge|aufgrund|wegen)\b/iu.test(
+    !/\b(?:Sch(?:a|ä)den|Beschädigung(?:en)?)\b[\s\S]{0,240}\b(?:durch|infolge|aufgrund|wegen)\b/iu.test(
       component.label
     )
   )
