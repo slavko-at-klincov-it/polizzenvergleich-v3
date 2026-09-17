@@ -1039,7 +1039,9 @@ function sourceBoundLiteralCoverageEffect(unit, component) {
       .replace(/\s+/gu, " ")
       .trim();
   const label = normalize(component.label);
-  const sourceText = normalize(blocks.map(({ exactText }) => exactText).join("\n"));
+  const sourceText = normalize(
+    blocks.map(({ exactText }) => exactText).join("\n")
+  );
   if (!label || !sourceText.includes(label)) return false;
   const negative = EXPLICIT_NEGATIVE_COVERAGE_EFFECT_PATTERN.test(label);
   const positive = EXPLICIT_POSITIVE_COVERAGE_EFFECT_PATTERN.test(label);
@@ -1066,9 +1068,8 @@ function explicitCoverageEffectRepair(unit, component) {
         negative[0].length
       )}${sourceText.slice(negative.index + negative[0].length)}`
     : sourceText;
-  const positive = EXPLICIT_POSITIVE_COVERAGE_EFFECT_PATTERN.exec(
-    positiveEvidenceText
-  );
+  const positive =
+    EXPLICIT_POSITIVE_COVERAGE_EFFECT_PATTERN.exec(positiveEvidenceText);
   if ((negative && positive) || (!negative && !positive)) return null;
   const evidence = negative || positive;
   const coverageEffect = negative ? "EXCLUDED" : "INCLUDED";

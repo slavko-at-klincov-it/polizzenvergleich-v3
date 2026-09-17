@@ -8991,8 +8991,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
     expect(
       normalized.componentRepairs.filter(
-        ({ action }) =>
-          action === "DROP_REDUNDANT_INVALID_COVERAGE_EFFECT"
+        ({ action }) => action === "DROP_REDUNDANT_INVALID_COVERAGE_EFFECT"
       )
     ).toHaveLength(2);
   });
@@ -9038,9 +9037,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
 
-    expect(
-      normalized.responses[0].requirements[0].components
-    ).toContainEqual(response.requirements[0].components[1]);
+    expect(normalized.responses[0].requirements[0].components).toContainEqual(
+      response.requirements[0].components[1]
+    );
     expect(normalized.componentRepairs).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -9060,7 +9059,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           { blockId: "effect", exactText: "Schäden sind mitversichert." },
           { blockId: "orphan", exactText: "Diese Regel gilt ergänzend." },
         ],
-        combinedText: "Schäden sind mitversichert.\nDiese Regel gilt ergänzend.",
+        combinedText:
+          "Schäden sind mitversichert.\nDiese Regel gilt ergänzend.",
       },
     };
     const invalid = {
@@ -9091,9 +9091,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
 
-    expect(
-      normalized.responses[0].requirements[0].components
-    ).toContainEqual(invalid);
+    expect(normalized.responses[0].requirements[0].components).toContainEqual(
+      invalid
+    );
   });
 
   test("drops redundant definition, duration and agreement effects only beside their semantic owners", async () => {
