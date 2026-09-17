@@ -13894,7 +13894,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       ],
     };
     const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
-    const normalizedComponents = normalized.responses[0].requirements[0].components;
+    const normalizedComponents =
+      normalized.responses[0].requirements[0].components;
 
     expect(
       normalizedComponents.find(({ type }) => type === "DAMAGE_OR_EFFECT")
@@ -13967,16 +13968,14 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         blocks,
         combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
       },
-      logicalSourceSegments:
-        segments ||
-        [
-          {
-            segmentId: "continued",
-            type: "LIST_ITEM_WITH_CONTINUATIONS",
-            blockIds: blocks.map(({ blockId }) => blockId),
-            combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
-          },
-        ],
+      logicalSourceSegments: segments || [
+        {
+          segmentId: "continued",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: blocks.map(({ blockId }) => blockId),
+          combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
+        },
+      ],
     });
     const makeResponse = (requirements) => ({
       unitId: "trailing-negative",
@@ -13989,7 +13988,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       components: [
         { type: "PERIL_OR_CAUSE", label: "Ereignis", sourceBlockIds: ["lead"] },
         { type: "FACT_ROLE", label: "Rolle", sourceBlockIds: ["effect"] },
-        { type: "DAMAGE_OR_EFFECT", label: "Schaden", sourceBlockIds: ["effect"] },
+        {
+          type: "DAMAGE_OR_EFFECT",
+          label: "Schaden",
+          sourceBlockIds: ["effect"],
+        },
       ],
     };
     const closedBoundaryBlocks = baseBlocks.map((entry) =>
@@ -13998,7 +14001,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         : entry
     );
     const listTailBlocks = baseBlocks.map((entry) =>
-      entry.blockId === "tail" ? { ...entry, structuralKind: "LIST_ITEM" } : entry
+      entry.blockId === "tail"
+        ? { ...entry, structuralKind: "LIST_ITEM" }
+        : entry
     );
     const ambiguousRequirement = {
       ...baseRequirement,
@@ -14009,11 +14014,17 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     };
     const interiorGapRequirement = {
       ...baseRequirement,
-      components: baseRequirement.components.map((component) =>
-        component.type === "PERIL_OR_CAUSE"
-          ? { ...component, label: "Schaden", sourceBlockIds: ["effect"] }
-          : component
-      ).concat({ type: "SCOPE", label: "vollständig", sourceBlockIds: ["tail"] }),
+      components: baseRequirement.components
+        .map((component) =>
+          component.type === "PERIL_OR_CAUSE"
+            ? { ...component, label: "Schaden", sourceBlockIds: ["effect"] }
+            : component
+        )
+        .concat({
+          type: "SCOPE",
+          label: "vollständig",
+          sourceBlockIds: ["tail"],
+        }),
     };
     const cases = [
       {
@@ -14039,10 +14050,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ];
 
     for (const { unit, response } of cases) {
-      const normalized = normalizeUnambiguousComponentTypes(
-        [response],
-        [unit]
-      );
+      const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
       expect(normalized.componentRepairs).not.toContainEqual(
         expect.objectContaining({
           action: "COMPLETE_TRAILING_LIST_SENTENCE_COMPONENT_SOURCE_IDS",
