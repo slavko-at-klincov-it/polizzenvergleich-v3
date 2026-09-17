@@ -13,7 +13,9 @@ describe("workspace comparison deletion preparation", () => {
   let exportDirectory;
 
   beforeEach(() => {
-    root = fs.mkdtempSync(path.join(os.tmpdir(), "workspace-comparison-delete-"));
+    root = fs.mkdtempSync(
+      path.join(os.tmpdir(), "workspace-comparison-delete-")
+    );
     comparisonRoot = path.join(root, "policy-comparisons");
     exportDirectory = path.join(root, "exports");
     fs.mkdirSync(exportDirectory, { recursive: true });
@@ -94,9 +96,9 @@ describe("workspace comparison deletion preparation", () => {
       timeoutMs: 2_000,
     });
     expect(workerSupervisor.cancel).toHaveBeenCalledTimes(1);
-    expect(fs.existsSync(path.join(comparisonRoot, "uploads", runningUuid))).toBe(
-      false
-    );
+    expect(
+      fs.existsSync(path.join(comparisonRoot, "uploads", runningUuid))
+    ).toBe(false);
     expect(
       fs.existsSync(path.join(comparisonRoot, "runs", completedUuid))
     ).toBe(false);
@@ -181,10 +183,7 @@ describe("workspace comparison deletion preparation", () => {
 
   test("contains no raw PID kill path", () => {
     const contents = fs.readFileSync(
-      path.join(
-        __dirname,
-        "../../utils/workspaceComparisonDeletion.js"
-      ),
+      path.join(__dirname, "../../utils/workspaceComparisonDeletion.js"),
       "utf8"
     );
     expect(contents).not.toContain("process.kill");
