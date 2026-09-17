@@ -10668,8 +10668,24 @@ Der fokussierte Vertrag bestand auf dem Mac Studio mit 412/412 Tests. Der
 echte Batch 36 revalidierte danach ausschließlich aus den fünf vorhandenen
 Attempt-Artefakten mit 6/6 Units. Der Attempt-Tree-Hash blieb unverändert.
 
-Status: `V3.9.7-RELEASEKANDIDAT; BATCH 36 OFFLINE 6/6 REVALIDIERT; VOLLGATE,
-DEPLOYMENT UND RESUME AUSSTEHEND`.
+Der vollständige Release-Gate auf dem exakten Commit
+`ebb98ed5b7ba4f1c291d54a8be72290edd75ffca` bestand mit 212/212 Testsuiten,
+3.107/3.107 Tests, allen drei Lints, Prisma, Capability-Inventar, Prettier,
+Frontend-Build und Installer-Suite. `origin/main` und der annotierte Tag
+`v3.9.7` wurden auf diesen Commit veröffentlicht. Die offizielle
+Update-Routine aktivierte das Release im Kunden-Checkout; Doctor, API und
+SQLite-Quick-Check bestanden, der Checkout war sauber. Das
+Aktivierungsbackup ist
+`server/storage/backups/anythingllm-before-activation-20260917-211233.db`.
+
+Der neue Produkt-Resume liegt unter
+`resume-d4a5422a492af4769c12cdd4`. Batches 1 bis 36 wurden unter dem aktuellen
+Vertrag als PASS revalidiert. Erst Batch 37 (`batchIndex 36`,
+`AUB-427949dc7bed92a6c594f3ba`) erzeugte neue Modellversuche; die bestehende
+Arbeit wurde damit nicht neu berechnet.
+
+Status: `V3.9.7 PRODUKTIV AKTIV; DOCTOR/API/DB PASS; BATCHES 1 BIS 36
+REVALIDIERT; KALTER PRODUKTLAUF AB BATCH 37 AKTIV`.
 
 Change-Set: `LF-V397-LOCAL-COVERAGE-RESET-ATOMIZATION-20260917-001`.
 

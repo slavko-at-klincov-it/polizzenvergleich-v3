@@ -30,6 +30,23 @@ Attempt-Baum blieb unter SHA-256
 `af641edaf2faec4dcd7263e06c1cdb1bbf4fa445ab892e977642618e6a5ec753`
 unverändert.
 
+Der vollständige Release-Gate lief anschließend auf dem exakten
+Release-Commit `ebb98ed5b7ba4f1c291d54a8be72290edd75ffca` am Mac Studio durch:
+212/212 Testsuiten und 3.107/3.107 Tests sowie Server-, Frontend- und
+Collector-Lint, Prisma, Capability-Inventar, Prettier, Frontend-Build und
+Installer-Suite bestanden. `origin/main` und der annotierte Tag `v3.9.7`
+zeigen auf diesen Commit.
+
+Die offizielle Update-Routine aktivierte V3.9.7 im Kunden-Checkout. Doctor,
+API (`{"online":true}`) und SQLite-Quick-Check (`ok`) bestanden; der
+Arbeitsbaum war sauber. Das Aktivierungsbackup liegt unter
+`server/storage/backups/anythingllm-before-activation-20260917-211233.db`.
+Im neuen Resume
+`resume-d4a5422a492af4769c12cdd4` wurden Batches 1 bis 36 unter dem aktuellen
+Vertrag als PASS revalidiert. Die erste neue Modellarbeit begann
+vertragsgemäß mit Batch 37 (`batchIndex 36`,
+`AUB-427949dc7bed92a6c594f3ba`).
+
 Der bekannte LF-1+9-Lauf bleibt Regressionsevidenz und ist kein unabhängiger
 Generalisierungs- oder 99-Prozent-Nachweis.
 

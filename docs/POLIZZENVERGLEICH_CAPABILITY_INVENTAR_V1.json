@@ -803,7 +803,7 @@
           "INT-20260917-065"
         ]
       },
-      "lastVerifiedCommit": "cd03deb4656b8d6d90b6b49d501a89abe4a38069",
+      "lastVerifiedCommit": "ebb98ed5b7ba4f1c291d54a8be72290edd75ffca",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
@@ -904,7 +904,7 @@
           "INT-20260917-065"
         ]
       },
-      "lastVerifiedCommit": "cd03deb4656b8d6d90b6b49d501a89abe4a38069",
+      "lastVerifiedCommit": "ebb98ed5b7ba4f1c291d54a8be72290edd75ffca",
       "relations": [{ "type": "DERIVED_FROM", "target": "CAP-A-002" }],
       "activationReason": "Current V2 runner consumes this manifest directly.",
       "reactivationCriteria": "Not applicable while active."
