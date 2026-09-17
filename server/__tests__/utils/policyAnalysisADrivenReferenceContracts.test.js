@@ -17,8 +17,10 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V9,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
   buildADrivenSemanticManifest,
+  logicalSegmentDiagnostics,
   materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
+  sharedListGovernorGroups,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
   buildADrivenClassificationBatches,
@@ -3030,6 +3032,217 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
         governorBlockIds: ["governor"],
       }),
     ]);
+  });
+
+  test("bounds an embedded shared list governor to only its following subordinate items", () => {
+    const first = "- gemauerte Öfen;";
+    const governor = "• auf dem Versicherungsgrundstück";
+    const second = "- Stützmauern;";
+    const third = "- Solaranlagen;";
+    const unit = {
+      unitId: "embedded-scope-governor",
+      unitKind: "LIST",
+      source: {
+        blockIds: ["first", "governor", "second", "third"],
+        combinedText: [first, governor, second, third].join("\n"),
+        blocks: [
+          {
+            blockId: "first",
+            structuralKind: "LIST_ITEM",
+            exactText: first,
+          },
+          {
+            blockId: "governor",
+            structuralKind: "LIST_GOVERNOR",
+            exactText: governor,
+          },
+          {
+            blockId: "second",
+            structuralKind: "LIST_ITEM",
+            exactText: second,
+          },
+          {
+            blockId: "third",
+            structuralKind: "LIST_ITEM",
+            exactText: third,
+          },
+        ],
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "first-segment",
+          blockIds: ["first"],
+          combinedText: first,
+        },
+        {
+          segmentId: "governor-segment",
+          blockIds: ["governor"],
+          combinedText: governor,
+        },
+        {
+          segmentId: "second-segment",
+          blockIds: ["second"],
+          combinedText: second,
+        },
+        {
+          segmentId: "third-segment",
+          blockIds: ["third"],
+          combinedText: third,
+        },
+      ],
+    };
+    const scope = {
+      type: "SCOPE",
+      label: "auf dem Versicherungsgrundstück",
+      sourceBlockIds: ["governor"],
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "INSURED_OBJECT",
+      semanticClasses: ["INSURED_OBJECT", "VARIANT"],
+      requirements: [
+        {
+          displayLabel: first,
+          components: [
+            {
+              type: "OBJECT",
+              label: "gemauerte Öfen",
+              sourceBlockIds: ["first"],
+            },
+            scope,
+          ],
+        },
+        { displayLabel: governor, components: [scope] },
+        {
+          displayLabel: second,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Stützmauern",
+              sourceBlockIds: ["second"],
+            },
+            scope,
+          ],
+        },
+        {
+          displayLabel: third,
+          components: [
+            {
+              type: "OBJECT",
+              label: "Solaranlagen",
+              sourceBlockIds: ["third"],
+            },
+            scope,
+          ],
+        },
+      ],
+    };
+
+    expect(sharedListGovernorGroups(unit)).toEqual([
+      expect.objectContaining({
+        governorIndex: 1,
+        governorSegment: expect.objectContaining({
+          segmentId: "governor-segment",
+        }),
+        itemSegments: [
+          expect.objectContaining({ segmentId: "second-segment" }),
+          expect.objectContaining({ segmentId: "third-segment" }),
+        ],
+      }),
+    ]);
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const requirements = normalized.responses[0].requirements;
+    expect(requirements.map(({ displayLabel }) => displayLabel)).toEqual([
+      first,
+      second,
+      third,
+    ]);
+    expect(requirements[0].components).not.toContainEqual(scope);
+    expect(requirements[1].components).toContainEqual(scope);
+    expect(requirements[2].components).toContainEqual(scope);
+    expect(normalized.componentRepairs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "DROP_CROSS_SEGMENT_COMPONENT",
+          segmentId: "first-segment",
+          sourceBlockIds: ["governor"],
+        }),
+        expect.objectContaining({
+          action: "MATERIALIZE_SHARED_LIST_GOVERNOR_COMPONENTS",
+          governorBlockIds: ["governor"],
+        }),
+      ])
+    );
+    expect(
+      logicalSegmentDiagnostics(
+        unit,
+        requirements.map((requirement, index) => ({
+          ...requirement,
+          requirementId: `requirement-${index}`,
+          sourceBlockIds: [
+            ...new Set(
+              requirement.components.flatMap(
+                ({ sourceBlockIds }) => sourceBlockIds
+              )
+            ),
+          ],
+        }))
+      )
+    ).toEqual([]);
+  });
+
+  test("does not promote same-level or childless list governors to shared groups", () => {
+    const unit = {
+      unitId: "same-level-governors",
+      source: {
+        blocks: [
+          { blockId: "one", structuralKind: "LIST_GOVERNOR" },
+          { blockId: "two", structuralKind: "LIST_GOVERNOR" },
+        ],
+      },
+      logicalSourceSegments: [
+        { segmentId: "one", blockIds: ["one"] },
+        { segmentId: "two", blockIds: ["two"] },
+      ],
+    };
+
+    expect(sharedListGovernorGroups(unit)).toEqual([]);
+  });
+
+  test("fails closed when an embedded governor leaks into a preceding item", () => {
+    const unit = {
+      unitId: "leaking-scope-governor",
+      source: {
+        blocks: [
+          { blockId: "first", structuralKind: "LIST_ITEM" },
+          { blockId: "governor", structuralKind: "LIST_GOVERNOR" },
+          { blockId: "second", structuralKind: "LIST_ITEM" },
+        ],
+      },
+      logicalSourceSegments: [
+        { segmentId: "first-segment", blockIds: ["first"] },
+        { segmentId: "governor-segment", blockIds: ["governor"] },
+        { segmentId: "second-segment", blockIds: ["second"] },
+      ],
+    };
+
+    expect(
+      logicalSegmentDiagnostics(unit, [
+        {
+          requirementId: "leak",
+          sourceBlockIds: ["first", "governor"],
+        },
+        { requirementId: "target", sourceBlockIds: ["second", "governor"] },
+      ])
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "LIST_GOVERNOR_SCOPE_LEAK",
+          governorSegmentId: "governor-segment",
+          leakedSegmentIds: ["first-segment"],
+        }),
+      ])
+    );
   });
 
   test("separates a pure quantified list limit from the insured object it governs", () => {
@@ -8154,7 +8367,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V66");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V67");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
@@ -8556,6 +8769,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       );
       predecessorAttempt.semanticSignalContractId =
         A_SEMANTIC_SIGNAL_CONTRACT_ID_V2;
+      predecessorAttempt.promptContractId =
+        "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V28";
       fs.writeFileSync(
         attemptFile,
         `${JSON.stringify(predecessorAttempt, null, 2)}\n`,
@@ -12328,6 +12543,16 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           toSourceBlockIds: ["peril-lead", "peril-tail"],
         }),
       ])
+    );
+    const renormalized = normalizeUnambiguousComponentTypes(
+      normalized.responses,
+      [unit]
+    );
+    expect(renormalized.responses).toEqual(normalized.responses);
+    expect(renormalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "MATERIALIZE_SOURCE_BOUND_INTERNAL_OBJECT_GOVERNOR",
+      })
     );
 
     const plan = {

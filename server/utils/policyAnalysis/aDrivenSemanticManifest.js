@@ -18,8 +18,10 @@ const A_DYNAMIC_MANIFEST_CONTRACT_ID_V13 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V13";
 const A_DYNAMIC_MANIFEST_CONTRACT_ID_V14 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V14";
-const A_DYNAMIC_MANIFEST_CONTRACT_ID =
+const A_DYNAMIC_MANIFEST_CONTRACT_ID_V15 =
   "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V15";
+const A_DYNAMIC_MANIFEST_CONTRACT_ID =
+  "LF_A_DYNAMIC_SEMANTIC_REQUIREMENT_MANIFEST_V16";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V1 =
   "LF_A_REQUIREMENT_ROLE_EVIDENCE_COMPLETENESS_V1";
 const A_SEMANTIC_SIGNAL_CONTRACT_ID_V2 =
@@ -1486,32 +1488,46 @@ function hasCoverageEffectEvidence(unit) {
   );
 }
 
-function logicalSegmentDiagnostics(unit, requirements) {
-  const segments = unit.logicalSourceSegments || [];
+function sharedListGovernorGroups(unit) {
+  const segments = Array.isArray(unit?.logicalSourceSegments)
+    ? unit.logicalSourceSegments
+    : [];
   const ownedBlocksById = new Map(
-    unit.source.blocks.map((block) => [block.blockId, block])
+    (unit?.source?.blocks || []).map((block) => [block.blockId, block])
   );
-  const segmentStartsWithStructuralKind = (segment, structuralKind) =>
-    ownedBlocksById.get(segment.blockIds[0])?.structuralKind === structuralKind;
-  // SOURCE_BLOCK_LEDGER_V1 calls every leading `•` line LIST_GOVERNOR.
-  // It is only a shared governor inside one list unit when the following
-  // logical segments are the typographically subordinate `-` list items.
-  // Same-level `•` segments remain independent operative list items.
-  const hasSubordinateItemSegments =
-    segments.length > 1 &&
-    segments
-      .slice(1)
-      .every((segment) =>
-        segmentStartsWithStructuralKind(segment, "LIST_ITEM")
-      );
-  const sharedGovernorSegments = segments.filter(
-    (segment, index) =>
-      index === 0 &&
-      hasSubordinateItemSegments &&
-      segment.blockIds.every(
+  const startsWith = (segment, structuralKind) =>
+    ownedBlocksById.get(segment?.blockIds?.[0])?.structuralKind ===
+    structuralKind;
+  return segments.flatMap((governorSegment, governorIndex) => {
+    if (
+      !startsWith(governorSegment, "LIST_GOVERNOR") ||
+      !(governorSegment.blockIds || []).every(
         (blockId) =>
           ownedBlocksById.get(blockId)?.structuralKind === "LIST_GOVERNOR"
       )
+    )
+      return [];
+    const itemSegments = [];
+    for (let index = governorIndex + 1; index < segments.length; index += 1) {
+      const segment = segments[index];
+      if (!startsWith(segment, "LIST_ITEM")) break;
+      itemSegments.push(segment);
+    }
+    return itemSegments.length > 0
+      ? [{ governorSegment, governorIndex, itemSegments }]
+      : [];
+  });
+}
+
+function logicalSegmentDiagnostics(unit, requirements) {
+  const segments = unit.logicalSourceSegments || [];
+  // SOURCE_BLOCK_LEDGER_V1 calls every leading `•` line LIST_GOVERNOR.
+  // A shared governor may start at any segment boundary when immediately
+  // followed by typographically subordinate `-` items. Same-level `•`
+  // segments without subordinate items remain independent operative items.
+  const governorGroups = sharedListGovernorGroups(unit);
+  const sharedGovernorSegments = governorGroups.map(
+    ({ governorSegment }) => governorSegment
   );
   const sharedGovernorBlockIds = new Set(
     sharedGovernorSegments.flatMap(({ blockIds }) => blockIds)
@@ -1557,13 +1573,22 @@ function logicalSegmentDiagnostics(unit, requirements) {
     ];
   });
   const standaloneGovernorDiagnostics = requirements.flatMap((requirement) => {
+    const targetItemBlockIds = new Set(
+      governorGroups.flatMap(({ governorSegment, itemSegments }) =>
+        governorSegment.blockIds.some((blockId) =>
+          requirement.sourceBlockIds.includes(blockId)
+        )
+          ? itemSegments.flatMap(({ blockIds }) => blockIds)
+          : []
+      )
+    );
     if (
       sharedGovernorBlockIds.size === 0 ||
       !requirement.sourceBlockIds.some((blockId) =>
         sharedGovernorBlockIds.has(blockId)
       ) ||
-      itemSegments.some(({ blockIds }) =>
-        blockIds.some((blockId) => requirement.sourceBlockIds.includes(blockId))
+      requirement.sourceBlockIds.some((blockId) =>
+        targetItemBlockIds.has(blockId)
       )
     )
       return [];
@@ -1576,10 +1601,39 @@ function logicalSegmentDiagnostics(unit, requirements) {
       },
     ];
   });
+  const governorScopeLeakDiagnostics = requirements.flatMap((requirement) =>
+    governorGroups.flatMap(({ governorSegment, itemSegments: targets }) => {
+      const referencesGovernor = governorSegment.blockIds.some((blockId) =>
+        requirement.sourceBlockIds.includes(blockId)
+      );
+      if (!referencesGovernor) return [];
+      const targetIds = new Set(targets.flatMap(({ blockIds }) => blockIds));
+      const leakedSegmentIds = itemSegments
+        .filter(
+          ({ blockIds }) =>
+            blockIds.some((blockId) =>
+              requirement.sourceBlockIds.includes(blockId)
+            ) && blockIds.every((blockId) => !targetIds.has(blockId))
+        )
+        .map(({ segmentId }) => segmentId);
+      return leakedSegmentIds.length > 0
+        ? [
+            {
+              code: "LIST_GOVERNOR_SCOPE_LEAK",
+              unitId: unit.unitId,
+              requirementId: requirement.requirementId,
+              governorSegmentId: governorSegment.segmentId,
+              leakedSegmentIds,
+            },
+          ]
+        : [];
+    })
+  );
   return [
     ...segmentDiagnostics,
     ...mergeDiagnostics,
     ...standaloneGovernorDiagnostics,
+    ...governorScopeLeakDiagnostics,
   ];
 }
 
@@ -1995,6 +2049,7 @@ module.exports = {
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V14,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V15,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -2010,7 +2065,9 @@ module.exports = {
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
   hasCoverageEffectEvidence,
+  logicalSegmentDiagnostics,
   materializeSharedSignalComponents,
   requirementRoleEvidenceDiagnostics,
+  sharedListGovernorGroups,
   validateADrivenSemanticManifest,
 };

@@ -20,6 +20,7 @@ const {
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V14,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V15,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V1,
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V2,
@@ -33,13 +34,14 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
   buildADrivenSemanticManifest,
   hasCoverageEffectEvidence,
+  sharedListGovernorGroups,
 } = require("../../utils/policyAnalysis/aDrivenSemanticManifest");
 const {
   A_SOURCE_UNIT_PLAN_CONTRACT_ID,
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V66";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V67";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -95,6 +97,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V63",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V64",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V65",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V66",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -102,6 +105,7 @@ const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V12,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V13,
   A_DYNAMIC_MANIFEST_CONTRACT_ID_V14,
+  A_DYNAMIC_MANIFEST_CONTRACT_ID_V15,
   A_DYNAMIC_MANIFEST_CONTRACT_ID,
 ]);
 const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
@@ -117,7 +121,7 @@ const RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS = new Set([
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V10,
   A_SEMANTIC_SIGNAL_CONTRACT_ID,
 ]);
-const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V28";
+const PROMPT_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V29";
 const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V12",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V13",
@@ -135,6 +139,7 @@ const RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V25",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V26",
   "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V27",
+  "LF_A_BOUNDED_CLASSIFICATION_PROMPT_V28",
   PROMPT_CONTRACT_ID,
 ]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -3053,14 +3058,7 @@ function normalizeListSegmentComponentBoundaries(requirements, unit) {
   const sourceBlocksById = new Map(
     (unit.source?.blocks || []).map((block) => [block.blockId, block])
   );
-  const internalGovernorBlockIds = new Set(
-    unit.logicalSourceSegments.flatMap((segment) => {
-      const firstBlock = sourceBlocksById.get(segment.blockIds?.[0]);
-      return firstBlock?.structuralKind === "LIST_GOVERNOR"
-        ? segment.blockIds
-        : [];
-    })
-  );
+  const governorGroups = sharedListGovernorGroups(unit);
   const governingBlockIds = new Set(unit.governingContext?.blockIds || []);
   const repairs = [];
   const normalizedRequirements = requirements.map(
@@ -3077,10 +3075,14 @@ function normalizeListSegmentComponentBoundaries(requirements, unit) {
       });
       if (matchingSegments.length !== 1) return requirement;
       const segment = matchingSegments[0];
+      const applicableGovernorBlockIds = governorGroups.flatMap(
+        ({ governorSegment, itemSegments }) =>
+          itemSegments.includes(segment) ? governorSegment.blockIds : []
+      );
       const allowedBlockIds = new Set([
         ...segment.blockIds,
         ...governingBlockIds,
-        ...internalGovernorBlockIds,
+        ...applicableGovernorBlockIds,
       ]);
       const components = (requirement.components || []).flatMap(
         (component, componentIndex) => {
@@ -4569,33 +4571,17 @@ function normalizeStandaloneListGovernorRequirements(responses, units = []) {
   return {
     responses: responses.map((response) => {
       const unit = unitsById.get(response?.unitId);
-      if (!unit) return response;
-      const segments = unit?.logicalSourceSegments || [];
-      const firstSegment = segments[0];
-      const firstBlockId = firstSegment?.blockIds?.[0];
-      const firstBlock = unit?.source?.blocks?.find(
-        ({ blockId }) => blockId === firstBlockId
-      );
-      const hasSubordinateItems =
-        segments.length > 1 &&
-        segments.slice(1).every((segment) => {
-          const block = unit.source.blocks.find(
-            ({ blockId }) => blockId === segment.blockIds[0]
-          );
-          return block?.structuralKind === "LIST_ITEM";
-        });
-      if (
-        firstBlock?.structuralKind !== "LIST_GOVERNOR" ||
-        !hasSubordinateItems ||
-        !Array.isArray(response?.requirements)
-      )
-        return response;
-      const governorBlockIds = new Set(firstSegment.blockIds);
-      const itemBlockIds = new Set(
-        segments.slice(1).flatMap(({ blockIds }) => blockIds)
-      );
-      const standalone = response.requirements
-        .map((requirement, requirementIndex) => ({
+      if (!unit || !Array.isArray(response?.requirements)) return response;
+      const governorGroups = sharedListGovernorGroups(unit);
+      if (governorGroups.length === 0) return response;
+      let requirements = response.requirements;
+      const internalObjectGovernor = internalObjectListGovernor(unit);
+      for (const { governorSegment, itemSegments } of governorGroups) {
+        const governorBlockIds = new Set(governorSegment.blockIds);
+        const itemBlockIds = new Set(
+          itemSegments.flatMap(({ blockIds }) => blockIds)
+        );
+        const indexed = requirements.map((requirement, requirementIndex) => ({
           requirement,
           requirementIndex,
           sourceBlockIds: new Set(
@@ -4603,109 +4589,110 @@ function normalizeStandaloneListGovernorRequirements(responses, units = []) {
               ({ sourceBlockIds }) => sourceBlockIds || []
             )
           ),
-        }))
-        .filter(
+        }));
+        const standalone = indexed.filter(
           ({ sourceBlockIds }) =>
-            [...sourceBlockIds].some((blockId) =>
+            sourceBlockIds.size > 0 &&
+            [...sourceBlockIds].every((blockId) =>
               governorBlockIds.has(blockId)
-            ) &&
-            ![...sourceBlockIds].some((blockId) => itemBlockIds.has(blockId))
-        );
-      const targets = response.requirements
-        .map((requirement, requirementIndex) => ({
-          requirement,
-          requirementIndex,
-        }))
-        .filter(({ requirement, requirementIndex }) => {
-          if (
-            standalone.some(
-              (candidate) => candidate.requirementIndex === requirementIndex
             )
+        );
+        const targets = indexed.filter(
+          ({ requirementIndex, sourceBlockIds }) =>
+            !standalone.some(
+              (candidate) => candidate.requirementIndex === requirementIndex
+            ) &&
+            [...sourceBlockIds].some((blockId) => itemBlockIds.has(blockId))
+        );
+        if (
+          standalone.length === 0 &&
+          targets.length > 0 &&
+          internalObjectGovernor?.segmentId === governorSegment.segmentId &&
+          Array.isArray(response?.semanticClasses) &&
+          response.semanticClasses.includes("INSURED_OBJECT") &&
+          targets.every(({ requirement }) =>
+            (requirement.components || []).some(({ type }) => type === "OBJECT")
           )
-            return false;
-          return (requirement.components || []).some(({ sourceBlockIds }) =>
-            (sourceBlockIds || []).some((blockId) => itemBlockIds.has(blockId))
+        ) {
+          const component = {
+            type: "OBJECT",
+            label: internalObjectGovernor.label,
+            sourceBlockIds: internalObjectGovernor.blockIds,
+          };
+          const missingTargets = targets.filter(
+            ({ requirement }) =>
+              !(requirement.components || []).some(
+                (candidate) =>
+                  stableStringify(candidate) === stableStringify(component)
+              )
           );
-        });
-      const internalObjectGovernor = internalObjectListGovernor(unit);
-      if (
-        standalone.length === 0 &&
-        targets.length > 0 &&
-        internalObjectGovernor &&
-        Array.isArray(response?.semanticClasses) &&
-        response.semanticClasses.includes("INSURED_OBJECT") &&
-        targets.every(({ requirement }) =>
-          (requirement.components || []).some(({ type }) => type === "OBJECT")
-        )
-      ) {
-        const component = {
-          type: "OBJECT",
-          label: internalObjectGovernor.label,
-          sourceBlockIds: internalObjectGovernor.blockIds,
-        };
+          if (missingTargets.length === 0) continue;
+          repairs.push({
+            unitId: unit.unitId,
+            action: "MATERIALIZE_SOURCE_BOUND_INTERNAL_OBJECT_GOVERNOR",
+            targetRequirementIndexes: missingTargets.map(
+              ({ requirementIndex }) => requirementIndex
+            ),
+            governorBlockIds: internalObjectGovernor.blockIds,
+          });
+          requirements = requirements.map((requirement, requirementIndex) =>
+            missingTargets.some(
+              (target) => target.requirementIndex === requirementIndex
+            )
+              ? {
+                  ...requirement,
+                  components: [...(requirement.components || []), component],
+                }
+              : requirement
+          );
+          continue;
+        }
+        if (standalone.length !== 1 || targets.length === 0) continue;
+        const [governor] = standalone;
+        const movedComponents = (governor.requirement.components || []).filter(
+          ({ sourceBlockIds }) =>
+            (sourceBlockIds || []).length > 0 &&
+            (sourceBlockIds || []).every((blockId) =>
+              governorBlockIds.has(blockId)
+            )
+        );
+        if (movedComponents.length === 0) continue;
         repairs.push({
           unitId: unit.unitId,
-          action: "MATERIALIZE_SOURCE_BOUND_INTERNAL_OBJECT_GOVERNOR",
+          action: "MATERIALIZE_SHARED_LIST_GOVERNOR_COMPONENTS",
+          sourceRequirementIndex: governor.requirementIndex,
           targetRequirementIndexes: targets.map(
             ({ requirementIndex }) => requirementIndex
           ),
-          governorBlockIds: internalObjectGovernor.blockIds,
+          governorBlockIds: [...governorBlockIds],
         });
-        return {
-          ...response,
-          requirements: response.requirements.map(
-            (requirement, requirementIndex) =>
-              targets.some(
-                (target) => target.requirementIndex === requirementIndex
-              )
-                ? {
-                    ...requirement,
-                    components: [...(requirement.components || []), component],
-                  }
-                : requirement
-          ),
-        };
-      }
-      if (standalone.length !== 1 || targets.length === 0) return response;
-      const [governor] = standalone;
-      const movedComponents = governor.requirement.components || [];
-      repairs.push({
-        unitId: unit.unitId,
-        action: "MATERIALIZE_SHARED_LIST_GOVERNOR_COMPONENTS",
-        sourceRequirementIndex: governor.requirementIndex,
-        targetRequirementIndexes: targets.map(
-          ({ requirementIndex }) => requirementIndex
-        ),
-        governorBlockIds: [...governorBlockIds],
-      });
-      return {
-        ...response,
-        requirements: response.requirements.flatMap(
-          (requirement, requirementIndex) => {
-            if (requirementIndex === governor.requirementIndex) return [];
-            if (
-              !targets.some(
-                (target) => target.requirementIndex === requirementIndex
-              )
+        requirements = requirements.flatMap((requirement, requirementIndex) => {
+          if (requirementIndex === governor.requirementIndex) return [];
+          if (
+            !targets.some(
+              (target) => target.requirementIndex === requirementIndex
             )
-              return [requirement];
-            const existing = new Set(
-              (requirement.components || []).map(stableStringify)
-            );
-            return [
-              {
-                ...requirement,
-                components: [
-                  ...(requirement.components || []),
-                  ...movedComponents.filter(
-                    (component) => !existing.has(stableStringify(component))
-                  ),
-                ],
-              },
-            ];
-          }
-        ),
-      };
+          )
+            return [requirement];
+          const existing = new Set(
+            (requirement.components || []).map(stableStringify)
+          );
+          return [
+            {
+              ...requirement,
+              components: [
+                ...(requirement.components || []),
+                ...movedComponents.filter(
+                  (component) => !existing.has(stableStringify(component))
+                ),
+              ],
+            },
+          ];
+        });
+      }
+      return requirements === response.requirements
+        ? response
+        : { ...response, requirements };
     }),
     repairs,
   };
@@ -5426,7 +5413,9 @@ function acceptedResponsesFromAttemptJournal({ output, plan, batch, args }) {
     if (
       artifact?.contractId !== TRANSPORT_CONTRACT_ID ||
       artifact?.sourceUnitPlanSha256 !== plan.planSha256 ||
-      artifact.promptContractId !== PROMPT_CONTRACT_ID ||
+      !RESUMABLE_PREDECESSOR_PROMPT_CONTRACT_IDS.has(
+        artifact.promptContractId
+      ) ||
       !RESUMABLE_SEMANTIC_SIGNAL_CONTRACT_IDS.has(
         artifact.semanticSignalContractId
       ) ||
@@ -6035,7 +6024,7 @@ async function runBatch({
         },
       ];
       messages.at(-1).content +=
-        " Präzisierung für gemischte Klassen: Wenn observedComponentTypes OBJECT nennt und semanticClasses zugleich INSURED_OBJECT enthält, behalte die gültige OBJECT-Komponente und ergänze PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT als separate Komponente derselben Requirement. Ersetze OBJECT nur, wenn INSURED_OBJECT weder primaryClass noch semanticClasses ist. Entferne beim Ergänzen einer missingRequiredComponentGroup keine Komponente, die eine andere vorhandene semanticClass weiterhin benötigt. Nennt COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE zusätzlich requiredSourceBlockIds, ersetze sourceBlockIds der exakt bezeichneten Komponente vollständig und zeichengetreu durch requiredSourceBlockIds; kopiere keine ähnlich aussehende Hash-ID aus der alten Antwort. Nennt COMPONENT_SOURCE_TEXT_INVALID declaredSourceExactText, ersetze jedes invalidLiteralValue der bezeichneten Komponente durch einen wörtlichen zusammenhängenden Teilstring daraus oder durch declaredSourceExactText selbst. Erhalte dabei Zeilenumbrüche, Trennstriche, Mehrfachleerzeichen, Satzzeichen und OCR-Zeichen exakt; dehypheniere und normalisiere nichts. War dasselbe normalisierte Literal zugleich displayLabel, ersetze auch displayLabel durch denselben exakten ownedSourceBlocks-Teilstring. Ändere declaredSourceBlockIds dabei nicht. REQUIREMENT_DISPLAY_LABEL_OUTSIDE_OWNED_SOURCE bedeutet: Ersetze das displayLabel am genannten requirementIndex durch einen exakt kopierten zusammenhängenden Ausschnitt aus allowedEvidence; erhalte insbesondere OCR-Schreibfehler, Leerzeichen und Zeilenumbrüche. REQUIREMENT_SOURCE_TEXT_INVALID bedeutet: Die Vereinigungsmenge der Komponenten-sourceBlockIds dieser Requirement muss jeden Block enthalten, aus dem ihr displayLabel Text übernimmt. Wenn requiredSourceBlockIds angegeben sind, ergänze eine fachlich passende Komponente für den fehlenden Randblock oder verkürze displayLabel auf einen exakt zitierten zusammenhängenden Ausschnitt aus selectedSourceExactText; erfinde keine ID. COVERAGE_EFFECT_LABEL_INVALID bedeutet: Das bisherige label ist keine Deckungswirkung. Verwende ausschließlich einen wörtlichen Wirkungsausdruck samt blockId aus allowedCoverageEffectEvidence. Ist diese Liste leer, lösche die COVERAGE_EFFECT-Komponente und entferne die unbelegte operative Deckungsklasse. Bei einer EXCLUSION bedeutet der wörtliche Ausdruck „ausgenommen sind“ die Deckungswirkung EXCLUDED und ist als eigene COVERAGE_EFFECT-Komponente auszugeben. Eine nummerierte, ausschließlich aus HEADING_CANDIDATE-Blöcken bestehende LIST-Unit ohne eigenes Prädikat oder Wirkungswort ist STRUCTURE mit requirements:[]; übertrage die Wirkung der nachfolgenden Klausel niemals auf diese Überschrift. Eine Regel, die ausschließlich beschreibt, wozu eine Versicherungssumme dient, wie sie aufgeteilt wird oder wonach sich ihre Verteilung richtet, ist DEFINITION mit FACT_ROLE-Komponenten und keine OPERATIVE_COVERAGE_STATEMENT. Eine ausdrückliche Erweiterung der Anwendbarkeit eines Gesetzesparagraphen auf weitere Sparten ist DOCUMENT_PRECEDENCE_OR_REPLACEMENT mit PRECEDENCE_OR_REPLACEMENT-Komponente und keine Deckungswirkung. Wörter wie „angerechnet“, „gelten als verloren“, „Bewertung“, „Ersatzwert“, „Restwert“, „Neuwert“ und „Zeitwert“ beschreiben für sich eine Bewertungs- oder Definitionsregel, keine Deckungswirkung und keine Gefahr. Verwende dafür DEFINITION mit einer wörtlichen FACT_ROLE-Komponente; enthält die Regel eine konkrete Grenze, ergänze LIMIT mit VALUE_AND_UNIT und LIMIT_BASIS. „gilt als vereinbart“ ist nur eine Vereinbarungseinleitung; wenn derselbe Satz die tatsächliche Leistung „Neuwertentschädigung geleistet wird“ enthält, ist ausschließlich dieser Leistungsausdruck der COVERAGE_EFFECT. LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet: Lösche die eigenständige Governor-Requirement. Verwende ihren COVERAGE_EFFECT stattdessen in jeder fachlichen Requirement der folgenden Item-Segmente. Der gemeinsame Governor darf in mehreren Requirements zitiert werden; jedes Nicht-Governor-logicalSourceSegment bleibt genau einer eigenen Requirement zugeordnet. Nennt OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE einen uncoveredBlocks-Eintrag mit structuralKind LIST_GOVERNOR ohne Deckungswirkungswort, füge dessen exactText als passende SCOPE-, CONDITION-, OBJECT- oder FACT_ROLE-Komponente in die fachlich abhängige Item-Requirement ein; erzeuge für den Governor keine eigene Requirement. DUPLICATE_UNIT_RESPONSE bedeutet: Gib für die genannte unitId genau ein Objekt aus und vereinige die fachlich getrennten Punkte ausschließlich als mehrere Einträge im requirements-Array dieses einen Objekts; verliere dabei keinen Punkt und keine Komponente. UNKNOWN_UNIT_ID bedeutet: Erzeuge niemals eine Ersatz- oder Unter-ID. Ordne alle fachlich getrennten Aussagen als mehrere requirements demselben einzigen erwarteten unitId-Objekt zu. Das gilt auch für lange Fließtextklauseln; alle uncoveredBlocks müssen durch fachlich passende Komponenten unter dieser unveränderten unitId belegt werden.";
+        " Präzisierung für gemischte Klassen: Wenn observedComponentTypes OBJECT nennt und semanticClasses zugleich INSURED_OBJECT enthält, behalte die gültige OBJECT-Komponente und ergänze PERIL_OR_CAUSE oder DAMAGE_OR_EFFECT als separate Komponente derselben Requirement. Ersetze OBJECT nur, wenn INSURED_OBJECT weder primaryClass noch semanticClasses ist. Entferne beim Ergänzen einer missingRequiredComponentGroup keine Komponente, die eine andere vorhandene semanticClass weiterhin benötigt. Nennt COMPONENT_SOURCE_BLOCK_ID_OUT_OF_SCOPE zusätzlich requiredSourceBlockIds, ersetze sourceBlockIds der exakt bezeichneten Komponente vollständig und zeichengetreu durch requiredSourceBlockIds; kopiere keine ähnlich aussehende Hash-ID aus der alten Antwort. Nennt COMPONENT_SOURCE_TEXT_INVALID declaredSourceExactText, ersetze jedes invalidLiteralValue der bezeichneten Komponente durch einen wörtlichen zusammenhängenden Teilstring daraus oder durch declaredSourceExactText selbst. Erhalte dabei Zeilenumbrüche, Trennstriche, Mehrfachleerzeichen, Satzzeichen und OCR-Zeichen exakt; dehypheniere und normalisiere nichts. War dasselbe normalisierte Literal zugleich displayLabel, ersetze auch displayLabel durch denselben exakten ownedSourceBlocks-Teilstring. Ändere declaredSourceBlockIds dabei nicht. REQUIREMENT_DISPLAY_LABEL_OUTSIDE_OWNED_SOURCE bedeutet: Ersetze das displayLabel am genannten requirementIndex durch einen exakt kopierten zusammenhängenden Ausschnitt aus allowedEvidence; erhalte insbesondere OCR-Schreibfehler, Leerzeichen und Zeilenumbrüche. REQUIREMENT_SOURCE_TEXT_INVALID bedeutet: Die Vereinigungsmenge der Komponenten-sourceBlockIds dieser Requirement muss jeden Block enthalten, aus dem ihr displayLabel Text übernimmt. Wenn requiredSourceBlockIds angegeben sind, ergänze eine fachlich passende Komponente für den fehlenden Randblock oder verkürze displayLabel auf einen exakt zitierten zusammenhängenden Ausschnitt aus selectedSourceExactText; erfinde keine ID. COVERAGE_EFFECT_LABEL_INVALID bedeutet: Das bisherige label ist keine Deckungswirkung. Verwende ausschließlich einen wörtlichen Wirkungsausdruck samt blockId aus allowedCoverageEffectEvidence. Ist diese Liste leer, lösche die COVERAGE_EFFECT-Komponente und entferne die unbelegte operative Deckungsklasse. Bei einer EXCLUSION bedeutet der wörtliche Ausdruck „ausgenommen sind“ die Deckungswirkung EXCLUDED und ist als eigene COVERAGE_EFFECT-Komponente auszugeben. Eine nummerierte, ausschließlich aus HEADING_CANDIDATE-Blöcken bestehende LIST-Unit ohne eigenes Prädikat oder Wirkungswort ist STRUCTURE mit requirements:[]; übertrage die Wirkung der nachfolgenden Klausel niemals auf diese Überschrift. Eine Regel, die ausschließlich beschreibt, wozu eine Versicherungssumme dient, wie sie aufgeteilt wird oder wonach sich ihre Verteilung richtet, ist DEFINITION mit FACT_ROLE-Komponenten und keine OPERATIVE_COVERAGE_STATEMENT. Eine ausdrückliche Erweiterung der Anwendbarkeit eines Gesetzesparagraphen auf weitere Sparten ist DOCUMENT_PRECEDENCE_OR_REPLACEMENT mit PRECEDENCE_OR_REPLACEMENT-Komponente und keine Deckungswirkung. Wörter wie „angerechnet“, „gelten als verloren“, „Bewertung“, „Ersatzwert“, „Restwert“, „Neuwert“ und „Zeitwert“ beschreiben für sich eine Bewertungs- oder Definitionsregel, keine Deckungswirkung und keine Gefahr. Verwende dafür DEFINITION mit einer wörtlichen FACT_ROLE-Komponente; enthält die Regel eine konkrete Grenze, ergänze LIMIT mit VALUE_AND_UNIT und LIMIT_BASIS. „gilt als vereinbart“ ist nur eine Vereinbarungseinleitung; wenn derselbe Satz die tatsächliche Leistung „Neuwertentschädigung geleistet wird“ enthält, ist ausschließlich dieser Leistungsausdruck der COVERAGE_EFFECT. LIST_GOVERNOR_REQUIREMENT_STANDALONE bedeutet: Lösche die eigenständige Governor-Requirement. Verwende ihre fachlichen Komponenten stattdessen ausschließlich in den unmittelbar folgenden, typografisch untergeordneten Item-Segmenten bis zur nächsten Governor- oder Strukturgrenze. LIST_GOVERNOR_SCOPE_LEAK bedeutet: Entferne die Governor-Komponente aus allen davorliegenden, gleichrangigen oder außerhalb dieser Gruppe liegenden Requirements. Der gemeinsame Governor darf in mehreren zugehörigen Requirements zitiert werden; jedes Nicht-Governor-logicalSourceSegment bleibt genau einer eigenen Requirement zugeordnet. Nennt OPERATIVE_UNIT_BLOCK_COVERAGE_INCOMPLETE einen uncoveredBlocks-Eintrag mit structuralKind LIST_GOVERNOR ohne Deckungswirkungswort, füge dessen exactText als passende SCOPE-, CONDITION-, OBJECT- oder FACT_ROLE-Komponente in die fachlich abhängige Item-Requirement ein; erzeuge für den Governor keine eigene Requirement. DUPLICATE_UNIT_RESPONSE bedeutet: Gib für die genannte unitId genau ein Objekt aus und vereinige die fachlich getrennten Punkte ausschließlich als mehrere Einträge im requirements-Array dieses einen Objekts; verliere dabei keinen Punkt und keine Komponente. UNKNOWN_UNIT_ID bedeutet: Erzeuge niemals eine Ersatz- oder Unter-ID. Ordne alle fachlich getrennten Aussagen als mehrere requirements demselben einzigen erwarteten unitId-Objekt zu. Das gilt auch für lange Fließtextklauseln; alle uncoveredBlocks müssen durch fachlich passende Komponenten unter dieser unveränderten unitId belegt werden.";
       messages.at(-1).content +=
         " REQUIREMENT_ROLE_EVIDENCE_UNMAPPED bedeutet: In der exakt genannten Requirement fehlt für matchedEvidence eine anforderungsbezogene Rollenkomponente. Ergänze sie in derselben Requirement und zitiere den genannten blockId; leihe keine Komponente aus einer benachbarten Requirement. EXPLICIT_CONDITION benötigt CONDITION. EXPLICIT_DEDUCTIBLE benötigt DEDUCTIBLE. EXPLICIT_QUANTIFIED_VALUE benötigt VALUE_AND_UNIT mit wörtlichem rawValue. EXPLICIT_LIMIT_BASIS benötigt LIMIT_BASIS. EXPLICIT_NON_NUMERIC_LIMIT benötigt LIMIT_BASIS. EXPLICIT_EXCLUSION benötigt eine eigene COVERAGE_EFFECT-Komponente mit coverageEffect EXCLUDED und einem wörtlichen Ausschlussausdruck als label.";
       messages.at(-1).content +=
