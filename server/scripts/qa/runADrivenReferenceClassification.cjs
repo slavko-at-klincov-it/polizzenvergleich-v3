@@ -3055,9 +3055,6 @@ function normalizeListSegmentComponentBoundaries(requirements, unit) {
       .replace(/\s+/gu, " ")
       .trim()
       .replace(/^[•▪–—-]\s*/u, "");
-  const sourceBlocksById = new Map(
-    (unit.source?.blocks || []).map((block) => [block.blockId, block])
-  );
   const governorGroups = sharedListGovernorGroups(unit);
   const governingBlockIds = new Set(unit.governingContext?.blockIds || []);
   const repairs = [];
