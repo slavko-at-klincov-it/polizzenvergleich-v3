@@ -10636,6 +10636,46 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.78 Batch 38: exakte Einwort-Quellbindung und mehrstufiges Resume
+
+Der V3.9.8-Resume `resume-5b54889b5b8cf61a238f8f79` übernahm Batches 1 bis
+36, schloss Batch 37 ab und brachte Batch 38 auf 5/6 gültige Units. Die einzige
+offene Unit enthielt einen fachlich richtigen Zeitbezug, aber Qwen schrieb im
+Komponentenlabel einmal `Wirklichkeit` statt des Originalworts `Wirksamkeit`.
+Der Source-Validator lehnte dies korrekt als `COMPONENT_SOURCE_TEXT_INVALID`
+ab; drei Versuche stoppten ohne Timeout fail-closed.
+
+Der allgemeine V80-Fix adaptiert `CAP-A-002`. Eine Einwortabweichung wird nur
+dann auf Originaltext zurückgeführt, wenn alle übrigen Wörter positionsgleich
+sind, das abweichende Wort morphologisch eng verwandt ist und genau eine
+zusammenhängende Zielspanne innerhalb der bereits deklarierten eigenen
+Quellblöcke existiert. Zahlen, Zahlwörter, Negationen,
+Deckungs-/Ausschlusspolarität, Modalität, mehrere Abweichungen und mehrdeutige
+Spannen sind ausdrücklich ausgeschlossen und bleiben fail-closed.
+
+Die reale Offline-Revalidierung zeigte außerdem eine Persistenzlücke:
+Zwei gültige Antworten lagen im älteren Resume, vier weitere im unmittelbar
+folgenden Attempt-Journal. Eine einstufige Wiederaufnahme hätte nur vier
+gesehen. `CAP-ORCH-001` und `CAP-A-002` verfolgen deshalb nun die vollständige
+explizite `LF_A_PARTIAL_RESUME_SOURCE_V1`-Kette. Jeder Vorgängerplan wird gegen
+den aktuellen Plan geprüft; Symlinks, Zyklen, ungültige Marker und mehr als 64
+Vorgänger stoppen fail-closed. Jede Antwort wird unter dem aktuellen Vertrag
+einzeln revalidiert.
+
+Die fokussierte Suite bestand auf dem Mac Studio mit 420/420 Tests. Die echte
+Batch-38-Kette wurde anschließend über 13 Vorgängerwurzeln read-only geprüft:
+6/6 Units PASS, sechs Vorgängerantworten wiederverwendet, null Modellaufrufe
+und null neue Versuche. Der vorhandene Attempt-Baum und die privaten
+Kundenartefakte blieben unverändert.
+
+Status: `V3.9.9-RELEASEKANDIDAT; BATCH 38 OFFLINE 6/6 PASS; 420/420
+FOKUSSIERTE TESTS PASS; VOLLGATE, DEPLOYMENT UND RESUME AUSSTEHEND`.
+
+Change-Sets:
+
+- `LF-V399-EXACT-SINGLE-TOKEN-SOURCE-ALIGNMENT-20260917-001`
+- `LF-V399-MULTIHOP-PARTIAL-RESUME-20260917-002`
+
 ### 133.77 Batch 38: nummerierte Struktur beendet fremden Governor
 
 Der V3.9.7-Resume `resume-d4a5422a492af4769c12cdd4` revalidierte Batches 1

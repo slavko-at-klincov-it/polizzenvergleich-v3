@@ -30,5 +30,16 @@ neu klassifiziert werden.
 Der bekannte LF-1+9-Lauf bleibt Regressionsevidenz und ist kein unabhängiger
 Generalisierungs- oder 99-Prozent-Nachweis.
 
+Der vollständige Release-Gate bestand anschließend auf Commit
+`00de36d5cd803bd5296b6a76330950c4574342b2` mit 212/212 Testsuiten und
+3.108/3.108 Tests sowie allen Lints, Prisma, Capability-Inventar, Prettier,
+Frontend-Build und Installer-Suite. V3.9.8 wurde über den offiziellen Updater
+installiert; Doctor, API und SQLite bestanden. Der Produkt-Resume schloss
+Batch 37 ab und brachte Batch 38 auf 5/6 gültige Units. Die letzte Unit stoppte
+korrekt fail-closed, weil das Modell in einem ansonsten source-bound Zeitlabel
+ein Originalwort veränderte. Diese Restursache und die dabei sichtbar
+gewordene mehrstufige Resume-Lücke werden ausschließlich im Nachfolgerelease
+V3.9.9 behoben.
+
 Change-Set:
 `LF-V398-NUMBERED-HEADING-GOVERNOR-BOUNDARY-20260917-001`.

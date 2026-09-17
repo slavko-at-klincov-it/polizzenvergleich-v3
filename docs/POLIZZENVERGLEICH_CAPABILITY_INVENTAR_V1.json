@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V398-NUMBERED-HEADING-GOVERNOR-BOUNDARY-20260917-001",
+  "changeSetId": "LF-V399-MULTIHOP-PARTIAL-RESUME-20260917-002",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -237,25 +237,28 @@
         "Configured worker concurrency does not override the global local-model lock.",
         "A session PASS does not prove fachliche correctness.",
         "Cross-release partial resume is allowed only for an exact release-independent run identity and requires current-contract revalidation.",
-        "Every run-contract bump must retain the immediately preceding contract in the explicit predecessor allowlist; omission fails closed before model work."
+        "Every run-contract bump must retain the immediately preceding contract in the explicit predecessor allowlist; omission fails closed before model work.",
+        "Multi-hop partial resume follows only explicit plan-identical LF_A_PARTIAL_RESUME_SOURCE_V1 links; invalid markers, symlinks, cycles and chains beyond 64 predecessors fail closed."
       ],
       "evidence": {
         "tests": [
           "server/__tests__/scripts/qa/policyComparisonWorkerContract.test.js",
           "server/__tests__/utils/policyComparisonADrivenPartialResumeSource.test.js",
           "server/__tests__/utils/policyComparisonWorkerSupervisor.test.js",
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js",
           "server/__tests__/models/policyComparison.test.js"
         ],
         "runs": [
           "Tracker 133.45",
           "Tracker 133.47",
           "Tracker 133.65",
-          "Tracker 133.74"
+          "Tracker 133.74",
+          "Tracker 133.78"
         ],
         "adrs": ["ADR-009", "ADR-027", "ADR-031"],
-        "failures": ["INT-20260917-049", "INT-20260917-060"]
+        "failures": ["INT-20260917-049", "INT-20260917-060", "INT-20260917-068"]
       },
-      "lastVerifiedCommit": "74f9a621ef1af002bda980fbc0f99e0e3c239cf0",
+      "lastVerifiedCommit": "996ed0fd3eb222a33481c06bae5c6cc6cea6466a",
       "relations": [{ "type": "REFINES", "target": "CAP-LEGACY-001" }],
       "activationReason": "Endpoint and worker route both persisted product modes; V3.8.0 activates LF V2 for controlled customer production.",
       "reactivationCriteria": "Not applicable while active."
@@ -751,7 +754,9 @@
         "An explicitly elided component label is restored only to one exact, globally unique original span inside the smallest contiguous window bounded by all model-declared owned blocks; ambiguity and external evidence remain fail-closed.",
         "A repeated literal component is narrowed to the unique exact requirement display-label occurrence only when every selected display block was already model-declared and at least two declared blocks contain the same literal.",
         "A complete owned insured-things clause with a conditional extension and trailing exclusion is atomized into separate source-bound requirements; an older inherited coverage governor is suppressed only when the owned text carries an explicit positive coverage reset.",
-        "A numbered pure structural heading or direct numbered question terminates an older operative heading governor; numbered operative assertions remain under the normal source-bound evidence rules."
+        "A numbered pure structural heading or direct numbered question terminates an older operative heading governor; numbered operative assertions remain under the normal source-bound evidence rules.",
+        "A single morphologically close model word is restored only from one unique contiguous span inside already declared owned source blocks; numbers, number words, negation, coverage polarity, modality, multiple differences and ambiguity remain fail-closed.",
+        "A partial resume revalidates every explicit plan-identical predecessor in its bounded chain so valid units from older attempts are not recomputed."
       ],
       "evidence": {
         "tests": [
@@ -776,7 +781,8 @@
           "Tracker 133.74",
           "Tracker 133.75",
           "Tracker 133.76",
-          "Tracker 133.77"
+          "Tracker 133.77",
+          "Tracker 133.78"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -803,10 +809,12 @@
           "INT-20260917-063",
           "INT-20260917-064",
           "INT-20260917-065",
-          "INT-20260917-066"
+          "INT-20260917-066",
+          "INT-20260917-067",
+          "INT-20260917-068"
         ]
       },
-      "lastVerifiedCommit": "66ab098e345f0f01d9ab33c867db6707c29c2509",
+      "lastVerifiedCommit": "996ed0fd3eb222a33481c06bae5c6cc6cea6466a",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
