@@ -155,6 +155,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-049` | Partiellen A-Resume über Releasegrenzen quellengebunden übernehmen                | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.8.6 installieren und Session 14 ab der ersten aktuell offenen Unit fortsetzen                                        |
 | `INT-20260917-050` | Komplementäre Duplicate-Unit-Hüllen vor Listen-Normalisierung sicher vereinigen   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.7-Produktlauf ab Batch 7 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
 | `INT-20260917-051` | Alte komponentenförmige Requirements vor fachlicher Normalisierung sicher heben   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.8-Produktlauf ab Batch 11 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
+| `INT-20260917-052` | Terminalalias in expliziter Schaden-durch-Komponente source-bound normalisieren   | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | eng gebundene Rollenregel testen, gespeicherten Batch 14 revalidieren und erst danach den Produktlauf fortsetzen          |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3468,3 +3469,44 @@ Vollständigkeitsbehauptung erzeugen.
   unabhängiger Generalisierungs-Holdout.
 - Geplanter Change-Set:
   `LF-V388-LEGACY-REQUIREMENT-SHAPE-LIFT-20260917-001`.
+
+## INT-20260917-052 — Terminalalias in expliziter Schaden-durch-Komponente source-bound normalisieren
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Ein Modell kann die gültige Terminalklasse `PERIL_OR_DAMAGE`
+  fälschlich als `component.type` verwenden. Enthält das wörtliche
+  Komponentenlabel die eindeutige Schaden-durch-Relation, darf dieser
+  ungültige Terminalalias zu `PERIL_OR_CAUSE` normalisiert werden. Ohne einen
+  solchen source-bound Rollenmarker bleibt die Antwort fail-closed.
+- Ist-Wahrheit: `JA` als alleinige verbleibende Ursache des fail-closed
+  Batch-14-Abbruchs im kalten V3.8.8-Produktlauf. Fünf von sechs Units sind
+  gültig gespeichert. Die offene Unit enthält zwei korrekt getrennte
+  Anforderungen für einen Selbstbehalt und einen ausdrücklichen Ausschluss.
+  Nach Korrektur der anfänglich fehlenden Primärklasse verbleibt ausschließlich
+  `COMPONENT_TYPE_INVALID` an der Schaden-durch-Komponente;
+  `INVALID_UNIT_ATOMIZATION` ist nur die Hüllenfolge dieses ungültigen
+  Komponententyps.
+- Quelle: private, resumierbare Batch-14-Attempt-Artefakte der Session
+  `79211e03-d5ce-44b6-9042-199e83f589a0` auf dem Mac Studio. Nur die kleinste
+  erforderliche Originalklausel wurde temporär source-bound geprüft.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Eine vollständig belegte
+  Ausschlussanforderung geht nicht allein wegen eines eindeutig auflösbaren
+  Terminal-/Komponentenalias verloren; die getrennte Selbstbehaltanforderung
+  und alle bereits gültigen Batches bleiben wiederverwendbar.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-A-002` und
+  `CAP-A-003`; keine Dokument-, Seiten-, ID-, Versicherer- oder
+  Wortlautsonderregel; keine Ergänzung oder Zusammenführung von Requirements;
+  keine Rollenentscheidung ohne wörtliche kausale Schadenrelation; keine
+  Lockerung der nachgelagerten Source- und Manifestvalidierung.
+- Hard-Gates: nur ungültiger `component.type` `PERIL_OR_DAMAGE`; nichtleeres
+  quellengebundenes Label; eindeutiges Muster Schaden/Beschädigung plus
+  kausaler Marker wie „durch“, „infolge“, „aufgrund“ oder „wegen“; keine
+  Änderung von Label, Quellen oder sonstigen Komponentenfeldern; unklare oder
+  nichtkausale Labels bleiben unverändert fail-closed; gespeicherter Batch 14
+  muss ohne Modellaufruf 6/6 PASS ergeben; der Attempt-Baum bleibt hashgleich.
+- Beweisgrenze: Der bekannte LF-1+9-Fehlerfall ist Regressionsevidenz, kein
+  unabhängiger Generalisierungs-Holdout.
+- Geplanter Change-Set:
+  `LF-V389-CAUSAL-PERIL-COMPONENT-ALIAS-20260917-001`.
