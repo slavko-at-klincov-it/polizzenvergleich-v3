@@ -4240,12 +4240,15 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       {
         blockId: "snow-removal",
         exactText:
-          "• Kosten für die Schneeräumung von Dächern zwecks Schadensprävention bei Gefahr in ",
+          "• Kosten für die Schneeräumung innerhalb ",
       },
-      { blockId: "snow-limit", exactText: "Verzug bis zu € 1.000,-; " },
+      {
+        blockId: "snow-limit",
+        exactText: "des versicherten Gebäudes bis zu € 1.000,-; ",
+      },
     ];
     const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
-    const governorText = "Versichert sind";
+    const governorText = "versichert";
     const unit = {
       unitId: "single-complete-list-segment",
       unitKind: "LIST",
@@ -4283,8 +4286,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           requirements: [
             {
               type: "OBJECT",
-              label:
-                "Kosten für die Schneeräumung von Dächern zwecks Schadensprävention bei Gefahr in Verzug",
+              label: "Kosten für die Schneeräumung innerhalb des versicherten Gebäudes",
               sourceBlockIds: ["snow-removal", "snow-limit"],
               components: [],
             },

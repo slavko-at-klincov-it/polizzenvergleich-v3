@@ -3342,17 +3342,18 @@ function liftLegacyComponentShapedRequirements(requirements, unit) {
             requirement.label
           )
         : [];
-    const exactSpanBlockIds =
-      ownedExactSpanBlockIds.length > 0
-        ? ownedExactSpanBlockIds
-        : governorExactSpanBlockIds.length > 0
-          ? governorExactSpanBlockIds
-          : sourceBlockIdsForWhitespaceNormalizedSpan(unit, requirement.label);
-    return (
-      exactSpanBlockIds.length > 0 &&
-      exactSpanBlockIds.every((blockId) =>
-        requirement.sourceBlockIds.includes(blockId)
-      )
+    const whitespaceNormalizedSpanBlockIds =
+      sourceBlockIdsForWhitespaceNormalizedSpan(unit, requirement.label);
+    return [
+      ownedExactSpanBlockIds,
+      governorExactSpanBlockIds,
+      whitespaceNormalizedSpanBlockIds,
+    ].some(
+      (exactSpanBlockIds) =>
+        exactSpanBlockIds.length > 0 &&
+        exactSpanBlockIds.every((blockId) =>
+          requirement.sourceBlockIds.includes(blockId)
+        )
     );
   };
   if (!requirements.every(isLegacyComponent))

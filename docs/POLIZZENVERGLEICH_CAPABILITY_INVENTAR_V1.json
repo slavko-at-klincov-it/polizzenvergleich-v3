@@ -735,7 +735,7 @@
         "Complementary duplicate envelopes are merged only for the same expected operative unit ID and still require complete current-contract source validation.",
         "Legacy component-shaped requirements are lifted only for wholly legacy, source-bound CLAUSE responses without logical list segments or a single complete continued-list segment; components may cite only owned blocks or exact blocks from a governor carrying the server evidence-context contract, while mixed, multi-segment or unbound shapes remain fail-closed.",
         "PERIL_OR_DAMAGE is normalized from an invalid component alias only when its exact source-bound label contains an explicit causal damage relation; ambiguous labels remain fail-closed.",
-        "A legacy multi-block label may cross physical blocks only through NFKC and whitespace collapse on one unique minimal contiguous source span; wording changes remain invalid.",
+        "A legacy multi-block label may cross physical blocks only through NFKC and whitespace collapse on one unique minimal contiguous source span; when the literal also occurs elsewhere, a candidate is valid only if its full block span is covered by the model-declared evidence IDs; wording changes remain invalid.",
         "A paraphrased quantified LIMIT_BASIS is rebound only from an exact 'Der/Die/Das X beträgt [Scope] Wert' source pattern with one exact value component."
       ],
       "evidence": {
