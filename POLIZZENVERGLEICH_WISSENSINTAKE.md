@@ -157,8 +157,8 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-051` | Alte komponentenförmige Requirements vor fachlicher Normalisierung sicher heben   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.8-Produktlauf ab Batch 11 weiterführen und vollständiges Endergebnis getrennt prüfen                          |
 | `INT-20260917-052` | Terminalalias in expliziter Schaden-durch-Komponente source-bound normalisieren   | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.8.9-Produktlauf ab Batch 15 weiterführen und vollständiges Endergebnis getrennt prüfen                           |
 | `INT-20260917-053` | Alte Komponentenform für exakt ein vollständiges Listensegment sicher heben       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.9.0-Produktlauf ab Batch 18 weiterführen und vollständiges Endergebnis getrennt prüfen                            |
-| `INT-20260917-054` | Mehrblocklabel in alter Hülle nur über Whitespace normalisiert exakt binden        | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | minimale zusammenhängende Blockspanne testen und erste offene Batch-21-Unit revalidieren                                   |
-| `INT-20260917-055` | Quantifizierte Limitbasis aus wörtlichem Satzsubjekt statt Paraphrase binden       | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | Subjekt-/Scope-/Wertvertrag testen und zweite offene Batch-21-Unit revalidieren                                             |
+| `INT-20260917-054` | Mehrblocklabel in alter Hülle nur über Whitespace normalisiert exakt binden        | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | vollständigen kalten Produktlauf ab Batch 22 fortsetzen und Endergebnis getrennt prüfen                                    |
+| `INT-20260917-055` | Quantifizierte Limitbasis aus wörtlichem Satzsubjekt statt Paraphrase binden       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | vollständigen kalten Produktlauf ab Batch 22 fortsetzen und Endergebnis getrennt prüfen                                    |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3594,7 +3594,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-17
 - Typ: `BEOBACHTUNG`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: Ein wörtliches Komponentenlabel kann eine physische Blockgrenze
   mit einem Leerzeichen statt dem im kombinierten Quelltext enthaltenen
   Zeilenumbruch wiedergeben. Wenn ausschließlich Whitespace kollabiert wird
@@ -3616,6 +3616,15 @@ Vollständigkeitsbehauptung erzeugen.
   Blockspanne von den deklarierten Source-IDs umfasst ist. Keine Korrektur von
   Wörtern, OCR, Trennstrichen, Satzzeichen oder fehlenden Quellen.
 - Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
+- Ergebnis: Der allgemeine V72-Vertrag wurde mit neun gezielten
+  Positiv-/Negativfällen und 393/393 fokussierten Tests auf dem Mac Studio
+  bestätigt. Der gespeicherte Batch 21 materialisierte 6/6 Units ohne neuen
+  Modellaufruf; sein Attempt-Baum blieb unter SHA-256
+  `c3f11c95368dc56956ddcbabedce0e9298a6b83a750e04c94deaf817927ede1e`
+  unverändert. Das V3.9.1-Release-Gate auf
+  `793f9eb1672e572b9585c4fb2207a6361336d14a` bestand 212/212 Suites und
+  3.088/3.088 Tests. Nach Installation mit Doctor/API/DB PASS wurden Batches
+  1 bis 21 ohne neue Attempts übernommen; der erste neue Attempt ist Batch 22.
 - Geplanter Change-Set:
   `LF-V391-BATCH21-EVIDENCE-NORMALIZATION-20260917-001`.
 
@@ -3623,7 +3632,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-17
 - Typ: `BEOBACHTUNG`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: In einer wörtlichen Konstruktion „Der/Die/Das X beträgt [Scope]
   [konkreter Wert]“ ist X die wörtliche Limitbasis. Kombiniert ein Modell X
   und den optionalen Scope zu einem nicht wörtlichen Kurzlabel, darf dieses
@@ -3641,5 +3650,14 @@ Vollständigkeitsbehauptung erzeugen.
   Neuformulierung, kein Löschen fachlicher Rollen und keine Regel für
   unquantifizierte oder mehrdeutige Sätze.
 - Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
+- Ergebnis: Der allgemeine V72-Vertrag wurde mit neun gezielten
+  Positiv-/Negativfällen und 393/393 fokussierten Tests auf dem Mac Studio
+  bestätigt. Der gespeicherte Batch 21 materialisierte 6/6 Units ohne neuen
+  Modellaufruf; sein Attempt-Baum blieb unter SHA-256
+  `c3f11c95368dc56956ddcbabedce0e9298a6b83a750e04c94deaf817927ede1e`
+  unverändert. Das V3.9.1-Release-Gate auf
+  `793f9eb1672e572b9585c4fb2207a6361336d14a` bestand 212/212 Suites und
+  3.088/3.088 Tests. Nach Installation mit Doctor/API/DB PASS wurden Batches
+  1 bis 21 ohne neue Attempts übernommen; der erste neue Attempt ist Batch 22.
 - Geplanter Change-Set:
   `LF-V391-BATCH21-EVIDENCE-NORMALIZATION-20260917-001`.
