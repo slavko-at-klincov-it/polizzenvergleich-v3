@@ -806,7 +806,7 @@
           "INT-20260917-066"
         ]
       },
-      "lastVerifiedCommit": "66ab098e3",
+      "lastVerifiedCommit": "66ab098e345f0f01d9ab33c867db6707c29c2509",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
