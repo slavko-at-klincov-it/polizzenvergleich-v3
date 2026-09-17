@@ -160,7 +160,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-054` | Mehrblocklabel in alter Hülle nur über Whitespace normalisiert exakt binden        | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | vollständigen kalten Produktlauf ab Batch 22 fortsetzen und Endergebnis getrennt prüfen                                    |
 | `INT-20260917-055` | Quantifizierte Limitbasis aus wörtlichem Satzsubjekt statt Paraphrase binden       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | vollständigen kalten Produktlauf ab Batch 22 fortsetzen und Endergebnis getrennt prüfen                                    |
 | `INT-20260917-056` | Nachlaufende Satzfortsetzung dem eindeutig letzten Komponentenanker zuordnen       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.9.2-Gate abschließen, installieren und den kalten Produktlauf ab Batch 30 fortsetzen                                    |
-| `INT-20260917-057` | Explizite Voraussetzung mit direkt folgender Begriffsdefinition atomisieren        | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | allgemeinen Bedingungs-/Definitionsvertrag testen und offene Batch-32-Unit revalidieren                                    |
+| `INT-20260917-057` | Explizite Voraussetzung mit direkt folgender Begriffsdefinition atomisieren        | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.9.3-Gate abschließen, installieren und den kalten Produktlauf ab Batch 33 fortsetzen                                    |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3708,7 +3708,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-17
 - Typ: `BEOBACHTUNG`
-- Status: `IN_PRÜFUNG`
+- Status: `BESTÄTIGT_UMGESETZT`
 - Aussage: Enthält genau ein fortgesetztes Listensegment eine ausdrücklich
   formulierte Voraussetzung und unmittelbar danach eine vollständige
   „Unter X versteht man Y“-Definition, sind beide Aussagen innerhalb der
@@ -3731,5 +3731,12 @@ Vollständigkeitsbehauptung erzeugen.
   fail-closed. Keine Dokument-ID, Seite, Versichererbezeichnung oder bekannte
   Kundenformulierung als Produktionsregel.
 - Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
+- Ergebnis: Syntax und Prettier sowie der vollständige A-Referenzvertrag
+  bestanden auf dem Mac Studio mit 397/397 Tests. Der echte gespeicherte
+  Batch 32 revalidierte ohne Modellaufruf mit 6/6 Units und null
+  Restdiagnosen. Der Attempt-Baum blieb unter SHA-256
+  `fa98cb514fd2507829612c02938ba1c8cb2a95b4d914632e2957496380b55ae1`
+  unverändert. Release-Gate, Deployment und Resume ab Batch 33 bleiben
+  getrennte nächste Nachweise.
 - Geplanter Change-Set:
   `LF-V393-PREREQUISITE-DEFINITION-ATOMIZATION-20260917-001`.
