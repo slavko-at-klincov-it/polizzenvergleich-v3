@@ -10571,6 +10571,55 @@ MODELLARBEIT ÜBERNOMMEN; KALTER PRODUKTLAUF AB BATCH 15 AKTIV`.
 Change-Set:
 `LF-V389-CAUSAL-PERIL-COMPONENT-ALIAS-20260917-001`.
 
+### 133.69 Ein vollständiges fortgesetztes Listensegment in Batch 17
+
+Der produktive V3.8.9-Resume materialisierte Batch 1 bis 14 ohne neue
+Modellarbeit. Batch 15 und 16 bestanden. Batch 17 stoppte nach neun Attempts
+korrekt fail-closed: fünf von sechs Units waren gültig und resumierbar, die
+verbleibende Unit wurde nicht als PASS gespeichert.
+
+Die offene Unit ist fachlich genau ein Listenpunkt, dessen Inhalt über zwei
+physische Blöcke fortgesetzt wird. Der Source-Plan besitzt dafür exakt ein
+`LIST_ITEM_WITH_CONTINUATIONS`, dessen geordnete Blockfolge mit der gesamten
+Unit übereinstimmt. Qwen lieferte in drei Versuchen dieselben drei
+quellengebundenen Komponenten für Rolle, Wert und Wirkung, aber in der alten
+Requirement-Hülle. Der bisherige V69-Vertrag sperrte jede `LIST`-Unit
+pauschal, um echte Mehrpunktlisten nicht versehentlich zusammenzuziehen.
+
+Der allgemeine V71-Fix adaptiert `CAP-A-002` und `CAP-A-003`. Eine alte
+Komponentenhülle wird bei `LIST` nur gehoben, wenn exakt ein fortgesetztes
+logisches Segment die vollständige geordnete Unit-Blockfolge besitzt. Eigene
+Quellen bleiben verpflichtend. Governor-Evidenz ist nur unter dem exakten
+serverseitigen Evidenzkontextvertrag zulässig und muss zusätzlich über
+Blockfolge, Hash und wortgetreues Label gebunden sein. Mehrsegmentlisten,
+unvollständige Blockfolgen, fremde Quellen, ungebundene Governor, gemischte
+Hüllen und verschachtelte Komponenten bleiben fail-closed.
+
+Mac-Studio-Nachweise auf dem exakten Implementierungsstand
+`d8425e86f95e62409c788a80570c6e9773bdae0d`:
+
+```text
+Gezielte positive/negative Vertragsfälle:  9/9 PASS
+Vollständiger fokussierter Vertragslauf:   389/389 PASS
+Echter gespeicherter Batch 17:             6/6 Units, PASS
+Neue Modellaufrufe im Realartefakt-Test:   0
+Nichtblockierende Diagnose:                LOCAL_SIGNAL_COMPONENT_MATERIALIZED
+Attempt-Artefaktbaum SHA-256 vorher/nachher:
+be05dd92dd2c71989e79f3320ee60e729045d8c7f0c8e7a37e3f1d63078cefe1
+Vorgängerartefakte nach Revalidierung:      hashgleich
+```
+
+V3.9.0-Release-Gate, Installation und die Fortsetzung ab dem nun
+materialisierbaren Batch 17 stehen noch aus. Gold-283-V2 bleibt unverändert;
+der bekannte LF-1+9-Lauf bleibt Regression und kein unabhängiger
+Generalisierungs- oder 99-Prozent-Nachweis.
+
+Status: `BATCH-17-ROOT-CAUSE ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
+MODELLAUFRUF; V3.9.0-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+
+Change-Set:
+`LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
+
 ### 133.64 Kalter V3.8.4-Lauf und eingebettete List-Governor-Gruppen
 
 V3.8.4 wurde als annotierter Tag veröffentlicht, `origin/main` und der

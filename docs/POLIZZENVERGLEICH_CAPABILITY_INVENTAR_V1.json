@@ -750,7 +750,8 @@
           "Tracker 133.64",
           "Tracker 133.65",
           "Tracker 133.66",
-          "Tracker 133.67"
+          "Tracker 133.67",
+          "Tracker 133.69"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -767,7 +768,7 @@
           "INT-20260917-053"
         ]
       },
-      "lastVerifiedCommit": "ae5b8a826e3c08f5b983393bd331f930ac469fac",
+      "lastVerifiedCommit": "d8425e86f95e62409c788a80570c6e9773bdae0d",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
@@ -840,7 +841,8 @@
           "Tracker 133.63",
           "Tracker 133.64",
           "Tracker 133.66",
-          "Tracker 133.67"
+          "Tracker 133.67",
+          "Tracker 133.69"
         ],
         "adrs": ["ADR-028", "ADR-031"],
         "failures": [
@@ -850,7 +852,7 @@
           "INT-20260917-053"
         ]
       },
-      "lastVerifiedCommit": "ae5b8a826e3c08f5b983393bd331f930ac469fac",
+      "lastVerifiedCommit": "d8425e86f95e62409c788a80570c6e9773bdae0d",
       "relations": [{ "type": "DERIVED_FROM", "target": "CAP-A-002" }],
       "activationReason": "Current V2 runner consumes this manifest directly.",
       "reactivationCriteria": "Not applicable while active."
