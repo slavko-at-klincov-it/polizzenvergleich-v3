@@ -43,7 +43,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V71";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V72";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -104,6 +104,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V68",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V69",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V70",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V71",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -841,6 +842,41 @@ function sourceBlockIdsForExactSpan(unit, exactSpan) {
     blockStart = blockEnd + (index < blocks.length - 1 ? 1 : 0);
     return result;
   });
+}
+
+function sourceBlockIdsForWhitespaceNormalizedSpan(unit, exactSpan) {
+  const normalize = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim();
+  const normalizedSpan = normalize(exactSpan);
+  if (!normalizedSpan) return [];
+  const candidates = [unit?.source, unit?.governingContext].flatMap((source) => {
+    const blocks = Array.isArray(source?.blocks) ? source.blocks : [];
+    const matches = [];
+    for (let start = 0; start < blocks.length; start += 1)
+      for (let end = start; end < blocks.length; end += 1) {
+        const selected = blocks.slice(start, end + 1);
+        if (
+          normalize(selected.map(({ exactText }) => exactText).join("\n")).includes(
+            normalizedSpan
+          )
+        )
+          matches.push(selected.map(({ blockId }) => blockId));
+      }
+    return matches;
+  });
+  if (candidates.length === 0) return [];
+  const minimumLength = Math.min(...candidates.map(({ length }) => length));
+  const unique = [
+    ...new Map(
+      candidates
+        .filter(({ length }) => length === minimumLength)
+        .map((blockIds) => [stableStringify(blockIds), blockIds])
+    ).values(),
+  ];
+  return unique.length === 1 ? unique[0] : [];
 }
 
 function authoritativeAdministrativeOrApplicabilityRequirement(unit) {
@@ -2847,6 +2883,99 @@ function normalizeCostAllocationDefinition(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
+function normalizeQuantifiedSubjectLimitBasis(requirements, unit) {
+  const normalize = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim();
+  const repairs = [];
+  let addedScope = false;
+  const normalizedRequirements = requirements.map(
+    (requirement, requirementIndex) => {
+      const displayLabel = String(requirement?.displayLabel || "");
+      if (sourceBlockIdsForExactSpan(unit, displayLabel).length === 0)
+        return requirement;
+      const relation =
+        /^\s*(?:Der|Die|Das)\s+(?<basis>[\p{L}\p{M}][\p{L}\p{M}\d\s/()-]{0,160}?)\s+beträgt\s+(?<tail>[\s\S]+?)\s*[.]?\s*$/iu.exec(
+          displayLabel
+        );
+      if (!relation?.groups?.basis || !relation.groups.tail)
+        return requirement;
+      const components = Array.isArray(requirement.components)
+        ? requirement.components
+        : [];
+      const exactValues = components.filter(
+        (component) =>
+          component?.type === "VALUE_AND_UNIT" &&
+          sourceBlockIdsForExactSpan(unit, component.label).length > 0 &&
+          normalize(relation.groups.tail).includes(normalize(component.label))
+      );
+      if (exactValues.length !== 1) return requirement;
+      const valueOffset = normalize(relation.groups.tail).indexOf(
+        normalize(exactValues[0].label)
+      );
+      if (valueOffset < 0) return requirement;
+      const normalizedTail = normalize(relation.groups.tail);
+      const scope = normalizedTail.slice(0, valueOffset).trim();
+      if (scope && !/^in\s+der\s+[\p{L}\p{M}\d-]+$/iu.test(scope))
+        return requirement;
+      const basis = relation.groups.basis.trim();
+      const basisSourceBlockIds = sourceBlockIdsForExactSpan(unit, basis);
+      const scopeSourceBlockIds = scope
+        ? sourceBlockIdsForExactSpan(unit, scope)
+        : [];
+      if (
+        basisSourceBlockIds.length === 0 ||
+        (scope && scopeSourceBlockIds.length === 0)
+      )
+        return requirement;
+      const invalidBasisIndexes = components.flatMap((component, index) => {
+        if (
+          component?.type !== "LIMIT_BASIS" ||
+          sourceBlockIdsForExactSpan(unit, component.label).length > 0 ||
+          normalize(component.label) !== normalize([basis, scope].filter(Boolean).join(" "))
+        )
+          return [];
+        return [index];
+      });
+      if (invalidBasisIndexes.length !== 1) return requirement;
+      const invalidIndex = invalidBasisIndexes[0];
+      addedScope ||= Boolean(scope);
+      repairs.push({
+        requirementIndex,
+        componentIndex: invalidIndex,
+        action: "REBIND_QUANTIFIED_SUBJECT_LIMIT_BASIS",
+        addedScope: Boolean(scope),
+      });
+      return {
+        ...requirement,
+        components: components.flatMap((component, componentIndex) =>
+          componentIndex === invalidIndex
+            ? [
+                {
+                  type: "LIMIT_BASIS",
+                  label: basis,
+                  sourceBlockIds: basisSourceBlockIds,
+                },
+                ...(scope
+                  ? [
+                      {
+                        type: "SCOPE",
+                        label: scope,
+                        sourceBlockIds: scopeSourceBlockIds,
+                      },
+                    ]
+                  : []),
+              ]
+            : [component]
+        ),
+      };
+    }
+  );
+  return { requirements: normalizedRequirements, repairs, addedScope };
+}
+
 function normalizeTieredLimitBasisComponents(requirements, unit) {
   const repairs = [];
   let addedScope = false;
@@ -3216,7 +3345,9 @@ function liftLegacyComponentShapedRequirements(requirements, unit) {
     const exactSpanBlockIds =
       ownedExactSpanBlockIds.length > 0
         ? ownedExactSpanBlockIds
-        : governorExactSpanBlockIds;
+        : governorExactSpanBlockIds.length > 0
+          ? governorExactSpanBlockIds
+          : sourceBlockIdsForWhitespaceNormalizedSpan(unit, requirement.label);
     return (
       exactSpanBlockIds.length > 0 &&
       exactSpanBlockIds.every((blockId) =>
@@ -4185,6 +4316,24 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
             ...(response.semanticClasses || []),
             "DEFINITION",
             "CONDITION",
+          ]),
+        ],
+      };
+    const quantifiedSubjectLimit = normalizeQuantifiedSubjectLimitBasis(
+      requirements,
+      unit
+    );
+    requirements = quantifiedSubjectLimit.requirements;
+    for (const repair of quantifiedSubjectLimit.repairs)
+      repairs.push({ unitId: response?.unitId, ...repair });
+    if (quantifiedSubjectLimit.repairs.length > 0)
+      response = {
+        ...response,
+        semanticClasses: [
+          ...new Set([
+            ...(response.semanticClasses || []),
+            "LIMIT",
+            ...(quantifiedSubjectLimit.addedScope ? ["VARIANT"] : []),
           ]),
         ],
       };

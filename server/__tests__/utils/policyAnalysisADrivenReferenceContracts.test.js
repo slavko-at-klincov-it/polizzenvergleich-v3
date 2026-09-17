@@ -4240,9 +4240,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       {
         blockId: "snow-removal",
         exactText:
-          "• Kosten für die Schneeräumung von Dächern zwecks Schadensprävention bei Gefahr in Verzug ",
+          "• Kosten für die Schneeräumung von Dächern zwecks Schadensprävention bei Gefahr in ",
       },
-      { blockId: "snow-limit", exactText: "bis zu € 1.000,-; " },
+      { blockId: "snow-limit", exactText: "Verzug bis zu € 1.000,-; " },
     ];
     const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
     const governorText = "Versichert sind";
@@ -4285,7 +4285,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
               type: "OBJECT",
               label:
                 "Kosten für die Schneeräumung von Dächern zwecks Schadensprävention bei Gefahr in Verzug",
-              sourceBlockIds: ["snow-removal"],
+              sourceBlockIds: ["snow-removal", "snow-limit"],
               components: [],
             },
             {
@@ -4313,7 +4313,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     expect(normalized.responses[0].requirements[0]).toMatchObject({
       displayLabel: combinedText,
       components: [
-        { type: "FACT_ROLE", sourceBlockIds: ["snow-removal"] },
+        {
+          type: "FACT_ROLE",
+          sourceBlockIds: ["snow-removal", "snow-limit"],
+        },
         { type: "VALUE_AND_UNIT", sourceBlockIds: ["snow-limit"] },
         {
           type: "COVERAGE_EFFECT",
@@ -4504,6 +4507,185 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           action: "LIFT_LEGACY_COMPONENT_SHAPED_REQUIREMENTS",
         }),
       ])
+    );
+  });
+
+  test("does not treat a non-whitespace legacy paraphrase as source-bound", () => {
+    const blocks = [
+      { blockId: "first", exactText: "Kosten innerhalb " },
+      { blockId: "second", exactText: "des versicherten Gebäudes" },
+    ];
+    const requirements = [
+      {
+        type: "OBJECT",
+        label: "Kosten innerhalb des Gebäudes",
+        sourceBlockIds: ["first", "second"],
+        components: [],
+      },
+    ];
+    const unit = {
+      unitId: "legacy-paraphrase-negative",
+      unitKind: "LIST",
+      logicalSourceSegments: [
+        {
+          segmentId: "one-item",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["first", "second"],
+        },
+      ],
+      source: {
+        blockIds: ["first", "second"],
+        combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
+        blocks,
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements,
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements).toEqual(requirements);
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "LIFT_LEGACY_COMPONENT_SHAPED_REQUIREMENTS",
+      })
+    );
+  });
+
+  test("rebinds a paraphrased quantified subject limit basis to exact basis and scope", () => {
+    const source =
+      "Der Rohrersatz beträgt in der C-Deckung bis zu 10m Länge.";
+    const unit = {
+      unitId: "quantified-subject-limit",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["limit-block"],
+        combinedText: source,
+        blocks: [{ blockId: "limit-block", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "LIMIT",
+          semanticClasses: ["LIMIT"],
+          requirements: [
+            {
+              displayLabel: source,
+              components: [
+                {
+                  type: "LIMIT_BASIS",
+                  label: "Rohrersatz in der C-Deckung",
+                  sourceBlockIds: ["limit-block"],
+                },
+                {
+                  type: "VALUE_AND_UNIT",
+                  label: "bis zu 10m Länge",
+                  rawValue: "bis zu 10m Länge",
+                  sourceBlockIds: ["limit-block"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].semanticClasses).toEqual([
+      "LIMIT",
+      "VARIANT",
+    ]);
+    expect(normalized.responses[0].requirements[0].components).toEqual([
+      {
+        type: "LIMIT_BASIS",
+        label: "Rohrersatz",
+        sourceBlockIds: ["limit-block"],
+      },
+      {
+        type: "SCOPE",
+        label: "in der C-Deckung",
+        sourceBlockIds: ["limit-block"],
+      },
+      {
+        type: "VALUE_AND_UNIT",
+        label: "bis zu 10m Länge",
+        rawValue: "bis zu 10m Länge",
+        sourceBlockIds: ["limit-block"],
+      },
+    ]);
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: unit.unitId,
+        action: "REBIND_QUANTIFIED_SUBJECT_LIMIT_BASIS",
+        addedScope: true,
+      })
+    );
+  });
+
+  test.each([
+    {
+      name: "an unrelated paraphrased basis",
+      basisLabel: "Rohrersatz der C-Deckung",
+      valueLabel: "bis zu 10m Länge",
+    },
+    {
+      name: "a non-source-bound value",
+      basisLabel: "Rohrersatz in der C-Deckung",
+      valueLabel: "bis zu 10 m Länge",
+    },
+  ])("keeps quantified subject rebinding fail-closed for $name", (fixture) => {
+    const source =
+      "Der Rohrersatz beträgt in der C-Deckung bis zu 10m Länge.";
+    const components = [
+      {
+        type: "LIMIT_BASIS",
+        label: fixture.basisLabel,
+        sourceBlockIds: ["limit-block"],
+      },
+      {
+        type: "VALUE_AND_UNIT",
+        label: fixture.valueLabel,
+        rawValue: fixture.valueLabel,
+        sourceBlockIds: ["limit-block"],
+      },
+    ];
+    const unit = {
+      unitId: "quantified-subject-negative",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["limit-block"],
+        combinedText: source,
+        blocks: [{ blockId: "limit-block", exactText: source }],
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "LIMIT",
+          semanticClasses: ["LIMIT"],
+          requirements: [{ displayLabel: source, components }],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements[0].components).toEqual(
+      components
+    );
+    expect(normalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "REBIND_QUANTIFIED_SUBJECT_LIMIT_BASIS",
+      })
     );
   });
 
@@ -9046,7 +9228,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V71");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V72");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001",
+  "changeSetId": "LF-V391-BATCH21-EVIDENCE-NORMALIZATION-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -734,7 +734,9 @@
         "Partial predecessor answers are never trusted as PASS and must be rebound to the identical source plan and current validator before reuse.",
         "Complementary duplicate envelopes are merged only for the same expected operative unit ID and still require complete current-contract source validation.",
         "Legacy component-shaped requirements are lifted only for wholly legacy, source-bound CLAUSE responses without logical list segments or a single complete continued-list segment; components may cite only owned blocks or exact blocks from a governor carrying the server evidence-context contract, while mixed, multi-segment or unbound shapes remain fail-closed.",
-        "PERIL_OR_DAMAGE is normalized from an invalid component alias only when its exact source-bound label contains an explicit causal damage relation; ambiguous labels remain fail-closed."
+        "PERIL_OR_DAMAGE is normalized from an invalid component alias only when its exact source-bound label contains an explicit causal damage relation; ambiguous labels remain fail-closed.",
+        "A legacy multi-block label may cross physical blocks only through NFKC and whitespace collapse on one unique minimal contiguous source span; wording changes remain invalid.",
+        "A paraphrased quantified LIMIT_BASIS is rebound only from an exact 'Der/Die/Das X beträgt [Scope] Wert' source pattern with one exact value component."
       ],
       "evidence": {
         "tests": [
@@ -765,7 +767,9 @@
           "INT-20260917-050",
           "INT-20260917-051",
           "INT-20260917-052",
-          "INT-20260917-053"
+          "INT-20260917-053",
+          "INT-20260917-054",
+          "INT-20260917-055"
         ]
       },
       "lastVerifiedCommit": "d8425e86f95e62409c788a80570c6e9773bdae0d",
@@ -828,7 +832,8 @@
         "External governing context may move with an owned shared list governor only into its immediately subordinate item requirements and remains fully source-validated.",
         "A legacy OBJECT alias inside a conditional equivalence definition is relabeled as a peril only when the response already declares PERIL_OR_DAMAGE; unseen structures remain a holdout gate.",
         "Causal peril aliases require an exact source-bound damage-plus-causal-marker label; terminal aliases without that evidence remain invalid.",
-        "A legacy LIST response is lifted only when one continued-item segment owns the complete ordered unit block sequence; governor evidence is accepted only under the exact server evidence-context contract with a word-for-word label and remains subject to downstream source validation."
+        "A legacy LIST response is lifted only when one continued-item segment owns the complete ordered unit block sequence; governor evidence is accepted only under the exact server evidence-context contract with a word-for-word label and remains subject to downstream source validation.",
+        "Whitespace-normalized block-spanning labels and quantified subject limit bases remain exact source transformations, not permission for semantic paraphrase."
       ],
       "evidence": {
         "tests": [
@@ -849,7 +854,9 @@
           "INT-20260917-050",
           "INT-20260917-051",
           "INT-20260917-052",
-          "INT-20260917-053"
+          "INT-20260917-053",
+          "INT-20260917-054",
+          "INT-20260917-055"
         ]
       },
       "lastVerifiedCommit": "d8425e86f95e62409c788a80570c6e9773bdae0d",
