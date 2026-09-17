@@ -4637,9 +4637,10 @@ function normalizeStandaloneListGovernorRequirements(responses, units = []) {
               governorBlockIds.has(blockId)
             ) &&
             ![...sourceBlockIds].some((blockId) => itemBlockIds.has(blockId)) &&
-            [...sourceBlockIds].every((blockId) =>
-              governorBlockIds.has(blockId) ||
-              externalGovernorBlockIds.has(blockId)
+            [...sourceBlockIds].every(
+              (blockId) =>
+                governorBlockIds.has(blockId) ||
+                externalGovernorBlockIds.has(blockId)
             )
         );
         const targets = indexed.filter(
@@ -4697,9 +4698,10 @@ function normalizeStandaloneListGovernorRequirements(responses, units = []) {
         const movedComponents = (governor.requirement.components || []).filter(
           ({ sourceBlockIds }) =>
             (sourceBlockIds || []).length > 0 &&
-            (sourceBlockIds || []).every((blockId) =>
-              governorBlockIds.has(blockId) ||
-              externalGovernorBlockIds.has(blockId)
+            (sourceBlockIds || []).every(
+              (blockId) =>
+                governorBlockIds.has(blockId) ||
+                externalGovernorBlockIds.has(blockId)
             )
         );
         if (movedComponents.length === 0) continue;

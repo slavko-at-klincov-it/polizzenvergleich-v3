@@ -7611,10 +7611,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       {
         unitId: unit.unitId,
         primaryClass: "INSURED_OBJECT",
-        semanticClasses: [
-          "INSURED_OBJECT",
-          "OPERATIVE_COVERAGE_STATEMENT",
-        ],
+        semanticClasses: ["INSURED_OBJECT", "OPERATIVE_COVERAGE_STATEMENT"],
         requirements: [
           {
             displayLabel:
@@ -7641,10 +7638,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     const merged = mergeCompatibleDuplicateUnitResponses(responses, [
       unit.unitId,
     ]);
-    const normalized = normalizeUnambiguousComponentTypes(
-      merged.responses,
-      [unit]
-    );
+    const normalized = normalizeUnambiguousComponentTypes(merged.responses, [
+      unit,
+    ]);
     const validation = validateBatchResponses(
       {
         contractId: A_SOURCE_UNIT_PLAN_CONTRACT_ID,
@@ -7665,9 +7661,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ]);
     expect(normalized.responses[0].requirements).toHaveLength(1);
     expect(
-      normalized.responses[0].requirements[0].components.map(({ type }) =>
-        type
-      )
+      normalized.responses[0].requirements[0].components.map(({ type }) => type)
     ).toEqual(
       expect.arrayContaining([
         "OBJECT",
@@ -7707,8 +7701,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       mergeCompatibleDuplicateUnitResponses(unknown, ["known"]).responses
     ).toHaveLength(2);
     expect(
-      mergeCompatibleDuplicateUnitResponses(nonOperative, ["known"])
-        .responses
+      mergeCompatibleDuplicateUnitResponses(nonOperative, ["known"]).responses
     ).toHaveLength(2);
   });
 
