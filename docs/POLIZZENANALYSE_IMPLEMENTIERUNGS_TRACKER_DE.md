@@ -10336,6 +10336,54 @@ Holdout-Aussage.
 
 Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
 
+### 133.60 Gold-283-V2 eingefroren und V3.8.1-Release-Gate bestanden
+
+Der occurrence-gebundene V11-Fix wurde auf dem Mac Studio im isolierten
+Worktree `/private/tmp/lf-v381-fix-ceb7b7107` auf dem exakten
+Release-Kandidaten `588334568f93be060ca1c078cae0c3439619ad6d` geprüft. Das
+Gate bestand:
+
+```text
+Server:                  201/201 Suites, 2.948/2.948 Tests PASS
+Server-/Collector-Lint:  PASS / PASS
+Frontend-Lint/-Build:    PASS / PASS
+Prisma:                  PASS
+Capability-Inventar:     PASS
+macOS-Installer-Suite:   PASS
+```
+
+Gold-283-V2 wurde ausschließlich aus den bereits hashgebundenen
+Originalquellen, Gold-V1, Gold-30-V2, Vollkorpus-, Entscheidungs- und
+Regressionsartefakten materialisiert. Gold-V1 blieb byteidentisch bei
+`9ed4ab6ba3dbd896de48ecf94e6874881391600ef2cc027afae5af5d21123a55`.
+Der neue Stand liegt geschützt auf dem Mac Studio unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/
+  at.klincov.polizzenvergleich-v3/QA/
+  LF-1PLUS9-GOLD-283-V2-20260917-4C917E7F/
+```
+
+Gold-Datei-SHA-256:
+`f43f6216010dfc01db53fcb8c3b04b5bc5a49f657c2232ab9f2a2999021551d4`;
+interner Gold-SHA-256:
+`44300754f9bad315410f7805ecb1b8c4f4e65551e2dc8a5349ba41c8697edf37`.
+Die 283 Zeilen verteilen sich auf 270 `FOUND` und 13 `NOT_FOUND`, davon 149
+`FULL`, 113 `PARTIAL`, acht `CONTRADICTED` und 13 `NONE`. Gegen die bestehende
+dynamische Baseline sind 144/144 eindeutig messbare Fälle korrekt, ohne
+False Positive oder False Negative. Die 139 verbleibenden Crosswalk-Fälle
+sind wegen Split/Merge nicht binär eindeutig messbar und werden nicht als
+Fehler oder Erfolg umetikettiert.
+
+Der echte kalte Produktlauf und das Kundenupdate auf V3.8.1 stehen nach dem
+Release-Gate noch aus. Der fehlende unabhängige expertengelabelte
+Mehrversicherer-Holdout bleibt ein separates Abnahme-Gate.
+
+Status: `GOLD-283-V2 FROZEN; RELEASE-GATE PASS; V3.8.1-DEPLOYMENT UND KALTER
+PRODUKTLAUF AUSSTEHEND; KEIN HOLDOUT-/99-PROZENT-NACHWEIS`.
+
+Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
+
 ### 133.59 Kalter V3.8.0-Produktlauf deckt occurrence-gebundene A-Limitlücke auf
 
 Der erste neue Lauf über den echten Kundenpfad wurde am 17. September 2026
