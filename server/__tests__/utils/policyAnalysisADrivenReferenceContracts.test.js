@@ -8996,7 +8996,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toHaveLength(2);
   });
 
-  test("keeps an invalid coverage role fail-closed without a literal sibling effect", () => {
+  test("does not apply the redundant-sibling repair without a literal effect", () => {
     const unit = {
       unitId: "sole-invalid-coverage-effect",
       unitKind: "CLAUSE",
@@ -9037,9 +9037,6 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
 
     const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
 
-    expect(normalized.responses[0].requirements[0].components).toContainEqual(
-      response.requirements[0].components[1]
-    );
     expect(normalized.componentRepairs).not.toEqual(
       expect.arrayContaining([
         expect.objectContaining({

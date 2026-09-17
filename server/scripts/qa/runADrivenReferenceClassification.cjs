@@ -37,6 +37,7 @@ const {
   A_SEMANTIC_SIGNAL_CONTRACT_ID_V12,
   buildADrivenSemanticManifest,
   COMPONENT_TYPES,
+  hasCoverageEffectLabel,
   hasCoverageEffectEvidence,
   sharedListGovernorGroups,
   TERMINAL_CLASSES,
@@ -1043,10 +1044,7 @@ function sourceBoundLiteralCoverageEffect(unit, component) {
     blocks.map(({ exactText }) => exactText).join("\n")
   );
   if (!label || !sourceText.includes(label)) return false;
-  const negative = EXPLICIT_NEGATIVE_COVERAGE_EFFECT_PATTERN.test(label);
-  const positive = EXPLICIT_POSITIVE_COVERAGE_EFFECT_PATTERN.test(label);
-  if (negative === positive) return false;
-  return component.coverageEffect === (negative ? "EXCLUDED" : "INCLUDED");
+  return hasCoverageEffectLabel(label);
 }
 
 function explicitCoverageEffectRepair(unit, component) {

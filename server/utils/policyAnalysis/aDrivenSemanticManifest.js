@@ -101,6 +101,10 @@ const COVERAGE_EFFECTS = new Set([
 ]);
 const COVERAGE_EFFECT_TEXT_PATTERN =
   /\b(?:ausgeschlossen|ausgenommen(?:\s+sind)?|exklusive|ein(?:geschlossen|bezogen)|(?:mit)?gedeckt|(?:mit)?versichert|nicht\s+(?:mit)?versichert|kein(?:e[snmr]?)?\s+(?:Deckung|Versicherungsschutz)|Versicherungsschutz\s+(?:besteht|gilt)|besteht\s+Versicherungsschutz|als\s+versicherte\s+Sachen\s+gelten|(?:die\s+)?Versicherung\s+erstreckt\s+sich\s+auf|gilt\s+als\s+(?:mit)?versichert|(?:nicht\s+)?ersetz(?:t|en|ten)|erstatt(?:et|en)|Entschädigung\s+(?:wird|erfolgt)|erfolgt\s+die\s+Entschädigung|\w*entschädigung\s+geleistet\s+wird|Versicherungsschutz(?:\s+\S+){0,16}\s+geleistet|leistet(?:\s+\S+){0,24}\s+Ersatz|Anspruch\s+auf\s+(?:Zahlung|Leistung)|zur\s+Leistung\s+verpflichtet|verzichtet\s+der\s+Versicherer\s+auf\s+(?:den\s+)?Einwand|erstreckt\s+sich(?:\s+dabei)?\s+nicht|bezieht\s+sich(?:\s+\S+){0,10}\s+auf)\b/iu;
+
+function hasCoverageEffectLabel(value) {
+  return COVERAGE_EFFECT_TEXT_PATTERN.test(String(value || ""));
+}
 const REQUIREMENT_ROLE_SIGNALS_V1 = Object.freeze([
   Object.freeze({
     signalId: "EXPLICIT_EXCLUSION",
@@ -1334,7 +1338,7 @@ function validateComponent(component, unit) {
     return { value: null, code: "COVERAGE_EFFECT_VALUE_INVALID" };
   if (type === "COVERAGE_EFFECT" && !effect)
     return { value: null, code: "COVERAGE_EFFECT_VALUE_MISSING" };
-  if (type === "COVERAGE_EFFECT" && !COVERAGE_EFFECT_TEXT_PATTERN.test(label))
+  if (type === "COVERAGE_EFFECT" && !hasCoverageEffectLabel(label))
     return {
       value: null,
       code: "COVERAGE_EFFECT_LABEL_INVALID",
@@ -2178,6 +2182,7 @@ module.exports = {
   COMPONENT_TYPES,
   TERMINAL_CLASSES,
   buildADrivenSemanticManifest,
+  hasCoverageEffectLabel,
   hasCoverageEffectEvidence,
   logicalSegmentDiagnostics,
   materializeSharedSignalComponents,
