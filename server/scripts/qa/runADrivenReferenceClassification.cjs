@@ -43,7 +43,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V70";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V71";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -103,6 +103,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V67",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V68",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V69",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V70",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -3123,15 +3124,32 @@ function normalizeUnambiguousSemanticClassAliases(response) {
 }
 
 function liftLegacyComponentShapedRequirements(requirements, unit) {
+  const logicalSourceSegments = Array.isArray(unit?.logicalSourceSegments)
+    ? unit.logicalSourceSegments
+    : [];
+  const sourceBlockIds = Array.isArray(unit?.source?.blockIds)
+    ? unit.source.blockIds
+    : [];
+  const singleCompleteListSegment =
+    unit?.unitKind === "LIST" &&
+    logicalSourceSegments.length === 1 &&
+    logicalSourceSegments[0]?.type === "LIST_ITEM_WITH_CONTINUATIONS" &&
+    Array.isArray(logicalSourceSegments[0].blockIds) &&
+    logicalSourceSegments[0].blockIds.length === sourceBlockIds.length &&
+    logicalSourceSegments[0].blockIds.every(
+      (blockId, index) => blockId === sourceBlockIds[index]
+    ) &&
+    (!Array.isArray(unit?.governingContext?.blockIds) ||
+      unit.governingContext.blockIds.length === 0);
+  const clauseWithoutLogicalSegments =
+    unit?.unitKind === "CLAUSE" && logicalSourceSegments.length === 0;
   if (
-    unit?.unitKind !== "CLAUSE" ||
-    (Array.isArray(unit?.logicalSourceSegments) &&
-      unit.logicalSourceSegments.length > 0) ||
+    (!clauseWithoutLogicalSegments && !singleCompleteListSegment) ||
     !Array.isArray(requirements) ||
     requirements.length === 0
   )
     return { requirements, repairs: [] };
-  const ownedBlockIds = new Set(unit?.source?.blockIds || []);
+  const ownedBlockIds = new Set(sourceBlockIds);
   const componentKeys = new Set([
     "type",
     "label",

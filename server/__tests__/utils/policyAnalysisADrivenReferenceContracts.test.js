@@ -4235,6 +4235,177 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     );
   });
 
+  test("lifts a fully source-bound legacy component shape for one complete continued list item", () => {
+    const blocks = [
+      {
+        blockId: "snow-removal",
+        exactText:
+          "• Kosten für die Schneeräumung von Dächern zwecks Schadensprävention bei Gefahr in Verzug ",
+      },
+      { blockId: "snow-limit", exactText: "bis zu € 1.000,-; " },
+    ];
+    const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+    const unit = {
+      unitId: "single-complete-list-segment",
+      unitKind: "LIST",
+      logicalSourceSegments: [
+        {
+          segmentId: "single-list-item",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: blocks.map(({ blockId }) => blockId),
+          combinedText,
+        },
+      ],
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        combinedText,
+        blocks,
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+          semanticClasses: ["OPERATIVE_COVERAGE_STATEMENT"],
+          requirements: [
+            {
+              type: "OBJECT",
+              label:
+                "Kosten für die Schneeräumung von Dächern zwecks Schadensprävention bei Gefahr in Verzug",
+              sourceBlockIds: ["snow-removal"],
+              components: [],
+            },
+            {
+              type: "VALUE_AND_UNIT",
+              label: "€ 1.000,-",
+              rawValue: "1.000",
+              unit: "€",
+              sourceBlockIds: ["snow-limit"],
+              components: [],
+            },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "bis zu",
+              coverageEffect: "INCLUDED",
+              sourceBlockIds: ["snow-limit"],
+              components: [],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements).toHaveLength(1);
+    expect(normalized.responses[0].requirements[0]).toMatchObject({
+      displayLabel: combinedText,
+      components: [
+        { type: "OBJECT", sourceBlockIds: ["snow-removal"] },
+        { type: "VALUE_AND_UNIT", sourceBlockIds: ["snow-limit"] },
+        {
+          type: "COVERAGE_EFFECT",
+          sourceBlockIds: ["snow-limit"],
+          coverageEffect: "INCLUDED",
+        },
+      ],
+    });
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: unit.unitId,
+        action: "LIFT_LEGACY_COMPONENT_SHAPED_REQUIREMENTS",
+        components: 3,
+      })
+    );
+  });
+
+  test.each([
+    {
+      name: "multiple logical list segments",
+      logicalSourceSegments: [
+        {
+          segmentId: "first",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["first"],
+        },
+        {
+          segmentId: "second",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["second"],
+        },
+      ],
+    },
+    {
+      name: "an incomplete logical block sequence",
+      logicalSourceSegments: [
+        {
+          segmentId: "incomplete",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["first"],
+        },
+      ],
+    },
+    {
+      name: "external governing context",
+      logicalSourceSegments: [
+        {
+          segmentId: "complete",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: ["first", "second"],
+        },
+      ],
+      governingContext: {
+        blockIds: ["governor"],
+        combinedText: "Versichert sind",
+        blocks: [{ blockId: "governor", exactText: "Versichert sind" }],
+      },
+    },
+  ])("keeps single-list legacy lifting fail-closed for $name", (fixture) => {
+    const blocks = [
+      { blockId: "first", exactText: "Schneeräumung " },
+      { blockId: "second", exactText: "bis € 1.000" },
+    ];
+    const requirements = [
+      {
+        type: "OBJECT",
+        label: "Schneeräumung",
+        sourceBlockIds: ["first"],
+        components: [],
+      },
+    ];
+    const unit = {
+      unitId: "single-list-negative",
+      unitKind: "LIST",
+      logicalSourceSegments: fixture.logicalSourceSegments,
+      governingContext: fixture.governingContext,
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
+        blocks,
+      },
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "INSURED_OBJECT",
+          semanticClasses: ["INSURED_OBJECT"],
+          requirements,
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements).toEqual(requirements);
+    expect(normalized.componentRepairs).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          action: "LIFT_LEGACY_COMPONENT_SHAPED_REQUIREMENTS",
+        }),
+      ])
+    );
+  });
+
   test.each([
     {
       name: "mixed current and legacy shapes",
@@ -8863,7 +9034,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V70");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V71");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
