@@ -4062,3 +4062,36 @@ Vollständigkeitsbehauptung erzeugen.
   ms; keine Timeouts. Die vier offenen Units liegen sämtlich hinter einer
   solchen nummerierten Abschnittsgrenze.
 - Change-Set: `LF-V398-NUMBERED-HEADING-GOVERNOR-BOUNDARY-20260917-001`.
+
+## INT-20260917-067 — Eindeutige Einwortabweichung auf deklarierte Originalspanne zurückführen
+
+- Erfasst: 2026-09-17
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Aussage: Weicht in einem ansonsten wörtlichen Komponentenlabel genau ein
+  Wort von einer eindeutigen, zusammenhängenden Originalspanne innerhalb der
+  bereits deklarierten eigenen Quellblöcke ab, darf der Server das Label nur
+  unter engen, fail-closed Bedingungen auf diese Originalspanne zurückführen.
+- Ist-Wahrheit: `JA` als letzte Restursache des V3.9.8-Batch-38-Abbruchs.
+  Nach der korrigierten Governor-Grenze wurden fünf von sechs Units gültig;
+  die einzige offene Unit wiederholte in drei Versuchen innerhalb eines sonst
+  source-bound Zeitbezugs `Wirklichkeit` statt des Originalworts
+  `Wirksamkeit` und verletzte dadurch korrekt
+  `COMPONENT_SOURCE_TEXT_INVALID`.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002`; genau ein
+  abweichendes Wort; alle übrigen Wörter stimmen positionsgleich; die
+  Zielspanne ist innerhalb der bereits deklarierten, zusammenhängenden
+  Quellblöcke eindeutig; die Ausgabe übernimmt die vollständige Originalspanne
+  einschließlich Originalleerraum. Zahlen, Einheiten, Negationen,
+  Deckungs-/Ausschlusspolarität und andere semantisch kritische Wörter werden
+  niemals automatisch ersetzt. Mehrdeutige Treffer, mehrere Abweichungen,
+  fremde Blöcke oder nicht zusammenhängende Evidenz bleiben fail-closed.
+- Beweisgrenze: bekannte LF-1+9-Regression; synthetische Positiv-,
+  Mehrdeutigkeits-, Zahlen-, Negations- und Mehrfehlerfälle erforderlich; kein
+  Holdout- oder 99-Prozent-Nachweis.
+- Laufbeleg: V3.9.8-Resume
+  `resume-5b54889b5b8cf61a238f8f79` übernahm Batches 1 bis 36, schloss Batch 37
+  ab und akzeptierte in Batch 38 fünf von sechs Units. Drei neue Versuche für
+  die verbleibende Unit stoppten korrekt fail-closed; es trat kein Timeout
+  oder Transportfehler auf.
+- Change-Set: `LF-V399-EXACT-SINGLE-TOKEN-SOURCE-ALIGNMENT-20260917-001`.
