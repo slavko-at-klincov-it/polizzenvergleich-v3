@@ -10510,6 +10510,51 @@ MODELLAUFRUF; V3.8.8-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
 Change-Set:
 `LF-V388-LEGACY-REQUIREMENT-SHAPE-LIFT-20260917-001`.
 
+### 133.68 Kausaler Gefahralias in Batch 14
+
+Der produktive V3.8.8-Resume materialisierte Batch 1 bis 10 ohne neue
+Modellaufrufe. Batch 11 bis 13 bestanden mit den begrenzten produktiven
+Modellaufrufen. Batch 14 stoppte nach drei Attempts korrekt fail-closed: fünf
+von sechs Units waren gültig und resumierbar, die verbleibende Unit wurde
+nicht als PASS gespeichert.
+
+Die offene Unit enthält einen Selbstbehalt und einen ausdrücklichen
+Gefahrausschluss. Qwen trennte beide Anforderungen korrekt, verwendete für
+das source-bound Label „Schäden durch Graffiti“ jedoch den semantischen
+Klassennamen `PERIL_OR_DAMAGE` als terminalen Komponententyp. Der gültige
+Komponententyp des bestehenden Vertrages ist `PERIL_OR_CAUSE`.
+
+Der allgemeine V70-Fix adaptiert `CAP-A-002` und `CAP-A-003`. Er normalisiert
+den Alias nur bei einem wortgetreuen, vollständig eigenen Quellenbeleg und
+einer expliziten kausalen Schadensformulierung aus Schaden/Beschädigung plus
+„durch“, „infolge“, „aufgrund“ oder „wegen“. Ein bloßer Gefahrenbegriff und
+eine nichtkausale Schadensformulierung bleiben fail-closed. Andere Rollen,
+Wirkungen, Werte, Scope und Quellen werden nicht verändert.
+
+Mac-Studio-Nachweise auf dem exakten Implementierungsstand
+`ae5b8a826e3c08f5b983393bd331f930ac469fac`:
+
+```text
+Gezielte positive/negative Vertragsfälle:  6/6 PASS
+Vollständiger fokussierter Vertragslauf:   385/385 PASS
+Echter gespeicherter Batch 14:             6/6 Units, PASS
+Neue Modellaufrufe im Realartefakt-Test:   0
+Attempt-Artefaktbaum SHA-256 vorher/nachher:
+8356d00040a6d29245ff2537bba736d23e0a353e018b8ce3e6342a963669525c
+Vorgängerartefakte nach Revalidierung:      hashgleich
+```
+
+V3.8.9-Release-Gate, Installation und die Fortsetzung ab dem nun
+materialisierbaren Batch 14 stehen noch aus. Gold-283-V2 bleibt unverändert;
+der bekannte LF-1+9-Lauf bleibt Regression und kein unabhängiger
+Generalisierungs- oder 99-Prozent-Nachweis.
+
+Status: `BATCH-14-ROOT-CAUSE ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
+MODELLAUFRUF; V3.8.9-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+
+Change-Set:
+`LF-V389-CAUSAL-PERIL-COMPONENT-ALIAS-20260917-001`.
+
 ### 133.64 Kalter V3.8.4-Lauf und eingebettete List-Governor-Gruppen
 
 V3.8.4 wurde als annotierter Tag veröffentlicht, `origin/main` und der
