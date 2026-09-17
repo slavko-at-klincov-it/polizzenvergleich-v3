@@ -147,6 +147,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260904-034` | Zwei Workspace-Verfahren: gerichtetes LF A→B und vollständiges A/B       | `ENTSCHEIDUNGSKANDIDAT` | `PROMOTED`    | beide Laufverträge getrennt versionieren; LF-Katalog nach dem 35-Zeilen-Startprofil vollständig erweitern               |
 | `INT-20260915-037` | Schemafeste semantische Reparatur ohne Verlust gültiger Batches         | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | Reparaturhinweis präzisieren und am ersten unvollständigen Batch resumieren                                               |
 | `INT-20260916-038` | Identitätskern mit getrennt belegten Modifier-Abweichungen normalisieren | `BEOBACHTUNG`           | `PROMOTED`    | vollständigen Primärlauf und anschließende Gold-/Endergebnisprüfung abschließen                                          |
+| `INT-20260917-044` | Mehrere Rollen-Evidenzvorkommen occurrence-gebunden materialisieren     | `BEOBACHTUNG`           | `IN_PRÜFUNG`  | V11-Vertrag am kalten Produktlauf und an Segmentierungsvarianten validieren                                               |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3071,3 +3072,40 @@ Vollständigkeitsbehauptung erzeugen.
   rematerialisiert. `GL-17` ist `FOUND/CONTRADICTED`; das bekannte
   LF-1+9-Gold verbessert sich auf 141/144 eindeutig messbare
   Übereinstimmungen. Tracker 133.56, Tests 95.
+
+## INT-20260917-044 — Mehrere Rollen-Evidenzvorkommen occurrence-gebunden materialisieren
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Enthält dieselbe A-Anforderung mehrere explizite Aussagen derselben
+  Rollenklasse, muss jede Aussage anhand ihres konkreten Textvorkommens und
+  ihrer Quellblöcke geprüft und materialisiert werden. Eine bereits vorhandene
+  Rollenkomponente darf ein weiteres Vorkommen nur abdecken, wenn ihr eigenes
+  Label auch dessen Wortlaut tatsächlich enthält.
+- Ist-Wahrheit: `JA` für den kalten V3.8.0-Produktlauf. Qwen lieferte beide
+  nichtnumerischen Limitformulierungen vollständig und source-bound. Der
+  servereigene Materializer verwendete beim zweiten Vorkommen jedoch erneut
+  den ersten Regex-Treffer und ließ dadurch die zweite Limitrolle ungemappt.
+- Quelle: resumierbare private Attempt-Artefakte der neuen
+  LF-1+9-Produktsitzung auf dem Mac Studio; in der Knowledge Base werden nur
+  Fehlerklasse, Vertrag und Beweisgrenze dokumentiert.
+- Gewünschter Kundennutzen und sichtbares Ergebnis: Vollständig erkannte
+  Aussagen gehen nicht aufgrund von PDF-Blockgrenzen oder mehreren
+  gleichartigen Signalen innerhalb derselben Anforderung verloren.
+- Scope und ausdrückliche Nicht-Ziele: `ADAPT_EXISTING` für `CAP-A-002` und
+  `CAP-A-003`; keine neue Architektur, keine zeilenspezifische Regel, keine
+  Lockerung der Quellenbindung und keine automatische fachliche
+  Gleichsetzung.
+- Hard-Gates: Zwei-Block-Originalform, identische Ein-Block-Form, breite
+  tatsächlich beide Aussagen tragende Rollenkomponente, zu enge erste Rolle,
+  unverändertes V10-Replay, vollständige Manifestmaterialisierung und neuer
+  echter Produktlauf über Queue, Worker, API und XLSX.
+- Entscheidung: occurrence-gebundene V11-Rollenprüfung sowie Manifest V15 und
+  Lauf V63; ältere Verträge bleiben revalidierbar und unverändert.
+- Beweisgrenze: Die Korrektur belegt den allgemeinen Fehlervertrag und den
+  bekannten 1+9-Produktlauf, aber keinen ungesehenen Mehrversicherer-Holdout
+  oder 99-Prozent-Nachweis.
+- Kanonischer Ausgang: Change-Set
+  `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`; Mac-Studio-Gate und finaler
+  Produktlauf stehen noch aus.

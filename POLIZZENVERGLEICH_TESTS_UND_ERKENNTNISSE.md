@@ -5280,3 +5280,37 @@ Regression und kein Produktionseingang.
 zu einem ungesehenen Holdout- oder allgemeinen 99-Prozent-Nachweis.
 
 Change-Set: `LF-V2-PRODUCTION-ACTIVATION-20260916-001`.
+
+## 98. Kalter V3.8.0-Produktlauf: mehrere nichtnumerische Limits in einer Anforderung
+
+Der erste neue Produktlauf nach V3.8.0 verwendete eine neue Workspace- und
+Session-Identität sowie zehn hashverifizierte 1+9-Dokumente. PDF-Extraktion
+und die ersten zwei von 58 A-Klassifikationsbatches bestanden. Batch 3 stoppte
+fail-closed; vollständige PASS-Batches und Attempt-Journale blieben erhalten.
+
+Die isolierte Ursache ist ein serverseitiger Multi-Occurrence-Fehler. Zwei
+explizite nichtnumerische Limits lagen in derselben Anforderung und zufällig
+auf zwei PDF-Blöcken. Qwen zitierte beide. Die bisherige Materialisierung
+verwendete für jedes Vorkommen jedoch `localMatches[0]`, erzeugte deshalb
+zweimal die erste `LIMIT_BASIS` und ließ die zweite Aussage ungemappt.
+
+Die Korrektur bindet in V11 jede solche Evidenz an ihren konkreten Wortlaut
+und Quellblock. Ein breites Rollenlabel darf beide Vorkommen nur tragen, wenn
+es beide tatsächlich enthält. V10 bleibt unverändert replaybar. Manifest und
+Klassifikationslauf werden als V15 beziehungsweise V63 fortgeschrieben.
+
+**Positive Erkenntnis:** Der fail-closed-Vertrag verhinderte ein scheinbares
+PASS mit verlorener A-Aussage; die gespeicherten Versuche erlaubten eine
+eindeutige deterministische Ursache ohne neuen Reviewer-Lauf.
+
+**Negative Erkenntnis:** Typ und Quellblock allein reichen bei mehreren
+gleichartigen Signalen nicht aus. Ohne occurrence-gebundene Textprüfung kann
+eine Rolle ein zweites Signal im selben oder benachbarten Block still
+absorbieren.
+
+**Beweisgrenze:** Tests und erneuter Mac-Studio-Produktlauf stehen noch aus.
+Der vorhandene Dokumentbestand enthält außerdem keinen unabhängigen,
+expertengelabelten Mehrversicherer-Holdout; ein explorativer unlabeled Smoke
+darf nicht als Generalisierungsnachweis ausgegeben werden.
+
+Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
