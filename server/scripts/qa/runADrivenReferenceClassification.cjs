@@ -4614,18 +4614,22 @@ function completeInternalObjectListLeadingComponentSources(requirements, unit) {
   return { requirements: normalizedRequirements, repairs };
 }
 
-function isNumberedHeadingWithoutPredicate(unit) {
+function isNumberedStructuralHeading(unit) {
   const sourceText = String(unit?.source?.combinedText || "");
+  const numberedHeading = /^\s*\d+[.)]\s/u.test(sourceText);
+  const interrogativeHeading = /\?\s*$/u.test(sourceText);
+  const hasOperativePredicate =
+    /\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|versichert|mitversichert|ausgeschlossen|ersetzt|leistet|verzichtet)\b/iu.test(
+      sourceText
+    );
   return (
     unit?.unitKind === "LIST" &&
     unit.source?.blocks?.length > 0 &&
     unit.source.blocks.every(
       ({ structuralKind }) => structuralKind === "HEADING_CANDIDATE"
     ) &&
-    /^\s*\d+[.)]\s/u.test(sourceText) &&
-    !/\b(?:ist|sind|wird|werden|gilt|gelten|besteht|bestehen|hat|haben|muss|müssen|kann|können|darf|dürfen|umfasst|umfassen|versichert|mitversichert|ausgeschlossen|ersetzt|leistet|verzichtet)\b/iu.test(
-      sourceText
-    )
+    numberedHeading &&
+    (interrogativeHeading || !hasOperativePredicate)
   );
 }
 
@@ -4685,9 +4689,8 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         requirements: [],
       };
     }
-    const numberedHeadingWithoutPredicate =
-      isNumberedHeadingWithoutPredicate(unit);
-    if (numberedHeadingWithoutPredicate) {
+    const numberedStructuralHeading = isNumberedStructuralHeading(unit);
+    if (numberedStructuralHeading) {
       if (
         response?.primaryClass !== "STRUCTURE" ||
         response?.semanticClasses?.length !== 1 ||
@@ -6313,7 +6316,7 @@ function deriveClassificationEvidencePlan(plan) {
         activeHeading = current;
         continue;
       }
-      if (isNumberedHeadingWithoutPredicate(current)) {
+      if (isNumberedStructuralHeading(current)) {
         delete current.governingContext;
         activeHeading = null;
         numberedHeadingGovernorBoundaries += 1;
