@@ -13775,6 +13775,282 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toBe(true);
   });
 
+  test("binds a trailing open-sentence list suffix to the uniquely latest literal component anchor", () => {
+    const exactBlock = (blockId, exactText, ordinal, structuralKind) => ({
+      blockId,
+      ordinal,
+      structuralKind,
+      physicalPageNumber: 8,
+      documentStart: ordinal * 200,
+      documentEnd: ordinal * 200 + exactText.length,
+      exactText,
+      exactTextSha256: crypto
+        .createHash("sha256")
+        .update(exactText)
+        .digest("hex"),
+    });
+    const blocks = [
+      exactBlock(
+        "lead",
+        "• Sachschäden sind unter besonderer Vereinbarung mitversichert. Bei reinen",
+        1,
+        "LIST_ITEM"
+      ),
+      exactBlock(
+        "definition-lead",
+        "Vermögensschäden ist der Versicherungsfall der Verstoß, aus",
+        2,
+        "BODY_LINE"
+      ),
+      exactBlock(
+        "effect-lead",
+        "welchem dem Versicherungsnehmer Ersatzpflichten entstehen oder entstehen",
+        3,
+        "BODY_LINE"
+      ),
+      exactBlock("effect-tail", "könnten.", 4, "BODY_LINE"),
+    ];
+    const combinedText = blocks.map(({ exactText }) => exactText).join("\n");
+    const unit = {
+      unitId: "trailing-open-sentence-list",
+      unitOrder: 0,
+      packageOrder: [0, 0],
+      unitKind: "LIST",
+      structurePath: ["Deckung"],
+      source: {
+        documentUuid: "doc",
+        documentSha256: "d".repeat(64),
+        documentPosition: 0,
+        documentRole: "MAIN_POLICY",
+        documentStatus: "ACTIVE",
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+        physicalPages: [8],
+        documentStart: blocks[0].documentStart,
+        documentEnd: blocks.at(-1).documentEnd,
+        combinedText,
+        combinedTextSha256: crypto
+          .createHash("sha256")
+          .update(combinedText)
+          .digest("hex"),
+        contiguous: true,
+      },
+      logicalSourceSegments: [
+        {
+          segmentId: "single-continued-item",
+          type: "LIST_ITEM_WITH_CONTINUATIONS",
+          blockIds: blocks.map(({ blockId }) => blockId),
+          combinedText,
+        },
+      ],
+      semanticAuthority: false,
+      initialDisposition: "PENDING_CLASSIFICATION",
+      governingContext: null,
+    };
+    const response = {
+      unitId: unit.unitId,
+      primaryClass: "OPERATIVE_COVERAGE_STATEMENT",
+      semanticClasses: [
+        "OPERATIVE_COVERAGE_STATEMENT",
+        "INSURED_OBJECT",
+        "CONDITION",
+        "PERIL_OR_DAMAGE",
+        "DEFINITION",
+      ],
+      requirements: [
+        {
+          displayLabel:
+            "Sachschäden sind unter besonderer Vereinbarung mitversichert.",
+          components: [
+            { type: "OBJECT", label: "Sachschäden", sourceBlockIds: ["lead"] },
+            {
+              type: "COVERAGE_EFFECT",
+              label: "mitversichert",
+              sourceBlockIds: ["lead"],
+              coverageEffect: "INCLUDED",
+            },
+            {
+              type: "CONDITION",
+              label: "unter besonderer Vereinbarung",
+              sourceBlockIds: ["lead"],
+            },
+            {
+              type: "PERIL_OR_CAUSE",
+              label: "Verstoß",
+              sourceBlockIds: ["definition-lead"],
+            },
+            {
+              type: "FACT_ROLE",
+              label: "Versicherungsnehmer",
+              sourceBlockIds: ["effect-lead"],
+            },
+            {
+              type: "DAMAGE_OR_EFFECT",
+              label: "Ersatzpflichten",
+              sourceBlockIds: ["effect-lead"],
+            },
+          ],
+        },
+      ],
+    };
+    const normalized = normalizeUnambiguousComponentTypes([response], [unit]);
+    const normalizedComponents = normalized.responses[0].requirements[0].components;
+
+    expect(
+      normalizedComponents.find(({ type }) => type === "DAMAGE_OR_EFFECT")
+        .sourceBlockIds
+    ).toEqual(["effect-lead", "effect-tail"]);
+    expect(
+      normalizedComponents.find(({ type }) => type === "FACT_ROLE")
+        .sourceBlockIds
+    ).toEqual(["effect-lead"]);
+    expect(normalized.componentRepairs).toContainEqual(
+      expect.objectContaining({
+        unitId: unit.unitId,
+        action: "COMPLETE_TRAILING_LIST_SENTENCE_COMPONENT_SOURCE_IDS",
+        segmentId: "single-continued-item",
+        fromSourceBlockIds: ["effect-lead"],
+        toSourceBlockIds: ["effect-lead", "effect-tail"],
+      })
+    );
+
+    const plan = {
+      schemaVersion: 2,
+      contractId: A_SOURCE_UNIT_PLAN_CONTRACT_ID,
+      runContractId: A_DRIVEN_RUN_CONTRACT_ID,
+      planSha256: "a".repeat(64),
+      documents: [{ documentUuid: "doc" }],
+      units: [unit],
+      relations: [],
+      summary: { sourceBlocks: blocks.length },
+    };
+    const manifest = buildADrivenSemanticManifest({
+      plan,
+      responses: normalized.responses,
+      semanticSignalContractId: A_SEMANTIC_SIGNAL_CONTRACT_ID,
+    });
+    expect(manifest.summary).toMatchObject({
+      unresolvedUnits: 0,
+      reviewRequiredBlocks: 0,
+      allBlocksTerminal: true,
+      responseIntegrityStatus: "VALID",
+    });
+    const renormalized = normalizeUnambiguousComponentTypes(
+      normalized.responses,
+      [unit]
+    );
+    expect(renormalized.responses).toEqual(normalized.responses);
+    expect(renormalized.componentRepairs).not.toContainEqual(
+      expect.objectContaining({
+        action: "COMPLETE_TRAILING_LIST_SENTENCE_COMPONENT_SOURCE_IDS",
+      })
+    );
+  });
+
+  test("keeps trailing list-sentence completion fail-closed outside its exact boundaries", () => {
+    const block = (blockId, exactText, structuralKind) => ({
+      blockId,
+      exactText,
+      structuralKind,
+    });
+    const baseBlocks = [
+      block("lead", "• Schutz gilt. Bei einem Ereignis", "LIST_ITEM"),
+      block("cause", "entsteht die Verpflichtung aus", "BODY_LINE"),
+      block("effect", "der Rolle und dem Schaden", "BODY_LINE"),
+      block("tail", "vollständig.", "BODY_LINE"),
+    ];
+    const makeUnit = (blocks, segments = null) => ({
+      unitId: "trailing-negative",
+      unitKind: "LIST",
+      source: {
+        blockIds: blocks.map(({ blockId }) => blockId),
+        blocks,
+        combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
+      },
+      logicalSourceSegments:
+        segments ||
+        [
+          {
+            segmentId: "continued",
+            type: "LIST_ITEM_WITH_CONTINUATIONS",
+            blockIds: blocks.map(({ blockId }) => blockId),
+            combinedText: blocks.map(({ exactText }) => exactText).join("\n"),
+          },
+        ],
+    });
+    const makeResponse = (requirements) => ({
+      unitId: "trailing-negative",
+      primaryClass: "PERIL_OR_DAMAGE",
+      semanticClasses: ["PERIL_OR_DAMAGE", "DEFINITION"],
+      requirements,
+    });
+    const baseRequirement = {
+      displayLabel: "Schutz gilt.",
+      components: [
+        { type: "PERIL_OR_CAUSE", label: "Ereignis", sourceBlockIds: ["lead"] },
+        { type: "FACT_ROLE", label: "Rolle", sourceBlockIds: ["effect"] },
+        { type: "DAMAGE_OR_EFFECT", label: "Schaden", sourceBlockIds: ["effect"] },
+      ],
+    };
+    const closedBoundaryBlocks = baseBlocks.map((entry) =>
+      entry.blockId === "effect"
+        ? { ...entry, exactText: "der Rolle und dem Schaden." }
+        : entry
+    );
+    const listTailBlocks = baseBlocks.map((entry) =>
+      entry.blockId === "tail" ? { ...entry, structuralKind: "LIST_ITEM" } : entry
+    );
+    const ambiguousRequirement = {
+      ...baseRequirement,
+      components: [
+        ...baseRequirement.components,
+        { type: "OBJECT", label: "Schaden", sourceBlockIds: ["effect"] },
+      ],
+    };
+    const interiorGapRequirement = {
+      ...baseRequirement,
+      components: baseRequirement.components.map((component) =>
+        component.type === "PERIL_OR_CAUSE"
+          ? { ...component, label: "Schaden", sourceBlockIds: ["effect"] }
+          : component
+      ).concat({ type: "SCOPE", label: "vollständig", sourceBlockIds: ["tail"] }),
+    };
+    const cases = [
+      {
+        unit: makeUnit(closedBoundaryBlocks),
+        response: makeResponse([baseRequirement]),
+      },
+      {
+        unit: makeUnit(listTailBlocks),
+        response: makeResponse([baseRequirement]),
+      },
+      {
+        unit: makeUnit(baseBlocks),
+        response: makeResponse([ambiguousRequirement]),
+      },
+      {
+        unit: makeUnit(baseBlocks),
+        response: makeResponse([interiorGapRequirement]),
+      },
+      {
+        unit: makeUnit(baseBlocks),
+        response: makeResponse([baseRequirement, { ...baseRequirement }]),
+      },
+    ];
+
+    for (const { unit, response } of cases) {
+      const normalized = normalizeUnambiguousComponentTypes(
+        [response],
+        [unit]
+      );
+      expect(normalized.componentRepairs).not.toContainEqual(
+        expect.objectContaining({
+          action: "COMPLETE_TRAILING_LIST_SENTENCE_COMPONENT_SOURCE_IDS",
+        })
+      );
+    }
+  });
+
   test("preserves a source-bound internal object governor and the leading provenance of its continued item", () => {
     const exactBlock = (blockId, exactText, ordinal, structuralKind) => ({
       blockId,

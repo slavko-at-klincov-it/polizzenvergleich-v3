@@ -43,7 +43,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V72";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V73";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -105,6 +105,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V69",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V70",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V71",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V72",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -3545,6 +3546,133 @@ function completeSingleListContinuationComponentSources(requirements, unit) {
   };
 }
 
+function completeTrailingListSentenceComponentSources(requirements, unit) {
+  if (
+    unit?.unitKind !== "LIST" ||
+    !Array.isArray(unit.logicalSourceSegments) ||
+    unit.logicalSourceSegments.length !== 1 ||
+    !Array.isArray(requirements) ||
+    requirements.length !== 1
+  )
+    return { requirements, repairs: [] };
+  const segment = unit.logicalSourceSegments[0];
+  if (
+    segment?.type !== "LIST_ITEM_WITH_CONTINUATIONS" ||
+    !Array.isArray(segment.blockIds) ||
+    segment.blockIds.length < 2
+  )
+    return { requirements, repairs: [] };
+  const sourceBlocksById = new Map(
+    (unit.source?.blocks || []).map((block) => [block.blockId, block])
+  );
+  if (segment.blockIds.some((blockId) => !sourceBlocksById.has(blockId)))
+    return { requirements, repairs: [] };
+  const components = Array.isArray(requirements[0]?.components)
+    ? requirements[0].components
+    : [];
+  if (components.length === 0) return { requirements, repairs: [] };
+  const segmentBlockIds = new Set(segment.blockIds);
+  const coveredBlockIds = new Set(
+    components.flatMap(({ sourceBlockIds }) =>
+      (Array.isArray(sourceBlockIds) ? sourceBlockIds : []).filter((blockId) =>
+        segmentBlockIds.has(blockId)
+      )
+    )
+  );
+  const firstMissingIndex = segment.blockIds.findIndex(
+    (blockId) => !coveredBlockIds.has(blockId)
+  );
+  if (
+    firstMissingIndex <= 0 ||
+    segment.blockIds
+      .slice(0, firstMissingIndex)
+      .some((blockId) => !coveredBlockIds.has(blockId)) ||
+    segment.blockIds
+      .slice(firstMissingIndex)
+      .some((blockId) => coveredBlockIds.has(blockId))
+  )
+    return { requirements, repairs: [] };
+  const boundaryBlock = sourceBlocksById.get(
+    segment.blockIds[firstMissingIndex - 1]
+  );
+  const trailingBlocks = segment.blockIds
+    .slice(firstMissingIndex)
+    .map((blockId) => sourceBlocksById.get(blockId));
+  if (
+    !["LIST_ITEM", "LIST_GOVERNOR", "BODY_LINE"].includes(
+      boundaryBlock?.structuralKind
+    ) ||
+    trailingBlocks.some(
+      ({ structuralKind, exactText }) =>
+        structuralKind !== "BODY_LINE" || /^\s*[•▪–—-]\s+/u.test(exactText)
+    ) ||
+    /[.!?;:]\s*$/u.test(boundaryBlock.exactText) ||
+    !/[.!?;:]\s*$/u.test(trailingBlocks.at(-1)?.exactText || "")
+  )
+    return { requirements, repairs: [] };
+  const comparable = (value) =>
+    String(value || "")
+      .normalize("NFKC")
+      .replace(/\s+/gu, " ")
+      .trim();
+  const boundaryText = comparable(boundaryBlock.exactText);
+  const candidates = components.flatMap((component, componentIndex) => {
+    const declaredIds = Array.isArray(component?.sourceBlockIds)
+      ? component.sourceBlockIds
+      : [];
+    if (
+      component?.type === "COVERAGE_EFFECT" ||
+      declaredIds.length === 0 ||
+      declaredIds.some((blockId) => !segmentBlockIds.has(blockId)) ||
+      !declaredIds.includes(boundaryBlock.blockId)
+    )
+      return [];
+    const label = comparable(component.label);
+    const start = label ? boundaryText.lastIndexOf(label) : -1;
+    return start < 0
+      ? []
+      : [{ componentIndex, declaredIds, anchorEnd: start + label.length }];
+  });
+  if (candidates.length === 0) return { requirements, repairs: [] };
+  const latestAnchorEnd = Math.max(
+    ...candidates.map(({ anchorEnd }) => anchorEnd)
+  );
+  const latest = candidates.filter(
+    ({ anchorEnd }) => anchorEnd === latestAnchorEnd
+  );
+  if (latest.length !== 1) return { requirements, repairs: [] };
+  const [{ componentIndex, declaredIds }] = latest;
+  const desiredIds = new Set([
+    ...declaredIds,
+    ...segment.blockIds.slice(firstMissingIndex),
+  ]);
+  const completedIds = segment.blockIds.filter((blockId) =>
+    desiredIds.has(blockId)
+  );
+  return {
+    requirements: [
+      {
+        ...requirements[0],
+        components: components.map((component, index) =>
+          index === componentIndex
+            ? { ...component, sourceBlockIds: completedIds }
+            : component
+        ),
+      },
+    ],
+    repairs: [
+      {
+        requirementIndex: 0,
+        componentIndex,
+        action: "COMPLETE_TRAILING_LIST_SENTENCE_COMPONENT_SOURCE_IDS",
+        segmentId: segment.segmentId,
+        fromSourceBlockIds: declaredIds,
+        toSourceBlockIds: completedIds,
+      },
+    ],
+  };
+}
+
 function completeBoundedListSegmentComponentSources(requirements, unit) {
   if (
     unit?.unitKind !== "LIST" ||
@@ -4924,13 +5052,21 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         );
       for (const repair of leadingCompletion.repairs)
         repairs.push({ unitId: response?.unitId, ...repair });
+      const trailingSentenceCompletion =
+        completeTrailingListSentenceComponentSources(
+          leadingCompletion.requirements,
+          unit
+        );
+      for (const repair of trailingSentenceCompletion.repairs)
+        repairs.push({ unitId: response?.unitId, ...repair });
       const completed = completeBoundedListSegmentComponentSources(
-        leadingCompletion.requirements,
+        trailingSentenceCompletion.requirements,
         unit
       );
       for (const repair of completed.repairs)
         repairs.push({ unitId: response?.unitId, ...repair });
       return leadingCompletion.repairs.length > 0 ||
+        trailingSentenceCompletion.repairs.length > 0 ||
         completed.repairs.length > 0
         ? { ...response, requirements: completed.requirements }
         : response;
