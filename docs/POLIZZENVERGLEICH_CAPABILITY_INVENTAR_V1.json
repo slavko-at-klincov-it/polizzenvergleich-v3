@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V393-PREREQUISITE-DEFINITION-ATOMIZATION-20260917-001",
+  "changeSetId": "LF-V394-BATCH33-LIST-PROVENANCE-AND-EMBEDDED-OBJECTS-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -738,7 +738,9 @@
         "A legacy multi-block label may cross physical blocks only through NFKC and whitespace collapse on one unique minimal contiguous source span; when the literal also occurs elsewhere, a candidate is valid only if its full block span is covered by the model-declared evidence IDs; wording changes remain invalid.",
         "A paraphrased quantified LIMIT_BASIS is rebound only from an exact 'Der/Die/Das X beträgt [Scope] Wert' source pattern with one exact value component.",
         "A trailing BODY_LINE suffix may complete exactly one continued-list requirement only across an open sentence boundary and only through the uniquely latest literal component anchor; interior gaps, closed sentences and ambiguous anchors remain fail-closed.",
-        "An explicit prerequisite followed immediately by an 'Unter X versteht man Y' definition is atomized only when sentence boundaries, repeated term X and every source span match exactly; mismatched terms and multi-requirement envelopes remain fail-closed."
+        "An explicit prerequisite followed immediately by an 'Unter X versteht man Y' definition is atomized only when sentence boundaries, repeated term X and every source span match exactly; mismatched terms and multi-requirement envelopes remain fail-closed.",
+        "Multiple literal components anchored in the same source block share only the bounded span up to the next later anchor, and only when the segment still has a real provenance gap.",
+        "An embedded alphabetic object list is materialized only from a contiguous server-owned intro/item segment sequence with markers starting at a), one bound external coverage governor and one explicit final benefit predicate."
       ],
       "evidence": {
         "tests": [
@@ -758,7 +760,8 @@
           "Tracker 133.69",
           "Tracker 133.70",
           "Tracker 133.71",
-          "Tracker 133.72"
+          "Tracker 133.72",
+          "Tracker 133.73"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -776,10 +779,12 @@
           "INT-20260917-054",
           "INT-20260917-055",
           "INT-20260917-056",
-          "INT-20260917-057"
+          "INT-20260917-057",
+          "INT-20260917-058",
+          "INT-20260917-059"
         ]
       },
-      "lastVerifiedCommit": "ae206f003ed86915aa73207df158ed724aca4955",
+      "lastVerifiedCommit": "1aae110e1a6f505c89e9ab406ef7d753707de0e5",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
@@ -840,7 +845,8 @@
         "A legacy OBJECT alias inside a conditional equivalence definition is relabeled as a peril only when the response already declares PERIL_OR_DAMAGE; unseen structures remain a holdout gate.",
         "Causal peril aliases require an exact source-bound damage-plus-causal-marker label; terminal aliases without that evidence remain invalid.",
         "A legacy LIST response is lifted only when one continued-item segment owns the complete ordered unit block sequence; governor evidence is accepted only under the exact server evidence-context contract with a word-for-word label and remains subject to downstream source validation.",
-        "Whitespace-normalized block-spanning labels and quantified subject limit bases remain exact source transformations, not permission for semantic paraphrase."
+        "Whitespace-normalized block-spanning labels and quantified subject limit bases remain exact source transformations, not permission for semantic paraphrase.",
+        "Embedded alphabetic object lists retain one requirement per server-owned logical segment; external governor evidence never changes owned segment overlap, and the final local benefit predicate remains on the final item only."
       ],
       "evidence": {
         "tests": [
@@ -855,7 +861,8 @@
           "Tracker 133.66",
           "Tracker 133.67",
           "Tracker 133.69",
-          "Tracker 133.70"
+          "Tracker 133.70",
+          "Tracker 133.73"
         ],
         "adrs": ["ADR-028", "ADR-031"],
         "failures": [
@@ -864,10 +871,12 @@
           "INT-20260917-052",
           "INT-20260917-053",
           "INT-20260917-054",
-          "INT-20260917-055"
+          "INT-20260917-055",
+          "INT-20260917-058",
+          "INT-20260917-059"
         ]
       },
-      "lastVerifiedCommit": "a92aeae4f2b5da490288a7d35e7e701894595adc",
+      "lastVerifiedCommit": "1aae110e1a6f505c89e9ab406ef7d753707de0e5",
       "relations": [{ "type": "DERIVED_FROM", "target": "CAP-A-002" }],
       "activationReason": "Current V2 runner consumes this manifest directly.",
       "reactivationCriteria": "Not applicable while active."

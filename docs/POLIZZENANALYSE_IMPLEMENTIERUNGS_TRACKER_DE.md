@@ -10636,6 +10636,55 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.73 Batch 33: gemeinsame Anker und eingebettete alphabetische Objektliste
+
+Der produktive V3.9.3-Resume übernahm Batches 1 bis 32 ohne neue
+Modellarbeit. Batch 33 stoppte nach sechs gespeicherten Versuchen korrekt
+fail-closed: vier Units waren sofort gültig, zwei blieben resumierbar offen.
+Der Attempt-Baum blieb unter SHA-256
+`14221202067bc834b5cde5f49a32e78f5d33876e4af62a9f465a3cd83bf7ee86`
+unverändert.
+
+Die erste Unit war fachlich vollständig erkannt. Mehrere eigenständige
+Umweltschaden-Komponenten begannen jedoch im selben Quellblock; der bisherige
+bounded-source-Algorithmus lehnte identische Startpositionen pauschal ab und
+ließ dadurch Zwischenblöcke unzitiert. V75 gruppiert gleichrangige
+source-bound Anker und weist ihnen nur die begrenzte Spanne bis zum nächsten
+späteren Anker zu. Bereits vollständig belegte Segmente werden nicht
+verändert.
+
+Die zweite Unit enthält eine Deckungseinleitung und fünf alphabetische
+Objektpunkte. Der produktive Evidenzplan verfeinert sie korrekt in sechs
+logische Segmente. Qwen lieferte Einleitung und letzten Punkt, verlor aber die
+Punkte a bis d und das lokale Leistungsprädikat. V75 materialisiert diese
+Struktur nur bei lückenloser Blockbesitzfolge, alphabetischen Markern ab a),
+gebundenem externen Deckungs-Governor und eindeutigem abschließendem
+„leistet … Ersatz“-Prädikat. Jeder Unterpunkt bleibt eine eigene Requirement;
+keine Requirement überlappt mehrere eigene Segmente.
+
+Die Arbeit ist `ADAPT_EXISTING` für `CAP-A-002` und `CAP-A-003`; es wurde
+keine Nebenarchitektur eingeführt. Mac-Studio-Nachweise auf
+Implementierungscommit `1aae110e1a6f505c89e9ab406ef7d753707de0e5`:
+
+```text
+Syntax und Prettier:                       PASS
+Vollständiger A-Referenzvertrag:           401/401 PASS
+Echter gespeicherter Batch 33:             6/6 Units, PASS
+Neue Modellaufrufe im Realartefakt-Test:   0
+Attempt-Artefaktbaum vorher/nachher:       hashgleich
+```
+
+V3.9.4-Release-Gate, Installation und Fortsetzung ab Batch 34 stehen noch
+aus. Gold-283-V2 bleibt unverändert; der bekannte LF-1+9-Lauf bleibt
+Regression und kein unabhängiger Generalisierungs- oder
+99-Prozent-Nachweis.
+
+Status: `BATCH-33-ROOT-CAUSES ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
+MODELLAUFRUF; V3.9.4-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+
+Change-Set:
+`LF-V394-BATCH33-LIST-PROVENANCE-AND-EMBEDDED-OBJECTS-20260917-001`.
+
 ### 133.72 Voraussetzung und nachfolgende Begriffsdefinition in Batch 32 atomisiert
 
 Der produktive V3.9.2-Resume übernahm Batches 1 bis 29 ohne neue
@@ -10674,12 +10723,29 @@ Neue Modellaufrufe im Realartefakt-Test:   0
 Attempt-Artefaktbaum vorher/nachher:       hashgleich
 ```
 
-V3.9.3-Release-Gate, Installation und Fortsetzung ab Batch 33 stehen noch
-aus. Gold-283-V2 bleibt unverändert; der bekannte LF-1+9-Lauf bleibt
-Regression und kein unabhängiger Generalisierungs- oder 99-Prozent-Nachweis.
+Das vollständige V3.9.3-Release-Gate auf Commit
+`562abb978ca520308c70985a9f588f6bfa31bac1` bestand 212/212 Suites und
+3.092/3.092 Tests sowie Server-, Frontend- und Collector-Lint, Prisma,
+Capability-Inventar, Prettier, Frontend-Build und macOS-Installer-Suite. Der
+annotierte Tag `v3.9.3`, `origin/main` und der installierte Kunden-Checkout
+zeigen auf denselben Release-Commit. Der offizielle Updater endete mit
+Doctor-, API- und SQLite-`quick_check`-PASS. Das Pre-Activation-Backup liegt
+unter:
 
-Status: `BATCH-32-ROOT-CAUSE ALLGEMEIN BEHOBEN; REALARTEFAKT 6/6 PASS OHNE
-MODELLAUFRUF; V3.9.3-GATE, DEPLOYMENT UND PRODUKT-RESUME AUSSTEHEND`.
+```text
+server/storage/backups/anythingllm-before-activation-20260917-183900.db
+```
+
+Der anschließende Resume verwendet den Run-Root
+`resume-1ba22e17f1bfece6435fa43e`. Batches 1 bis 32 wurden ohne neue
+Modellarbeit übernommen; der erste neue Attempt betraf Batch 33. Dieser
+stoppte korrekt fail-closed und führte zu den in Abschnitt 133.73
+dokumentierten allgemeinen Korrekturen. Gold-283-V2 bleibt unverändert; der
+bekannte LF-1+9-Lauf bleibt Regression und kein unabhängiger
+Generalisierungs- oder 99-Prozent-Nachweis.
+
+Status: `V3.9.3 PRODUKTIV AKTIV; DOCTOR/API/DB PASS; BATCHES 1 BIS 32 OHNE
+NEUE MODELLARBEIT ÜBERNOMMEN; BATCH 33 FAIL-CLOSED UND IN 133.73 BEHOBEN`.
 
 Change-Set:
 `LF-V393-PREREQUISITE-DEFINITION-ATOMIZATION-20260917-001`.
