@@ -159,6 +159,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-053` | Alte Komponentenform für exakt ein vollständiges Listensegment sicher heben       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | kalten V3.9.0-Produktlauf ab Batch 18 weiterführen und vollständiges Endergebnis getrennt prüfen                            |
 | `INT-20260917-054` | Mehrblocklabel in alter Hülle nur über Whitespace normalisiert exakt binden        | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | vollständigen kalten Produktlauf ab Batch 22 fortsetzen und Endergebnis getrennt prüfen                                    |
 | `INT-20260917-055` | Quantifizierte Limitbasis aus wörtlichem Satzsubjekt statt Paraphrase binden       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | vollständigen kalten Produktlauf ab Batch 22 fortsetzen und Endergebnis getrennt prüfen                                    |
+| `INT-20260917-056` | Nachlaufende Satzfortsetzung dem eindeutig letzten Komponentenanker zuordnen       | `BEOBACHTUNG`           | `IN_PRÜFUNG`          | allgemeinen Suffixvertrag testen und offene Batch-29-Unit ohne Modellaufruf revalidieren                                   |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -3661,3 +3662,32 @@ Vollständigkeitsbehauptung erzeugen.
   1 bis 21 ohne neue Attempts übernommen; der erste neue Attempt ist Batch 22.
 - Geplanter Change-Set:
   `LF-V391-BATCH21-EVIDENCE-NORMALIZATION-20260917-001`.
+
+## INT-20260917-056 — Nachlaufende Satzfortsetzung dem eindeutig letzten Komponentenanker zuordnen
+
+- Erfasst: 2026-09-17
+- Typ: `BEOBACHTUNG`
+- Status: `IN_PRÜFUNG`
+- Aussage: Enthält genau ein `LIST_ITEM_WITH_CONTINUATIONS` genau eine
+  Anforderung und fehlt in deren Komponentenbelegen ausschließlich ein
+  zusammenhängendes Suffix aus fortsetzenden `BODY_LINE`-Blöcken, darf dieses
+  Suffix nur dem eindeutig letzten wörtlichen Komponentenanker im letzten
+  bereits belegten Block zugeordnet werden. Der belegte Block muss syntaktisch
+  offen enden und der letzte Suffixblock die Aussage abschließen.
+- Ist-Wahrheit: `JA` als Ursache der einzigen offenen Batch-29-Unit. Fünf von
+  sechs Units waren gültig. In der verbleibenden Unit waren Objekt,
+  Deckungswirkung, Bedingung, Ursache, Wirkung und Fachrolle source-bound;
+  nur der vierte Block, der den im dritten Block begonnenen Satz beendet,
+  blieb unzitiert. Alle sechs Modellversuche und 28 vorherige PASS-Batches
+  sind resumierbar erhalten.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002` und `CAP-A-003`;
+  genau ein logisches Fortsetzungssegment und eine Anforderung; ausschließlich
+  fehlendes zusammenhängendes Suffix; Suffix nur `BODY_LINE`; keine neue
+  Listenmarke; offene Satzgrenze vor dem Suffix und Abschluss am Segmentende;
+  eindeutiger letzter wörtlicher Anker. Mehrere gleich letzte Anker,
+  Innenlücken, mehrere Anforderungen oder bereits abgeschlossene Sätze
+  bleiben fail-closed. Keine Dokument-ID, Seite, Versichererbezeichnung oder
+  bekannte Kundenformulierung als Produktionsregel.
+- Beweisgrenze: bekannte LF-1+9-Regression, kein Holdout-Nachweis.
+- Geplanter Change-Set:
+  `LF-V392-TRAILING-LIST-SENTENCE-PROVENANCE-20260917-001`.
