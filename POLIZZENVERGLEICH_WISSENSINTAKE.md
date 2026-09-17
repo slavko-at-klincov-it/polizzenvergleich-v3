@@ -3694,7 +3694,11 @@ Vollständigkeitsbehauptung erzeugen.
   Batch 29 revalidierte ohne Modellaufruf mit 6/6 Units und null
   Restdiagnosen. Der Attempt-Baum blieb unter SHA-256
   `d9b25a76fbc0d1592ecb9be8552cf09152d6f7f49cc9547dae27f127c1e7c69b`
-  unverändert. Das vollständige Release-Gate, Deployment und Resume ab Batch
-  30 bleiben getrennte nächste Nachweise.
+  unverändert. Das vollständige Release-Gate auf
+  `fa04b026eb4e9fa1475439fe4ab8cfdce83b644e` bestand 212/212 Suites und
+  3.090/3.090 Tests sowie alle weiteren Gates. Nach Installation mit
+  Doctor/API/DB PASS wurden Batches 1 bis 29 ohne neue Attempts übernommen;
+  der erste neue Attempt ist Batch 30 im Run-Root
+  `resume-8870c114ac674319d26d6875`.
 - Geplanter Change-Set:
   `LF-V392-TRAILING-LIST-SENTENCE-PROVENANCE-20260917-001`.
