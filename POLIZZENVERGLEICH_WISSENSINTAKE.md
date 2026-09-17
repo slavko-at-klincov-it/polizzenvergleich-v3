@@ -4026,3 +4026,39 @@ Vollständigkeitsbehauptung erzeugen.
   Im Resume `resume-d4a5422a492af4769c12cdd4` wurden Batches 1 bis 36
   revalidiert, und erst Batch 37 begann neue Modellarbeit.
 - Change-Set: `LF-V397-LOCAL-COVERAGE-RESET-ATOMIZATION-20260917-001`.
+
+## INT-20260917-066 — Nummerierte Abschnittsüberschrift beendet fremden operativen Governor
+
+- Erfasst: 2026-09-17
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Aussage: Eine ausschließlich strukturelle, nummerierte Abschnittsüberschrift
+  ohne eigenes fachliches Prädikat oder in Form einer direkten Frage muss
+  einen zuvor aktiven operativen Überschriften-Governor beenden. Andernfalls
+  darf dessen Deckungswirkung nicht in die nach der neuen Abschnittsgrenze
+  folgenden Klauseln gelangen.
+- Ist-Wahrheit: `JA` als gemeinsame Ursache des fail-closed Batch-38-Abbruchs.
+  Die bereits als Struktur normalisierten Einheiten `1. Wann gilt die
+  Versicherung?` und `2. Wo gilt die Versicherung?` blieben im
+  Evidenzplan als `LIST` sichtbar und setzten deshalb den aktiven negativen
+  Governor `Nicht versichert ...` nicht zurück. Nachfolgende positive Zeit-,
+  Rückwirkungs- und Ortsklauseln erhielten dadurch unzulässige fremde
+  Ausschlussevidenz.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-A-002`; Wiederverwendung
+  derselben engen Erkennung, die nummerierte reine Struktur bereits
+  deterministisch terminalisiert. Nur vollständig aus
+  `HEADING_CANDIDATE`-Blöcken bestehende nummerierte Units ohne fachliches
+  Prädikat oder mit abschließendem Fragezeichen bilden eine Grenze.
+  Nummerierte operative Aussagesätze und echte Listenpunkte dürfen weder
+  umklassifiziert noch von ihrem gültigen Governor getrennt werden. Keine
+  Dokument-, Seiten-, ID- oder Versichererregel.
+- Beweisgrenze: bekannte LF-1+9-Regression; synthetische positive und
+  negative Grenzvarianten sowie Revalidierung der vorhandenen
+  Batch-Artefakte erforderlich; kein Holdout- oder 99-Prozent-Nachweis.
+- Laufbeleg: V3.9.7-Resume
+  `resume-d4a5422a492af4769c12cdd4` revalidierte Batches 1 bis 36, berechnete
+  Batch 37 mit 6/6 Units und stoppte Batch 38 nach zehn gespeicherten
+  Versuchen bei 2/6 gültigen Units korrekt fail-closed. Gesamtdauer 493.565
+  ms; keine Timeouts. Die vier offenen Units liegen sämtlich hinter einer
+  solchen nummerierten Abschnittsgrenze.
+- Change-Set: `LF-V398-NUMBERED-HEADING-GOVERNOR-BOUNDARY-20260917-001`.
