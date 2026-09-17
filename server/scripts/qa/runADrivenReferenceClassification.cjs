@@ -43,7 +43,7 @@ const {
   stableStringify,
 } = require("../../utils/policyAnalysis/aDrivenSourceUnitPlan");
 
-const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V69";
+const RUN_CONTRACT_ID = "LF_A_BOUNDED_CLASSIFICATION_RUN_V70";
 const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V12",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V13",
@@ -102,6 +102,7 @@ const RESUMABLE_PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V66",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V67",
   "LF_A_BOUNDED_CLASSIFICATION_RUN_V68",
+  "LF_A_BOUNDED_CLASSIFICATION_RUN_V69",
   RUN_CONTRACT_ID,
 ]);
 const RESUMABLE_PREDECESSOR_VALIDATOR_CONTRACT_IDS = new Set([
@@ -779,6 +780,28 @@ function explicitScopeRoleRepair(component, { allowObject = false } = {}) {
   )
     return null;
   return { ...component, type: "SCOPE" };
+}
+
+function causalPerilComponentAlias(component, unit) {
+  if (
+    component?.type !== "PERIL_OR_DAMAGE" ||
+    typeof component.label !== "string" ||
+    !Array.isArray(component.sourceBlockIds) ||
+    component.sourceBlockIds.length === 0 ||
+    !/\b(?:Schäden?|Beschädigungen?)\b[\s\S]{0,240}\b(?:durch|infolge|aufgrund|wegen)\b/iu.test(
+      component.label
+    )
+  )
+    return null;
+  const exactSourceBlockIds = sourceBlockIdsForExactSpan(unit, component.label);
+  if (
+    exactSourceBlockIds.length === 0 ||
+    !exactSourceBlockIds.every((blockId) =>
+      component.sourceBlockIds.includes(blockId)
+    )
+  )
+    return null;
+  return { ...component, type: "PERIL_OR_CAUSE" };
 }
 
 function splitProductConfigurationScopeRoles(component) {
@@ -4363,6 +4386,21 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
                       (candidate) => candidate?.type === type
                     );
                   const componentLabel = String(component?.label || "");
+                  const perilComponent = causalPerilComponentAlias(
+                    component,
+                    unit
+                  );
+                  if (perilComponent) {
+                    repairs.push({
+                      unitId: response.unitId,
+                      requirementIndex,
+                      componentIndex,
+                      action: "NORMALIZE_CAUSAL_PERIL_COMPONENT_ALIAS",
+                      fromType: "PERIL_OR_DAMAGE",
+                      toType: "PERIL_OR_CAUSE",
+                    });
+                    return [perilComponent];
+                  }
                   if (
                     component?.type === "SCOPE" &&
                     /^\s*auf\s+[„“”"',]*\s*Erstes\s+Risiko[„“”"',]*\s*[.;]?\s*$/iu.test(

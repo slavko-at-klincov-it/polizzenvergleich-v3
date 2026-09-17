@@ -7905,6 +7905,107 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
     ).toHaveLength(2);
   });
 
+  test.each([
+    "Schäden durch Graffiti",
+    "Beschädigungen infolge Hagel",
+    "Schaden aufgrund eines Sturms",
+    "Schäden wegen Vandalismus",
+  ])("normalizes a source-bound causal peril component alias: %s", (label) => {
+    const unit = {
+      unitId: "causal-peril-component-alias",
+      unitKind: "CLAUSE",
+      source: {
+        blockIds: ["block"],
+        combinedText: label,
+        blocks: [{ blockId: "block", exactText: label }],
+      },
+      logicalSourceSegments: [],
+    };
+    const normalized = normalizeUnambiguousComponentTypes(
+      [
+        {
+          unitId: unit.unitId,
+          primaryClass: "EXCLUSION",
+          semanticClasses: ["EXCLUSION"],
+          requirements: [
+            {
+              displayLabel: label,
+              components: [
+                {
+                  type: "PERIL_OR_DAMAGE",
+                  label,
+                  sourceBlockIds: ["block"],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      [unit]
+    );
+
+    expect(normalized.responses[0].requirements[0].components[0].type).toBe(
+      "PERIL_OR_CAUSE"
+    );
+    expect(normalized.componentRepairs).toContainEqual({
+      unitId: unit.unitId,
+      requirementIndex: 0,
+      componentIndex: 0,
+      action: "NORMALIZE_CAUSAL_PERIL_COMPONENT_ALIAS",
+      fromType: "PERIL_OR_DAMAGE",
+      toType: "PERIL_OR_CAUSE",
+    });
+  });
+
+  test.each(["Graffiti", "Schäden an Gebäuden"])(
+    "keeps an ambiguous peril component alias fail-closed: %s",
+    (label) => {
+      const unit = {
+        unitId: "ambiguous-peril-component-alias",
+        unitKind: "CLAUSE",
+        source: {
+          blockIds: ["block"],
+          combinedText: label,
+          blocks: [{ blockId: "block", exactText: label }],
+        },
+        logicalSourceSegments: [],
+      };
+      const normalized = normalizeUnambiguousComponentTypes(
+        [
+          {
+            unitId: unit.unitId,
+            primaryClass: "EXCLUSION",
+            semanticClasses: ["EXCLUSION"],
+            requirements: [
+              {
+                displayLabel: label,
+                components: [
+                  {
+                    type: "PERIL_OR_DAMAGE",
+                    label,
+                    sourceBlockIds: ["block"],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        [unit]
+      );
+
+      expect(normalized.responses[0].requirements[0].components[0].type).toBe(
+        "PERIL_OR_DAMAGE"
+      );
+      expect(normalized.componentRepairs).not.toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            action: "NORMALIZE_CAUSAL_PERIL_COMPONENT_ALIAS",
+          }),
+        ])
+      );
+    }
+  );
+
   test("normalizes only an exclusion terminal used as a component type", async () => {
     const source = artifact(
       ["Seite 1\nNicht versichert sind Treibhäuser.\n"],
@@ -8762,7 +8863,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
           recoverModelAfterAbort: jest.fn(),
         });
 
-        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V69");
+        expect(upgraded.contractId).toBe("LF_A_BOUNDED_CLASSIFICATION_RUN_V70");
         expect(upgraded.validatorContractId).toBe(
           A_DYNAMIC_MANIFEST_CONTRACT_ID
         );
