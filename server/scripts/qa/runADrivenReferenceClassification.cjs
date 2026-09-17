@@ -3202,10 +3202,21 @@ function liftLegacyComponentShapedRequirements(requirements, unit) {
       )
     )
       return false;
-    const exactSpanBlockIds = sourceBlockIdsForExactSpan(
+    const ownedExactSpanBlockIds = sourceBlockIdsForExactSpan(
       unit,
       requirement.label
     );
+    const governorExactSpanBlockIds =
+      singleCompleteListSegment && governingContextIsBound
+        ? sourceBlockIdsForExactSpan(
+            { source: governingContext },
+            requirement.label
+          )
+        : [];
+    const exactSpanBlockIds =
+      ownedExactSpanBlockIds.length > 0
+        ? ownedExactSpanBlockIds
+        : governorExactSpanBlockIds;
     return (
       exactSpanBlockIds.length > 0 &&
       exactSpanBlockIds.every((blockId) =>
