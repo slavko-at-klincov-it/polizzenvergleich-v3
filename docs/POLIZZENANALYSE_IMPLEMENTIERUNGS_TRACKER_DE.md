@@ -10636,6 +10636,52 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.75 Batch 35: eindeutige Quellspannen, Schadensüberschrift und Wiederholungsbindung
+
+Der echte V3.9.5-Resume übernahm Batches 1 bis 33 ohne neue Modellarbeit.
+Batch 34 bestand nach drei Modellversuchen. Batch 35 stoppte nach sieben
+gespeicherten Versuchen korrekt fail-closed: drei von sechs Units waren
+gültig, drei blieben resumierbar offen. Kein unvollständiger Versuch wurde als
+PASS gespeichert.
+
+Die Ursachen waren vier allgemeine Evidenzformen, nicht ein fehlender
+semantischer Modellbefund: ausdrückliche Auslassungen in ansonsten
+eindeutigen Komponentenlabels; eine kurze Schadensüberschrift direkt nach
+einem reinen Bullet-Marker; dasselbe Objektwort in Titel und Beschreibung;
+und die positive Wirkungsform `Versicherungsschutz ... geleistet`.
+
+Der V77-Vertrag adaptiert `CAP-A-002` und `CAP-A-003`. Auslassungslabels
+werden nur auf genau eine vollständige Originalspanne innerhalb des kleinsten
+durch die bereits deklarierten eigenen Blöcke begrenzten Fensters
+zurückgeführt. Wiederholte Komponenten werden nur auf die eindeutige
+Displaylabel-Quelle verengt, wenn alle Zielblöcke bereits deklariert waren.
+Eine eindeutige kurze `...schäden`-Überschrift nach einem layout-only Bullet
+wird nur bei bereits vorhandener Deckungswirkung als `DAMAGE_OR_EFFECT`
+materialisiert. Reine Bullet-Blöcke benötigen keine semantische Zitierung;
+operative Überschriften und Textblöcke weiterhin vollständig. Die neue
+Wirkungsform wird nur wörtlich und source-bound akzeptiert. Alle
+Mehrdeutigkeiten bleiben fail-closed. V76 wurde explizit in die
+Vorgänger-Allowlist aufgenommen.
+
+Der vollständige fokussierte Vertrag bestand auf dem Mac Studio mit 409/409
+Tests. Der echte gespeicherte Batch 35 revalidierte danach ausschließlich aus
+seinen vorhandenen Antworten mit 6/6 Units und null Diagnosen. Der
+Attempt-Baum blieb vor und nach der Prüfung hashgleich:
+
+```text
+64bc381721de32f585b80202556ece14c1c33984093ca080be43835bbe90641f
+```
+
+Damit ist die Reparatur belegt, ohne Qwen-Aufruf, Überschreiben oder neue
+Berechnung. Der bekannte LF-1+9-Lauf bleibt Regressionsevidenz; insbesondere
+ist der noch laufende vollständige Kaltlauf notwendig, aber kein allgemeiner
+Holdout- oder 99-Prozent-Nachweis.
+
+Status: `V3.9.6-RELEASEKANDIDAT; BATCH 35 OFFLINE 6/6 REVALIDIERT; VOLLGATE,
+DEPLOYMENT UND RESUME AUSSTEHEND`.
+
+Change-Set: `LF-V396-BATCH35-EVIDENCE-BINDING-20260917-001`.
+
 ### 133.74 V3.9.4-Resume fail-closed und unmittelbarer V74-Vorgänger ergänzt
 
 V3.9.4 wurde nach vollständig grünem Release-Gate auf dem Kunden-Mac-Studio

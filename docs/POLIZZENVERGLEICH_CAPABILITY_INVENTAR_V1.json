@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V395-IMMEDIATE-PREDECESSOR-RESUME-20260917-001",
+  "changeSetId": "LF-V396-BATCH35-EVIDENCE-BINDING-20260917-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -747,7 +747,9 @@
         "An explicit prerequisite followed immediately by an 'Unter X versteht man Y' definition is atomized only when sentence boundaries, repeated term X and every source span match exactly; mismatched terms and multi-requirement envelopes remain fail-closed.",
         "Multiple literal components anchored in the same source block share only the bounded span up to the next later anchor, and only when the segment still has a real provenance gap.",
         "An embedded alphabetic object list is materialized only from a contiguous server-owned intro/item segment sequence with markers starting at a), one bound external coverage governor and one explicit final benefit predicate.",
-        "The immediate predecessor run contract must be explicitly allowlisted and is still revalidated against the current source plan and validator before any response is reused."
+        "The immediate predecessor run contract must be explicitly allowlisted and is still revalidated against the current source plan and validator before any response is reused.",
+        "An explicitly elided component label is restored only to one exact, globally unique original span inside the smallest contiguous window bounded by all model-declared owned blocks; ambiguity and external evidence remain fail-closed.",
+        "A repeated literal component is narrowed to the unique exact requirement display-label occurrence only when every selected display block was already model-declared and at least two declared blocks contain the same literal."
       ],
       "evidence": {
         "tests": [
@@ -769,7 +771,8 @@
           "Tracker 133.71",
           "Tracker 133.72",
           "Tracker 133.73",
-          "Tracker 133.74"
+          "Tracker 133.74",
+          "Tracker 133.75"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -790,10 +793,14 @@
           "INT-20260917-057",
           "INT-20260917-058",
           "INT-20260917-059",
-          "INT-20260917-060"
+          "INT-20260917-060",
+          "INT-20260917-061",
+          "INT-20260917-062",
+          "INT-20260917-063",
+          "INT-20260917-064"
         ]
       },
-      "lastVerifiedCommit": "74f9a621ef1af002bda980fbc0f99e0e3c239cf0",
+      "lastVerifiedCommit": "d1ed801354fe9ac08f0eefc7bc1f203b5d0514f6",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Validated on the complete known 1+9 fixture and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
@@ -855,7 +862,10 @@
         "Causal peril aliases require an exact source-bound damage-plus-causal-marker label; terminal aliases without that evidence remain invalid.",
         "A legacy LIST response is lifted only when one continued-item segment owns the complete ordered unit block sequence; governor evidence is accepted only under the exact server evidence-context contract with a word-for-word label and remains subject to downstream source validation.",
         "Whitespace-normalized block-spanning labels and quantified subject limit bases remain exact source transformations, not permission for semantic paraphrase.",
-        "Embedded alphabetic object lists retain one requirement per server-owned logical segment; external governor evidence never changes owned segment overlap, and the final local benefit predicate remains on the final item only."
+        "Embedded alphabetic object lists retain one requirement per server-owned logical segment; external governor evidence never changes owned segment overlap, and the final local benefit predicate remains on the final item only.",
+        "A unique short damage heading directly following a layout-only bullet is materialized as DAMAGE_OR_EFFECT only when its requirement already contains an explicit coverage effect; unseen heading layouts remain a holdout gate.",
+        "Layout-only bullet markers may be omitted from semantic component citations, but operative heading and body blocks remain mandatory.",
+        "The phrase 'Versicherungsschutz ... geleistet' is accepted as an inclusion-effect surface form only when the complete component remains exact and source-bound."
       ],
       "evidence": {
         "tests": [
@@ -871,7 +881,8 @@
           "Tracker 133.67",
           "Tracker 133.69",
           "Tracker 133.70",
-          "Tracker 133.73"
+          "Tracker 133.73",
+          "Tracker 133.75"
         ],
         "adrs": ["ADR-028", "ADR-031"],
         "failures": [
@@ -882,10 +893,12 @@
           "INT-20260917-054",
           "INT-20260917-055",
           "INT-20260917-058",
-          "INT-20260917-059"
+          "INT-20260917-059",
+          "INT-20260917-062",
+          "INT-20260917-064"
         ]
       },
-      "lastVerifiedCommit": "1aae110e1a6f505c89e9ab406ef7d753707de0e5",
+      "lastVerifiedCommit": "d1ed801354fe9ac08f0eefc7bc1f203b5d0514f6",
       "relations": [{ "type": "DERIVED_FROM", "target": "CAP-A-002" }],
       "activationReason": "Current V2 runner consumes this manifest directly.",
       "reactivationCriteria": "Not applicable while active."
