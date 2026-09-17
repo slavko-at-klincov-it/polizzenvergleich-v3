@@ -14159,10 +14159,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
               type: "CONDITION",
               label:
                 "auf einen Störfall zurückzuführen ist. Unter Störfall versteht man ein technisches Gebrechen oder menschliches Versagen.",
-              sourceBlockIds: [
-                "prerequisite-definition",
-                "definition-tail",
-              ],
+              sourceBlockIds: ["prerequisite-definition", "definition-tail"],
             },
             {
               type: "COVERAGE_EFFECT",
@@ -14239,7 +14236,8 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       {
         blockId: "lead",
         structuralKind: "LIST_ITEM",
-        exactText: "- Voraussetzung für den Schutz ist, dass der Schaden auf einen Störfall zurückgeht.",
+        exactText:
+          "- Voraussetzung für den Schutz ist, dass der Schaden auf einen Störfall zurückgeht.",
       },
       {
         blockId: "definition",

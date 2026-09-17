@@ -2360,7 +2360,9 @@ function normalizePrerequisiteWithFollowingDefinition(requirements, unit) {
     segment?.type !== "LIST_ITEM_WITH_CONTINUATIONS" ||
     !Array.isArray(segment.blockIds) ||
     segment.blockIds.length !== sourceBlockIds.length ||
-    !segment.blockIds.every((blockId, index) => blockId === sourceBlockIds[index])
+    !segment.blockIds.every(
+      (blockId, index) => blockId === sourceBlockIds[index]
+    )
   )
     return { requirements, repairs: [] };
   const sourceText = String(unit?.source?.combinedText || "");
@@ -4385,8 +4387,10 @@ function normalizeUnambiguousComponentTypes(responses, units = []) {
         ],
       };
     }
-    const prerequisiteDefinition =
-      normalizePrerequisiteWithFollowingDefinition(requirements, unit);
+    const prerequisiteDefinition = normalizePrerequisiteWithFollowingDefinition(
+      requirements,
+      unit
+    );
     requirements = prerequisiteDefinition.requirements;
     for (const repair of prerequisiteDefinition.repairs)
       repairs.push({ unitId: response?.unitId, ...repair });
