@@ -5314,3 +5314,37 @@ expertengelabelten Mehrversicherer-Holdout; ein explorativer unlabeled Smoke
 darf nicht als Generalisierungsnachweis ausgegeben werden.
 
 Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
+
+## 99. Gold-283-V2 und V3.8.1-Release-Gate
+
+Gold-283-V2 wurde auf dem Mac Studio aus den bestehenden hashgebundenen
+Gold-, Vollkorpus-, Entscheidungs- und Regressionsartefakten in einem neuen
+geschützten Verzeichnis eingefroren. Gold-283-V1 blieb byteidentisch bei
+Datei-SHA-256
+`9ed4ab6ba3dbd896de48ecf94e6874881391600ef2cc027afae5af5d21123a55`.
+
+Der neue Goldstand besitzt 283 Zeilen: 270 `FOUND`, 13 `NOT_FOUND`, 149
+`FULL`, 113 `PARTIAL`, acht `CONTRADICTED` und 13 `NONE`. Der Datei-SHA-256
+lautet
+`f43f6216010dfc01db53fcb8c3b04b5bc5a49f657c2232ab9f2a2999021551d4`,
+der interne Gold-SHA-256
+`44300754f9bad315410f7805ecb1b8c4f4e65551e2dc8a5349ba41c8697edf37`.
+Die bestehende dynamische Baseline stimmt in 144/144 eindeutig messbaren
+Fällen binär überein; es gibt dort null False Positives und null False
+Negatives. 139 Split-/Merge-Crosswalks bleiben bewusst außerhalb der binären
+Messmenge.
+
+Der exakte V3.8.1-Release-Kandidat
+`588334568f93be060ca1c078cae0c3439619ad6d` bestand auf dem Mac Studio
+201/201 Server-Suites mit 2.948/2.948 Tests, drei Lints, Prisma,
+Capability-Inventar, Frontend-Build und Installer-Suite.
+
+**Positive Erkenntnis:** Mehrfach vorkommende gleichartige A-Rollen können
+allgemein über konkrete Text- und Quellenbindung repariert werden, ohne
+bekannte Ergebniszeilen in den Produktpfad einzubauen.
+
+**Beweisgrenze:** Gold-283-V2 ist Regression für genau das bekannte
+hashgebundene LF-1+9-Set. Der kalte Produktlauf nach dem Fix und ein echter
+ungesehener, expertengelabelter Mehrversicherer-Holdout stehen noch aus.
+
+Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
