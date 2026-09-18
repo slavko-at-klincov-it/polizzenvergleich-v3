@@ -1577,11 +1577,10 @@ async function processBatches({
         initialAcceptedResponses: batch.expectedRequirementIds
           .filter((requirementId) => acceptedByRequirement.has(requirementId))
           .map((requirementId) => acceptedByRequirement.get(requirementId)),
-        initialIdentityCoreModifierNormalizations:
-          [
-            ...predecessorResumeState.identityCoreModifierNormalizations,
-            ...resumeState.identityCoreModifierNormalizations,
-          ],
+        initialIdentityCoreModifierNormalizations: [
+          ...predecessorResumeState.identityCoreModifierNormalizations,
+          ...resumeState.identityCoreModifierNormalizations,
+        ],
         initialExplicitExclusionCounterpartNormalizations: [
           ...predecessorResumeState.explicitExclusionCounterpartNormalizations,
           ...(resumeState.explicitExclusionCounterpartNormalizations || []),
@@ -1591,11 +1590,10 @@ async function processBatches({
             batch.expectedRequirementIds.includes(requirementId)
           ),
         ],
-        initialUniqueRescueCandidateAliasNormalizations:
-          [
-            ...predecessorResumeState.uniqueRescueCandidateAliasNormalizations,
-            ...resumeState.uniqueRescueCandidateAliasNormalizations,
-          ],
+        initialUniqueRescueCandidateAliasNormalizations: [
+          ...predecessorResumeState.uniqueRescueCandidateAliasNormalizations,
+          ...resumeState.uniqueRescueCandidateAliasNormalizations,
+        ],
         initialBoundCandidateIdOmissionNormalizations: [
           ...predecessorResumeState.boundCandidateIdOmissionNormalizations,
           ...resumeState.boundCandidateIdOmissionNormalizations,

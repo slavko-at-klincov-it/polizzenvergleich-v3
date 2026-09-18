@@ -94,7 +94,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
       'if [ ! -f "$B_RESCUE_DECISION_ROOT/summary.private.json" ]'
     );
     expect(source).not.toContain("rm -rf");
-    expect(source).toContain('LF_B_DECISION_RESUME_ROOT');
+    expect(source).toContain("LF_B_DECISION_RESUME_ROOT");
     expect(source).toContain('--resumeOutputRoot "$LF_B_DECISION_RESUME_ROOT"');
 
     const aBuilder = fs.readFileSync(

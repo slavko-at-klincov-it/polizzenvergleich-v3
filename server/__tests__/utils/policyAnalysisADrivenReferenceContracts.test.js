@@ -19668,10 +19668,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     [
       "an ambiguous contiguous omission",
       "RCE-1234567890abcdef123456",
-      [
-        "RCE-1234567890aaabcdef123456",
-        "RCE-1234567890bbabcdef123456",
-      ],
+      ["RCE-1234567890aaabcdef123456", "RCE-1234567890bbabcdef123456"],
     ],
     [
       "a replacement",
@@ -20003,17 +20000,13 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         );
         fs.mkdirSync(attemptDirectory, { recursive: true });
         fs.writeFileSync(
-          path.join(
-            attemptDirectory,
-            "cycle-001-attempt-001.private.json"
-          ),
+          path.join(attemptDirectory, "cycle-001-attempt-001.private.json"),
           `${JSON.stringify(
             {
               schemaVersion: 1,
               contractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_TRANSPORT_V1",
               decisionPlanSha256: decisionPlan.planSha256,
-              promptContractId:
-                "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V2",
+              promptContractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V2",
               promptSha256: crypto
                 .createHash("sha256")
                 .update(JSON.stringify(requirementDecisionPrompt(batch)))
@@ -20047,8 +20040,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         validatorContractId: A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID,
         requestedModel: args.model,
         modelContext: args.modelContext,
-        transportContractId:
-          "LF_A_DRIVEN_REQUIREMENT_DECISION_TRANSPORT_V1",
+        transportContractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_TRANSPORT_V1",
         requestTimeoutMs: args.requestTimeoutMs,
         abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
         batchId: batch.batchId,
