@@ -260,7 +260,7 @@
         "adrs": ["ADR-009", "ADR-027", "ADR-031"],
         "failures": ["INT-20260917-049", "INT-20260917-060", "INT-20260917-068"]
       },
-      "lastVerifiedCommit": "2b052273f0311318c715d5d78faa3bc044856bcf",
+      "lastVerifiedCommit": "ef3bb09d980ef51516300250ece2a02a0e49cae7",
       "relations": [{ "type": "REFINES", "target": "CAP-LEGACY-001" }],
       "activationReason": "Endpoint and worker route both persisted product modes; V3.8.0 activates LF V2 for controlled customer production.",
       "reactivationCriteria": "Not applicable while active."
@@ -1397,7 +1397,7 @@
           "INT-20260918-071"
         ]
       },
-      "lastVerifiedCommit": "2b052273f0311318c715d5d78faa3bc044856bcf",
+      "lastVerifiedCommit": "ef3bb09d980ef51516300250ece2a02a0e49cae7",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Reachable from the V2 product runner and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."

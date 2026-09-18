@@ -19,9 +19,12 @@ Originalartefakte werden nicht verändert.
 Auf dem Mac Studio bestanden 452/452 fokussierte Tests und Prettier. Der
 unveränderte echte Lauf wurde bis einschließlich Batch 35 revalidiert:
 35/35 Batches PASS, null Modellaufrufe, null neue Versuche und kontrollierter
-Resume ab Batch 36. Der vollständige Release-Gate, das Kundenupdate, der
-anschließende vollständige Produktlauf und die Gold-Regression stehen zum
-Zeitpunkt dieser Releasevorbereitung noch aus.
+Resume ab Batch 36. Der exakte Releasekandidat
+`ef3bb09d980ef51516300250ece2a02a0e49cae7` bestand außerdem 212/212 Suites
+mit 3.128/3.128 Tests, alle drei Lints, Prisma, Capability-Inventar,
+Frontend-Build und macOS-Installer-Suite. Kundenupdate, vollständiger
+Produkt-Resume und Gold-Regression stehen zum Zeitpunkt dieser
+Releasevorbereitung noch aus.
 
 Der bekannte LF-1+9-Lauf bleibt Regressionsevidenz. Er ist kein unabhängiger
 Generalisierungs- oder 99-Prozent-Nachweis.

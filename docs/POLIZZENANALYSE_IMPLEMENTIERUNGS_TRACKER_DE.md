@@ -10691,9 +10691,17 @@ Plan-Datei-SHA-256:
 Checkpoint-Datei-SHA-256:
 `f43346cf0b9c99b58be9c95170223f0141719eff5675c1bcb7f19fb2d6bb771c`.
 
-Status: `ROOT CAUSE ALLGEMEIN BEHOBEN; BATCHES 1 BIS 35 OFFLINE PASS; 452/452
-FOKUSSIERTE TESTS PASS; V3.9.12-RELEASE-GATE, DEPLOYMENT, PRODUKT-RESUME UND
-GOLD-PRÜFUNG AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
+Der exakte V3.9.12-Releasekandidat
+`ef3bb09d980ef51516300250ece2a02a0e49cae7` bestand danach auf dem Mac
+Studio das vollständige Gate: 212/212 Suites und 3.128/3.128 Tests, alle drei
+Lints, Prisma, Capability-Inventar, Frontend-Build und macOS-Installer-Suite.
+Der erste Testaufruf ohne die normale Homebrew-/ESM-Testumgebung scheiterte
+ausschließlich an drei vorhandenen ffmpeg-Harness-Tests; mit dem produktiven
+`/opt/homebrew/bin`- und VM-Modul-Vertrag bestand die vollständige Suite.
+
+Status: `ROOT CAUSE ALLGEMEIN BEHOBEN; BATCHES 1 BIS 35 OFFLINE PASS;
+V3.9.12-RELEASE-GATE PASS; DEPLOYMENT, PRODUKT-RESUME UND GOLD-PRÜFUNG
+AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
 
 Change-Set: `LF-V3912-BOUND-CANDIDATE-ID-RESUME-20260918-001`.
 
