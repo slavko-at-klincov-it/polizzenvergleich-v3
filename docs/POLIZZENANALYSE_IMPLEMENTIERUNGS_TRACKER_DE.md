@@ -10636,6 +10636,48 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.81 B-Batch 35: eindeutig verkürzte servergebundene Kandidaten-ID
+
+Der vollständige kalte V3.9.11-LF-1+9-Lauf schloss die dynamische A-Seite mit
+58/58 Batches, 362 Requirements, 1.448 Komponenten und null ungeklärten Units
+ab. Die B-Suche verarbeitete alle neun Vergleichsdokumente, 322 Klauseln,
+1.446 eindeutige Queries und 13.032 Rankings. Die komponentenweise
+B-Gegenstückprüfung stoppte anschließend in Batch 35
+(`batchIndex 34`, `ADRB-8ea59552d19fc72cc1cf3a8b`) nach 34/210 gültigen
+Batches korrekt fail-closed.
+
+Die Ursache ist kein fehlender Gegenstücktext und kein Retrievalfehler. Qwen
+zitierte in allen drei Versuchen für die Requirement
+`AR-9d0bb4d7d0a9160d4c91391b` neben einer gültigen ID dieselbe um zwei
+zusammenhängende Hex-Zeichen verkürzte servergenerierte Kandidaten-ID:
+`RCE-e466494863f4e57eb62c03` statt
+`RCE-e466494863f4e9b57eb62c03`. Die strikte Quellenbindung lehnte dadurch
+alle zwölf Komponentenbefunde, den Kontextbefund und die Wertabweichung ab.
+Es gab keinen Timeout oder Transportfehler.
+
+Der allgemeine Fix adaptiert `CAP-B-006` und `CAP-ORCH-001`. Eine Kandidaten-ID
+darf ausschließlich dann mechanisch wiederhergestellt werden, wenn sie ein
+kanonisches `RCE-*`-/`RCR-*`-Präfix besitzt, genau ein oder zwei
+zusammenhängende Hex-Zeichen fehlen und exakt ein erlaubter Kandidat derselben
+Requirement passt. Ersetzungen, Vertauschungen, längere Kürzungen,
+Präfixwechsel und mehrdeutige Treffer bleiben fail-closed. Danach läuft der
+unveränderte vollständige Fach- und Quellenvalidator.
+
+Zusätzlich kann ein neuer Produktlauf die planidentischen gültigen B-Batches
+eines expliziten Vorgängerlaufs read-only revalidieren und unter dem neuen
+Vertrag rematerialisieren. Dasselbe gilt für einzeln gültige Antworten aus
+einem unvollständigen Attempt-Journal. Der Vorgängerplan muss vollständig
+identisch sein; Symlinks und Selbstreferenzen werden abgewiesen. Dadurch
+werden die 34 gültigen Batches nicht erneut berechnet und Batch 35 kann aus
+den gespeicherten Artefakten repariert werden, ohne die Originalartefakte zu
+verändern.
+
+Status: `ROOT CAUSE IMPLEMENTIERT; SYNTHETISCHE MAC-STUDIO-TESTS, ECHTE
+BATCH-35-REVALIDIERUNG, RELEASE-GATE, DEPLOYMENT, PRODUKT-RESUME UND
+GOLD-PRÜFUNG AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
+
+Change-Set: `LF-V3912-BOUND-CANDIDATE-ID-RESUME-20260918-001`.
+
 ### 133.80 Batch 55: redundante ungültige Deckungsrollen sicher entfernen
 
 Der auf V3.9.10 fortgesetzte kalte LF-1+9-Lauf übernahm Batches 1 bis 52 ohne

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V3911-REDUNDANT-COVERAGE-ROLE-20260918-001",
+  "changeSetId": "LF-V3912-BOUND-CANDIDATE-ID-RESUME-20260918-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -237,6 +237,7 @@
         "Configured worker concurrency does not override the global local-model lock.",
         "A session PASS does not prove fachliche correctness.",
         "Cross-release partial resume is allowed only for an exact release-independent run identity and requires current-contract revalidation.",
+        "B-decision cross-release resume accepts only a real non-symlink predecessor directory with a byte-equivalent decision plan and revalidates every predecessor response under the current strict contract before rematerialization.",
         "Every run-contract bump must retain the immediately preceding contract in the explicit predecessor allowlist; omission fails closed before model work.",
         "Multi-hop partial resume follows only explicit plan-identical LF_A_PARTIAL_RESUME_SOURCE_V1 links; invalid markers, symlinks, cycles and chains beyond 64 predecessors fail closed."
       ],
@@ -1366,6 +1367,7 @@
         "Deterministic local-model output can repeat the same malformed or schema-invalid answer; bounded schema-specific repair must remain fail-closed.",
         "Identity-core modifier normalization is allowed only for a positive MATCH or COUNTERPART_WITH_DIFFERENCE context, identical server-bound candidate IDs and explicit differences limited to scope, condition, value, limit, deductible or temporal validity; RELATED_ONLY remains excluded.",
         "Cross-plan reuse is allowed only after complete seed binding, byte-identical row comparison and current single-row revalidation.",
+        "A shortened server candidate ID is restored only for an RCE/RCR ID with one or two contiguous omitted hex characters and exactly one allowed same-prefix candidate in the current requirement; substitutions, transpositions, longer omissions and ambiguous matches remain fail-closed.",
         "Explicit-exclusion normalization is restricted to one PERIL_OR_CAUSE identity core, an existing COVERAGE_EFFECT, one cited server-bound clause with explicit exclusion wording and exactly one configured general peril-equivalence group; unrelated clauses, ambiguous cores and uncited evidence remain fail-closed."
       ],
       "evidence": {
@@ -1389,7 +1391,8 @@
           "INT-20260916-040",
           "INT-20260916-041",
           "INT-20260916-042",
-          "INT-20260916-043"
+          "INT-20260916-043",
+          "INT-20260918-071"
         ]
       },
       "lastVerifiedCommit": "ac3ce5631cd062143f70188c33f5c28baa25f8cb",

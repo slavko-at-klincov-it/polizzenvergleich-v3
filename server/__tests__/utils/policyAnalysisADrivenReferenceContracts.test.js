@@ -88,6 +88,7 @@ const {
   normalizeExplicitExclusionCounterparts,
   normalizeIdentityCoreModifierDifferences,
   normalizeRepeatedCandidateIds,
+  normalizeUniqueBoundCandidateIdOmissions,
   normalizeUniqueRescueCandidateAliases,
   prompt: requirementDecisionPrompt,
   processBatches: processRequirementDecisionBatches,
@@ -19606,6 +19607,117 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ]);
   });
 
+  test("restores a uniquely bound candidate ID with one contiguous omission without mutating the source", () => {
+    const allowedCandidateId = "RCE-e466494863f4e9b57eb62c03";
+    const omittedCandidateId = "RCE-e466494863f4e57eb62c03";
+    const response = {
+      requirementId: "requirement",
+      contextFinding: {
+        outcome: "COUNTERPART_WITH_DIFFERENCE",
+        candidateIds: [omittedCandidateId],
+      },
+      componentFindings: [
+        {
+          componentId: "component",
+          dimension: "VALUE_AND_UNIT",
+          outcome: "COUNTERPART_WITH_DIFFERENCE",
+          candidateIds: [omittedCandidateId],
+        },
+      ],
+      unmodeledDifferences: [
+        { dimension: "VALUE_AND_UNIT", candidateIds: [omittedCandidateId] },
+      ],
+    };
+    const batch = {
+      rows: [
+        {
+          requirementId: "requirement",
+          candidates: [
+            { candidateId: allowedCandidateId },
+            { candidateId: "RCE-09878ac97d640466a5268a17" },
+          ],
+        },
+      ],
+    };
+
+    const normalized = normalizeUniqueBoundCandidateIdOmissions(batch, [
+      response,
+    ]);
+
+    expect(normalized.normalizations).toEqual([
+      {
+        requirementId: "requirement",
+        fromCandidateId: omittedCandidateId,
+        toCandidateId: allowedCandidateId,
+        omittedCharacterCount: 2,
+      },
+    ]);
+    expect(normalized.responses[0].contextFinding.candidateIds).toEqual([
+      allowedCandidateId,
+    ]);
+    expect(normalized.responses[0].componentFindings[0].candidateIds).toEqual([
+      allowedCandidateId,
+    ]);
+    expect(
+      normalized.responses[0].unmodeledDifferences[0].candidateIds
+    ).toEqual([allowedCandidateId]);
+    expect(response.contextFinding.candidateIds).toEqual([omittedCandidateId]);
+  });
+
+  test.each([
+    [
+      "an ambiguous contiguous omission",
+      "RCE-1234567890abcdef123456",
+      [
+        "RCE-1234567890aaabcdef123456",
+        "RCE-1234567890bbabcdef123456",
+      ],
+    ],
+    [
+      "a replacement",
+      "RCE-e466494863f4e9b57eb62c04",
+      ["RCE-e466494863f4e9b57eb62c03"],
+    ],
+    [
+      "a transposition",
+      "RCE-e466494863f49eb57eb62c03",
+      ["RCE-e466494863f4e9b57eb62c03"],
+    ],
+    [
+      "three omitted characters",
+      "RCE-e466494863f4e57eb62c0",
+      ["RCE-e466494863f4e9b57eb62c03"],
+    ],
+    [
+      "a different candidate prefix",
+      "RCR-e466494863f4e57eb62c03",
+      ["RCE-e466494863f4e9b57eb62c03"],
+    ],
+  ])("keeps %s fail-closed", (_name, candidateId, allowedCandidateIds) => {
+    const response = {
+      requirementId: "requirement",
+      contextFinding: { outcome: "MATCH", candidateIds: [candidateId] },
+      componentFindings: [],
+      unmodeledDifferences: [],
+    };
+    const normalized = normalizeUniqueBoundCandidateIdOmissions(
+      {
+        rows: [
+          {
+            requirementId: "requirement",
+            candidates: allowedCandidateIds.map((allowedCandidateId) => ({
+              candidateId: allowedCandidateId,
+            })),
+          },
+        ],
+      },
+      [response]
+    );
+
+    expect(normalized.normalizations).toEqual([]);
+    expect(normalized.responses).toEqual([response]);
+  });
+
   test("normalizes an unknown rescue alias only when the row has exactly one allowed rescue candidate", () => {
     const uniqueRescueId = "RCR-67ac73c0307887d218282628";
     const inventedRescueId = "RCR-67ac30aad586050f71073e77633";
@@ -19841,6 +19953,166 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(
       compatible.audit.explicitExclusionCounterpartNormalizations
     ).toHaveLength(1);
+  });
+
+  test("rematerializes predecessor batches and a uniquely repairable predecessor journal without model calls", async () => {
+    const { decisionPlan } = requirementDecisionFixture();
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-requirement-predecessor-resume-")
+    );
+    const predecessorOutput = path.join(temporary, "predecessor");
+    const output = path.join(temporary, "current");
+    const args = {
+      output,
+      resumeOutputRoot: predecessorOutput,
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      maximumAttempts: 2,
+      requestTimeoutMs: 180_000,
+      abortSettlementTimeoutMs: 15_000,
+      modelRecoveryTimeoutMs: 180_000,
+      maximumNewBatches: null,
+      startBatchIndex: 0,
+    };
+    fs.mkdirSync(predecessorOutput, { recursive: true });
+    fs.mkdirSync(output, { recursive: true });
+    fs.writeFileSync(
+      path.join(predecessorOutput, "decision-plan.private.json"),
+      `${JSON.stringify(decisionPlan, null, 2)}\n`
+    );
+
+    for (const batch of decisionPlan.batches) {
+      const responses = batch.rows.map(validRequirementResponse);
+      if (batch.batchIndex === 0) {
+        const allowedCandidateId = batch.rows[0].candidates[0].candidateId;
+        expect(allowedCandidateId).toMatch(/^RCE-[a-f0-9]{24}$/u);
+        const omittedCandidateId =
+          allowedCandidateId.slice(0, 16) + allowedCandidateId.slice(18);
+        const typoResponses = responses.map((response) =>
+          JSON.parse(
+            JSON.stringify(response).replaceAll(
+              allowedCandidateId,
+              omittedCandidateId
+            )
+          )
+        );
+        const attemptDirectory = path.join(
+          predecessorOutput,
+          "attempts",
+          `${String(batch.batchIndex).padStart(5, "0")}-${batch.batchId}`
+        );
+        fs.mkdirSync(attemptDirectory, { recursive: true });
+        fs.writeFileSync(
+          path.join(
+            attemptDirectory,
+            "cycle-001-attempt-001.private.json"
+          ),
+          `${JSON.stringify(
+            {
+              schemaVersion: 1,
+              contractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_TRANSPORT_V1",
+              decisionPlanSha256: decisionPlan.planSha256,
+              promptContractId:
+                "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V2",
+              promptSha256: crypto
+                .createHash("sha256")
+                .update(JSON.stringify(requirementDecisionPrompt(batch)))
+                .digest("hex"),
+              requestedModel: args.model,
+              modelContext: args.modelContext,
+              requestTimeoutMs: args.requestTimeoutMs,
+              abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+              modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
+              batchId: batch.batchId,
+              batchIndex: batch.batchIndex,
+              expectedRequirementIds: batch.expectedRequirementIds,
+              attempt: { responses: typoResponses },
+            },
+            null,
+            2
+          )}\n`
+        );
+        continue;
+      }
+      const rawResponse = JSON.stringify(responses);
+      const result = {
+        schemaVersion: 1,
+        contractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V1",
+        decisionPlanSha256: decisionPlan.planSha256,
+        promptContractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V2",
+        promptSha256: crypto
+          .createHash("sha256")
+          .update(JSON.stringify(requirementDecisionPrompt(batch)))
+          .digest("hex"),
+        validatorContractId: A_DRIVEN_REQUIREMENT_DECISION_CONTRACT_ID,
+        requestedModel: args.model,
+        modelContext: args.modelContext,
+        transportContractId:
+          "LF_A_DRIVEN_REQUIREMENT_DECISION_TRANSPORT_V1",
+        requestTimeoutMs: args.requestTimeoutMs,
+        abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+        batchId: batch.batchId,
+        batchIndex: batch.batchIndex,
+        expectedRequirementIds: batch.expectedRequirementIds,
+        responses,
+        validation: validateRequirementDecisionBatchResponses(
+          decisionPlan,
+          batch,
+          responses
+        ),
+        rawResponse,
+        rawResponseSha256: crypto
+          .createHash("sha256")
+          .update(rawResponse)
+          .digest("hex"),
+        error: null,
+        attempts: [],
+      };
+      const file = path.join(
+        predecessorOutput,
+        "batches",
+        `${String(batch.batchIndex).padStart(5, "0")}-${batch.batchId}.private.json`
+      );
+      fs.mkdirSync(path.dirname(file), { recursive: true });
+      fs.writeFileSync(file, `${JSON.stringify(result, null, 2)}\n`);
+    }
+    const client = {
+      chat: {
+        completions: {
+          create: jest.fn(async () => {
+            throw new Error("MODEL_CALL_NOT_EXPECTED");
+          }),
+        },
+      },
+    };
+
+    try {
+      const result = await processRequirementDecisionBatches({
+        args,
+        plan: decisionPlan,
+        client,
+        recoverModelAfterAbort: jest.fn(),
+      });
+
+      expect(result.complete).toBe(true);
+      expect(result.resumedPredecessorBatches).toBe(
+        decisionPlan.batches.length
+      );
+      expect(client.chat.completions.create).not.toHaveBeenCalled();
+      expect(result.results).toHaveLength(decisionPlan.batches.length);
+      expect(
+        result.results.every(
+          ({ contractId }) =>
+            contractId === "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V2"
+        )
+      ).toBe(true);
+      expect(
+        result.results[0].resumedBoundCandidateIdOmissionNormalizations
+      ).toHaveLength(1);
+      expect(result.results[0].validation.passed).toBe(true);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
   });
 
   test("normalizes an identity-core difference only when every candidate has bound modifier evidence", () => {

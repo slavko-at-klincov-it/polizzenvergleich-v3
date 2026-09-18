@@ -430,6 +430,16 @@ function runADrivenReferenceProduct({
   logFile,
   partialResumeSource = null,
 }) {
+  const bDecisionResumeRoot = partialResumeSource
+    ? path.join(
+        partialResumeSource.runRoot,
+        "a-driven-v2",
+        "b-requirement-decisions"
+      )
+    : null;
+  const bDecisionResumeStat = bDecisionResumeRoot
+    ? fs.existsSync(bDecisionResumeRoot) && fs.lstatSync(bDecisionResumeRoot)
+    : null;
   return new Promise((resolve, reject) => {
     const log = fs.openSync(logFile, "a", 0o600);
     let logClosed = false;
@@ -459,6 +469,10 @@ function runADrivenReferenceProduct({
                   partialResumeSource.planRoot,
                 LF_A_CLASSIFICATION_RESUME_OUTPUT_ROOT:
                   partialResumeSource.outputRoot,
+                ...(bDecisionResumeStat?.isDirectory() &&
+                !bDecisionResumeStat.isSymbolicLink()
+                  ? { LF_B_DECISION_RESUME_ROOT: bDecisionResumeRoot }
+                  : {}),
               }
             : {}),
         },

@@ -23,7 +23,10 @@ const {
   requestCompletionWithTimeout,
 } = require("./runADrivenReferenceClassification.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V1";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V2";
+const PREDECESSOR_RUN_CONTRACT_IDS = new Set([
+  "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V1",
+]);
 const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V2";
 const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_DECISION_TRANSPORT_V1";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -87,6 +90,7 @@ function argumentsFrom(argv) {
     "seedDecisionPlan",
     "seedResponses",
     "seedSummary",
+    "resumeOutputRoot",
     "manifest",
     "searchPlan",
     "searchExecution",
@@ -150,6 +154,9 @@ function argumentsFrom(argv) {
       ? path.resolve(values.seedResponses)
       : null,
     seedSummary: values.seedSummary ? path.resolve(values.seedSummary) : null,
+    resumeOutputRoot: values.resumeOutputRoot
+      ? path.resolve(values.resumeOutputRoot)
+      : null,
     manifest: values.manifest ? path.resolve(values.manifest) : null,
     searchPlan: values.searchPlan ? path.resolve(values.searchPlan) : null,
     searchExecution: values.searchExecution
@@ -278,6 +285,104 @@ function normalizeUniqueRescueCandidateAliases(batch, responses) {
         requirementId: row.requirementId,
         fromCandidateId: candidateId,
         toCandidateId: normalizedCandidateId,
+      };
+      normalizationsByKey.set(
+        `${normalization.requirementId}:${normalization.fromCandidateId}:${normalization.toCandidateId}`,
+        normalization
+      );
+      return normalizedCandidateId;
+    });
+  };
+  const normalizedResponses = (Array.isArray(responses) ? responses : []).map(
+    (response) => {
+      const row = rowsById.get(response?.requirementId);
+      if (!row) return response;
+      return {
+        ...response,
+        ...(response?.contextFinding
+          ? {
+              contextFinding: {
+                ...response.contextFinding,
+                candidateIds: normalizeCandidateIds(
+                  row,
+                  response.contextFinding.candidateIds
+                ),
+              },
+            }
+          : {}),
+        ...(Array.isArray(response?.componentFindings)
+          ? {
+              componentFindings: response.componentFindings.map((finding) => ({
+                ...finding,
+                candidateIds: normalizeCandidateIds(row, finding.candidateIds),
+              })),
+            }
+          : {}),
+        ...(Array.isArray(response?.unmodeledDifferences)
+          ? {
+              unmodeledDifferences: response.unmodeledDifferences.map(
+                (difference) => ({
+                  ...difference,
+                  candidateIds: normalizeCandidateIds(
+                    row,
+                    difference.candidateIds
+                  ),
+                })
+              ),
+            }
+          : {}),
+      };
+    }
+  );
+  return {
+    responses: normalizedResponses,
+    normalizations: [...normalizationsByKey.values()],
+  };
+}
+
+function isCandidateIdWithContiguousOmission(candidateId, allowedCandidateId) {
+  if (
+    typeof candidateId !== "string" ||
+    typeof allowedCandidateId !== "string" ||
+    !/^RC[ER]-[a-f0-9]{22,23}$/u.test(candidateId) ||
+    !/^RC[ER]-[a-f0-9]{24}$/u.test(allowedCandidateId) ||
+    candidateId.slice(0, 4) !== allowedCandidateId.slice(0, 4)
+  )
+    return false;
+  const omittedCharacters = allowedCandidateId.length - candidateId.length;
+  if (omittedCharacters < 1 || omittedCharacters > 2) return false;
+  for (let offset = 4; offset <= candidateId.length; offset += 1)
+    if (
+      allowedCandidateId.slice(0, offset) +
+        allowedCandidateId.slice(offset + omittedCharacters) ===
+      candidateId
+    )
+      return true;
+  return false;
+}
+
+function normalizeUniqueBoundCandidateIdOmissions(batch, responses) {
+  const rowsById = new Map(batch.rows.map((row) => [row.requirementId, row]));
+  const normalizationsByKey = new Map();
+  const normalizeCandidateIds = (row, candidateIds) => {
+    if (!Array.isArray(candidateIds)) return candidateIds;
+    const allowedCandidateIds = [
+      ...new Set(row.candidates.map(({ candidateId }) => candidateId)),
+    ];
+    const allowed = new Set(allowedCandidateIds);
+    return candidateIds.map((candidateId) => {
+      if (allowed.has(candidateId)) return candidateId;
+      const matches = allowedCandidateIds.filter((allowedCandidateId) =>
+        isCandidateIdWithContiguousOmission(candidateId, allowedCandidateId)
+      );
+      if (matches.length !== 1) return candidateId;
+      const normalizedCandidateId = matches[0];
+      const normalization = {
+        requirementId: row.requirementId,
+        fromCandidateId: candidateId,
+        toCandidateId: normalizedCandidateId,
+        omittedCharacterCount:
+          normalizedCandidateId.length - candidateId.length,
       };
       normalizationsByKey.set(
         `${normalization.requirementId}:${normalization.fromCandidateId}:${normalization.toCandidateId}`,
@@ -720,8 +825,11 @@ function compatibleSeedResponses({
     plan: seedPlan,
     responses: seedResponses,
   });
+  const seedContractAccepted =
+    seedSummary?.contractId === RUN_CONTRACT_ID ||
+    PREDECESSOR_RUN_CONTRACT_IDS.has(seedSummary?.contractId);
   if (
-    seedSummary?.contractId !== RUN_CONTRACT_ID ||
+    !seedContractAccepted ||
     seedSummary.decisionPlanSha256 !== seedPlan.planSha256 ||
     seedSummary.decisionSha256 !== seedDecisions.decisionSha256 ||
     seedSummary.promptContractId !== PROMPT_CONTRACT_ID ||
@@ -893,6 +1001,7 @@ async function runBatch({
   initialIdentityCoreModifierNormalizations = [],
   initialExplicitExclusionCounterpartNormalizations = [],
   initialUniqueRescueCandidateAliasNormalizations = [],
+  initialBoundCandidateIdOmissionNormalizations = [],
   resumeAfterSafeGroupedTimeout = false,
 }) {
   const accepted = new Map(
@@ -952,10 +1061,15 @@ async function runBatch({
         recoverModelAfterAbort,
       });
       observedRawText = completion.choices?.[0]?.message?.content || "";
+      const boundCandidateIdOmissionNormalization =
+        normalizeUniqueBoundCandidateIdOmissions(
+          workingBatch,
+          parseJsonArray(observedRawText)
+        );
       const rescueCandidateAliasNormalization =
         normalizeUniqueRescueCandidateAliases(
           workingBatch,
-          parseJsonArray(observedRawText)
+          boundCandidateIdOmissionNormalization.responses
         );
       const parsedResponse = normalizeRepeatedCandidateIds(
         rescueCandidateAliasNormalization.responses
@@ -1021,6 +1135,8 @@ async function runBatch({
           parsedResponse.duplicateCandidateIdsRemoved,
         uniqueRescueCandidateAliasNormalizations:
           rescueCandidateAliasNormalization.normalizations,
+        boundCandidateIdOmissionNormalizations:
+          boundCandidateIdOmissionNormalization.normalizations,
         explicitExclusionCounterpartNormalizations:
           explicitExclusionNormalization.normalizations,
         identityCoreModifierNormalizations:
@@ -1154,6 +1270,8 @@ async function runBatch({
       initialExplicitExclusionCounterpartNormalizations,
     resumedUniqueRescueCandidateAliasNormalizations:
       initialUniqueRescueCandidateAliasNormalizations,
+    resumedBoundCandidateIdOmissionNormalizations:
+      initialBoundCandidateIdOmissionNormalizations,
     resumeAfterSafeGroupedTimeout,
   };
 }
@@ -1166,10 +1284,20 @@ function batchFile(output, batch) {
   );
 }
 
-function existingBatchResult(file, plan, batch, args) {
+function existingBatchResult(
+  file,
+  plan,
+  batch,
+  args,
+  { allowPredecessorContract = false } = {}
+) {
   const result = readJson(file, "LF_A_DRIVEN_REQUIREMENT_BATCH_RESULT");
+  const contractAccepted =
+    result?.contractId === RUN_CONTRACT_ID ||
+    (allowPredecessorContract &&
+      PREDECESSOR_RUN_CONTRACT_IDS.has(result?.contractId));
   if (
-    result?.contractId !== RUN_CONTRACT_ID ||
+    !contractAccepted ||
     result.decisionPlanSha256 !== plan.planSha256 ||
     result.promptContractId !== PROMPT_CONTRACT_ID ||
     result.promptSha256 !== sha256(JSON.stringify(prompt(batch))) ||
@@ -1270,6 +1398,7 @@ function journalState({ output, plan, batch, args }) {
       identityCoreModifierNormalizations: [],
       explicitExclusionCounterpartNormalizations: [],
       uniqueRescueCandidateAliasNormalizations: [],
+      boundCandidateIdOmissionNormalizations: [],
       resumeAfterSafeGroupedTimeout: false,
     };
   const responses = [];
@@ -1310,8 +1439,13 @@ function journalState({ output, plan, batch, args }) {
     )
       resumeAfterSafeGroupedTimeout = true;
   }
+  const boundCandidateIdOmissionNormalization =
+    normalizeUniqueBoundCandidateIdOmissions(batch, responses);
   const rescueCandidateAliasNormalization =
-    normalizeUniqueRescueCandidateAliases(batch, responses);
+    normalizeUniqueRescueCandidateAliases(
+      batch,
+      boundCandidateIdOmissionNormalization.responses
+    );
   const repeatedCandidateNormalization = normalizeRepeatedCandidateIds(
     rescueCandidateAliasNormalization.responses
   );
@@ -1335,6 +1469,8 @@ function journalState({ output, plan, batch, args }) {
       explicitExclusionNormalization.normalizations,
     uniqueRescueCandidateAliasNormalizations:
       rescueCandidateAliasNormalization.normalizations,
+    boundCandidateIdOmissionNormalizations:
+      boundCandidateIdOmissionNormalization.normalizations,
     resumeAfterSafeGroupedTimeout,
   };
 }
@@ -1351,6 +1487,7 @@ async function processBatches({
   let nextBatchIndex = null;
   const seededRequirementIds = new Set();
   let fullySeededBatches = 0;
+  let resumedPredecessorBatches = 0;
   for (const batch of plan.batches) {
     if (batch.batchIndex < args.startBatchIndex) continue;
     const file = batchFile(args.output, batch);
@@ -1373,6 +1510,31 @@ async function processBatches({
         batch,
         args,
       });
+      const predecessorFile = args.resumeOutputRoot
+        ? batchFile(args.resumeOutputRoot, batch)
+        : null;
+      const predecessorResult =
+        predecessorFile && fs.existsSync(predecessorFile)
+          ? existingBatchResult(predecessorFile, plan, batch, args, {
+              allowPredecessorContract: true,
+            })
+          : null;
+      const predecessorResumeState =
+        args.resumeOutputRoot && !predecessorResult
+          ? journalState({
+              output: args.resumeOutputRoot,
+              plan,
+              batch,
+              args,
+            })
+          : {
+              acceptedResponses: [],
+              identityCoreModifierNormalizations: [],
+              explicitExclusionCounterpartNormalizations: [],
+              uniqueRescueCandidateAliasNormalizations: [],
+              boundCandidateIdOmissionNormalizations: [],
+              resumeAfterSafeGroupedTimeout: false,
+            };
       const batchSeedResponses = batch.expectedRequirementIds
         .filter((requirementId) =>
           seed?.responsesByRequirement.has(requirementId)
@@ -1381,8 +1543,20 @@ async function processBatches({
       const acceptedByRequirement = new Map(
         batchSeedResponses.map((response) => [response.requirementId, response])
       );
+      for (const response of predecessorResult?.responses || [])
+        acceptedByRequirement.set(response.requirementId, response);
+      for (const response of predecessorResumeState.acceptedResponses)
+        acceptedByRequirement.set(response.requirementId, response);
       for (const response of resumeState.acceptedResponses)
         acceptedByRequirement.set(response.requirementId, response);
+      if (
+        batch.expectedRequirementIds.every((requirementId) =>
+          acceptedByRequirement.has(requirementId)
+        ) &&
+        ((predecessorResult?.responses?.length || 0) > 0 ||
+          predecessorResumeState.acceptedResponses.length > 0)
+      )
+        resumedPredecessorBatches += 1;
       for (const response of batchSeedResponses)
         seededRequirementIds.add(response.requirementId);
       if (
@@ -1404,8 +1578,12 @@ async function processBatches({
           .filter((requirementId) => acceptedByRequirement.has(requirementId))
           .map((requirementId) => acceptedByRequirement.get(requirementId)),
         initialIdentityCoreModifierNormalizations:
-          resumeState.identityCoreModifierNormalizations,
+          [
+            ...predecessorResumeState.identityCoreModifierNormalizations,
+            ...resumeState.identityCoreModifierNormalizations,
+          ],
         initialExplicitExclusionCounterpartNormalizations: [
+          ...predecessorResumeState.explicitExclusionCounterpartNormalizations,
           ...(resumeState.explicitExclusionCounterpartNormalizations || []),
           ...(
             seed?.audit?.explicitExclusionCounterpartNormalizations || []
@@ -1414,8 +1592,16 @@ async function processBatches({
           ),
         ],
         initialUniqueRescueCandidateAliasNormalizations:
-          resumeState.uniqueRescueCandidateAliasNormalizations,
+          [
+            ...predecessorResumeState.uniqueRescueCandidateAliasNormalizations,
+            ...resumeState.uniqueRescueCandidateAliasNormalizations,
+          ],
+        initialBoundCandidateIdOmissionNormalizations: [
+          ...predecessorResumeState.boundCandidateIdOmissionNormalizations,
+          ...resumeState.boundCandidateIdOmissionNormalizations,
+        ],
         resumeAfterSafeGroupedTimeout:
+          predecessorResumeState.resumeAfterSafeGroupedTimeout ||
           resumeState.resumeAfterSafeGroupedTimeout,
         onAttempt: attemptRecorder({ output: args.output, plan, batch, args }),
       });
@@ -1442,6 +1628,7 @@ async function processBatches({
     nextBatchIndex,
     seededRequirements: seededRequirementIds.size,
     fullySeededBatches,
+    resumedPredecessorBatches,
   };
 }
 
@@ -1488,6 +1675,21 @@ async function run() {
     if (!stat.isDirectory() || stat.isSymbolicLink())
       throw new Error("LF_A_DRIVEN_REQUIREMENT_OUTPUT_INVALID");
   } else fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });
+  if (args.resumeOutputRoot) {
+    const resumeStat = fs.lstatSync(args.resumeOutputRoot);
+    if (
+      !resumeStat.isDirectory() ||
+      resumeStat.isSymbolicLink() ||
+      args.resumeOutputRoot === args.output
+    )
+      throw new Error("LF_A_DRIVEN_REQUIREMENT_RESUME_OUTPUT_INVALID");
+    const resumePlan = readJson(
+      path.join(args.resumeOutputRoot, "decision-plan.private.json"),
+      "LF_A_DRIVEN_REQUIREMENT_RESUME_PLAN"
+    );
+    if (stableStringify(resumePlan) !== stableStringify(plan))
+      throw new Error("LF_A_DRIVEN_REQUIREMENT_RESUME_PLAN_MISMATCH");
+  }
   writeOrVerifyPrivateJson(
     path.join(args.output, "decision-plan.private.json"),
     plan,
@@ -1536,6 +1738,7 @@ async function run() {
     newBatches: processed.newBatches,
     seededRequirements: processed.seededRequirements,
     fullySeededBatches: processed.fullySeededBatches,
+    resumedPredecessorBatches: processed.resumedPredecessorBatches,
     seed: seed?.audit || null,
     completedAt: new Date().toISOString(),
   };
@@ -1583,6 +1786,7 @@ async function run() {
     ),
     seededRequirements: processed.seededRequirements,
     fullySeededBatches: processed.fullySeededBatches,
+    resumedPredecessorBatches: processed.resumedPredecessorBatches,
     seed: seed?.audit || null,
     ...decisions.summary,
   };
@@ -1620,6 +1824,7 @@ module.exports = {
   normalizeIdentityCoreModifierDifferences,
   normalizeExplicitExclusionCounterparts,
   normalizeRepeatedCandidateIds,
+  normalizeUniqueBoundCandidateIdOmissions,
   normalizeUniqueRescueCandidateAliases,
   parseJsonArray,
   processBatches,

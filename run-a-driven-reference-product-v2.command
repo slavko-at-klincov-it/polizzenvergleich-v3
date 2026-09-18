@@ -175,6 +175,11 @@ if [ -n "${LF_A_CLASSIFICATION_RESUME_PLAN_ROOT:-}" ] || [ -n "${LF_A_CLASSIFICA
   )
 fi
 
+B_DECISION_RESUME_ARGS=()
+if [ -n "${LF_B_DECISION_RESUME_ROOT:-}" ]; then
+  B_DECISION_RESUME_ARGS=(--resumeOutputRoot "$LF_B_DECISION_RESUME_ROOT")
+fi
+
 run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/buildADrivenReferenceShadow.cjs" \
   --runRoot "$RUN_ROOT" \
   --output "$A_PLAN_ROOT"
@@ -277,7 +282,8 @@ if [ ! -f "$B_DECISION_ROOT/summary.private.json" ]; then
     --abortSettlementTimeoutMs "${LF_B_QWEN_ABORT_SETTLEMENT_TIMEOUT_MS:-15000}" \
     --modelRecoveryTimeoutMs "${LF_B_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
     --lmStudioSdk "$LMSTUDIO_SDK" \
-    --qwenModelKey "$QWEN_MODEL_KEY"
+    --qwenModelKey "$QWEN_MODEL_KEY" \
+    "${B_DECISION_RESUME_ARGS[@]}"
 fi
 
 ABSENCE_SEED_ARGS=()
