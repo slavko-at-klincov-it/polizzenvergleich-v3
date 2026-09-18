@@ -20551,6 +20551,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         explicitExclusionCounterpartNormalizations: [],
         identityCoreModifierNormalizations: [],
         uniqueRescueCandidateAliasNormalizations: [],
+        boundCandidateIdOmissionNormalizations: [],
         resumeAfterSafeGroupedTimeout: true,
       });
 
