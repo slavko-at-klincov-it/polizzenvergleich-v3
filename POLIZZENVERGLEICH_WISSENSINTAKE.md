@@ -4031,7 +4031,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-17
 - Typ: `FEHLER`
-- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Status: `BESTÄTIGT`
 - Aussage: Eine ausschließlich strukturelle, nummerierte Abschnittsüberschrift
   ohne eigenes fachliches Prädikat oder in Form einer direkten Frage muss
   einen zuvor aktiven operativen Überschriften-Governor beenden. Andernfalls
@@ -4252,4 +4252,13 @@ Vollständigkeitsbehauptung erzeugen.
   Mehrdeutigkeits-, Präfix-, Ersetzungs-, Vertauschungs- und Längengrenzfälle
   sowie read-only Revalidierung des echten Batch 35 erforderlich; kein
   Holdout- oder 99-Prozent-Nachweis.
+- Ergebnis: Auf dem Mac Studio bestanden 452/452 fokussierte Tests und
+  Prettier. Die unveränderten Real-Artefakte wurden read-only bis Batch 35
+  revalidiert: 35/35 Batches PASS, exakt eine protokollierte
+  Zwei-Zeichen-Wiederherstellung in Batch 35, null Modellaufrufe und null neue
+  Attempt-Dateien. Der Checkpoint bleibt kontrolliert ab Batch 36 resumierbar.
+  Plan-Datei-SHA-256:
+  `70cb5b8805fa8ae70c1c4d66d947babf8fe42dcef3e92a96a07f38238bbec143`;
+  Checkpoint-Datei-SHA-256:
+  `f43346cf0b9c99b58be9c95170223f0141719eff5675c1bcb7f19fb2d6bb771c`.
 - Change-Set: `LF-V3912-BOUND-CANDIDATE-ID-RESUME-20260918-001`.

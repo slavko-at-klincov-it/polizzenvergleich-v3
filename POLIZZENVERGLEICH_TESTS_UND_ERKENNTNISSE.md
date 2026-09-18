@@ -5315,6 +5315,48 @@ darf nicht als Generalisierungsnachweis ausgegeben werden.
 
 Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
 
+## 102. B-Batch-35: servergebundene IDs nur eindeutig mechanisch reparieren
+
+Der kalte V3.9.11-LF-1+9-Produktlauf schloss A mit 58/58 Batches, 362
+Requirements, 1.448 Komponenten und null ungeklärten Units ab. Die B-Suche
+schloss alle neun Dokumente mit 322 Klauseln, 1.446 eindeutigen Queries und
+13.032 Rankings ab. Die komponentenweise Prüfung stoppte nach 34/210
+gültigen Batches korrekt fail-closed in Batch 35.
+
+Qwen hatte das fachlich passende Gegenstück zitiert, aber dieselbe
+servergenerierte ID in drei Versuchen um zwei zusammenhängende Hex-Zeichen
+verkürzt. Der neue Vertrag stellt eine solche ID nur bei genau einem
+erlaubten Kandidaten derselben Requirement wieder her. Substitutionen,
+Vertauschungen, drei oder mehr fehlende Zeichen, Präfixwechsel und
+mehrdeutige Zuordnungen bleiben ungültig. Der vollständige Fach- und
+Quellenvalidator läuft danach unverändert.
+
+Planidentische Vorgänger-Batches und gültige Einzelantworten aus einem
+unvollständigen Vorgängerjournal werden unter dem aktuellen Vertrag erneut
+validiert und in einen neuen Lauf rematerialisiert. Originalartefakte bleiben
+unverändert.
+
+Auf dem Mac Studio bestanden auf Commit
+`2b052273f0311318c715d5d78faa3bc044856bcf` 452/452 fokussierte Tests und
+Prettier. Der echte Artefakt-Replay bestand Batches 1 bis 35 mit null
+Modellaufrufen und null neuen Attempt-Dateien; Batch 35 protokolliert genau
+die erwartete Zwei-Zeichen-Wiederherstellung und ist fachlich/technisch PASS.
+Der neue Checkpoint ist ab Batch 36 resumierbar.
+
+**Positive Erkenntnis:** Eine streng mechanische Korrektur kann
+Quellenbindung erhalten und unnötige Neuberechnung vermeiden, wenn sie nur
+innerhalb der serverseitig erlaubten Kandidatenmenge eindeutig ist.
+
+**Negative Erkenntnis:** Auch bei fachlich korrekter Quellenwahl kann eine
+deterministisch wiederholte Zeichenkürzung den gesamten Batch blockieren;
+Prompt-Wiederholung allein behebt diesen Fehler nicht zuverlässig.
+
+**Beweisgrenze:** Der Nachweis betrifft technische Resume-Korrektheit und das
+bekannte LF-1+9-Regressionsset. Vollständiger Produktlauf, Gold-Regression und
+unabhängiger Mehrversicherer-Holdout bleiben separate Nachweise.
+
+Change-Set: `LF-V3912-BOUND-CANDIDATE-ID-RESUME-20260918-001`.
+
 ## 101. V3.8.6-Gate: partieller A-Resume über Releasegrenzen
 
 Der erste produktive Resume derselben Session 14 unter V3.8.5 legte wegen
