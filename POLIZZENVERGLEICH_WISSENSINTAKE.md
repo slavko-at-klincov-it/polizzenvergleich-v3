@@ -4261,4 +4261,8 @@ Vollständigkeitsbehauptung erzeugen.
   `70cb5b8805fa8ae70c1c4d66d947babf8fe42dcef3e92a96a07f38238bbec143`;
   Checkpoint-Datei-SHA-256:
   `f43346cf0b9c99b58be9c95170223f0141719eff5675c1bcb7f19fb2d6bb771c`.
+  Der exakte V3.9.12-Releasekandidat
+  `ef3bb09d980ef51516300250ece2a02a0e49cae7` bestand anschließend 212/212
+  Suites mit 3.128/3.128 Tests, alle drei Lints, Prisma,
+  Capability-Inventar, Frontend-Build und macOS-Installer-Suite.
 - Change-Set: `LF-V3912-BOUND-CANDIDATE-ID-RESUME-20260918-001`.

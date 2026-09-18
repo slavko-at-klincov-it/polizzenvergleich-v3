@@ -5343,6 +5343,14 @@ Modellaufrufen und null neuen Attempt-Dateien; Batch 35 protokolliert genau
 die erwartete Zwei-Zeichen-Wiederherstellung und ist fachlich/technisch PASS.
 Der neue Checkpoint ist ab Batch 36 resumierbar.
 
+Der exakte V3.9.12-Releasekandidat
+`ef3bb09d980ef51516300250ece2a02a0e49cae7` bestand danach das vollständige
+Mac-Studio-Gate mit 212/212 Suites und 3.128/3.128 Tests sowie allen drei
+Lints, Prisma, Capability-Inventar, Frontend-Build und Installer-Suite. Ein
+erster Aufruf ohne den normalen Homebrew-/ESM-Testpfad scheiterte nur an drei
+ffmpeg-Harness-Tests; mit der vorgesehenen Mac-Studio-Umgebung war die
+vollständige Suite grün.
+
 **Positive Erkenntnis:** Eine streng mechanische Korrektur kann
 Quellenbindung erhalten und unnötige Neuberechnung vermeiden, wenn sie nur
 innerhalb der serverseitig erlaubten Kandidatenmenge eindeutig ist.
