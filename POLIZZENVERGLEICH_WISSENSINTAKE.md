@@ -4215,3 +4215,41 @@ Vollständigkeitsbehauptung erzeugen.
   vollständige Release-Gate, das Deployment und der fortgesetzte Produktlauf
   stehen noch aus.
 - Change-Set: `LF-V3911-REDUNDANT-COVERAGE-ROLE-20260918-001`.
+
+## INT-20260918-071 — Eindeutig verkürzte servergebundene Kandidaten-ID wiederherstellen
+
+- Erfasst: 2026-09-18
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Aussage: Verkürzt das Modell eine vorgelegte servergenerierte `RCE-*`- oder
+  `RCR-*`-Kandidaten-ID ausschließlich durch das Auslassen von ein oder zwei
+  zusammenhängenden Hex-Zeichen, darf der Server sie nur dann auf eine
+  zulässige ID derselben aktuellen Requirement zurückführen, wenn exakt ein
+  Kandidat diese mechanische Beziehung erfüllt. Die fachliche Aussage,
+  Outcome, Dimension und Quellenwahl dürfen dabei nicht verändert werden.
+- Ist-Wahrheit: `JA` als unmittelbare Ursache des fail-closed
+  V3.9.11-B-Batch-35-Abbruchs. Qwen verwendete in drei unabhängigen Versuchen
+  durchgängig neben einer gültigen ID dieselbe um zwei Zeichen verkürzte
+  `RCE-*`-ID. Dadurch lehnten die strikten Gates sämtliche zwölf
+  Komponentenbefunde, den Kontextbefund und die Wertabweichung gemeinsam als
+  nicht servergebunden ab. Der Lauf stoppte mit 34/210 gespeicherten
+  PASS-Batches ohne Timeout oder Transportfehler.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-B-006` und
+  `CAP-ORCH-001`; nur kanonische `RCE-*`/`RCR-*`-IDs mit hexadezimalem
+  24-Zeichen-Suffix; nur ein oder zwei an einer einzigen Stelle ausgelassene
+  Zeichen; Präfix muss identisch sein; exakt ein zulässiger Kandidat derselben
+  Requirement; keine Ersetzung, Vertauschung, Verlängerung oder semantische
+  Ähnlichkeit. Danach bleibt die vollständige bestehende B-Validierung
+  verpflichtend. Mehrdeutige oder anders deformierte IDs bleiben
+  fail-closed.
+- Resume-Vertrag: Bereits gültige, plan-, Prompt-, Modell-, Kontext- und
+  Transport-gebundene B-Batches eines expliziten Vorgängerlaufs werden
+  read-only unter dem aktuellen Vertrag erneut validiert und ohne
+  Modellaufruf rematerialisiert. Ungültige Versuchsjournale dürfen nur durch
+  die aktuelle enge Normalisierung und anschließende Einzelzeilenvalidierung
+  übernommen werden; Originalartefakte bleiben unverändert.
+- Beweisgrenze: bekannte LF-1+9-Regression; synthetische Positiv-,
+  Mehrdeutigkeits-, Präfix-, Ersetzungs-, Vertauschungs- und Längengrenzfälle
+  sowie read-only Revalidierung des echten Batch 35 erforderlich; kein
+  Holdout- oder 99-Prozent-Nachweis.
+- Change-Set: `LF-V3912-BOUND-CANDIDATE-ID-RESUME-20260918-001`.
