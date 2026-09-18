@@ -254,12 +254,13 @@
           "Tracker 133.47",
           "Tracker 133.65",
           "Tracker 133.74",
-          "Tracker 133.78"
+          "Tracker 133.78",
+          "Tracker 133.81; Batches 1-35 rematerialized, Batch 35 PASS, zero model calls"
         ],
         "adrs": ["ADR-009", "ADR-027", "ADR-031"],
         "failures": ["INT-20260917-049", "INT-20260917-060", "INT-20260917-068"]
       },
-      "lastVerifiedCommit": "996ed0fd3eb222a33481c06bae5c6cc6cea6466a",
+      "lastVerifiedCommit": "2b052273f0311318c715d5d78faa3bc044856bcf",
       "relations": [{ "type": "REFINES", "target": "CAP-LEGACY-001" }],
       "activationReason": "Endpoint and worker route both persisted product modes; V3.8.0 activates LF V2 for controlled customer production.",
       "reactivationCriteria": "Not applicable while active."
@@ -1381,7 +1382,8 @@
           "Tracker 133.53",
           "Tracker 133.54",
           "Tracker 133.55; 204/204 and 363/363 terminal with 361 seeded plus 2 new model decisions",
-          "Tracker 133.56; 351/351 tests, 15/15 rescue rows seeded, zero model calls"
+          "Tracker 133.56; 351/351 tests, 15/15 rescue rows seeded, zero model calls",
+          "Tracker 133.81; exact batch 35 predecessor journal revalidated without a model call"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -1395,7 +1397,7 @@
           "INT-20260918-071"
         ]
       },
-      "lastVerifiedCommit": "ac3ce5631cd062143f70188c33f5c28baa25f8cb",
+      "lastVerifiedCommit": "2b052273f0311318c715d5d78faa3bc044856bcf",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Reachable from the V2 product runner and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."

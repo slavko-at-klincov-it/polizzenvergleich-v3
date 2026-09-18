@@ -10672,8 +10672,27 @@ werden die 34 gültigen Batches nicht erneut berechnet und Batch 35 kann aus
 den gespeicherten Artefakten repariert werden, ohne die Originalartefakte zu
 verändern.
 
-Status: `ROOT CAUSE IMPLEMENTIERT; SYNTHETISCHE MAC-STUDIO-TESTS, ECHTE
-BATCH-35-REVALIDIERUNG, RELEASE-GATE, DEPLOYMENT, PRODUKT-RESUME UND
+Auf dem Mac Studio bestanden auf Commit
+`2b052273f0311318c715d5d78faa3bc044856bcf` 452/452 fokussierte Tests und
+Prettier. Die unveränderten Real-Artefakte wurden anschließend read-only bis
+einschließlich Batch 35 revalidiert. 35/35 Batches bestanden, darunter Batch
+35 mit der exakt protokollierten Zwei-Zeichen-Wiederherstellung. Es gab null
+Modellaufrufe und null neue Attempt-Dateien; der kontrollierte Checkpoint ist
+ab Batch 36 resumierbar. Das private Prüfartefakt liegt unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/
+  at.klincov.polizzenvergleich-v3/QA/
+  LF-V3912-BATCH35-REVALIDATION-20260918/
+```
+
+Plan-Datei-SHA-256:
+`70cb5b8805fa8ae70c1c4d66d947babf8fe42dcef3e92a96a07f38238bbec143`;
+Checkpoint-Datei-SHA-256:
+`f43346cf0b9c99b58be9c95170223f0141719eff5675c1bcb7f19fb2d6bb771c`.
+
+Status: `ROOT CAUSE ALLGEMEIN BEHOBEN; BATCHES 1 BIS 35 OFFLINE PASS; 452/452
+FOKUSSIERTE TESTS PASS; V3.9.12-RELEASE-GATE, DEPLOYMENT, PRODUKT-RESUME UND
 GOLD-PRÜFUNG AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
 
 Change-Set: `LF-V3912-BOUND-CANDIDATE-ID-RESUME-20260918-001`.
