@@ -10691,6 +10691,61 @@ AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
 
 Change-Set: `LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001`.
 
+### 133.83 V3.9.13-Produktresume wählte den B-Vorgänger fälschlich über A
+
+Der nach dem V3.9.13-Deployment gestartete Produktresume bewies zunächst die
+fachliche Batch-71-Korrektur nicht, weil der Worker die B-Resume-Quelle aus
+der stärksten A-Resume-Quelle ableitete. Für A war
+`resume-502070675f9e019dc215e00a` mit 58 vollständigen Batches korrekt; dessen
+B-Pfad besaß aber nur 34 vollständige Batches. Der stärkere und
+planidentische B-Vorgänger `resume-36b747b2f79c1dc44e0aabff` besaß bereits
+70 vollständige Batches sowie das unter V3.9.13 revalidierbare
+Batch-71-Journal. Deshalb wurden im Produktlauf Batches 36 bis 55 unnötig neu
+berechnet. Der Lauf wurde über den offiziellen Cancel-Endpunkt beendet. Seine
+55 PASS-Batches und der unvollständige Batch-56-Versuch blieben unverändert
+erhalten.
+
+Der allgemeine V3.9.14-Fix adaptiert `CAP-ORCH-001` und `CAP-B-006`. A- und
+B-Resume werden unabhängig ausgewählt. Die B-Auswahl akzeptiert nur echte,
+nicht symbolische Vorgänger derselben release-unabhängigen Run-Identität und
+bewertet ausschließlich deren lückenlosen B-Batch-Präfix. Der bestehende
+B-Runner erzwingt danach weiterhin einen byte-semantisch identischen
+Entscheidungsplan und revalidiert jeden Batch beziehungsweise jedes Journal
+unter dem aktuellen Prompt-, Modell-, Kontext-, Transport- und
+Validatorvertrag. Dateinamen allein können daher keinen Batch übernehmen und
+Originalartefakte werden nicht verändert.
+
+Mac-Studio-Nachweise auf dem exakten Code- und Teststand `f0173d8ba`:
+
+```text
+Fokussierte Resume-/Worker-Tests:          17/17 PASS
+Vollständiger Jest-Gate:                   212/212 Suites, 3.133/3.133 Tests
+Reale Vorgängerauswahl:                    resume-36b747b2f79c1dc44e0aabff
+Lückenloser gespeicherter B-Präfix:        70 Batches
+Read-only Revalidierung:                   71/71 PASS
+Neue Modellversuche:                       0
+Nächster Batch:                            72
+Vorgängerbaum SHA-256 vorher/nachher:      73709ebf89368ed34fbdb425eaea84d1cd78c00b79581432dc9748f05b166e99
+Checkpoint SHA-256:                        9d4852898c7083f5c16b3f1dafc5af5bcd35870e0dce45a9a4f152e431fcc887
+Batch-71 SHA-256:                          fa56ac0a0afe8da7ce06f82b30f64b24b639477272c50f331c7fa168844b9592
+```
+
+Der private QA-Nachweis liegt unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/
+  at.klincov.polizzenvergleich-v3/QA/
+  LF-V3914-INDEPENDENT-B-RESUME-20260920/
+```
+
+Status: `ROOT CAUSE ALLGEMEIN BEHOBEN; B-RESUME 1 BIS 71 OHNE
+MODELLAUFRUF BELEGT; RELEASE-GATE, DEPLOYMENT UND PRODUKT-RESUME AB BATCH 72
+AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
+
+Change-Set:
+`LF-V3914-INDEPENDENT-B-RESUME-SELECTION-20260920-001`.
+Paired Knowledge-Commit: `2451438c0`.
+
 ### 133.81 B-Batch 35: eindeutig verkürzte servergebundene Kandidaten-ID
 
 Der vollständige kalte V3.9.11-LF-1+9-Lauf schloss die dynamische A-Seite mit

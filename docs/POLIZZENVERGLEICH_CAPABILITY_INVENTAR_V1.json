@@ -237,6 +237,7 @@
         "Configured worker concurrency does not override the global local-model lock.",
         "A session PASS does not prove fachliche correctness.",
         "Cross-release partial resume is allowed only for an exact release-independent run identity and requires current-contract revalidation.",
+        "A-classification and B-decision resume sources are selected independently; B ranks only the contiguous completed prefix of same-identity non-symlink predecessors and the decision runner still requires a byte-equivalent plan plus current-contract revalidation.",
         "B-decision cross-release resume accepts only a real non-symlink predecessor directory with a byte-equivalent decision plan and revalidates every predecessor response under the current strict contract before rematerialization.",
         "Every run-contract bump must retain the immediately preceding contract in the explicit predecessor allowlist; omission fails closed before model work.",
         "Multi-hop partial resume follows only explicit plan-identical LF_A_PARTIAL_RESUME_SOURCE_V1 links; invalid markers, symlinks, cycles and chains beyond 64 predecessors fail closed."
@@ -255,12 +256,18 @@
           "Tracker 133.65",
           "Tracker 133.74",
           "Tracker 133.78",
-          "Tracker 133.81; Batches 1-35 rematerialized, Batch 35 PASS, zero model calls"
+          "Tracker 133.81; Batches 1-35 rematerialized, Batch 35 PASS, zero model calls",
+          "Tracker 133.83; independent B selection chose the 70-batch predecessor and rematerialized Batches 1-71 with zero model calls"
         ],
         "adrs": ["ADR-009", "ADR-027", "ADR-031"],
-        "failures": ["INT-20260917-049", "INT-20260917-060", "INT-20260917-068"]
+        "failures": [
+          "INT-20260917-049",
+          "INT-20260917-060",
+          "INT-20260917-068",
+          "INT-20260920-073"
+        ]
       },
-      "lastVerifiedCommit": "ef3bb09d980ef51516300250ece2a02a0e49cae7",
+      "lastVerifiedCommit": "f0173d8ba",
       "relations": [{ "type": "REFINES", "target": "CAP-LEGACY-001" }],
       "activationReason": "Endpoint and worker route both persisted product modes; V3.8.0 activates LF V2 for controlled customer production.",
       "reactivationCriteria": "Not applicable while active."
@@ -1385,7 +1392,8 @@
           "Tracker 133.55; 204/204 and 363/363 terminal with 361 seeded plus 2 new model decisions",
           "Tracker 133.56; 351/351 tests, 15/15 rescue rows seeded, zero model calls",
           "Tracker 133.81; exact batch 35 predecessor journal revalidated without a model call",
-          "Tracker 133.82; exact batch 71 predecessor journal revalidated with one anchored RELATED_ONLY normalization and zero model calls"
+          "Tracker 133.82; exact batch 71 predecessor journal revalidated with one anchored RELATED_ONLY normalization and zero model calls",
+          "Tracker 133.83; Batches 1-71 selected independently from A resume and rematerialized with zero model calls"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -1397,10 +1405,11 @@
           "INT-20260916-042",
           "INT-20260916-043",
           "INT-20260918-071",
-          "INT-20260920-072"
+          "INT-20260920-072",
+          "INT-20260920-073"
         ]
       },
-      "lastVerifiedCommit": "6ff6a6b0a5d6d19494209ed276da261a0f2fec69",
+      "lastVerifiedCommit": "f0173d8ba",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Reachable from the V2 product runner and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
