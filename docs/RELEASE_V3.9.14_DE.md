@@ -22,9 +22,11 @@ null Modellaufrufen; Batch 72 bleibt der nächste neue Qwen-Aufruf. Der
 Vorgängerbaum blieb vor und nach der Revalidierung hashgleich.
 
 Auf dem exakten Code- und Teststand `f0173d8ba` bestanden 17/17 fokussierte
-Resume-/Worker-Tests, Prettier sowie der vollständige Jest-Gate mit 212/212
-Suites und 3.133/3.133 Tests. Die verbleibenden Release-, Build-, Installer-
-und Doctor-Gates werden auf dem finalen Releasecommit dokumentiert.
+Resume-/Worker-Tests und Prettier. Der Releasekandidat `0093ccc30` bestand
+anschließend den vollständigen Mac-Studio-Gate mit 212/212 Suites und
+3.133/3.133 Tests, allen drei Lints, Prisma, Capability-Inventar, Prettier,
+Frontend-Produktionsbuild und macOS-Installer-Suite. Der nachfolgende
+dokumentarische Inventarabschluss verändert keinen Produkt- oder Testcode.
 
 Der bekannte LF-1+9-Lauf bleibt Regressionsevidenz. Er ist kein unabhängiger
 Generalisierungs-, Holdout- oder 99-Prozent-Nachweis.

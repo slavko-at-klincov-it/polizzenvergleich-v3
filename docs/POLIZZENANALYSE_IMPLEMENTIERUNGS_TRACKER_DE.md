@@ -10739,8 +10739,15 @@ Der private QA-Nachweis liegt unter:
 ```
 
 Status: `ROOT CAUSE ALLGEMEIN BEHOBEN; B-RESUME 1 BIS 71 OHNE
-MODELLAUFRUF BELEGT; RELEASE-GATE, DEPLOYMENT UND PRODUKT-RESUME AB BATCH 72
-AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
+MODELLAUFRUF BELEGT; V3.9.14-RELEASE-GATE PASS; DEPLOYMENT UND
+PRODUKT-RESUME AB BATCH 72 AUSSTEHEND; KEIN HOLDOUT- ODER
+99-PROZENT-NACHWEIS`.
+
+Der exakte V3.9.14-Releasekandidat `0093ccc30` bestand auf dem Mac Studio
+212/212 Suites und 3.133/3.133 Tests, alle drei Lints, Prisma,
+Capability-Inventar, Prettier, Frontend-Produktionsbuild und
+macOS-Installer-Suite. Der nachfolgende dokumentarische Inventarabschluss
+ändert keinen Produkt- oder Testcode.
 
 Change-Set:
 `LF-V3914-INDEPENDENT-B-RESUME-SELECTION-20260920-001`.
