@@ -1137,3 +1137,14 @@ Quellenintegrität, aber keine hinreichende Aussage über korrekte atomare
 Fachkomponenten. Produkt-Routing, Kunden-XLSX und Deployment bleiben bis zu
 diesem zusätzlichen Gate sowie bis zum vollständigen B- und
 Nichtregressionsnachweis gesperrt.
+
+Aktualisierung vom 20. September 2026: Der dynamische LF-V2-Pfad ist
+inzwischen produktiv verdrahtet. Beim V3.9.13-Resume wurde jedoch eine
+Orchestrierungslücke sichtbar: Die B-Resume-Quelle war an die stärkste
+A-Quelle gekoppelt und fiel dadurch von 70 vorhandenen B-Batches auf 34
+zurück. Change-Set
+`LF-V3914-INDEPENDENT-B-RESUME-SELECTION-20260920-001` trennt beide
+Auswahlen. Der Mac-Studio-Nachweis rematerialisierte Batches 1 bis 71 ohne
+Modellaufruf; Batch 72 ist der nächste produktive Schritt. Der vollständige
+1+9-Abschluss und die Gold-Regression stehen weiterhin aus. Das bekannte Set
+bleibt Regression und kein Holdout- oder 99-Prozent-Nachweis.

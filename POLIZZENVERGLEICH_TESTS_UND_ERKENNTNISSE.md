@@ -5315,6 +5315,54 @@ darf nicht als Generalisierungsnachweis ausgegeben werden.
 
 Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
 
+## 104. A- und B-Resume benötigen unabhängige Vorgängerauswahl
+
+Der produktive V3.9.13-Resume verwendete trotz einer offline belegten
+71-Batch-Kette nur 35 bestehende B-Batches und begann ab Batch 36 erneut mit
+Qwen-Aufrufen. Die fachliche V3.9.13-Korrektur war aktiv; falsch war das
+Routing davor: Der Worker leitete die B-Resume-Quelle aus der stärksten
+A-Resume-Quelle ab. Diese Quelle besaß 58 vollständige A-Batches, aber nur 34
+vollständige B-Batches. Der getrennte V3.9.12-B-Pfad besaß dagegen 70
+vollständige B-Batches und das unter V3.9.13 revalidierbare Batch-71-Journal.
+
+Der laufende Produktjob wurde über den offiziellen Cancel-Endpunkt beendet.
+55 vollständige PASS-Batches und der unvollständige Batch-56-Versuch blieben
+unverändert erhalten. Commit `f0173d8ba` wählt A- und B-Vorgänger nun
+unabhängig. Die B-Auswahl berücksichtigt ausschließlich echte,
+nicht-symbolische Run-Wurzeln derselben release-unabhängigen Identität und
+wertet nur den lückenlosen B-Batch-Präfix. Planidentität und aktuelle
+Antwortvalidierung bleiben anschließend unverändert im B-Runner verpflichtend.
+
+Mac-Studio-Ergebnis:
+
+```text
+Fokussierte Tests:                         17/17 PASS
+Vollständiger Jest-Gate:                   212/212 Suites, 3.133/3.133 Tests
+Gewählter realer B-Vorgänger:              resume-36b747b2f79c1dc44e0aabff
+Vollständige Vorgängerbatches:             70
+Revalidierte Batches:                      71/71 PASS
+Neue Modellversuche:                       0
+Erster noch offener Batch:                 72
+Vorgängerbaum vor/nachher:                 hashgleich
+Vorgängerbaum SHA-256:                     73709ebf89368ed34fbdb425eaea84d1cd78c00b79581432dc9748f05b166e99
+Checkpoint SHA-256:                        9d4852898c7083f5c16b3f1dafc5af5bcd35870e0dce45a9a4f152e431fcc887
+Batch-71 SHA-256:                          fa56ac0a0afe8da7ce06f82b30f64b24b639477272c50f331c7fa168844b9592
+```
+
+**Positive Erkenntnis:** Persistente Phasen müssen ihren besten kompatiblen
+Vorgänger je Phase wählen. Derselbe Run kann für A und B unterschiedliche
+optimale Quellen besitzen.
+
+**Negative Erkenntnis:** Eine korrekte fachliche Revalidierung im B-Runner
+hilft nicht, wenn der Worker vorher einen schwächeren, nur für A optimalen
+Vorgänger verdrahtet.
+
+**Beweisgrenze:** Der Nachweis betrifft Resume-Routing und unveränderte
+Revalidierung auf dem bekannten LF-1+9-Set. Er belegt weder unbekannte
+Versicherer noch fachliche Generalisierung oder 99 Prozent.
+
+Change-Set: `LF-V3914-INDEPENDENT-B-RESUME-SELECTION-20260920-001`.
+
 ## 103. B-Batch 71: abweichender Identitätskern braucht einen unabhängigen Kernanker
 
 Der V3.9.12-Produktlauf bestand 70/210 B-Batches und stoppte Batch 71

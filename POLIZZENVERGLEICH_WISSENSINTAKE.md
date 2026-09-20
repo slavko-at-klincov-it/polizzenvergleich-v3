@@ -4316,3 +4316,54 @@ Vollständigkeitsbehauptung erzeugen.
   Frontend-Produktionsbuild und macOS-Installer-Suite.
 - Change-Set:
   `LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001`.
+
+## INT-20260920-073 — A- und B-Resume unabhängig nach aktuell revalidierbarem Fortschritt wählen
+
+- Erfasst: 2026-09-20
+- Typ: `FEHLER`
+- Status: `UMGESETZT_REGRESSION_BESTANDEN`
+- Aussage: Im A-getriebenen Produktpfad darf die Quelle für die
+  B-Gegenstückprüfung nicht implizit aus der stärksten A-Resume-Quelle
+  abgeleitet werden. A-Klassifikation und B-Entscheidung sind getrennte
+  persistente Phasen und benötigen jeweils ihre eigene, fachvertraglich
+  kompatible Vorgängerauswahl. Für B ist der Vorgänger mit dem größten
+  lückenlosen Fortschritt zu wählen, der unter dem aktuellen B-Plan,
+  Prompt-, Modell-, Kontext-, Transport- und Validatorvertrag vollständig
+  revalidierbar ist.
+- Ist-Wahrheit: `JA` im produktiven V3.9.13-Resume
+  `resume-402807e64610eb442ada9b4c`. Obwohl
+  `resume-36b747b2f79c1dc44e0aabff` 70 vollständige B-Batches und ein unter
+  V3.9.13 revalidierbares Batch-71-Journal enthält, leitete der Worker
+  `LF_B_DECISION_RESUME_ROOT` aus der stärksten A-Quelle
+  `resume-502070675f9e019dc215e00a` ab. Dadurch wurden nur Batches 1 bis 35
+  wiederverwendet und Batches 36 bis 55 unnötig neu berechnet. Der Lauf wurde
+  über den offiziellen Cancel-Pfad beendet; 55 vollständige PASS-Batches und
+  der unvollständige Batch-56-Versuch bleiben unverändert resumierbar.
+- Root-Cause-Klasse: `ROUTING` und `PERSISTENZ`, nicht Datenfindung oder
+  Semantik. Der B-Runner kann bereits einen expliziten, planidentischen
+  Vorgänger read-only revalidieren; falsch ist die vorgelagerte Auswahl und
+  Kopplung an den A-Vorgänger.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-ORCH-001` und
+  `CAP-B-006`; nur echte, nicht symbolische Resume-Verzeichnisse derselben
+  Session und derselben release-unabhängigen Run-Identität; exakte
+  byte-semantische B-Planidentität; aktuelle Revalidierung jedes
+  vollständigen Batches beziehungsweise jedes Attempt-Journals; nur der
+  größte lückenlose Präfix zählt. Ungültige, planfremde, zyklische,
+  selbstreferenzielle oder nach einer Lücke liegende Artefakte werden nicht
+  übernommen. Originalartefakte bleiben unverändert.
+- Messbare Verbesserung: Der reale V3.9.13-Nachfolger muss Batches 1 bis 71
+  mit null Modellaufrufen rematerialisieren; Batch 72 ist der erste neue
+  Qwen-Aufruf. Ein Test mit mehreren Vorgängerwurzeln muss belegen, dass die
+  beste A-Quelle von der besten B-Quelle abweichen darf und ein stärker
+  aussehender, aber planinkompatibler B-Kandidat übersprungen wird.
+- Beweisgrenze: technischer Resume-, Routing- und Persistenzvertrag auf dem
+  bekannten LF-1+9-Set; keine Aussage über fachliche Generalisierung,
+  Holdout-Qualität oder 99 Prozent.
+- Ergebnis: Commit `f0173d8ba` trennt die A- und B-Vorgängerauswahl. Auf dem
+  Mac Studio bestanden 17/17 fokussierte Tests, Prettier und der vollständige
+  Jest-Gate mit 212/212 Suites und 3.133/3.133 Tests. Die read-only
+  Realprüfung wählte `resume-36b747b2f79c1dc44e0aabff` mit 70
+  lückenlosen B-Batches und rematerialisierte Batch 71 aus dem vorhandenen
+  Journal. Ergebnis: 71/71 PASS, null Modellversuche, nächster Batch 72 und
+  hashgleicher Vorgängerbaum vor/nach der Prüfung.
+- Change-Set: `LF-V3914-INDEPENDENT-B-RESUME-SELECTION-20260920-001`.
