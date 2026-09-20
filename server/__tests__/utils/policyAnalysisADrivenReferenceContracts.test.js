@@ -20247,9 +20247,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
           ? normalized.responses[0]
           : validRequirementResponse(plannedRow)
       ),
-    }).results.find(
-      ({ requirementId }) => requirementId === row.requirementId
-    );
+    }).results.find(({ requirementId }) => requirementId === row.requirementId);
     expect(decision).toMatchObject({
       customerFound: true,
       counterpartOutcome: "PARTIAL_COUNTERPART",
