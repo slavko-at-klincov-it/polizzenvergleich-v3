@@ -195,7 +195,7 @@ run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/runADrivenReferenceClassifi
   --modelRecoveryTimeoutMs "${LF_A_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
   --lmStudioSdk "$LMSTUDIO_SDK" \
   --qwenModelKey "$QWEN_MODEL_KEY" \
-  "${A_CLASSIFICATION_RESUME_ARGS[@]}"
+  "${A_CLASSIFICATION_RESUME_ARGS[@]+"${A_CLASSIFICATION_RESUME_ARGS[@]}"}"
 
 "$NODE_BIN" -e '
   const fs = require("fs");
@@ -283,7 +283,7 @@ if [ ! -f "$B_DECISION_ROOT/summary.private.json" ]; then
     --modelRecoveryTimeoutMs "${LF_B_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
     --lmStudioSdk "$LMSTUDIO_SDK" \
     --qwenModelKey "$QWEN_MODEL_KEY" \
-    "${B_DECISION_RESUME_ARGS[@]}"
+    "${B_DECISION_RESUME_ARGS[@]+"${B_DECISION_RESUME_ARGS[@]}"}"
 fi
 
 ABSENCE_SEED_ARGS=()
@@ -306,7 +306,7 @@ if [ ! -f "$B_ABSENCE_ROOT/summary.private.json" ]; then
     --modelRecoveryTimeoutMs "${LF_B_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
     --lmStudioSdk "$LMSTUDIO_SDK" \
     --qwenModelKey "$QWEN_MODEL_KEY" \
-    "${ABSENCE_SEED_ARGS[@]}"
+    "${ABSENCE_SEED_ARGS[@]+"${ABSENCE_SEED_ARGS[@]}"}"
 fi
 
 run_child "$NODE_BIN" "$SCRIPT_DIR/server/scripts/qa/materializeADrivenRequirementRescueReviewPlan.cjs" \

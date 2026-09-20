@@ -1,6 +1,7 @@
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { spawnSync } = require("child_process");
 const {
   archivedCompatiblePredecessorManifest,
   compatiblePredecessorShadowSummary,
@@ -113,6 +114,39 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
     );
     expect(aBuilder).toContain("LF_A_SHADOW_RESUME_MISMATCH");
     expect(bBuilder).toContain("LF_A_DRIVEN_COMPLETE_B_RESUME_MISMATCH");
+  });
+
+  test("passes empty and populated optional argument arrays safely under macOS Bash nounset", () => {
+    for (const name of [
+      "A_CLASSIFICATION_RESUME_ARGS",
+      "B_DECISION_RESUME_ARGS",
+      "ABSENCE_SEED_ARGS",
+    ]) {
+      expect(source).toContain(`\"\${${name}[@]+\"\${${name}[@]}\"}\"`);
+      expect(source).not.toContain(`\"\${${name}[@]}\"`);
+    }
+
+    const empty = spawnSync(
+      "/bin/bash",
+      [
+        "-c",
+        'set -u; optional=(); set -- "${optional[@]+"${optional[@]}"}"; printf "%s" "$#"',
+      ],
+      { encoding: "utf8" }
+    );
+    expect(empty.status).toBe(0);
+    expect(empty.stdout).toBe("0");
+
+    const populated = spawnSync(
+      "/bin/bash",
+      [
+        "-c",
+        'set -u; optional=(--seedOutput "/private/seed path"); set -- "${optional[@]+"${optional[@]}"}"; printf "%s\\n%s\\n%s" "$#" "$1" "$2"',
+      ],
+      { encoding: "utf8" }
+    );
+    expect(populated.status).toBe(0);
+    expect(populated.stdout).toBe("2\n--seedOutput\n/private/seed path");
   });
 
   test("archives only an integrity-valid, payload-identical V13 placeholder during the V14 resume upgrade", () => {
