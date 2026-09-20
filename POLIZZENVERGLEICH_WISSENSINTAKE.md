@@ -4367,3 +4367,36 @@ Vollständigkeitsbehauptung erzeugen.
   Journal. Ergebnis: 71/71 PASS, null Modellversuche, nächster Batch 72 und
   hashgleicher Vorgängerbaum vor/nach der Prüfung.
 - Change-Set: `LF-V3914-INDEPENDENT-B-RESUME-SELECTION-20260920-001`.
+
+## INT-20260920-074 — Leere optionale Runner-Argumente unter macOS Bash nounset sicher übergeben
+
+- Erfasst: 2026-09-20
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Aussage: Optionale Argumentlisten des dynamischen LF-Produktrunners dürfen
+  unter der auf macOS vorhandenen Bash 3.2 und aktivem `set -u` weder einen
+  Abbruch noch ein leeres Phantomargument erzeugen. Eine nicht gesetzte
+  Resume- oder Seed-Option muss als exakt null zusätzliche Argumente an den
+  bestehenden Unterprozess übergeben werden; eine gesetzte Option muss ihre
+  Flag-/Wert-Paarung unverändert bewahren.
+- Ist-Wahrheit: `JA` im produktiven V3.9.14-Lauf
+  `resume-f9609219013df5b56ebc3258`. Die komponentenweise B-Prüfung endete
+  vollständig mit 210/210 PASS-Batches, 362 terminalen Requirements, 320
+  vorläufigen Funden und 42 Fällen für die Vollkorpusprüfung. Unmittelbar vor
+  deren Start brach der Runner mit
+  `ABSENCE_SEED_ARGS[@]: unbound variable` ab, weil kein optionaler
+  Abwesenheits-Seed gesetzt war. Alle vorhandenen Modell- und
+  Entscheidungsartefakte blieben erhalten.
+- Root-Cause-Klasse: `ORCHESTRIERUNG` und `PORTABILITÄT`, nicht Retrieval,
+  Semantik oder Modellqualität. Derselbe leere-Array-Vertrag gilt latent auch
+  für die optionalen A-Klassifikations- und B-Entscheidungs-Resume-Argumente.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-ORCH-001`, `CAP-B-006` und
+  `CAP-B-007`; keine Prompt-, Modell-, Such-, Gold- oder Fachlogikänderung.
+  Tests müssen unter `/bin/bash` mit `set -u` sowohl null optionale Argumente
+  als auch ein unverändertes Flag-/Wert-Paar belegen. Der echte Resume muss
+  die vorhandene vollständige B-Zusammenfassung überspringen und darf dafür
+  keine neuen B-Modellversuche erzeugen.
+- Beweisgrenze: technischer Runner-, Resume- und Portabilitätsvertrag auf der
+  Zielhardware; keine Aussage über fachliche Generalisierung, Holdout-Qualität
+  oder 99 Prozent.
+- Change-Set: `LF-V3915-EMPTY-OPTIONAL-ARGUMENTS-20260920-001`.
