@@ -4372,7 +4372,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-20
 - Typ: `FEHLER`
-- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Status: `BESTÄTIGT`
 - Aussage: Optionale Argumentlisten des dynamischen LF-Produktrunners dürfen
   unter der auf macOS vorhandenen Bash 3.2 und aktivem `set -u` weder einen
   Abbruch noch ein leeres Phantomargument erzeugen. Eine nicht gesetzte
@@ -4399,4 +4399,12 @@ Vollständigkeitsbehauptung erzeugen.
 - Beweisgrenze: technischer Runner-, Resume- und Portabilitätsvertrag auf der
   Zielhardware; keine Aussage über fachliche Generalisierung, Holdout-Qualität
   oder 99 Prozent.
+- Ergebnis: Commit `26c723da6dfa4da538eba05490f03da340f33b73`
+  ersetzt die drei direkten leeren Arrayexpansionen durch den
+  Bash-3.2-sicheren nounset-Vertrag. Auf dem Mac Studio bestanden der
+  ausführbare Leer-/Flag-Wert-Regressionsvertrag mit 7/7 Tests, der
+  vollständige Jest-Gate mit 212/212 Suites und 3.134/3.134 Tests, alle drei
+  Lints, Prisma, Capability-Inventar, Prettier, Frontend-Produktionsbuild und
+  macOS-Installer-Suite. Deployment, echter Produktresume ab der
+  Vollkorpusprüfung und Gold-Prüfung bleiben getrennte ausstehende Nachweise.
 - Change-Set: `LF-V3915-EMPTY-OPTIONAL-ARGUMENTS-20260920-001`.
