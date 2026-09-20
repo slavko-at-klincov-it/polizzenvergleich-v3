@@ -1400,7 +1400,7 @@
           "INT-20260920-072"
         ]
       },
-      "lastVerifiedCommit": "6ff6a6b0a",
+      "lastVerifiedCommit": "6ff6a6b0a5d6d19494209ed276da261a0f2fec69",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Reachable from the V2 product runner and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
