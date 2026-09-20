@@ -23,9 +23,10 @@ const {
   requestCompletionWithTimeout,
 } = require("./runADrivenReferenceClassification.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V2";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V3";
 const PREDECESSOR_RUN_CONTRACT_IDS = new Set([
   "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V1",
+  "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V2",
 ]);
 const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V2";
 const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_DECISION_TRANSPORT_V1";
@@ -602,6 +603,9 @@ function normalizeIdentityCoreModifierDifferences(batch, responses) {
       const componentsById = new Map(
         row.components.map((component) => [component.componentId, component])
       );
+      const identityFindings = response.componentFindings.filter(
+        (finding) => componentsById.get(finding?.componentId)?.identityCore
+      );
       const componentFindings = response.componentFindings.map((finding) => {
         const component = componentsById.get(finding?.componentId);
         if (
@@ -617,6 +621,74 @@ function normalizeIdentityCoreModifierDifferences(batch, responses) {
         )
           return finding;
         const candidateIds = new Set(finding.candidateIds);
+        const nonModifierDifferences = response.unmodeledDifferences.filter(
+          (difference) =>
+            !DIFFERENCE_DIMENSIONS.has(difference?.dimension) &&
+            typeof difference?.description === "string" &&
+            difference.description.trim() &&
+            Array.isArray(difference.candidateIds) &&
+            difference.candidateIds.some((candidateId) =>
+              candidateIds.has(candidateId)
+            )
+        );
+        const sameDimensionDifferences = nonModifierDifferences.filter(
+          (difference) => difference.dimension === finding.dimension
+        );
+        const anchoringFindings = identityFindings.filter((otherFinding) => {
+          const otherComponent = componentsById.get(otherFinding?.componentId);
+          return (
+            otherFinding.componentId !== finding.componentId &&
+            otherComponent?.identityCore &&
+            otherComponent.dimension !== finding.dimension &&
+            otherFinding.outcome === "MATCH" &&
+            Array.isArray(otherFinding.candidateIds) &&
+            otherFinding.candidateIds.some((candidateId) =>
+              candidateIds.has(candidateId)
+            )
+          );
+        });
+        const everyCandidateHasSameDimensionDifference =
+          finding.candidateIds.every((candidateId) =>
+            sameDimensionDifferences.some((difference) =>
+              difference.candidateIds.includes(candidateId)
+            )
+          );
+        const everyCandidateHasIndependentCoreAnchor =
+          finding.candidateIds.every((candidateId) =>
+            anchoringFindings.some((otherFinding) =>
+              otherFinding.candidateIds.includes(candidateId)
+            )
+          );
+        const hasOtherCoreDifference = nonModifierDifferences.some(
+          (difference) => difference.dimension !== finding.dimension
+        );
+        if (
+          everyCandidateHasSameDimensionDifference &&
+          everyCandidateHasIndependentCoreAnchor &&
+          !hasOtherCoreDifference
+        ) {
+          normalizations.push({
+            requirementId: response.requirementId,
+            componentId: finding.componentId,
+            dimension: finding.dimension,
+            fromOutcome: finding.outcome,
+            toOutcome: "RELATED_ONLY",
+            candidateIds: [...finding.candidateIds],
+            differenceDimensions: [finding.dimension],
+            anchoredByComponentIds: [
+              ...new Set(
+                anchoringFindings
+                  .filter(({ candidateIds: anchorCandidateIds }) =>
+                    anchorCandidateIds.some((candidateId) =>
+                      candidateIds.has(candidateId)
+                    )
+                  )
+                  .map(({ componentId }) => componentId)
+              ),
+            ].sort(),
+          });
+          return { ...finding, outcome: "RELATED_ONLY" };
+        }
         const modifierDifferences = response.unmodeledDifferences.filter(
           (difference) =>
             DIFFERENCE_DIMENSIONS.has(difference?.dimension) &&
@@ -627,14 +699,7 @@ function normalizeIdentityCoreModifierDifferences(batch, responses) {
               candidateIds.has(candidateId)
             )
         );
-        const hasNonModifierDifference = response.unmodeledDifferences.some(
-          (difference) =>
-            !DIFFERENCE_DIMENSIONS.has(difference?.dimension) &&
-            Array.isArray(difference?.candidateIds) &&
-            difference.candidateIds.some((candidateId) =>
-              candidateIds.has(candidateId)
-            )
-        );
+        const hasNonModifierDifference = nonModifierDifferences.length > 0;
         const everyCandidateExplained = finding.candidateIds.every(
           (candidateId) =>
             modifierDifferences.some((difference) =>

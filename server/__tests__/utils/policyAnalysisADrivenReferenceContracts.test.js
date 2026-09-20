@@ -20030,7 +20030,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       const rawResponse = JSON.stringify(responses);
       const result = {
         schemaVersion: 1,
-        contractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V1",
+        contractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V2",
         decisionPlanSha256: decisionPlan.planSha256,
         promptContractId: "LF_A_DRIVEN_REQUIREMENT_DECISION_PROMPT_V2",
         promptSha256: crypto
@@ -20095,7 +20095,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       expect(
         result.results.every(
           ({ contractId }) =>
-            contractId === "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V2"
+            contractId === "LF_A_DRIVEN_REQUIREMENT_DECISION_RUN_V3"
         )
       ).toBe(true);
       expect(
@@ -20168,6 +20168,141 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       })
     );
   });
+
+  test("keeps an independently anchored counterpart partial when another identity core differs", () => {
+    const { decisionPlan: sourcePlan } = requirementDecisionFixture();
+    const decisionPlan = JSON.parse(JSON.stringify(sourcePlan));
+    const batch = decisionPlan.batches[0];
+    const row = batch.rows[0];
+    const planRow = decisionPlan.rows.find(
+      ({ requirementId }) => requirementId === row.requirementId
+    );
+    const target = row.components.find(({ identityCore }) => identityCore);
+    const anchor = row.components.find(
+      ({ componentId, dimension }) =>
+        componentId !== target.componentId && dimension !== target.dimension
+    );
+    anchor.identityCore = true;
+    planRow.components.find(
+      ({ componentId }) => componentId === anchor.componentId
+    ).identityCore = true;
+    const { planSha256: _oldPlanSha256, ...planPayload } = decisionPlan;
+    decisionPlan.planSha256 = crypto
+      .createHash("sha256")
+      .update(
+        `${A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID}\u0000${stableStringify(
+          planPayload
+        )}`
+      )
+      .digest("hex");
+    const candidateId = row.candidates[0].candidateId;
+    const response = validRequirementResponse(row);
+    response.contextFinding.outcome = "COUNTERPART_WITH_DIFFERENCE";
+    response.componentFindings = response.componentFindings.map((finding) =>
+      finding.componentId === target.componentId
+        ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
+        : finding
+    );
+    response.unmodeledDifferences = [
+      {
+        dimension: target.dimension,
+        description:
+          "Das Gegenstück besitzt einen abweichenden engeren fachlichen Kernumfang.",
+        candidateIds: [candidateId],
+      },
+    ];
+
+    const normalized = normalizeIdentityCoreModifierDifferences(batch, [
+      response,
+    ]);
+
+    expect(normalized.normalizations).toEqual([
+      expect.objectContaining({
+        requirementId: row.requirementId,
+        componentId: target.componentId,
+        dimension: target.dimension,
+        fromOutcome: "COUNTERPART_WITH_DIFFERENCE",
+        toOutcome: "RELATED_ONLY",
+        candidateIds: [candidateId],
+        differenceDimensions: [target.dimension],
+        anchoredByComponentIds: [anchor.componentId],
+      }),
+    ]);
+    expect(
+      normalized.responses[0].componentFindings.find(
+        ({ componentId }) => componentId === target.componentId
+      ).outcome
+    ).toBe("RELATED_ONLY");
+    expect(
+      validateRequirementDecisionBatchResponses(
+        decisionPlan,
+        batch,
+        normalized.responses
+      ).passed
+    ).toBe(true);
+    const decision = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: decisionPlan.rows.map((plannedRow) =>
+        plannedRow.requirementId === row.requirementId
+          ? normalized.responses[0]
+          : validRequirementResponse(plannedRow)
+      ),
+    }).results.find(
+      ({ requirementId }) => requirementId === row.requirementId
+    );
+    expect(decision).toMatchObject({
+      customerFound: true,
+      counterpartOutcome: "PARTIAL_COUNTERPART",
+    });
+  });
+
+  test.each([
+    ["without another identity-core match", false, false],
+    ["with an additional unrelated core difference", true, true],
+  ])(
+    "does not partialize an unsafe identity-core relation %s",
+    (_name, includeAnchor, includeOtherDifference) => {
+      const { decisionPlan } = requirementDecisionFixture();
+      const batch = decisionPlan.batches[0];
+      const row = batch.rows[0];
+      const target = row.components.find(({ identityCore }) => identityCore);
+      const anchor = row.components.find(
+        ({ componentId, dimension }) =>
+          componentId !== target.componentId && dimension !== target.dimension
+      );
+      anchor.identityCore = includeAnchor;
+      const candidateId = row.candidates[0].candidateId;
+      const response = validRequirementResponse(row);
+      response.componentFindings = response.componentFindings.map((finding) =>
+        finding.componentId === target.componentId
+          ? { ...finding, outcome: "COUNTERPART_WITH_DIFFERENCE" }
+          : finding
+      );
+      response.unmodeledDifferences = [
+        {
+          dimension: target.dimension,
+          description: "Der fachliche Kernumfang weicht ab.",
+          candidateIds: [candidateId],
+        },
+        ...(includeOtherDifference
+          ? [
+              {
+                dimension: "OTHER_IDENTITY_CORE",
+                description: "Eine weitere Kerndimension ist verschieden.",
+                candidateIds: [candidateId],
+              },
+            ]
+          : []),
+      ];
+
+      const normalized = normalizeIdentityCoreModifierDifferences(batch, [
+        response,
+      ]);
+
+      expect(normalized.normalizations).toEqual([]);
+      expect(normalized.responses).toEqual([response]);
+    }
+  );
 
   test.each([
     ["without modifier evidence", [], "MATCH"],
