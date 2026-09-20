@@ -4266,3 +4266,39 @@ Vollständigkeitsbehauptung erzeugen.
   Suites mit 3.128/3.128 Tests, alle drei Lints, Prisma,
   Capability-Inventar, Frontend-Build und macOS-Installer-Suite.
 - Change-Set: `LF-V3912-BOUND-CANDIDATE-ID-RESUME-20260918-001`.
+
+## INT-20260920-072 — Abweichenden Identitätskern nur bei unabhängig belegtem Gegenstück partialisieren
+
+- Erfasst: 2026-09-20
+- Typ: `FEHLER`
+- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Aussage: Liefert das Modell für eine Identitätskern-Komponente
+  `COUNTERPART_WITH_DIFFERENCE`, obwohl der Vertrag dort nur `MATCH`,
+  `OPPOSITE`, `RELATED_ONLY` oder `NOT_ESTABLISHED` zulässt, darf der Server
+  die abweichende Kernkomponente ausschließlich dann zu `RELATED_ONLY`
+  normalisieren, wenn ein anderes Identitätskern-Merkmal desselben
+  servergebundenen Kandidaten bereits `MATCH` ist und eine ausdrückliche
+  gleichdimensionale Abweichung jeden betroffenen Kandidaten erklärt. Die
+  Regel darf niemals selbst einen Fund erzeugen oder einen fehlenden
+  unabhängigen Kernanker ersetzen.
+- Ist-Wahrheit: `JA` als Ursache des fail-closed V3.9.12-B-Batch-71-Abbruchs.
+  Für Baum-Sicherungs- und Entsorgungskosten ist der `FACT_ROLE` desselben
+  B-Kandidaten quellengebunden `MATCH`; Gefahrenscope und Wert weichen
+  sichtbar ab. Qwen gab den Gefahrenscope zweimal als
+  `COUNTERPART_WITH_DIFFERENCE` auf `PERIL_OR_CAUSE` aus. Diese fachlich
+  plausible, aber vertragswidrige Darstellung wurde korrekt abgelehnt; ein
+  weiterer Versuch lief in den harten 180-Sekunden-Timeout und wurde sicher
+  abgebrochen und wiederhergestellt.
+- Scope und Hard-Gates: `ADAPT_EXISTING` für `CAP-B-006`; positiver
+  Kontextbefund; mindestens ein anderes Identitätskern-`MATCH` mit
+  Kandidatenüberlappung; gleichdimensionale, nichtleere und vollständig
+  kandidatengebundene Abweichungsbeschreibung; keine fremde oder zusätzliche
+  nichtmodifizierende Kerndifferenz. Die Normalisierung lautet ausschließlich
+  `RELATED_ONLY`, nie `MATCH`, `OPPOSITE` oder ein neu erzeugtes
+  `GEFUNDEN`. Fehlt der unabhängige Anker, bleibt die Antwort ungültig und der
+  Lauf fail-closed.
+- Beweisgrenze: bekannte LF-1+9-Regression und synthetische positive sowie
+  negative Vertragsfälle; kein unabhängiger Holdout- oder
+  99-Prozent-Nachweis.
+- Change-Set:
+  `LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001`.
