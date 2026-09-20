@@ -1369,6 +1369,7 @@
         "Identity-core modifier normalization is allowed only for a positive MATCH or COUNTERPART_WITH_DIFFERENCE context, identical server-bound candidate IDs and explicit differences limited to scope, condition, value, limit, deductible or temporal validity; RELATED_ONLY remains excluded.",
         "Cross-plan reuse is allowed only after complete seed binding, byte-identical row comparison and current single-row revalidation.",
         "A shortened server candidate ID is restored only for an RCE/RCR ID with one or two contiguous omitted hex characters and exactly one allowed same-prefix candidate in the current requirement; substitutions, transpositions, longer omissions and ambiguous matches remain fail-closed.",
+        "A non-modifier identity-core difference is normalized only to RELATED_ONLY, never MATCH, and only when a separate identity-core dimension independently MATCHes every same server-bound candidate, every candidate has an explicit same-dimension difference and no additional non-modifier core difference exists; without that anchor the response remains fail-closed and the normalization cannot create FOUND.",
         "Explicit-exclusion normalization is restricted to one PERIL_OR_CAUSE identity core, an existing COVERAGE_EFFECT, one cited server-bound clause with explicit exclusion wording and exactly one configured general peril-equivalence group; unrelated clauses, ambiguous cores and uncited evidence remain fail-closed."
       ],
       "evidence": {
@@ -1383,7 +1384,8 @@
           "Tracker 133.54",
           "Tracker 133.55; 204/204 and 363/363 terminal with 361 seeded plus 2 new model decisions",
           "Tracker 133.56; 351/351 tests, 15/15 rescue rows seeded, zero model calls",
-          "Tracker 133.81; exact batch 35 predecessor journal revalidated without a model call"
+          "Tracker 133.81; exact batch 35 predecessor journal revalidated without a model call",
+          "Tracker 133.82; exact batch 71 predecessor journal revalidated with one anchored RELATED_ONLY normalization and zero model calls"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -1394,10 +1396,11 @@
           "INT-20260916-041",
           "INT-20260916-042",
           "INT-20260916-043",
-          "INT-20260918-071"
+          "INT-20260918-071",
+          "INT-20260920-072"
         ]
       },
-      "lastVerifiedCommit": "ef3bb09d980ef51516300250ece2a02a0e49cae7",
+      "lastVerifiedCommit": "6ff6a6b0a",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Reachable from the V2 product runner and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."

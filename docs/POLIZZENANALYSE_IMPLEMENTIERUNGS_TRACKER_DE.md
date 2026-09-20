@@ -10636,6 +10636,52 @@ MODELLARBEIT ÜBERNOMMEN; BATCH 18 PASS; KALTER PRODUKTLAUF AB BATCH 19 AKTIV`.
 Change-Set:
 `LF-V390-SINGLE-LIST-SEGMENT-LEGACY-LIFT-20260917-001`.
 
+### 133.82 B-Batch 71: abweichender Identitätskern bei unabhängig belegtem Gegenstück
+
+Der auf V3.9.12 fortgesetzte kalte LF-1+9-Lauf revalidierte Batches 1 bis 63,
+berechnete ab Batch 64 weiter und stoppte Batch 71 (`batchIndex 70`,
+`ADRB-52f1e48dafabd6b50281845b`) nach 70/210 PASS korrekt fail-closed. Zwei
+semantisch plausible Modellantworten belegten denselben Baum-Sicherungs- und
+Entsorgungskosten-Kandidaten über `FACT_ROLE = MATCH`, verwendeten für den
+abweichenden Gefahrenscope aber das auf Identitätskernen unzulässige
+`COUNTERPART_WITH_DIFFERENCE`. Der zweite Versuch lief in den harten
+180-Sekunden-Timeout; Abort, Settlement und Modellwiederherstellung arbeiteten
+wie vorgesehen.
+
+Der allgemeine V3-Vertrag adaptiert `CAP-B-006`. Eine abweichende
+Identitätskern-Komponente wird ausschließlich zu `RELATED_ONLY` normalisiert,
+wenn ein anderes Identitätskern-Merkmal mit einer anderen Dimension für jeden
+betroffenen servergebundenen Kandidaten bereits `MATCH` ist, eine ausdrückliche
+gleichdimensionale Abweichung jeden Kandidaten erklärt und keine weitere
+nichtmodifizierende Kerndifferenz vorliegt. Die Regel kann keinen Fund
+erzeugen: Ohne den unabhängigen Kernanker bleibt die Antwort ungültig und der
+Lauf fail-closed. Mehrfach identische Normalisierungstelemetrie aus
+Vorgänger-Attempts wird deterministisch dedupliziert; die fachliche Antwort
+wird nicht vervielfacht.
+
+Auf dem Mac Studio bestanden auf Commit `6ff6a6b0a` 436/436 fokussierte Tests
+und Prettier. Die unveränderten Produktartefakte wurden danach bis
+einschließlich Batch 71 read-only in einen neuen privaten QA-Pfad
+revalidiert: 71/71 Batches PASS, Batch 71 mit exakt einer protokollierten
+`PERIL_OR_CAUSE: COUNTERPART_WITH_DIFFERENCE -> RELATED_ONLY`-Normalisierung,
+null Modellaufrufe und null neue Modellversuche. Batch 72 ist der nächste
+echte Modellaufruf. Das Batch-71-Artefakt liegt unter:
+
+```text
+/Users/michaelmischkot/Library/Application Support/
+  at.klincov.polizzenvergleich-v3/QA/
+  LF-V3913-BATCH71-REVALIDATION-V2-20260920/
+```
+
+Batch-71-Datei-SHA-256:
+`fa56ac0a0afe8da7ce06f82b30f64b24b639477272c50f331c7fa168844b9592`.
+
+Status: `ROOT CAUSE ALLGEMEIN BEHOBEN; BATCHES 1 BIS 71 OFFLINE PASS; NULL
+MODELLAUFRUFE; V3.9.13-RELEASE-GATE, DEPLOYMENT UND PRODUKT-RESUME
+AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
+
+Change-Set: `LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001`.
+
 ### 133.81 B-Batch 35: eindeutig verkürzte servergebundene Kandidaten-ID
 
 Der vollständige kalte V3.9.11-LF-1+9-Lauf schloss die dynamische A-Seite mit
