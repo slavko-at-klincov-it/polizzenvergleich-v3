@@ -117,13 +117,14 @@ describe("LF_REFERENCE_A_DRIVEN_V2 product runner contract", () => {
   });
 
   test("passes empty and populated optional argument arrays safely under macOS Bash nounset", () => {
+    const runnerLines = source.split("\n").map((line) => line.trim());
     for (const name of [
       "A_CLASSIFICATION_RESUME_ARGS",
       "B_DECISION_RESUME_ARGS",
       "ABSENCE_SEED_ARGS",
     ]) {
       expect(source).toContain(`\"\${${name}[@]+\"\${${name}[@]}\"}\"`);
-      expect(source).not.toContain(`\"\${${name}[@]}\"`);
+      expect(runnerLines).not.toContain(`\"\${${name}[@]}\"`);
     }
 
     const empty = spawnSync(
