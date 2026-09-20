@@ -179,8 +179,9 @@ function selectADrivenBDecisionResumeSource({
       );
       if (!safeDirectory(outputRoot)) continue;
       safeJson(path.join(outputRoot, "decision-plan.private.json"));
-      const contiguousCompletedBatchArtifacts =
-        countContiguousBDecisionBatches(path.join(outputRoot, "batches"));
+      const contiguousCompletedBatchArtifacts = countContiguousBDecisionBatches(
+        path.join(outputRoot, "batches")
+      );
       const attemptArtifacts = countRegularFiles(
         path.join(outputRoot, "attempts"),
         ATTEMPT_RESULT_PATTERN,
