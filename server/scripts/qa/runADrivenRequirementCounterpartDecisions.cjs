@@ -724,7 +724,17 @@ function normalizeIdentityCoreModifierDifferences(batch, responses) {
       return { ...response, componentFindings };
     }
   );
-  return { responses: normalizedResponses, normalizations };
+  return {
+    responses: normalizedResponses,
+    normalizations: [
+      ...new Map(
+        normalizations.map((normalization) => [
+          stableStringify(normalization),
+          normalization,
+        ])
+      ).values(),
+    ],
+  };
 }
 
 function repairInstruction(batch, diagnostics = [], previousResponses = []) {

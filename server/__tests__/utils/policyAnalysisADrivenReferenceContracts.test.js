@@ -20252,6 +20252,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       customerFound: true,
       counterpartOutcome: "PARTIAL_COUNTERPART",
     });
+    expect(
+      normalizeIdentityCoreModifierDifferences(batch, [
+        response,
+        JSON.parse(JSON.stringify(response)),
+      ]).normalizations
+    ).toHaveLength(1);
   });
 
   test.each([
