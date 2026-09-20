@@ -21,9 +21,16 @@ werden nicht überschrieben.
 Auf dem Mac Studio bestanden 436/436 fokussierte Tests und Prettier. Die
 unveränderten Produktartefakte wurden bis Batch 71 revalidiert: 71/71 PASS,
 null Modellaufrufe und exakt eine protokollierte Normalisierung in Batch 71.
-Batch 72 ist damit der nächste echte Modellaufruf. Das vollständige
-Release-Gate, die Kundenaktivierung, der weitere Produktlauf und die
-abschließende Gold-Regression werden vor der Freigabe ergänzt.
+Batch 72 ist damit der nächste echte Modellaufruf.
+
+Der Runtime- und Teststand `fd4a569e6` bestand anschließend 212/212 Suites
+mit 3.131/3.131 Tests, alle drei Lints, Prisma, Capability-Inventar und
+Prettier. Auf dem ausschließlich dokumentarisch weitergebundenen Stand
+`80c693596` bestanden zusätzlich Capability-Validator, 4/4 fokussierte
+Inventartests, Prettier, Frontend-Produktionsbuild und
+macOS-Installer-Suite. Produktcode und Testcode sind zwischen beiden Commits
+byteidentisch. Kundenaktivierung, weiterer Produktlauf und abschließende
+Gold-Regression folgen nach Veröffentlichung des Release-Tags.
 
 Der bekannte LF-1+9-Lauf bleibt Regressionsevidenz. Er ist kein unabhängiger
 Generalisierungs- oder 99-Prozent-Nachweis.

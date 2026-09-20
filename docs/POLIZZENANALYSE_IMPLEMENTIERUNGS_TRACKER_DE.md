@@ -10676,8 +10676,17 @@ echte Modellaufruf. Das Batch-71-Artefakt liegt unter:
 Batch-71-Datei-SHA-256:
 `fa56ac0a0afe8da7ce06f82b30f64b24b639477272c50f331c7fa168844b9592`.
 
+Der Runtime- und Teststand `fd4a569e6` bestand danach auf dem Mac Studio das
+vollständige Gate mit 212/212 Suites und 3.131/3.131 Tests, Server-,
+Frontend- und Collector-Lint, Prisma, Capability-Inventar und Prettier. Der
+anschließende ausschließlich dokumentarische Inventar-Commit `80c693596`
+bindet denselben Nachweis an den aktuellen Change-Set; auf diesem exakten
+Stand bestanden Capability-Validator, 4/4 fokussierte Inventartests,
+Prettier, Frontend-Produktionsbuild und macOS-Installer-Suite. Produktcode und
+Testcode sind zwischen beiden Commits byteidentisch.
+
 Status: `ROOT CAUSE ALLGEMEIN BEHOBEN; BATCHES 1 BIS 71 OFFLINE PASS; NULL
-MODELLAUFRUFE; V3.9.13-RELEASE-GATE, DEPLOYMENT UND PRODUKT-RESUME
+MODELLAUFRUFE; V3.9.13-RELEASE-GATE PASS; DEPLOYMENT UND PRODUKT-RESUME
 AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
 
 Change-Set: `LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001`.
