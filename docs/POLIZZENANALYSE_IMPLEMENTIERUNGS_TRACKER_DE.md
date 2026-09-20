@@ -10691,6 +10691,56 @@ AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
 
 Change-Set: `LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001`.
 
+### 133.84 Leere optionale Runner-Argumente unter macOS Bash 3.2
+
+Der auf V3.9.14 gestartete Produktlauf
+`resume-f9609219013df5b56ebc3258` schloss die komponentenweise B-Prüfung mit
+210/210 PASS-Batches, 362 terminalen Requirements, 320 vorläufigen Funden,
+42 Fällen für die Vollkorpusprüfung und null ungeklärten Requirements ab.
+Unmittelbar vor der Abwesenheitsprüfung stoppte der Shell-Runner dennoch mit
+`ABSENCE_SEED_ARGS[@]: unbound variable`. Ursache war der Bash-3.2-Vertrag
+auf macOS: Auch eine initialisierte leere Arrayvariable kann bei `set -u` mit
+einer direkten `"${array[@]}"`-Expansion abbrechen. Derselbe latente Fehler
+bestand für die optionalen A- und B-Resume-Argumente.
+
+Der allgemeine Fix adaptiert `CAP-ORCH-001`, `CAP-B-006` und `CAP-B-007`.
+Alle drei optionalen Argumentlisten verwenden nun die Bash-3.2-sichere
+nounset-Expansion. Ein fehlendes Resume oder Seed übergibt exakt null
+Argumente; ein gesetztes Flag-/Wert-Paar bleibt einschließlich Leerzeichen im
+Wert unverändert. Prompt, Modell, Suche, Gold und fachliche Entscheidung
+bleiben unverändert. Der vorhandene vollständige B-Checkpoint wird dadurch
+nicht neu berechnet und kann beim späteren Produktresume übersprungen werden.
+
+Mac-Studio-Nachweise auf dem exakten Produkt- und Teststand
+`26c723da6dfa4da538eba05490f03da340f33b73` im isolierten Worktree
+`/private/tmp/lf-v3915-empty-optional-0bd2268ce` mit Node `v22.23.2`:
+
+```text
+Bash-Syntax und fokussierter Runnervertrag:  PASS, 7/7 Tests
+Vollständiger Jest-Gate:                     212/212 Suites, 3.134/3.134 Tests
+Server-/Frontend-/Collector-Lint:            PASS / PASS / PASS
+Prisma validate und generate:                PASS / PASS
+Capability-Inventar:                         PASS, 25 Capabilities
+Prettier des geänderten JavaScript-Tests:    PASS
+Frontend-Produktionsbuild:                   PASS, 6.170 Module
+macOS-Installer-Suite:                       PASS
+```
+
+Die ersten beiden vollständigen Harness-Versuche lieferten zusätzliche
+Umgebungsevidenz, aber keinen Produktfehler: Ohne Homebrew-/VM-Modul-Vertrag
+scheiterten ausschließlich drei vorhandene FFmpeg-Tests; mit versehentlich
+vorgezogenem Homebrew-Node 26 waren 22 CommonJS-Suites wegen der entfernten
+`SlowBuffer`-API inkompatibel. Mit der gebündelten Release-Runtime Node
+22.23.2 zuerst, Homebrew-FFmpeg danach und
+`NODE_OPTIONS=--experimental-vm-modules` bestand der vollständige Gate.
+
+Status: `ROOT CAUSE ALLGEMEIN BEHOBEN; VOLLSTÄNDIGER MAC-STUDIO-GATE PASS;
+DEPLOYMENT, PRODUKT-RESUME AB VOLLKORPUSPRÜFUNG UND GOLD-PRÜFUNG AUSSTEHEND;
+KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
+
+Change-Set: `LF-V3915-EMPTY-OPTIONAL-ARGUMENTS-20260920-001`.
+Paired Knowledge-Commit: `aeb8538dc`.
+
 ### 133.83 V3.9.13-Produktresume wählte den B-Vorgänger fälschlich über A
 
 Der nach dem V3.9.13-Deployment gestartete Produktresume bewies zunächst die
