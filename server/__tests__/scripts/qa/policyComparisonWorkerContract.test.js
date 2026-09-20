@@ -239,8 +239,15 @@ describe("policy comparison worker contract", () => {
     expect(source).toContain("LF_A_CLASSIFICATION_RESUME_PLAN_ROOT");
     expect(source).toContain("LF_A_CLASSIFICATION_RESUME_OUTPUT_ROOT");
     expect(source).toContain("LF_B_DECISION_RESUME_ROOT");
-    expect(source).toContain('"b-requirement-decisions"');
     expect(source).toContain("a-driven-b-decision-resume.private.json");
+    const resumeSelectionSource = fs.readFileSync(
+      path.join(
+        REPOSITORY_ROOT,
+        "server/utils/policyComparison/aDrivenPartialResumeSource.js"
+      ),
+      "utf8"
+    );
+    expect(resumeSelectionSource).toContain('"b-requirement-decisions"');
     expect(source).toContain('activeProductRunner.kill("SIGTERM")');
     expect(source).not.toContain("LF_1PLUS9_GOLD_V1");
   });
