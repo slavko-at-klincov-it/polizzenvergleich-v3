@@ -4271,7 +4271,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-20
 - Typ: `FEHLER`
-- Status: `BESTÄTIGT_IN_PRÜFUNG`
+- Status: `UMGESETZT_REGRESSION_BESTANDEN`
 - Aussage: Liefert das Modell für eine Identitätskern-Komponente
   `COUNTERPART_WITH_DIFFERENCE`, obwohl der Vertrag dort nur `MATCH`,
   `OPPOSITE`, `RELATED_ONLY` oder `NOT_ESTABLISHED` zulässt, darf der Server
@@ -4300,5 +4300,14 @@ Vollständigkeitsbehauptung erzeugen.
 - Beweisgrenze: bekannte LF-1+9-Regression und synthetische positive sowie
   negative Vertragsfälle; kein unabhängiger Holdout- oder
   99-Prozent-Nachweis.
+- Ergebnis: Der V3-Vertrag ist auf Commit `6ff6a6b0a` implementiert. Auf dem
+  Mac Studio bestanden 436/436 fokussierte Tests und Prettier. Die
+  unveränderten Produktartefakte wurden read-only bis einschließlich Batch 71
+  revalidiert: 71/71 PASS, null Modellaufrufe, null neue Modellversuche und
+  exakt eine protokollierte
+  `PERIL_OR_CAUSE: COUNTERPART_WITH_DIFFERENCE -> RELATED_ONLY`-
+  Normalisierung. Batch 72 bleibt der nächste echte Modellaufruf. Das
+  Batch-71-QA-Artefakt besitzt Datei-SHA-256
+  `fa56ac0a0afe8da7ce06f82b30f64b24b639477272c50f331c7fa168844b9592`.
 - Change-Set:
   `LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001`.

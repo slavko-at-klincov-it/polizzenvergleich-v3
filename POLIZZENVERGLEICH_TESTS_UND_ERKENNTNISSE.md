@@ -5315,6 +5315,47 @@ darf nicht als Generalisierungsnachweis ausgegeben werden.
 
 Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
 
+## 103. B-Batch 71: abweichender Identitätskern braucht einen unabhängigen Kernanker
+
+Der V3.9.12-Produktlauf bestand 70/210 B-Batches und stoppte Batch 71
+fail-closed. Das Modell hatte denselben Kandidaten über die fachliche
+Kostenrolle korrekt als Gegenstück erkannt, Gefahrenscope und Wert aber als
+Abweichung ausgewiesen. Die Darstellung der Gefahrenabweichung als
+`COUNTERPART_WITH_DIFFERENCE` verletzte den Identitätskernvertrag. Zwei
+semantisch plausible Antworten wurden deshalb abgewiesen; ein dritter
+Versuch lief in den harten Timeout und wurde sauber abgebrochen und
+wiederhergestellt.
+
+Der allgemeine V3-Vertrag normalisiert eine solche Kernabweichung nur zu
+`RELATED_ONLY`, wenn eine andere Identitätskern-Dimension jeden selben
+servergebundenen Kandidaten unabhängig mit `MATCH` belegt, eine ausdrückliche
+gleichdimensionale Abweichung jeden Kandidaten erklärt und keine weitere
+nichtmodifizierende Kerndifferenz vorliegt. Die Normalisierung darf keinen
+Treffer erzeugen und nie zu `MATCH` aufwerten. Identische Telemetrie aus
+mehreren gespeicherten Attempts wird dedupliziert.
+
+Auf dem Mac Studio bestanden auf Commit `6ff6a6b0a` 436/436 fokussierte Tests
+und Prettier. Eine read-only Revalidierung der unveränderten Produktartefakte
+materialisierte Batches 1 bis 71 unter dem aktuellen Vertrag mit null
+Modellaufrufen. Batch 71 bestand mit genau einer protokollierten
+`PERIL_OR_CAUSE -> RELATED_ONLY`-Normalisierung. Sein neues privates
+QA-Artefakt besitzt Datei-SHA-256
+`fa56ac0a0afe8da7ce06f82b30f64b24b639477272c50f331c7fa168844b9592`.
+
+**Positive Erkenntnis:** Ein fachlich bereits unabhängig belegtes
+Gegenstück kann seine abweichende zweite Kerndimension sichtbar behalten,
+ohne Fundstatus und Detailübereinstimmung zu vermischen.
+
+**Negative Erkenntnis:** Der Modellbegriff `COUNTERPART_WITH_DIFFERENCE` ist
+breiter als der serverseitige Komponentenvertrag; ein Retry allein behebt
+diese Repräsentationsdifferenz nicht zuverlässig.
+
+**Beweisgrenze:** Der Nachweis betrifft den Vertragsfix und das bekannte
+LF-1+9-Regressionsset. Vollständiger Produktlauf, Gold-Regression und ein
+unabhängiger Holdout stehen noch aus.
+
+Change-Set: `LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001`.
+
 ## 102. B-Batch-35: servergebundene IDs nur eindeutig mechanisch reparieren
 
 Der kalte V3.9.11-LF-1+9-Produktlauf schloss A mit 58/58 Batches, 362
