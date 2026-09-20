@@ -5342,6 +5342,13 @@ Modellaufrufen. Batch 71 bestand mit genau einer protokollierten
 QA-Artefakt besitzt Datei-SHA-256
 `fa56ac0a0afe8da7ce06f82b30f64b24b639477272c50f331c7fa168844b9592`.
 
+Der Runtime- und Teststand `fd4a569e6` bestand anschließend auf dem Mac Studio
+212/212 Suites mit 3.131/3.131 Tests, die drei Lints, Prisma,
+Capability-Inventar und Prettier. Der nur dokumentarisch nachfolgende
+Inventar-Commit `80c693596` bestand Capability-Validator, 4/4 fokussierte
+Inventartests, Prettier, Frontend-Produktionsbuild und Installer-Suite.
+Produkt- und Testcode sind zwischen beiden Commits unverändert.
+
 **Positive Erkenntnis:** Ein fachlich bereits unabhängig belegtes
 Gegenstück kann seine abweichende zweite Kerndimension sichtbar behalten,
 ohne Fundstatus und Detailübereinstimmung zu vermischen.
