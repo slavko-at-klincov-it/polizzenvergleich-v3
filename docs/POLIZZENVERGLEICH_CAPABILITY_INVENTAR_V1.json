@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V3912-BOUND-CANDIDATE-ID-RESUME-20260918-001",
+  "changeSetId": "LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
