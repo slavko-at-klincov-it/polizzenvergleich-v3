@@ -235,10 +235,12 @@ describe("policy comparison worker contract", () => {
     expect(source).toContain("embedding-contract.private.json");
     expect(source).toContain("LF_A_DRIVEN_EMBEDDING_CONTRACT_CHANGED");
     expect(source).toContain("selectADrivenPartialResumeSource");
+    expect(source).toContain("selectADrivenBDecisionResumeSource");
     expect(source).toContain("LF_A_CLASSIFICATION_RESUME_PLAN_ROOT");
     expect(source).toContain("LF_A_CLASSIFICATION_RESUME_OUTPUT_ROOT");
     expect(source).toContain("LF_B_DECISION_RESUME_ROOT");
     expect(source).toContain('"b-requirement-decisions"');
+    expect(source).toContain("a-driven-b-decision-resume.private.json");
     expect(source).toContain('activeProductRunner.kill("SIGTERM")');
     expect(source).not.toContain("LF_1PLUS9_GOLD_V1");
   });

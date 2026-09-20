@@ -4,6 +4,8 @@ const { stableStringify } = require("../policyAnalysis/aDrivenSourceUnitPlan");
 
 const RESUME_DIRECTORY_PATTERN = /^resume-[a-f0-9]{24}$/u;
 const BATCH_RESULT_PATTERN = /^\d{4}-AUB-[a-f0-9]+\.private\.json$/u;
+const B_DECISION_BATCH_RESULT_PATTERN =
+  /^(\d{5})-ADRB-[a-f0-9]+\.private\.json$/u;
 const ATTEMPT_RESULT_PATTERN = /^cycle-\d+-attempt-\d+\.private\.json$/u;
 
 function safeJson(file) {
@@ -50,6 +52,19 @@ function countRegularFiles(directory, pattern, recursive = false) {
     if (entry.isFile() && pattern.test(entry.name)) count += 1;
   }
   return count;
+}
+
+function countContiguousBDecisionBatches(directory) {
+  if (!fs.existsSync(directory) || !safeDirectory(directory)) return 0;
+  const indices = new Set();
+  for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (!entry.isFile() || entry.isSymbolicLink()) continue;
+    const match = entry.name.match(B_DECISION_BATCH_RESULT_PATTERN);
+    if (match) indices.add(Number(match[1]));
+  }
+  let contiguous = 0;
+  while (indices.has(contiguous)) contiguous += 1;
+  return contiguous;
 }
 
 function selectADrivenPartialResumeSource({
@@ -125,7 +140,79 @@ function selectADrivenPartialResumeSource({
   );
 }
 
+function selectADrivenBDecisionResumeSource({
+  sessionRunsRoot,
+  currentRunRoot,
+  currentContract,
+}) {
+  if (!fs.existsSync(sessionRunsRoot) || !safeDirectory(sessionRunsRoot))
+    return null;
+  const expectedIdentity = stableStringify(
+    releaseIndependentIdentity(currentContract)
+  );
+  const candidates = [];
+  for (const entry of fs.readdirSync(sessionRunsRoot, {
+    withFileTypes: true,
+  })) {
+    if (
+      !entry.isDirectory() ||
+      entry.isSymbolicLink() ||
+      !RESUME_DIRECTORY_PATTERN.test(entry.name)
+    )
+      continue;
+    const runRoot = path.join(sessionRunsRoot, entry.name);
+    if (path.resolve(runRoot) === path.resolve(currentRunRoot)) continue;
+    try {
+      if (!safeDirectory(runRoot)) continue;
+      const contract = safeJson(
+        path.join(runRoot, "run-contract.private.json")
+      );
+      if (
+        stableStringify(releaseIndependentIdentity(contract)) !==
+        expectedIdentity
+      )
+        continue;
+      const outputRoot = path.join(
+        runRoot,
+        "a-driven-v2",
+        "b-requirement-decisions"
+      );
+      if (!safeDirectory(outputRoot)) continue;
+      safeJson(path.join(outputRoot, "decision-plan.private.json"));
+      const contiguousCompletedBatchArtifacts =
+        countContiguousBDecisionBatches(path.join(outputRoot, "batches"));
+      const attemptArtifacts = countRegularFiles(
+        path.join(outputRoot, "attempts"),
+        ATTEMPT_RESULT_PATTERN,
+        true
+      );
+      if (contiguousCompletedBatchArtifacts === 0 && attemptArtifacts === 0)
+        continue;
+      candidates.push({
+        runRoot,
+        outputRoot,
+        contiguousCompletedBatchArtifacts,
+        attemptArtifacts,
+        modifiedAtMs: fs.statSync(runRoot).mtimeMs,
+      });
+    } catch {
+      continue;
+    }
+  }
+  return (
+    candidates.sort(
+      (left, right) =>
+        right.contiguousCompletedBatchArtifacts -
+          left.contiguousCompletedBatchArtifacts ||
+        right.attemptArtifacts - left.attemptArtifacts ||
+        right.modifiedAtMs - left.modifiedAtMs ||
+        left.runRoot.localeCompare(right.runRoot)
+    )[0] || null
+  );
+}
+
 module.exports = {
   releaseIndependentIdentity,
+  selectADrivenBDecisionResumeSource,
   selectADrivenPartialResumeSource,
 };

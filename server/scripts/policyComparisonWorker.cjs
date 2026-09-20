@@ -64,6 +64,7 @@ const {
   loadHybridShadowContract,
 } = require("../utils/policyAnalysis/hybridShadowSearch");
 const {
+  selectADrivenBDecisionResumeSource,
   selectADrivenPartialResumeSource,
 } = require("../utils/policyComparison/aDrivenPartialResumeSource");
 
@@ -429,14 +430,9 @@ function runADrivenReferenceProduct({
   generatedAt,
   logFile,
   partialResumeSource = null,
+  bDecisionResumeSource = null,
 }) {
-  const bDecisionResumeRoot = partialResumeSource
-    ? path.join(
-        partialResumeSource.runRoot,
-        "a-driven-v2",
-        "b-requirement-decisions"
-      )
-    : null;
+  const bDecisionResumeRoot = bDecisionResumeSource?.outputRoot || null;
   const bDecisionResumeStat = bDecisionResumeRoot
     ? fs.existsSync(bDecisionResumeRoot) && fs.lstatSync(bDecisionResumeRoot)
     : null;
@@ -469,11 +465,11 @@ function runADrivenReferenceProduct({
                   partialResumeSource.planRoot,
                 LF_A_CLASSIFICATION_RESUME_OUTPUT_ROOT:
                   partialResumeSource.outputRoot,
-                ...(bDecisionResumeStat?.isDirectory() &&
-                !bDecisionResumeStat.isSymbolicLink()
-                  ? { LF_B_DECISION_RESUME_ROOT: bDecisionResumeRoot }
-                  : {}),
               }
+            : {}),
+          ...(bDecisionResumeStat?.isDirectory() &&
+          !bDecisionResumeStat.isSymbolicLink()
+            ? { LF_B_DECISION_RESUME_ROOT: bDecisionResumeRoot }
             : {}),
         },
         stdio: ["ignore", log, log],
@@ -566,6 +562,13 @@ async function main() {
         currentContract: runContract,
       })
     : null;
+  const bDecisionResumeSource = aDrivenReferenceMode
+    ? selectADrivenBDecisionResumeSource({
+        sessionRunsRoot: path.join(policyComparisonsPath, "runs", sessionUuid),
+        currentRunRoot: runRoot,
+        currentContract: runContract,
+      })
+    : null;
   if (partialResumeSource)
     writePrivateJson(
       path.join(runRoot, "a-driven-partial-resume.private.json"),
@@ -577,6 +580,19 @@ async function main() {
         sourceOutputRoot: partialResumeSource.outputRoot,
         completedBatchArtifacts: partialResumeSource.completedBatchArtifacts,
         attemptArtifacts: partialResumeSource.attemptArtifacts,
+      }
+    );
+  if (bDecisionResumeSource)
+    writePrivateJson(
+      path.join(runRoot, "a-driven-b-decision-resume.private.json"),
+      {
+        schemaVersion: 1,
+        contractId: "LF_B_DECISION_RESUME_SOURCE_V1",
+        sourceRunRoot: bDecisionResumeSource.runRoot,
+        sourceOutputRoot: bDecisionResumeSource.outputRoot,
+        contiguousCompletedBatchArtifacts:
+          bDecisionResumeSource.contiguousCompletedBatchArtifacts,
+        attemptArtifacts: bDecisionResumeSource.attemptArtifacts,
       }
     );
   const responseCacheDirectory =
@@ -680,6 +696,7 @@ async function main() {
       generatedAt,
       logFile,
       partialResumeSource,
+      bDecisionResumeSource,
     });
     const resultDirectory = path.join(runRoot, "result");
     const published = validatePublishedComparisonArtifactSet(resultDirectory);
