@@ -21390,12 +21390,16 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       sourceCoverage: "ALL_EXTRACTED_B_CLAUSE_BOUNDARIES",
       customerNotFoundEligible: false,
     });
-    expect(factIndex.facts.some(({ deterministicSignals }) =>
-      deterministicSignals.roles.includes("INCLUSION")
-    )).toBe(true);
-    expect(factIndex.facts.some(({ deterministicSignals }) =>
-      deterministicSignals.roles.includes("LIMIT")
-    )).toBe(true);
+    expect(
+      factIndex.facts.some(({ deterministicSignals }) =>
+        deterministicSignals.roles.includes("INCLUSION")
+      )
+    ).toBe(true);
+    expect(
+      factIndex.facts.some(({ deterministicSignals }) =>
+        deterministicSignals.roles.includes("LIMIT")
+      )
+    ).toBe(true);
 
     const fastPlan = buildADrivenFastFallbackPlan({
       decisionPlan,
@@ -21572,9 +21576,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(() =>
       validateFingerprintResponse(
         fingerprintResponse.map((item, index) =>
-          index === 0
-            ? { ...item, semanticKeys: ["zu wenig"] }
-            : item
+          index === 0 ? { ...item, semanticKeys: ["zu wenig"] } : item
         ),
         firstFingerprintPartition
       )
@@ -21637,9 +21639,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     const responses = absencePlan.partitions.map((partition, index) => ({
       partitionId: partition.partitionId,
       decision:
-        index === 0
-          ? "COUNTERPART_PRESENT"
-          : "NO_COUNTERPART_IN_PARTITION",
+        index === 0 ? "COUNTERPART_PRESENT" : "NO_COUNTERPART_IN_PARTITION",
       candidateIds: index === 0 ? [partition.candidateIds[0]] : [],
       rationale:
         index === 0
@@ -21668,9 +21668,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
 
     const tampered = JSON.parse(JSON.stringify(factIndex));
     tampered.facts.pop();
-    expect(() => validateADrivenBFactIndex(tampered, { completeCorpus })).toThrow(
-      "LF_A_DRIVEN_B_FACT_INDEX_INVALID"
-    );
+    expect(() =>
+      validateADrivenBFactIndex(tampered, { completeCorpus })
+    ).toThrow("LF_A_DRIVEN_B_FACT_INDEX_INVALID");
   });
 
   test("indexes short B fragments with nearby complete-clause context without changing their source identity", () => {
@@ -21791,9 +21791,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       expect(window.exactText).toBe(
         exactText.slice(window.localStart, window.localEnd)
       );
-      expect(window.documentStart).toBe(
-        fact.documentStart + window.localStart
-      );
+      expect(window.documentStart).toBe(fact.documentStart + window.localStart);
       expect(window.documentEnd).toBe(fact.documentStart + window.localEnd);
     }
   });
@@ -21863,9 +21861,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       retrievalUnitStrategy: "SOURCE_WINDOWS",
       customerNotFoundEligible: false,
     });
-    expect(plan.summary.retrievalUnits).toBeGreaterThan(
-      factIndex.facts.length
-    );
+    expect(plan.summary.retrievalUnits).toBeGreaterThan(factIndex.facts.length);
     expect(
       plan.rows[0].candidateSelections.some(({ channels }) =>
         channels.includes("LEXICAL_BM25_SOURCE_WINDOW_GLOBAL")

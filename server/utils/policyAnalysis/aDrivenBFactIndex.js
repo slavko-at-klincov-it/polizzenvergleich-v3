@@ -5,9 +5,7 @@ const {
   rankLexicalCandidates,
   tokens,
 } = require("./counterpartRetrievalPrimitives");
-const {
-  validateADrivenCompleteBCorpus,
-} = require("./aDrivenCompleteBCorpus");
+const { validateADrivenCompleteBCorpus } = require("./aDrivenCompleteBCorpus");
 const {
   validateADrivenRequirementDecisionArtifact,
   validateADrivenRequirementDecisionPlan,
@@ -41,7 +39,11 @@ function sortedUnique(values) {
 
 function numericSignals(value) {
   return sortedUnique(
-    [...String(value || "").matchAll(/(?:€|EUR|Euro)?\s*\d[\d.,]*(?:\s*(?:%|€|EUR|Euro|m(?:²|2)?|qm|Tage?|Monate?|Jahre?))?/giu)]
+    [
+      ...String(value || "").matchAll(
+        /(?:€|EUR|Euro)?\s*\d[\d.,]*(?:\s*(?:%|€|EUR|Euro|m(?:²|2)?|qm|Tage?|Monate?|Jahre?))?/giu
+      ),
+    ]
       .map(([match]) => normalize(match))
       .filter((match) => /\d/u.test(match))
   );
@@ -64,10 +66,19 @@ function roleSignals(value) {
       "LIMIT",
       /\b(?:Höchst(?:betrag|entschädigung)|Limit|Versicherungssumme|Erstes\s+Risiko|maximal|höchstens|bis\s+zu)\b|%|€|\bEUR\b/iu,
     ],
-    ["CONDITION", /\b(?:sofern|wenn|falls|vorausgesetzt|soweit|unter\s+der\s+Voraussetzung)\b/iu],
-    ["TEMPORAL", /\b(?:Frist|Tage?|Monate?|Jahre?|Beginn|Ende|Dauer|Wartezeit)\b/iu],
+    [
+      "CONDITION",
+      /\b(?:sofern|wenn|falls|vorausgesetzt|soweit|unter\s+der\s+Voraussetzung)\b/iu,
+    ],
+    [
+      "TEMPORAL",
+      /\b(?:Frist|Tage?|Monate?|Jahre?|Beginn|Ende|Dauer|Wartezeit)\b/iu,
+    ],
     ["PRECEDENCE", /\b(?:ersetzt|vorrangig|Nachtrag|abweichend|subsidiär)\b/iu],
-    ["DEFINITION", /\b(?:gilt|gelten|versteht\s+man|zu\s+verstehen|ist\s+definiert)\b/iu],
+    [
+      "DEFINITION",
+      /\b(?:gilt|gelten|versteht\s+man|zu\s+verstehen|ist\s+definiert)\b/iu,
+    ],
     ["COST", /\b(?:Kosten|Mehrkosten|Aufwendungen)\b/iu],
   ];
   for (const [signal, pattern] of patterns)
@@ -326,10 +337,10 @@ function buildADrivenBRetrievalWindows(
   return windows;
 }
 
-function contextualRetrievalFacts(facts, {
-  maximumStandaloneTokens = 20,
-  maximumContextDistance = 1_200,
-} = {}) {
+function contextualRetrievalFacts(
+  facts,
+  { maximumStandaloneTokens = 20, maximumContextDistance = 1_200 } = {}
+) {
   const ordered = [...facts].sort(
     (left, right) =>
       left.documentStart - right.documentStart ||
@@ -553,8 +564,7 @@ function buildADrivenFastFallbackPlan({
   const batches = [];
   for (const row of decisionPlan.rows.filter(
     ({ requirementId }) =>
-      preliminaryById.get(requirementId)?.customerStatus ===
-      "FALLBACK_REQUIRED"
+      preliminaryById.get(requirementId)?.customerStatus === "FALLBACK_REQUIRED"
   )) {
     const query = requirementQuery(
       row,
@@ -628,43 +638,43 @@ function buildADrivenFastFallbackPlan({
             "LEXICAL_EXPANSION_BM25_SOURCE_WINDOW_GLOBAL"
           );
       } else {
-      const rawRanked = rankLexicalCandidates({
-        target: lexicalTarget,
-        candidates: globalRetrieval.rawFacts,
-        index: globalRetrieval.rawIndex,
-        topK: lexicalTopKPerDocument,
-      });
-      addRanked(rawRanked, "LEXICAL_BM25_GLOBAL");
-      const contextualRanked = rankLexicalCandidates({
-        target: lexicalTarget,
-        candidates: globalRetrieval.contextualFacts,
-        index: globalRetrieval.contextualIndex,
-        topK: lexicalTopKPerDocument,
-      });
-      addRanked(
-        contextualRanked.filter((fact) => fact.retrievalContext),
-        "LEXICAL_CONTEXT_BM25_GLOBAL"
-      );
-      if (expandedLexicalTarget) {
+        const rawRanked = rankLexicalCandidates({
+          target: lexicalTarget,
+          candidates: globalRetrieval.rawFacts,
+          index: globalRetrieval.rawIndex,
+          topK: lexicalTopKPerDocument,
+        });
+        addRanked(rawRanked, "LEXICAL_BM25_GLOBAL");
+        const contextualRanked = rankLexicalCandidates({
+          target: lexicalTarget,
+          candidates: globalRetrieval.contextualFacts,
+          index: globalRetrieval.contextualIndex,
+          topK: lexicalTopKPerDocument,
+        });
         addRanked(
-          rankLexicalCandidates({
-            target: expandedLexicalTarget,
-            candidates: globalRetrieval.rawFacts,
-            index: globalRetrieval.rawIndex,
-            topK: lexicalTopKPerDocument,
-          }),
-          "LEXICAL_EXPANSION_BM25_GLOBAL"
+          contextualRanked.filter((fact) => fact.retrievalContext),
+          "LEXICAL_CONTEXT_BM25_GLOBAL"
         );
-        addRanked(
-          rankLexicalCandidates({
-            target: expandedLexicalTarget,
-            candidates: globalRetrieval.contextualFacts,
-            index: globalRetrieval.contextualIndex,
-            topK: lexicalTopKPerDocument,
-          }).filter((fact) => fact.retrievalContext),
-          "LEXICAL_EXPANSION_CONTEXT_BM25_GLOBAL"
-        );
-      }
+        if (expandedLexicalTarget) {
+          addRanked(
+            rankLexicalCandidates({
+              target: expandedLexicalTarget,
+              candidates: globalRetrieval.rawFacts,
+              index: globalRetrieval.rawIndex,
+              topK: lexicalTopKPerDocument,
+            }),
+            "LEXICAL_EXPANSION_BM25_GLOBAL"
+          );
+          addRanked(
+            rankLexicalCandidates({
+              target: expandedLexicalTarget,
+              candidates: globalRetrieval.contextualFacts,
+              index: globalRetrieval.contextualIndex,
+              topK: lexicalTopKPerDocument,
+            }).filter((fact) => fact.retrievalContext),
+            "LEXICAL_EXPANSION_CONTEXT_BM25_GLOBAL"
+          );
+        }
       }
     } else {
       for (const document of factIndex.documents) {
@@ -734,9 +744,7 @@ function buildADrivenFastFallbackPlan({
       }
     }
     for (const fact of factIndex.facts) {
-      if (
-        query.phrases.some((phrase) => fact.normalizedText.includes(phrase))
-      )
+      if (query.phrases.some((phrase) => fact.normalizedText.includes(phrase)))
         add(fact, "EXACT_COMPONENT_PHRASE");
       if (
         query.numericValues.length &&
@@ -867,7 +875,10 @@ function buildADrivenFastFallbackReplay({
     factIndex.facts.map((fact) => [sourceKey(fact), fact])
   );
   const absenceCandidateById = new Map(
-    absencePlan.candidates.map((candidate) => [candidate.candidateId, candidate])
+    absencePlan.candidates.map((candidate) => [
+      candidate.candidateId,
+      candidate,
+    ])
   );
   const rowByRequirement = new Map(
     fastPlan.rows.map((row) => [row.requirementId, row])
@@ -878,7 +889,9 @@ function buildADrivenFastFallbackReplay({
       const expectedFactIds = sortedUnique(
         (result.selectedCandidateIds || []).map((candidateId) => {
           const candidate = absenceCandidateById.get(candidateId);
-          return candidate ? factBySource.get(sourceKey(candidate))?.factId : null;
+          return candidate
+            ? factBySource.get(sourceKey(candidate))?.factId
+            : null;
         })
       );
       const selected = new Set(

@@ -105,6 +105,14 @@ function evaluateProfile({
     knownPositiveFacts: replay.summary.knownPositiveFacts,
     recoveredPositiveFacts: replay.summary.recoveredPositiveFacts,
     positiveFactRecall: replay.summary.positiveFactRecall,
+    missedPositiveFactIds: replay.cases.flatMap(
+      ({ expectedPositiveFactIds, recoveredPositiveFactIds }) => {
+        const recovered = new Set(recoveredPositiveFactIds);
+        return expectedPositiveFactIds.filter(
+          (factId) => !recovered.has(factId)
+        );
+      }
+    ),
     missedRequirementIds: replay.cases
       .filter(({ recoveredAnyPositive }) => !recoveredAnyPositive)
       .map(({ requirementId }) => requirementId),
@@ -175,6 +183,21 @@ function run() {
         neighborRadius: 0,
         neighborAnchorLimit: 0,
       }))
+    ),
+    ...windowShapes.flatMap(([maximumTokens, overlapTokens]) =>
+      [8, 12, 20].flatMap((topK) =>
+        [1, 2, 4, 8].flatMap((neighborRadius) =>
+          [1, 2, 4].map((neighborAnchorLimit) => ({
+            profileId: `window-t${maximumTokens}-o${overlapTokens}-k${topK}-r${neighborRadius}-a${neighborAnchorLimit}`,
+            strategy: "SOURCE_WINDOWS",
+            topK,
+            maximumTokens,
+            overlapTokens,
+            neighborRadius,
+            neighborAnchorLimit,
+          }))
+        )
+      )
     ),
   ];
   const results = profiles.map((profile) =>
