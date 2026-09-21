@@ -27,7 +27,7 @@ const {
   requirementsForPartition,
 } = require("./runADrivenBCorpusLocatorShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V9";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V10";
 const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V9";
 const REUSABLE_RUN_CONTRACT_IDS = new Set([RUN_CONTRACT_ID]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -299,7 +299,23 @@ function validateAliasDecisionResponse(
 ) {
   const view = compactDecisionPromptView(decisionPlan, locatorPlan, partition);
   const mergedRequirementNumbers = new Set();
-  let responseItems = response;
+  const synthesizedEmptyFindingsNumbers = new Set();
+  let responseItems = Array.isArray(response)
+    ? response.map((item) => {
+        if (
+          item &&
+          Object.keys(item).sort().join(",") === "c,o,r" &&
+          item.o === "NOT_ESTABLISHED" &&
+          Array.isArray(item.c) &&
+          item.c.length === 0 &&
+          Number.isSafeInteger(item.r)
+        ) {
+          synthesizedEmptyFindingsNumbers.add(item.r);
+          return { ...item, f: [] };
+        }
+        return item;
+      })
+    : response;
   if (
     Array.isArray(responseItems) &&
     responseItems.length > view.requirements.length
@@ -400,6 +416,10 @@ function validateAliasDecisionResponse(
       item.f.map((finding) => [finding?.k, finding])
     );
     const deterministicNormalizations = [];
+    if (synthesizedEmptyFindingsNumbers.has(expected.r))
+      deterministicNormalizations.push({
+        reason: "NOT_ESTABLISHED_EMPTY_FINDINGS_SYNTHESIZED",
+      });
     if (mergedRequirementNumbers.has(expected.r))
       deterministicNormalizations.push({
         reason: "SPLIT_REQUIREMENT_ITEMS_MERGED",

@@ -21794,6 +21794,41 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         { k: 2, o: "NOT_ESTABLISHED", c: [] },
       ],
     });
+    const emptyNotEstablishedCompactDecision = validateAliasDecisionResponse(
+      [{ r: 1, o: "NOT_ESTABLISHED", c: [] }],
+      {
+        rows: [
+          {
+            requirementId: decisionPlan.rows[0].requirementId,
+            displayLabel: "Nicht belegte Leistung",
+            structurePath: [],
+            components: [
+              {
+                componentId: "role",
+                dimension: "FACT_ROLE",
+                label: "Kosten für eine Leistung",
+                identityCore: true,
+              },
+            ],
+          },
+        ],
+      },
+      routedWindowLocatorPlan,
+      routedWindowLocatorPlan.partitions[0],
+      12
+    );
+    expect(emptyNotEstablishedCompactDecision[0]).toMatchObject({
+      contextOutcome: "NOT_ESTABLISHED",
+      candidateFactIds: [],
+      deterministicNormalizations: [
+        { reason: "NOT_ESTABLISHED_EMPTY_FINDINGS_SYNTHESIZED" },
+        {
+          componentNumber: 1,
+          reason: "MISSING_COMPONENT_DOWNGRADED_TO_NOT_ESTABLISHED",
+        },
+      ],
+      componentFindings: [{ k: 1, o: "NOT_ESTABLISHED", c: [] }],
+    });
     const uncitedRelatedCompactDecision = validateAliasDecisionResponse(
       [
         {
@@ -21928,7 +21963,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     fs.writeFileSync(
       path.join(compactSeedOutput, "partition-000.private.json"),
       JSON.stringify({
-        contractId: "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V9",
+        contractId: "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V10",
         locatorPlanSha256: routedWindowLocatorPlan.planSha256,
         partitionId: routedWindowLocatorPlan.partitions[0].partitionId,
         attempts: [
