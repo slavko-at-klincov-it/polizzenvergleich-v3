@@ -22065,6 +22065,30 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     });
   });
 
+  test("keeps every allowed broad locator candidate instead of truncating recall", () => {
+    const factIds = Array.from({ length: 13 }, (_, index) => `fact-${index}`);
+    const plan = {
+      requirements: [
+        {
+          requirementId: "requirement-1",
+          candidateFactIds: factIds,
+        },
+      ],
+    };
+    const partition = {
+      factIds,
+      candidates: factIds.map((factId) => ({ factId })),
+    };
+
+    expect(
+      validateLocatorAliasResponse(
+        [{ r: 1, c: factIds.map((_, index) => index + 1) }],
+        plan,
+        partition
+      )[0].candidateFactIds
+    ).toEqual(factIds);
+  });
+
   test("ranks embedded source windows deterministically while retaining parent fact identities", () => {
     const windows = [
       {

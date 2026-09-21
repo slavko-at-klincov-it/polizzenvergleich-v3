@@ -31,9 +31,9 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V5";
-const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V5";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V5";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V6";
+const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V6";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V6";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -293,7 +293,7 @@ function prompt(plan, partition, repair = null) {
     {
       role: "system",
       content:
-        'Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede Anforderung r unabhängig gegen die vorgelegten B-Quelltexte. Nenne alle lokalen Kandidatennummern c, die möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthalten. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Pro Anforderung sind ausschließlich ihre erlaubten Kandidatennummern c zulässig. Im Zweifel aufnehmen; bloße Themenähnlichkeit nicht aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, höchstens 12 eindeutige c je r, keine Erläuterung und keine weiteren Felder.',
+        'Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede Anforderung r unabhängig gegen die vorgelegten B-Quelltexte. Nenne alle lokalen Kandidatennummern c, die möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthalten. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Pro Anforderung sind ausschließlich ihre erlaubten Kandidatennummern c zulässig. Im Zweifel aufnehmen; bloße Themenähnlichkeit nicht aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige c, keine Erläuterung und keine weiteren Felder.',
     },
     {
       role: "user",
@@ -381,7 +381,6 @@ function validateLocatorAliasResponse(response, plan, partition) {
       Object.keys(item).sort().join(",") !== "c,r" ||
       item.r !== expectedRequirementNumber ||
       !Array.isArray(item.c) ||
-      item.c.length > 12 ||
       new Set(item.c).size !== item.c.length ||
       item.c.some(
         (candidateNumber) =>
@@ -427,7 +426,7 @@ function validateLocatorResponse(response, plan, partition) {
     if (
       Object.keys(item).sort().join(",") !== "candidateFactIds,requirementId" ||
       !Array.isArray(item.candidateFactIds) ||
-      item.candidateFactIds.length > 12 ||
+      new Set(item.candidateFactIds).size !== item.candidateFactIds.length ||
       item.candidateFactIds.some((factId) => !allowed.has(factId))
     )
       throw new Error(
