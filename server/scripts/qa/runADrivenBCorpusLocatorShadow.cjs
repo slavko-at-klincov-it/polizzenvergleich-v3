@@ -10,6 +10,7 @@ const { OpenAI } = require("openai");
 const {
   A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID,
   buildADrivenBFactIndex,
+  buildADrivenFastFallbackPlan,
   buildADrivenFastFallbackReplay,
 } = require("../../utils/policyAnalysis/aDrivenBFactIndex");
 const {
@@ -65,12 +66,18 @@ function argumentsFrom(argv) {
     runRoot: path.resolve(values.runRoot),
     output: path.resolve(values.output),
     seedOutput: values.seedOutput ? path.resolve(values.seedOutput) : null,
+    queryExpansionArtifact: values.queryExpansionArtifact
+      ? path.resolve(values.queryExpansionArtifact)
+      : null,
     lmStudioSdk: values.lmStudioSdk ? path.resolve(values.lmStudioSdk) : null,
     qwenModelKey: values.qwenModelKey || null,
     model: values.model || DEFAULT_MODEL,
     modelContext: number("modelContext", DEFAULT_CONTEXT, 1_000),
     partitionMode: values.partitionMode || "CHARACTER",
     maximumAttempts: number("maximumAttempts", 2),
+    routeLexicalTopK: number("routeLexicalTopK", 20),
+    routeNeighborRadius: number("routeNeighborRadius", 8, 0),
+    routeNeighborAnchorLimit: number("routeNeighborAnchorLimit", 1, 0),
     maximumPartitionCharacters: number(
       "maximumPartitionCharacters",
       115_000,
@@ -195,6 +202,7 @@ function buildPlan({
   factIndex,
   maximumPartitionCharacters,
   partitionMode = "CHARACTER",
+  candidateFactIdsByRequirement = null,
 }) {
   validateADrivenRequirementDecisionPlan(decisionPlan);
   validateADrivenRequirementDecisionArtifact(preliminaryDecisions, decisionPlan);
@@ -205,7 +213,15 @@ function buildPlan({
   );
   const requirements = decisionPlan.rows
     .filter(({ requirementId }) => fallbackIds.has(requirementId))
-    .map(compactRequirement);
+    .map((row) => ({
+      ...compactRequirement(row),
+      ...(candidateFactIdsByRequirement
+        ? {
+            candidateFactIds:
+              candidateFactIdsByRequirement[row.requirementId] || [],
+          }
+        : {}),
+    }));
   if (!["CHARACTER", "DOCUMENT"].includes(partitionMode))
     throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_PARTITION_MODE_INVALID");
   const partitions =
@@ -230,6 +246,13 @@ function buildPlan({
       facts: factIndex.facts.length,
       partitions: partitions.length,
       modelRequests: partitions.length,
+      routedPairReviews: candidateFactIdsByRequirement
+        ? requirements.reduce(
+            (sum, requirement) =>
+              sum + requirement.candidateFactIds.length,
+            0
+          )
+        : null,
       customerNotFoundEligible: false,
     },
     proofLimit:
@@ -242,11 +265,22 @@ function buildPlan({
 }
 
 function prompt(plan, partition, repair = null) {
+  const partitionFactIds = new Set(partition.factIds);
+  const requirements = plan.requirements.map((requirement) => ({
+    ...requirement,
+    ...(requirement.candidateFactIds
+      ? {
+          candidateFactIds: requirement.candidateFactIds.filter((factId) =>
+            partitionFactIds.has(factId)
+          ),
+        }
+      : {}),
+  }));
   const messages = [
     {
       role: "system",
       content:
-        "Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede requirementId unabhängig gegen alle vorgelegten B-Klauseln und nenne jede factId, die möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthält. Im Zweifel aufnehmen; bloße Themenähnlichkeit nicht aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein JSON-Array in der vorgegebenen Anforderungsreihenfolge: [{requirementId,candidateFactIds:[...]}]. Jede requirementId genau einmal. Verwende nur vorgelegte factIds, maximal 12 pro requirementId, keine Erläuterung und keine weiteren Felder.",
+        "Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede requirementId unabhängig gegen alle vorgelegten B-Klauseln und nenne jede factId, die möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthält. Falls eine Anforderung candidateFactIds enthält, sind ausschließlich diese factIds für genau diese Anforderung zulässig; andere vorgelegte Klauseln dienen nur den anderen Anforderungen. Im Zweifel aufnehmen; bloße Themenähnlichkeit nicht aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein JSON-Array in der vorgegebenen Anforderungsreihenfolge: [{requirementId,candidateFactIds:[...]}]. Jede requirementId genau einmal. Verwende nur vorgelegte und für die Anforderung zugelassene factIds, maximal 12 pro requirementId, keine Erläuterung und keine weiteren Felder.",
     },
     {
       role: "user",
@@ -254,7 +288,7 @@ function prompt(plan, partition, repair = null) {
         contractId: RUN_CONTRACT_ID,
         promptContractId: PROMPT_CONTRACT_ID,
         partitionId: partition.partitionId,
-        requirements: plan.requirements,
+        requirements,
         candidates: partition.candidates,
       }),
     },
@@ -272,8 +306,19 @@ function validateLocatorResponse(response, plan, partition) {
     JSON.stringify(expectedIds)
   )
     throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_IDS_INVALID");
-  const allowed = new Set(partition.factIds);
+  const partitionFactIds = new Set(partition.factIds);
+  const allowedByRequirement = new Map(
+    plan.requirements.map((requirement) => [
+      requirement.requirementId,
+      new Set(
+        (requirement.candidateFactIds || partition.factIds).filter((factId) =>
+          partitionFactIds.has(factId)
+        )
+      ),
+    ])
+  );
   return response.map((item) => {
+    const allowed = allowedByRequirement.get(item.requirementId);
     if (
       Object.keys(item).sort().join(",") !==
         "candidateFactIds,requirementId" ||
@@ -467,12 +512,55 @@ async function run() {
     "LF_B_CORPUS_LOCATOR_ABSENCE_DECISIONS"
   );
   const factIndex = buildADrivenBFactIndex({ completeCorpus });
+  let candidateFactIdsByRequirement = null;
+  if (args.queryExpansionArtifact) {
+    const expansionArtifact = readJson(
+      args.queryExpansionArtifact,
+      "LF_B_CORPUS_LOCATOR_QUERY_EXPANSIONS"
+    );
+    const fallbackRequirementIds = preliminaryDecisions.results
+      .filter(({ customerStatus }) => customerStatus === "FALLBACK_REQUIRED")
+      .map(({ requirementId }) => requirementId);
+    if (
+      !Array.isArray(expansionArtifact.expansions) ||
+      JSON.stringify(
+        expansionArtifact.expansions.map(({ requirementId }) => requirementId)
+      ) !== JSON.stringify(fallbackRequirementIds)
+    )
+      throw new Error(
+        "LF_A_DRIVEN_B_CORPUS_LOCATOR_QUERY_EXPANSIONS_INVALID"
+      );
+    const queryExpansionsByRequirement = Object.fromEntries(
+      expansionArtifact.expansions.map(
+        ({ requirementId, searchPhrases }) => [requirementId, searchPhrases]
+      )
+    );
+    const routePlan = buildADrivenFastFallbackPlan({
+      decisionPlan,
+      preliminaryDecisions,
+      completeCorpus,
+      factIndex,
+      lexicalTopKPerDocument: args.routeLexicalTopK,
+      maximumBatchCharacters: 100_000,
+      retrievalScope: "GLOBAL",
+      neighborRadius: args.routeNeighborRadius,
+      neighborAnchorLimit: args.routeNeighborAnchorLimit,
+      queryExpansionsByRequirement,
+    });
+    candidateFactIdsByRequirement = Object.fromEntries(
+      routePlan.rows.map(({ requirementId, candidateFactIds }) => [
+        requirementId,
+        candidateFactIds,
+      ])
+    );
+  }
   const plan = buildPlan({
     decisionPlan,
     preliminaryDecisions,
     factIndex,
     maximumPartitionCharacters: args.maximumPartitionCharacters,
     partitionMode: args.partitionMode,
+    candidateFactIdsByRequirement,
   });
   fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });
   writePrivateJson(path.join(args.output, "locator-plan.private.json"), plan);

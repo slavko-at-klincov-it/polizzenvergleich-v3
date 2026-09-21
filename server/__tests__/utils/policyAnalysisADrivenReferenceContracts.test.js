@@ -21567,6 +21567,25 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         locatorPartitions[0]
       )
     ).toThrow("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_ITEM_INVALID");
+    expect(() =>
+      validateLocatorResponse(
+        [
+          {
+            requirementId: fallbackRequirementId,
+            candidateFactIds: [factIndex.facts[1].factId],
+          },
+        ],
+        {
+          requirements: [
+            {
+              requirementId: fallbackRequirementId,
+              candidateFactIds: [factIndex.facts[0].factId],
+            },
+          ],
+        },
+        locatorPartitions[0]
+      )
+    ).toThrow("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_ITEM_INVALID");
 
     const absencePlan = buildADrivenRequirementAbsencePlan({
       decisionPlan,
