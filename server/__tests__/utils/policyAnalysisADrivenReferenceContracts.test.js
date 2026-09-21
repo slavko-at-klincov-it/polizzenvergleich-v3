@@ -123,6 +123,7 @@ const {
   validateExpansionResponse,
 } = require("../../scripts/qa/runADrivenBQueryExpansionShadow.cjs");
 const {
+  buildPlan: buildBCorpusLocatorPlan,
   compactRequirement: compactBCorpusLocatorRequirement,
   partitionFacts: partitionBCorpusLocatorFacts,
   partitionFactsByDocument,
@@ -21425,6 +21426,25 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         fastPlan.summary.unassessedFactPairs
     ).toBe(completeCorpus.clauses.length);
     expect(fastPlan.rows[0].customerNotFoundEligible).toBe(false);
+
+    const routedLocatorPlan = buildBCorpusLocatorPlan({
+      decisionPlan,
+      preliminaryDecisions,
+      factIndex,
+      maximumPartitionCharacters: 20_000,
+      candidateFactIdsByRequirement: {
+        [decisionPlan.rows[0].requirementId]: [factIndex.facts[0].factId],
+      },
+    });
+    expect(routedLocatorPlan.summary).toMatchObject({
+      sourceFacts: factIndex.facts.length,
+      routedFacts: 1,
+      routedPairReviews: 1,
+      customerNotFoundEligible: false,
+    });
+    expect(
+      routedLocatorPlan.partitions.flatMap(({ factIds }) => factIds)
+    ).toEqual([factIndex.facts[0].factId]);
 
     const globalNeighborPlan = buildADrivenFastFallbackPlan({
       decisionPlan,

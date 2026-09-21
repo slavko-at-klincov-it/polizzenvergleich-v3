@@ -11,7 +11,7 @@ const {
   A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID,
   buildADrivenBFactIndex,
   buildADrivenFastFallbackPlan,
-  buildADrivenFastFallbackReplay,
+  buildADrivenTerminalEvidenceReplay,
 } = require("../../utils/policyAnalysis/aDrivenBFactIndex");
 const {
   validateADrivenRequirementDecisionArtifact,
@@ -30,9 +30,9 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V1";
-const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V1";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V1";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V2";
+const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V2";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V2";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -62,7 +62,7 @@ function argumentsFrom(argv) {
       fail(`--${name} ist ungültig`);
     return parsed;
   };
-  return {
+  const args = {
     runRoot: path.resolve(values.runRoot),
     output: path.resolve(values.output),
     seedOutput: values.seedOutput ? path.resolve(values.seedOutput) : null,
@@ -76,8 +76,12 @@ function argumentsFrom(argv) {
     partitionMode: values.partitionMode || "CHARACTER",
     maximumAttempts: number("maximumAttempts", 2),
     routeLexicalTopK: number("routeLexicalTopK", 20),
-    routeNeighborRadius: number("routeNeighborRadius", 8, 0),
-    routeNeighborAnchorLimit: number("routeNeighborAnchorLimit", 1, 0),
+    routeNeighborRadius: number("routeNeighborRadius", 0, 0),
+    routeNeighborAnchorLimit: number("routeNeighborAnchorLimit", 0, 0),
+    routeRetrievalUnitStrategy:
+      values.routeRetrievalUnitStrategy || "SOURCE_WINDOWS",
+    routeWindowMaximumTokens: number("routeWindowMaximumTokens", 32, 8),
+    routeWindowOverlapTokens: number("routeWindowOverlapTokens", 8, 0),
     maximumPartitionCharacters: number(
       "maximumPartitionCharacters",
       115_000,
@@ -91,6 +95,14 @@ function argumentsFrom(argv) {
     abortSettlementTimeoutMs: number("abortSettlementTimeoutMs", 15_000),
     modelRecoveryTimeoutMs: number("modelRecoveryTimeoutMs", 180_000),
   };
+  if (
+    !["PARENT_FACTS", "SOURCE_WINDOWS"].includes(
+      args.routeRetrievalUnitStrategy
+    ) ||
+    args.routeWindowOverlapTokens >= args.routeWindowMaximumTokens
+  )
+    fail("Routing-Fensterparameter sind ungültig");
+  return args;
 }
 
 function compactRequirement(row) {
@@ -224,13 +236,21 @@ function buildPlan({
     }));
   if (!["CHARACTER", "DOCUMENT"].includes(partitionMode))
     throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_PARTITION_MODE_INVALID");
+  const routedFactIds = candidateFactIdsByRequirement
+    ? new Set(Object.values(candidateFactIdsByRequirement).flat())
+    : null;
+  const routedFacts = routedFactIds
+    ? factIndex.facts.filter(({ factId }) => routedFactIds.has(factId))
+    : factIndex.facts;
+  if (routedFactIds && routedFacts.length !== routedFactIds.size)
+    throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_ROUTED_FACT_UNKNOWN");
   const partitions =
     partitionMode === "DOCUMENT"
       ? partitionFactsByDocument(
-          factIndex.facts,
+          routedFacts,
           maximumPartitionCharacters
         )
-      : partitionFacts(factIndex.facts, maximumPartitionCharacters);
+      : partitionFacts(routedFacts, maximumPartitionCharacters);
   const payload = {
     schemaVersion: 1,
     contractId: PLAN_CONTRACT_ID,
@@ -243,7 +263,8 @@ function buildPlan({
     partitions,
     summary: {
       requirements: requirements.length,
-      facts: factIndex.facts.length,
+      sourceFacts: factIndex.facts.length,
+      routedFacts: routedFacts.length,
       partitions: partitions.length,
       modelRequests: partitions.length,
       routedPairReviews: candidateFactIdsByRequirement
@@ -503,13 +524,13 @@ async function run() {
     "a-driven-v2/b-requirement-decisions/requirement-decisions.private.json",
     "LF_B_CORPUS_LOCATOR_PRELIMINARY_DECISIONS"
   );
-  const absencePlan = artifact(
-    "a-driven-v2/b-absence/absence-plan.private.json",
-    "LF_B_CORPUS_LOCATOR_ABSENCE_PLAN"
+  const rescuePlan = artifact(
+    "a-driven-v2/b-rescue/decision-plan.private.json",
+    "LF_B_CORPUS_LOCATOR_RESCUE_PLAN"
   );
-  const absenceDecisions = artifact(
-    "a-driven-v2/b-absence/absence-decisions.private.json",
-    "LF_B_CORPUS_LOCATOR_ABSENCE_DECISIONS"
+  const rescueDecisions = artifact(
+    "a-driven-v2/b-rescue/decisions/requirement-decisions.private.json",
+    "LF_B_CORPUS_LOCATOR_RESCUE_DECISIONS"
   );
   const factIndex = buildADrivenBFactIndex({ completeCorpus });
   let candidateFactIdsByRequirement = null;
@@ -546,6 +567,9 @@ async function run() {
       neighborRadius: args.routeNeighborRadius,
       neighborAnchorLimit: args.routeNeighborAnchorLimit,
       queryExpansionsByRequirement,
+      retrievalUnitStrategy: args.routeRetrievalUnitStrategy,
+      retrievalWindowMaximumTokens: args.routeWindowMaximumTokens,
+      retrievalWindowOverlapTokens: args.routeWindowOverlapTokens,
     });
     candidateFactIdsByRequirement = Object.fromEntries(
       routePlan.rows.map(({ requirementId, candidateFactIds }) => [
@@ -566,7 +590,7 @@ async function run() {
   writePrivateJson(path.join(args.output, "locator-plan.private.json"), plan);
   if (args.maximumNewPartitions === 0) {
     console.log(
-      `[lf-b-corpus-locator-shadow] PLAN: ${plan.summary.requirements} Anforderungen, ${plan.summary.facts} Fakten, ${plan.summary.partitions} Modellrequests; NICHT GEFUNDEN gesperrt`
+      `[lf-b-corpus-locator-shadow] PLAN: ${plan.summary.requirements} Anforderungen, ${plan.summary.routedFacts}/${plan.summary.sourceFacts} geroutete Fakten, ${plan.summary.partitions} Modellrequests; NICHT GEFUNDEN gesperrt`
     );
     return;
   }
@@ -655,11 +679,11 @@ async function run() {
     return;
   }
   const locatorFastPlan = replayPlan(plan, factIndex, results);
-  const replay = buildADrivenFastFallbackReplay({
+  const replay = buildADrivenTerminalEvidenceReplay({
     fastPlan: locatorFastPlan,
     factIndex,
-    absencePlan,
-    absenceDecisions,
+    rescuePlan,
+    rescueDecisions,
   });
   const summary = {
     schemaVersion: 1,
@@ -688,7 +712,7 @@ async function run() {
   writePrivateJson(path.join(args.output, "replay.private.json"), replay);
   writePrivateJson(path.join(args.output, "summary.private.json"), summary);
   console.log(
-    `[lf-b-corpus-locator-shadow] ${summary.recoveredPositiveFacts}/${summary.knownPositiveFacts} bekannte Rescue-Fakten; ${summary.shadowFactReviews} nominierte Paare; ${summary.modelRequests} Requests; ${summary.wallDurationMs} ms; NICHT GEFUNDEN gesperrt`
+    `[lf-b-corpus-locator-shadow] ${summary.recoveredTerminalEvidenceFacts}/${summary.expectedTerminalEvidenceFacts} finale Rescue-Evidenzfakten; ${summary.shadowFactReviews} nominierte Paare; ${summary.modelRequests} Requests; ${summary.wallDurationMs} ms; NICHT GEFUNDEN gesperrt`
   );
 }
 
