@@ -1148,3 +1148,17 @@ Auswahlen. Der Mac-Studio-Nachweis rematerialisierte Batches 1 bis 71 ohne
 Modellaufruf; Batch 72 ist der nächste produktive Schritt. Der vollständige
 1+9-Abschluss und die Gold-Regression stehen weiterhin aus. Das bekannte Set
 bleibt Regression und kein Holdout- oder 99-Prozent-Nachweis.
+
+Aktualisierung vom 21. September 2026: V3.9.15 schloss denselben bekannten
+1+9-Lauf vollständig ab. Alle 210 B-Batches wurden ohne neuen B-Modellaufruf
+übernommen. Nur 42 offene Anforderungen liefen durch die Vollkorpusprüfung;
+nur fünf danach auffällige Fälle gingen in Rescue. Das binäre Ergebnis lautet
+325 `GEFUNDEN`, 37 `NICHT GEFUNDEN`, null ungeklärt. XLSX, API und Download
+waren technisch konsistent. Die genau einmal ausgeführte Gold-283-V2-
+Regression bestätigte 128 von 139 messbaren Zeilen; drei False Positives und
+acht False Negatives bleiben. Die Gesamtlaufzeit betrug 4 h 56 min 59,852 s
+und verfehlt damit das ungefähr einstündige Produktziel deutlich. Technischer
+End-to-End-Abschluss ist belegt; fachliche Qualitäts-, Generalisierungs- und
+99-Prozent-Freigabe bleiben wegen der Goldabweichungen, einer fehlenden
+Crosswalk-Quelle und des nicht vorhandenen unabhängigen Mehrversicherer-
+Holdouts offen.

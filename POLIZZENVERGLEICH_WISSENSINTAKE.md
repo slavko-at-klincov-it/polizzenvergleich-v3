@@ -4372,7 +4372,7 @@ Vollständigkeitsbehauptung erzeugen.
 
 - Erfasst: 2026-09-20
 - Typ: `FEHLER`
-- Status: `BESTÄTIGT`
+- Status: `PROMOTED`
 - Aussage: Optionale Argumentlisten des dynamischen LF-Produktrunners dürfen
   unter der auf macOS vorhandenen Bash 3.2 und aktivem `set -u` weder einen
   Abbruch noch ein leeres Phantomargument erzeugen. Eine nicht gesetzte
@@ -4405,6 +4405,15 @@ Vollständigkeitsbehauptung erzeugen.
   ausführbare Leer-/Flag-Wert-Regressionsvertrag mit 7/7 Tests, der
   vollständige Jest-Gate mit 212/212 Suites und 3.134/3.134 Tests, alle drei
   Lints, Prisma, Capability-Inventar, Prettier, Frontend-Produktionsbuild und
-  macOS-Installer-Suite. Deployment, echter Produktresume ab der
-  Vollkorpusprüfung und Gold-Prüfung bleiben getrennte ausstehende Nachweise.
+  macOS-Installer-Suite. V3.9.15 wurde anschließend installiert; Updater und
+  Doctor bestanden. Der echte Produktresume übernahm 210/210 B-Batches mit
+  exakt null neuen B-Modellversuchen, prüfte nur die 42 offenen Anforderungen
+  im Vollkorpus, rescute nur die fünf danach auffälligen Fälle und endete mit
+  325 `GEFUNDEN`, 37 `NICHT GEFUNDEN` und null ungeklärten Zeilen. XLSX, API
+  und Download waren konsistent. Die genau einmal ausgeführte Gold-283-V2-
+  Regression ergab bei 139 messbaren Zeilen 128 Treffer, drei False Positives
+  und acht False Negatives. Die Gesamtlaufzeit von 4 h 56 min 59,852 s
+  verfehlt das ungefähr einstündige Produktziel; bekannte Fixture-Evidenz ist
+  weiterhin kein Holdout- oder 99-Prozent-Nachweis. Vollständige Evidenz:
+  `POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md`, Abschnitt 105.
 - Change-Set: `LF-V3915-EMPTY-OPTIONAL-ARGUMENTS-20260920-001`.

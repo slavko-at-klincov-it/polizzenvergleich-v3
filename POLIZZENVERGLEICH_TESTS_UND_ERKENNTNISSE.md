@@ -5315,6 +5315,67 @@ darf nicht als Generalisierungsnachweis ausgegeben werden.
 
 Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
 
+## 105. V3.9.15 schließt den bekannten 1+9-Produktlauf technisch ab
+
+Der V3.9.15-Resume der Session
+`79211e03-d5ce-44b6-9042-199e83f589a0` endete vollständig unter
+`resume-d8a73a30e2cf361b5e1b9f10`. Der Release-Commit
+`a9a91c766466ffaec90132dccdbe3fc59ac9c7a3`, Tag `v3.9.15`, der installierte
+Checkout und `origin/main` waren identisch; Updater und Doctor bestanden.
+
+Die wichtigste Resume-Evidenz ist eindeutig: 210/210 vorhandene B-Batches
+wurden übernommen, es gab exakt null neue B-Modellversuche. Von 362
+Requirements waren danach 320 vorläufig gefunden und exakt 42 für die
+Vollkorpusprüfung offen. Diese 42 wurden über 462/462 Partitionen geprüft.
+Zwei schemafeste Retries waren nötig, aber kein Timeout oder Abort. 37 Fälle
+wurden als nicht gefunden zertifiziert; nur fünf gingen in Rescue. Rescue
+prüfte genau diese fünf Fälle in fünf Batches, fand alle fünf und benötigte
+einen semantischen Retry wegen einer um ein Zeichen verkürzten Kandidaten-ID.
+
+```text
+Finale Requirements:      362
+GEFUNDEN:                 325
+NICHT GEFUNDEN:            37
+UNRESOLVED:                 0
+FULL_COUNTERPART:         197
+PARTIAL_COUNTERPART:      121
+CONTRADICTED:               7
+NO_COUNTERPART:            37
+Gesamtlaufzeit:            4 h 56 min 59,852 s
+Vollkorpusprüfung:         4 h 46 min 41,165 s
+Rescue:                    3 min 29,009 s
+```
+
+Die private XLSX-, API- und Downloadprüfung bestätigte dieselben 362 Zeilen
+und dieselbe 325/37-Verteilung. Das Workbook ist als ZIP und mit ExcelJS
+lesbar, besitzt ein Blatt mit 13 Spalten, keine Formel- oder Fehlerzellen und
+ist im Downloadarchiv bytegleich. XLSX-SHA-256:
+`0e89e2bf64107de2d540cc8fddc96f0e59574779c34de054754f69c5f2a4ff5d`.
+
+Vor der genau einmal ausgeführten Gold-283-V2-Auswertung blieben Datei- und
+interner Gold-SHA-256 unverändert
+(`f43f6216010dfc01db53fcb8c3b04b5bc5a49f657c2232ab9f2a2999021551d4` /
+`44300754f9bad315410f7805ecb1b8c4f4e65551e2dc8a5349ba41c8697edf37`).
+Von 139 messbaren und aufgelösten Goldzeilen stimmten 128 binär überein;
+elf wichen ab, davon drei False Positives und acht False Negatives. 144
+Zeilen bleiben konstruktionsgemäß ambig. Der Crosswalk deckt 282/283
+Legacy-Anforderungen ab. Das private Regressionsartefakt trägt Datei-SHA-256
+`f1a44ace42d0877d7fca303150a9636986c562b3cab1f43e14d553932b0a5042`.
+
+**Positive Erkenntnis:** Der Bash-3.2-Fix bewahrt den vollständigen B-Resume,
+der nachgelagerte Vollkorpus- und Rescuepfad endet ohne offene Anforderungen,
+und Publikation, API und XLSX bleiben intern konsistent.
+
+**Negative Erkenntnis:** Die fast fünfstündige Gesamtlaufzeit verfehlt das
+Produktziel von ungefähr einer Stunde deutlich. Elf messbare Goldabweichungen
+und eine fehlende Crosswalk-Quelle verhindern eine fachliche Freigabe.
+
+**Beweisgrenze:** Dies ist ein technischer End-to-End- und Fixture-
+Regressionsnachweis für das bekannte LF-1+9-Set. Es ist weder ein unabhängiger
+Mehrversicherer-Holdout noch ein Generalisierungs- oder 99-Prozent-Nachweis.
+
+Change-Set: `LF-V3915-EMPTY-OPTIONAL-ARGUMENTS-20260920-001`.
+
 ## 104. A- und B-Resume benötigen unabhängige Vorgängerauswahl
 
 Der produktive V3.9.13-Resume verwendete trotz einer offline belegten
