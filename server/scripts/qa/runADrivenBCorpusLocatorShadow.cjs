@@ -644,8 +644,8 @@ async function locatePartition({
 }) {
   const attempts = [];
   for (let attempt = 1; attempt <= args.maximumAttempts; attempt += 1) {
-    const allowedCandidateHint = locatorPromptView(plan, partition).requirements
-      .map(({ r, c }) => `r${r}=[${c.join(",")}]`)
+    const allowedCandidateHint = locatorPromptView(plan, partition)
+      .requirements.map(({ r, c }) => `r${r}=[${c.join(",")}]`)
       .join("; ");
     const repair = attempts.length
       ? `Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}] und bewerte jede Anforderung unabhängig. Erlaubte lokale Kandidaten sind verbindlich: ${allowedCandidateHint}.${plan.maximumSelectionsPerRequirement ? ` Nenne je r höchstens ${plan.maximumSelectionsPerRequirement} Kandidaten.` : ""}`
