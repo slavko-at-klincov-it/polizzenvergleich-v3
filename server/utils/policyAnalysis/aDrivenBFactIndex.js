@@ -355,12 +355,15 @@ function buildADrivenFastFallbackPlan({
   }
   const indexesByDocument = new Map(
     [...factsByDocument].map(([documentUuid, facts]) => {
-      const retrievalFacts = contextualRetrievalFacts(facts);
+      const rawFacts = facts.map((fact) => ({ ...fact }));
+      const contextualFacts = contextualRetrievalFacts(facts);
       return [
         documentUuid,
         {
-          facts: retrievalFacts,
-          index: bm25Index(retrievalFacts),
+          rawFacts,
+          rawIndex: bm25Index(rawFacts),
+          contextualFacts,
+          contextualIndex: bm25Index(contextualFacts),
         },
       ];
     })
@@ -392,23 +395,28 @@ function buildADrivenFastFallbackPlan({
     for (const document of factIndex.documents) {
       const documentFacts = factsByDocument.get(document.documentUuid) || [];
       const retrieval = indexesByDocument.get(document.documentUuid);
-      const ranked = rankLexicalCandidates({
-        target: {
-          query: query.text,
-          queryTokens: query.tokens,
-          phrases: query.phrases,
-        },
-        candidates: retrieval.facts,
-        index: retrieval.index,
+      const lexicalTarget = {
+        query: query.text,
+        queryTokens: query.tokens,
+        phrases: query.phrases,
+      };
+      const rawRanked = rankLexicalCandidates({
+        target: lexicalTarget,
+        candidates: retrieval.rawFacts,
+        index: retrieval.rawIndex,
         topK: lexicalTopKPerDocument,
       });
-      for (const fact of ranked)
-        add(
-          canonicalFactById.get(fact.factId),
-          fact.retrievalContext
-            ? "LEXICAL_CONTEXT_BM25"
-            : "LEXICAL_BM25"
-        );
+      for (const fact of rawRanked)
+        add(canonicalFactById.get(fact.factId), "LEXICAL_BM25");
+      const contextualRanked = rankLexicalCandidates({
+        target: lexicalTarget,
+        candidates: retrieval.contextualFacts,
+        index: retrieval.contextualIndex,
+        topK: lexicalTopKPerDocument,
+      });
+      for (const fact of contextualRanked)
+        if (fact.retrievalContext)
+          add(canonicalFactById.get(fact.factId), "LEXICAL_CONTEXT_BM25");
       for (const fact of documentFacts) {
         if (
           query.phrases.some((phrase) =>
