@@ -27,8 +27,8 @@ const {
   requirementsForPartition,
 } = require("./runADrivenBCorpusLocatorShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V4";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V4";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V5";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V5";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const OUTCOMES = new Set([
@@ -86,8 +86,8 @@ function argumentsFrom(argv) {
     model: values.model || DEFAULT_MODEL,
     modelContext: integer("modelContext", DEFAULT_CONTEXT, 1_000),
     maximumAttempts: integer("maximumAttempts", 2),
-    maximumEvidencePerRequirement: integer("maximumEvidencePerRequirement", 12),
-    maximumComponentsPerRequest: integer("maximumComponentsPerRequest", 8),
+    maximumEvidencePerRequirement: integer("maximumEvidencePerRequirement", 48),
+    maximumComponentsPerRequest: integer("maximumComponentsPerRequest", 1),
     requestTimeoutMs: integer("requestTimeoutMs", 300_000),
     abortSettlementTimeoutMs: integer("abortSettlementTimeoutMs", 15_000),
     modelRecoveryTimeoutMs: integer("modelRecoveryTimeoutMs", 180_000),
@@ -97,7 +97,7 @@ function argumentsFrom(argv) {
 function partitionCompactDecisionWork(
   decisionPlan,
   locatorPlan,
-  maximumComponentsPerRequest = 8
+  maximumComponentsPerRequest = 1
 ) {
   const sourceRowsById = new Map(
     decisionPlan.rows.map((row) => [row.requirementId, row])
@@ -313,6 +313,17 @@ function validateAliasDecisionResponse(
         deterministicNormalizations.push({
           componentNumber: expectedComponent.k,
           reason: "POSITIVE_CONTEXT_BINDS_IDENTITY_OR_COVERAGE_COMPONENT",
+        });
+      }
+      if (
+        finding?.o === "RELATED_ONLY" &&
+        Array.isArray(finding.c) &&
+        finding.c.length === 0
+      ) {
+        finding = { ...finding, o: "NOT_ESTABLISHED" };
+        deterministicNormalizations.push({
+          componentNumber: expectedComponent.k,
+          reason: "UNCITED_RELATED_ONLY_DOWNGRADED_TO_NOT_ESTABLISHED",
         });
       }
       if (

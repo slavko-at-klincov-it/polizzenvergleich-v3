@@ -21717,6 +21717,57 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         { k: 2, o: "MATCH", c: [1] },
       ],
     });
+    const uncitedRelatedCompactDecision = validateAliasDecisionResponse(
+      [
+        {
+          r: 1,
+          o: "MATCH",
+          c: [1],
+          f: [
+            { k: 1, o: "MATCH", c: [1] },
+            { k: 2, o: "RELATED_ONLY", c: [] },
+          ],
+        },
+      ],
+      {
+        rows: [
+          {
+            requirementId: decisionPlan.rows[0].requirementId,
+            displayLabel: "Sprengstoffexplosion",
+            structurePath: [],
+            components: [
+              {
+                componentId: "coverage",
+                dimension: "COVERAGE_EFFECT",
+                label: "Versichert sind",
+                identityCore: false,
+              },
+              {
+                componentId: "peril",
+                dimension: "PERIL_OR_CAUSE",
+                label: "Sprengstoffexplosion",
+                identityCore: true,
+              },
+            ],
+          },
+        ],
+      },
+      routedWindowLocatorPlan,
+      routedWindowLocatorPlan.partitions[0],
+      12
+    );
+    expect(uncitedRelatedCompactDecision[0]).toMatchObject({
+      deterministicNormalizations: [
+        {
+          componentNumber: 2,
+          reason: "UNCITED_RELATED_ONLY_DOWNGRADED_TO_NOT_ESTABLISHED",
+        },
+      ],
+      componentFindings: [
+        { k: 1, o: "MATCH", c: [1] },
+        { k: 2, o: "NOT_ESTABLISHED", c: [] },
+      ],
+    });
 
     const globalNeighborPlan = buildADrivenFastFallbackPlan({
       decisionPlan,
