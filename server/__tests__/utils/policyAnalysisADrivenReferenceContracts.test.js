@@ -21928,7 +21928,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     fs.writeFileSync(
       path.join(compactSeedOutput, "partition-000.private.json"),
       JSON.stringify({
-        contractId: "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V6",
+        contractId: "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V9",
         locatorPlanSha256: routedWindowLocatorPlan.planSha256,
         partitionId: routedWindowLocatorPlan.partitions[0].partitionId,
         attempts: [
