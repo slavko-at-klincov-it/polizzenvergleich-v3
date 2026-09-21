@@ -21718,6 +21718,54 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         { k: 2, o: "MATCH", c: [1] },
       ],
     });
+    const missingConditionCompactDecision = validateAliasDecisionResponse(
+      [
+        {
+          r: 1,
+          o: "MATCH",
+          c: [1],
+          f: [{ k: 1, o: "MATCH", c: [1] }],
+        },
+      ],
+      {
+        rows: [
+          {
+            requirementId: decisionPlan.rows[0].requirementId,
+            displayLabel: "Ersatz nur wenn keine Sturmdeckung besteht",
+            structurePath: [],
+            components: [
+              {
+                componentId: "object",
+                dimension: "OBJECT",
+                label: "Ersatz aus der Haftpflichtversicherung",
+                identityCore: true,
+              },
+              {
+                componentId: "condition",
+                dimension: "CONDITION",
+                label: "wenn keine Sturmdeckung besteht",
+                identityCore: false,
+              },
+            ],
+          },
+        ],
+      },
+      routedWindowLocatorPlan,
+      routedWindowLocatorPlan.partitions[0],
+      12
+    );
+    expect(missingConditionCompactDecision[0]).toMatchObject({
+      deterministicNormalizations: [
+        {
+          componentNumber: 2,
+          reason: "MISSING_COMPONENT_DOWNGRADED_TO_NOT_ESTABLISHED",
+        },
+      ],
+      componentFindings: [
+        { k: 1, o: "MATCH", c: [1] },
+        { k: 2, o: "NOT_ESTABLISHED", c: [] },
+      ],
+    });
     const uncitedRelatedCompactDecision = validateAliasDecisionResponse(
       [
         {

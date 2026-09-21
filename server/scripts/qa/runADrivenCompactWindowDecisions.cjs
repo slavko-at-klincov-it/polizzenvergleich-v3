@@ -27,10 +27,11 @@ const {
   requirementsForPartition,
 } = require("./runADrivenBCorpusLocatorShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V7";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V7";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V8";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V8";
 const REUSABLE_RUN_CONTRACT_IDS = new Set([
   "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V6",
+  "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V7",
   RUN_CONTRACT_ID,
 ]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
@@ -389,6 +390,17 @@ function validateAliasDecisionResponse(
         deterministicNormalizations.push({
           componentNumber: expectedComponent.k,
           reason: "POSITIVE_CONTEXT_BINDS_IDENTITY_OR_COVERAGE_COMPONENT",
+        });
+      }
+      if (!finding) {
+        finding = {
+          k: expectedComponent.k,
+          o: "NOT_ESTABLISHED",
+          c: [],
+        };
+        deterministicNormalizations.push({
+          componentNumber: expectedComponent.k,
+          reason: "MISSING_COMPONENT_DOWNGRADED_TO_NOT_ESTABLISHED",
         });
       }
       if (
