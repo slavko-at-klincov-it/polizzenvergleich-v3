@@ -31,9 +31,9 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V8";
-const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V8";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V8";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V9";
+const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V9";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V9";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -79,6 +79,16 @@ function argumentsFrom(argv) {
     routeLexicalTopK: number("routeLexicalTopK", 20),
     routeNeighborRadius: number("routeNeighborRadius", 0, 0),
     routeNeighborAnchorLimit: number("routeNeighborAnchorLimit", 0, 0),
+    routeMaximumPrimaryReuseCandidates: number(
+      "routeMaximumPrimaryReuseCandidates",
+      4,
+      0
+    ),
+    routeMaximumExactPhraseCandidates: number(
+      "routeMaximumExactPhraseCandidates",
+      12,
+      0
+    ),
     routeRetrievalUnitStrategy:
       values.routeRetrievalUnitStrategy || "SOURCE_WINDOWS",
     routeWindowMaximumTokens: number("routeWindowMaximumTokens", 32, 8),
@@ -798,6 +808,9 @@ async function run() {
       retrievalUnitStrategy: args.routeRetrievalUnitStrategy,
       retrievalWindowMaximumTokens: args.routeWindowMaximumTokens,
       retrievalWindowOverlapTokens: args.routeWindowOverlapTokens,
+      maximumPrimaryReuseCandidates:
+        args.routeMaximumPrimaryReuseCandidates,
+      maximumExactPhraseCandidates: args.routeMaximumExactPhraseCandidates,
     });
     candidateFactIdsByRequirement = Object.fromEntries(
       routePlan.rows.map((row) => [

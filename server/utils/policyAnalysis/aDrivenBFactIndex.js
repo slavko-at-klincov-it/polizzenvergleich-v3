@@ -17,7 +17,7 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // Unselected facts stay visible as UNASSESSED and can never become NOT_FOUND.
 const A_DRIVEN_B_FACT_INDEX_CONTRACT_ID = "LF_A_DRIVEN_B_FACT_INDEX_V1";
 const A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID =
-  "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V2";
+  "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V3";
 const A_DRIVEN_FAST_FALLBACK_REPLAY_CONTRACT_ID =
   "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V2";
 const A_DRIVEN_TERMINAL_EVIDENCE_REPLAY_CONTRACT_ID =
@@ -449,6 +449,8 @@ function buildADrivenFastFallbackPlan({
   retrievalUnitStrategy = "PARENT_FACTS",
   retrievalWindowMaximumTokens = 48,
   retrievalWindowOverlapTokens = 12,
+  maximumPrimaryReuseCandidates = null,
+  maximumExactPhraseCandidates = null,
 } = {}) {
   validateADrivenRequirementDecisionPlan(decisionPlan);
   validateADrivenRequirementDecisionArtifact(
@@ -471,6 +473,12 @@ function buildADrivenFastFallbackPlan({
     neighborAnchorLimit < 0 ||
     neighborAnchorLimit > lexicalTopKPerDocument ||
     !["PARENT_FACTS", "SOURCE_WINDOWS"].includes(retrievalUnitStrategy) ||
+    (maximumPrimaryReuseCandidates !== null &&
+      (!Number.isInteger(maximumPrimaryReuseCandidates) ||
+        maximumPrimaryReuseCandidates < 0)) ||
+    (maximumExactPhraseCandidates !== null &&
+      (!Number.isInteger(maximumExactPhraseCandidates) ||
+        maximumExactPhraseCandidates < 0)) ||
     !queryExpansionsByRequirement ||
     typeof queryExpansionsByRequirement !== "object" ||
     Array.isArray(queryExpansionsByRequirement)
@@ -593,6 +601,7 @@ function buildADrivenFastFallbackPlan({
     const selected = new Map();
     const selectedRetrievalUnitIds = new Set();
     const neighborAnchors = new Set();
+    const primaryReuseCandidates = new Map();
     const add = (fact, channel) => {
       const existing = selected.get(fact.factId);
       if (existing)
@@ -609,10 +618,7 @@ function buildADrivenFastFallbackPlan({
       const fact =
         factBySource.get(sourceKey(candidate)) ||
         factByClause.get(clauseKey(candidate));
-      if (fact) {
-        add(fact, "PRIMARY_REUSE");
-        if (neighborAnchorLimit > 0) neighborAnchors.add(fact.factId);
-      }
+      if (fact) primaryReuseCandidates.set(fact.factId, fact);
     }
     const lexicalTarget = {
       query: query.text,
@@ -629,6 +635,23 @@ function buildADrivenFastFallbackPlan({
           phrases: query.phrases,
         }
       : null;
+    const boundedFacts = (facts, maximumCandidates) => {
+      if (maximumCandidates === null) return facts;
+      if (maximumCandidates === 0 || facts.length === 0) return [];
+      return rankLexicalCandidates({
+        target: expandedLexicalTarget || lexicalTarget,
+        candidates: facts,
+        index: bm25Index(facts),
+        topK: Math.min(maximumCandidates, facts.length),
+      });
+    };
+    for (const fact of boundedFacts(
+      [...primaryReuseCandidates.values()],
+      maximumPrimaryReuseCandidates
+    )) {
+      add(fact, "PRIMARY_REUSE");
+      if (neighborAnchorLimit > 0) neighborAnchors.add(fact.factId);
+    }
     const addRanked = (ranked, channel) => {
       for (const unit of ranked) {
         const factId = unit.parentFactId || unit.factId;
@@ -765,9 +788,15 @@ function buildADrivenFastFallbackPlan({
         }
       }
     }
+    const exactPhraseCandidates = factIndex.facts.filter((fact) =>
+      query.phrases.some((phrase) => fact.normalizedText.includes(phrase))
+    );
+    for (const fact of boundedFacts(
+      exactPhraseCandidates,
+      maximumExactPhraseCandidates
+    ))
+      add(fact, "EXACT_COMPONENT_PHRASE");
     for (const fact of factIndex.facts) {
-      if (query.phrases.some((phrase) => fact.normalizedText.includes(phrase)))
-        add(fact, "EXACT_COMPONENT_PHRASE");
       if (
         query.numericValues.length &&
         query.numericValues.some((value) =>
@@ -859,6 +888,8 @@ function buildADrivenFastFallbackPlan({
       retrievalUnitStrategy === "SOURCE_WINDOWS"
         ? retrievalWindowOverlapTokens
         : null,
+    maximumPrimaryReuseCandidates,
+    maximumExactPhraseCandidates,
     rows,
     batches,
     summary: {
@@ -881,6 +912,8 @@ function buildADrivenFastFallbackPlan({
       ).length,
       retrievalUnitStrategy,
       retrievalUnits: retrievalUnits.length,
+      maximumPrimaryReuseCandidates,
+      maximumExactPhraseCandidates,
       customerNotFoundEligible: false,
     },
     proofLimit:

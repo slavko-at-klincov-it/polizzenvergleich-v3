@@ -21432,6 +21432,32 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ).toBe(completeCorpus.clauses.length);
     expect(fastPlan.rows[0].customerNotFoundEligible).toBe(false);
 
+    const cappedPlan = buildADrivenFastFallbackPlan({
+      decisionPlan,
+      preliminaryDecisions,
+      completeCorpus,
+      factIndex,
+      lexicalTopKPerDocument: 1,
+      maximumBatchCharacters: 10_000,
+      retrievalScope: "GLOBAL",
+      maximumPrimaryReuseCandidates: 0,
+      maximumExactPhraseCandidates: 0,
+    });
+    expect(cappedPlan.summary).toMatchObject({
+      maximumPrimaryReuseCandidates: 0,
+      maximumExactPhraseCandidates: 0,
+    });
+    expect(
+      cappedPlan.rows[0].candidateSelections.every(({ channels }) =>
+        channels.every(
+          (channel) =>
+            channel !== "PRIMARY_REUSE" &&
+            channel !== "EXACT_COMPONENT_PHRASE"
+        )
+      )
+    ).toBe(true);
+    expect(cappedPlan.summary.selectedFactReviews).toBeGreaterThan(0);
+
     const routedLocatorPlan = buildBCorpusLocatorPlan({
       decisionPlan,
       preliminaryDecisions,
