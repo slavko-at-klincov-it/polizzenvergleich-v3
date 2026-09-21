@@ -73,7 +73,9 @@ function argumentsFrom(argv) {
   const maximumRequirementsPerBatch = Number(
     values.maximumRequirementsPerBatch || 8
   );
-  const maximumBatchCharacters = Number(values.maximumBatchCharacters || 70_000);
+  const maximumBatchCharacters = Number(
+    values.maximumBatchCharacters || 70_000
+  );
   if (
     !Number.isSafeInteger(maximumRequirementsPerBatch) ||
     maximumRequirementsPerBatch < 1 ||
@@ -96,10 +98,7 @@ function candidateCatalog(locatorPlan) {
   for (const partition of locatorPlan.partitions || [])
     for (const candidate of partition.candidates || []) {
       const existing = byWindowId.get(candidate.factId);
-      if (
-        existing &&
-        stableStringify(existing) !== stableStringify(candidate)
-      )
+      if (existing && stableStringify(existing) !== stableStringify(candidate))
         throw new Error(
           `LF_A_DRIVEN_ROUTED_WINDOW_CANDIDATE_CONFLICT:${candidate.factId}`
         );
