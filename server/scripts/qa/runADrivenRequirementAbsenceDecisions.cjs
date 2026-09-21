@@ -29,8 +29,8 @@ const {
 } = require("./runADrivenReferenceClassification.cjs");
 
 const RUN_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_RUN_V1";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V4";
-const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_TRANSPORT_V1";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V5";
+const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_TRANSPORT_V2";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
@@ -68,6 +68,7 @@ function argumentsFrom(argv) {
     "modelContext",
     "maximumAttempts",
     "maximumPartitionCharacters",
+    "maximumRequirementsPerRequest",
     "requestTimeoutMs",
     "abortSettlementTimeoutMs",
     "modelRecoveryTimeoutMs",
@@ -116,6 +117,10 @@ function argumentsFrom(argv) {
       "maximumPartitionCharacters",
       80_000,
       10_000
+    ),
+    maximumRequirementsPerRequest: integer(
+      "maximumRequirementsPerRequest",
+      8
     ),
     requestTimeoutMs: integer("requestTimeoutMs", DEFAULT_REQUEST_TIMEOUT_MS),
     abortSettlementTimeoutMs: integer(
@@ -459,6 +464,118 @@ function parseSingleDecision(value) {
   return parsed[0];
 }
 
+function parseDecisionBatch(value, expectedPartitionIds) {
+  const normalized = String(value || "")
+    .replace(/<think>[\s\S]*?<\/think>/giu, "")
+    .trim();
+  let parsed;
+  if (normalized.startsWith("[") && normalized.endsWith("]"))
+    parsed = JSON.parse(normalized);
+  else if (
+    expectedPartitionIds.length === 1 &&
+    normalized.startsWith("{") &&
+    normalized.endsWith("}")
+  )
+    parsed = [JSON.parse(normalized)];
+  else
+    throw new Error(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_JSON_VALUE_MISSING"
+    );
+  if (!Array.isArray(parsed) || parsed.length !== expectedPartitionIds.length)
+    throw new Error(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_RESPONSE_COUNT_INVALID"
+    );
+  const expected = new Set(expectedPartitionIds);
+  const observed = parsed.map(({ partitionId }) => partitionId);
+  if (
+    new Set(observed).size !== observed.length ||
+    observed.some((partitionId) => !expected.has(partitionId)) ||
+    expectedPartitionIds.some((partitionId) => !observed.includes(partitionId))
+  )
+    throw new Error(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_PARTITION_IDS_INVALID"
+    );
+  const byPartitionId = new Map(
+    parsed.map((response) => [response.partitionId, response])
+  );
+  return expectedPartitionIds.map((partitionId) =>
+    byPartitionId.get(partitionId)
+  );
+}
+
+function sharedPartitionKey(partition) {
+  return stableStringify({
+    documentUuid: partition.documentUuid,
+    documentSha256: partition.documentSha256,
+    documentPosition: partition.documentPosition,
+    partitionIndex: partition.partitionIndex,
+    candidateIds: partition.candidateIds,
+  });
+}
+
+function buildPartitionRequestBatches({
+  plan,
+  partitions = plan?.partitions,
+  maximumRequirementsPerRequest = 8,
+} = {}) {
+  validateADrivenRequirementAbsencePlan(plan);
+  if (
+    !Array.isArray(partitions) ||
+    partitions.length === 0 ||
+    !Number.isInteger(maximumRequirementsPerRequest) ||
+    maximumRequirementsPerRequest < 1
+  )
+    throw new Error(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_REQUEST_BATCH_INPUT_INVALID"
+    );
+  const planIndexes = new Map(
+    plan.partitions.map((partition, partitionIndex) => [
+      partition.partitionId,
+      partitionIndex,
+    ])
+  );
+  const groups = new Map();
+  for (const partition of partitions) {
+    const partitionIndex = planIndexes.get(partition?.partitionId);
+    if (
+      partitionIndex === undefined ||
+      stableStringify(plan.partitions[partitionIndex]) !==
+        stableStringify(partition)
+    )
+      throw new Error(
+        "LF_A_DRIVEN_REQUIREMENT_ABSENCE_REQUEST_BATCH_PARTITION_INVALID"
+      );
+    const key = sharedPartitionKey(partition);
+    const group = groups.get(key) || [];
+    group.push({ partition, partitionIndex });
+    groups.set(key, group);
+  }
+  const batches = [];
+  for (const entries of groups.values())
+    for (
+      let offset = 0;
+      offset < entries.length;
+      offset += maximumRequirementsPerRequest
+    ) {
+      const batchEntries = entries.slice(
+        offset,
+        offset + maximumRequirementsPerRequest
+      );
+      const identity = {
+        promptContractId: PROMPT_CONTRACT_ID,
+        absencePlanSha256: plan.planSha256,
+        partitionIds: batchEntries.map(({ partition }) =>
+          partition.partitionId
+        ),
+      };
+      batches.push({
+        batchId: `ABX-${sha256(stableStringify(identity)).slice(0, 24)}`,
+        entries: batchEntries,
+      });
+    }
+  return batches;
+}
+
 function jsonObjectsFromText(value) {
   const source = String(value || "");
   const objects = [];
@@ -768,6 +885,80 @@ function prompt(plan, partition, repair = null) {
   return messages;
 }
 
+function promptBatch(plan, entries, repair = null) {
+  if (!Array.isArray(entries) || entries.length === 0)
+    throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_BATCH_INVALID");
+  const [first] = entries;
+  const sharedKey = sharedPartitionKey(first.partition);
+  if (
+    entries.some(
+      ({ partition }) => sharedPartitionKey(partition) !== sharedKey
+    )
+  )
+    throw new Error(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_BATCH_CONTEXT_MISMATCH"
+    );
+  const allowed = new Set(first.partition.candidateIds);
+  const candidates = plan.candidates.filter(({ candidateId }) =>
+    allowed.has(candidateId)
+  );
+  const reviews = entries.map(({ partition }) => ({
+    partitionId: partition.partitionId,
+    requirement: plan.requirements.find(
+      ({ requirementId }) => requirementId === partition.requirementId
+    ),
+  }));
+  const messages = [
+    {
+      role: "system",
+      content:
+        "Du prüfst eine vollständige, servergebundene Partition originaler B-Klauseln unabhängig gegen mehrere dynamisch aus A ermittelte Anforderungen. Entscheide für jede review.partitionId separat, ob mindestens eine vorgelegte Klausel ein Gegenstück zum selben fachlichen Kern enthält. Abweichende Werte, Limits, Bedingungen, Umfänge oder ein ausdrücklicher Ausschluss zählen als Gegenstück. Ein ausdrücklich umfassender Oberbegriff kann den enger benannten Unterfall aus A abdecken, wenn Kontext und fachliche Rolle übereinstimmen; verlange dann nicht den identischen Spezialwortlaut. Eine funktional gleiche Vertragswirkung zählt ebenfalls, auch wenn Maßnahme oder Formulierung abweichen. Dagegen genügt eine gleiche allgemeine Rechtsfolge nicht, wenn sie an einen anderen Gegenstand, Vorgang oder Auslöser gebunden ist. Konstruiere keine ungeschriebene Ausnahme, Deckung oder Rechtsfolge. Keyword-Nennung, Überschrift, ähnlicher wirtschaftlicher Zweck oder nur verwandte Deckung zählen nicht. Antworte ausschließlich als genau ein JSON-Array mit genau einem Objekt je vorgegebener review.partitionId: [{partitionId,decision,candidateIds,rationale}]. Keine partitionId darf fehlen, doppelt vorkommen oder erfunden werden. Die Reihenfolge muss der Reihenfolge von reviews entsprechen. Auch bei NO_COUNTERPART_IN_PARTITION ist das Objekt zwingend und candidateIds muss [] sein. Bei COUNTERPART_PRESENT nenne die kleinste notwendige Menge eindeutiger vorgelegter candidateIds. Erfinde keine IDs, Quellen oder Tatsachen.",
+    },
+    {
+      role: "user",
+      content: JSON.stringify({
+        contractId: A_DRIVEN_REQUIREMENT_ABSENCE_DECISION_CONTRACT_ID,
+        promptContractId: PROMPT_CONTRACT_ID,
+        reviews,
+        candidates,
+      }),
+    },
+  ];
+  if (repair) messages.push({ role: "user", content: repair });
+  return messages;
+}
+
+function batchRetryInstruction(attempts) {
+  const previous = attempts.at(-1);
+  if (!previous) return null;
+  const positiveSignals = new Map();
+  for (const attempt of attempts)
+    for (const outcome of attempt.partitionOutcomes || []) {
+      const signals = positiveSignals.get(outcome.partitionId) || new Set();
+      for (const candidateId of outcome.positiveCandidateSignals || [])
+        signals.add(candidateId);
+      positiveSignals.set(outcome.partitionId, signals);
+    }
+  const signalText = [...positiveSignals.entries()]
+    .filter(([, signals]) => signals.size > 0)
+    .map(
+      ([partitionId, signals]) =>
+        `${partitionId}: ${[...signals].sort().join(", ")}`
+    )
+    .join("; ");
+  return [
+    "KORREKTUR FÜR DIESEN RETRY:",
+    "Die vorige Batch-Antwort war nicht für alle review.partitionIds terminal vertragsgültig.",
+    "Gib genau ein JSON-Array mit genau einem Objekt je vorgegebener partitionId in der vorgegebenen Reihenfolge aus; keine ID darf fehlen, doppelt sein oder hinzukommen.",
+    "Entscheide jeden fachlichen Kern unabhängig. Ein ausdrücklicher Ausschluss sowie abweichende Werte, Limits, Bedingungen, Umfänge oder zeitliche Geltung bleiben ein Gegenstück.",
+    signalText
+      ? `Frühere ungültige Versuche enthielten vertragsgültige Positivhinweise, die nicht still verschwinden dürfen: ${signalText}.`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
 function errorClass(error) {
   if (typeof error?.errorClass === "string") return error.errorClass;
   if (error?.name === "AbortError") return "MODEL_REQUEST_ABORTED";
@@ -962,6 +1153,241 @@ async function runPartition({
   throw error;
 }
 
+async function runPartitionBatch({
+  client,
+  model,
+  modelContext,
+  plan,
+  batch,
+  maximumAttempts,
+  requestTimeoutMs,
+  abortSettlementTimeoutMs,
+  recoverModelAfterAbort,
+  onAttempt = async () => {},
+}) {
+  if (!batch?.batchId || !Array.isArray(batch.entries) || !batch.entries.length)
+    throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_REQUEST_BATCH_INVALID");
+  const expectedPartitionIds = batch.entries.map(
+    ({ partition }) => partition.partitionId
+  );
+  const attempts = [];
+  for (let attempt = 1; attempt <= maximumAttempts; attempt += 1) {
+    const messages = promptBatch(
+      plan,
+      batch.entries,
+      batchRetryInstruction(attempts)
+    );
+    const started = performance.now();
+    let rawResponse = "";
+    try {
+      const completion = await requestCompletionWithTimeout({
+        client,
+        payload: {
+          model,
+          messages,
+          temperature: 0,
+          max_tokens: Math.min(8_000, Math.max(2_000, modelContext / 4)),
+        },
+        requestTimeoutMs,
+        abortSettlementTimeoutMs,
+        recoverModelAfterAbort,
+      });
+      rawResponse = completion.choices?.[0]?.message?.content || "";
+      const parsedResponses = parseDecisionBatch(
+        rawResponse,
+        expectedPartitionIds
+      );
+      const partitionOutcomes = batch.entries.map(
+        ({ partition }, partitionOffset) => {
+          const parsed = parsedResponses[partitionOffset];
+          const observedResponse = {
+            ...parsed,
+            candidateIds: Array.isArray(parsed?.candidateIds)
+              ? [...new Set(parsed.candidateIds)]
+              : parsed?.candidateIds,
+          };
+          const initialValidation =
+            validateADrivenRequirementAbsencePartitionResponse({
+              plan,
+              partitionId: partition.partitionId,
+              response: observedResponse,
+            });
+          const semanticContractConflicts =
+            initialValidation.result.status === "TERMINAL"
+              ? negativeDecisionSemanticConflicts({
+                  plan,
+                  partition,
+                  response: observedResponse,
+                })
+              : [];
+          const semanticReviewNormalization =
+            normalizeSemanticContractConflictForReview({
+              partition,
+              response: observedResponse,
+              semanticContractConflicts,
+            });
+          const response =
+            semanticReviewNormalization?.response || observedResponse;
+          const validation = semanticReviewNormalization
+            ? validateADrivenRequirementAbsencePartitionResponse({
+                plan,
+                partitionId: partition.partitionId,
+                response,
+              })
+            : initialValidation;
+          const observedPositiveCandidateIds = [
+            ...new Set(
+              attempts.flatMap(
+                ({ partitionOutcomes: priorOutcomes }) =>
+                  priorOutcomes?.find(
+                    ({ partitionId }) =>
+                      partitionId === partition.partitionId
+                  )?.positiveCandidateSignals || []
+              )
+            ),
+          ].sort();
+          const currentPositiveCandidateIds =
+            response.decision === "COUNTERPART_PRESENT" &&
+            Array.isArray(response.candidateIds)
+              ? response.candidateIds
+              : [];
+          const positiveSignalConflict =
+            response.decision === "NO_COUNTERPART_IN_PARTITION" &&
+            observedPositiveCandidateIds.length > 0 &&
+            !attempts.some(({ partitionOutcomes: priorOutcomes }) =>
+              priorOutcomes?.some(
+                (outcome) =>
+                  outcome.partitionId === partition.partitionId &&
+                  outcome.errorClass === "POSITIVE_SIGNAL_CONFLICT"
+              )
+            );
+          const semanticContractConflict =
+            semanticContractConflicts.length > 0 &&
+            !semanticReviewNormalization;
+          return {
+            partitionId: partition.partitionId,
+            errorClass: semanticContractConflict
+              ? "SEMANTIC_CONTRACT_CONFLICT"
+              : positiveSignalConflict
+                ? "POSITIVE_SIGNAL_CONFLICT"
+                : validation.result.status === "TERMINAL"
+                  ? null
+                  : "PARTITION_RESPONSE_INVALID",
+            observedResponse,
+            response,
+            validation,
+            semanticContractConflicts,
+            semanticContractReviewNormalization:
+              semanticReviewNormalization?.audit || null,
+            positiveCandidateSignals: [
+              ...new Set([
+                ...observedPositiveCandidateIds,
+                ...currentPositiveCandidateIds,
+              ]),
+            ].sort(),
+          };
+        }
+      );
+      const attemptRecord = {
+        batchId: batch.batchId,
+        attempt,
+        durationMs: Math.round(performance.now() - started),
+        errorClass: partitionOutcomes.some(({ errorClass: value }) => value)
+          ? "BATCH_PARTITION_INVALID"
+          : null,
+        timedOut: false,
+        abortTriggered: false,
+        responseModel: completion.model || null,
+        promptTokens: completion.usage?.prompt_tokens || 0,
+        completionTokens: completion.usage?.completion_tokens || 0,
+        totalTokens: completion.usage?.total_tokens || 0,
+        rawResponse,
+        rawResponseSha256: sha256(rawResponse),
+        partitionOutcomes,
+      };
+      attempts.push(attemptRecord);
+      await onAttempt(attemptRecord);
+      if (partitionOutcomes.every(({ errorClass: value }) => !value))
+        return {
+          batchId: batch.batchId,
+          attempts,
+          results: batch.entries.map(({ partition }, partitionOffset) => {
+            const outcome = partitionOutcomes[partitionOffset];
+            return {
+              schemaVersion: 1,
+              contractId: RUN_CONTRACT_ID,
+              absencePlanSha256: plan.planSha256,
+              promptContractId: PROMPT_CONTRACT_ID,
+              transportContractId: TRANSPORT_CONTRACT_ID,
+              requestedModel: model,
+              modelContext,
+              requestTimeoutMs,
+              abortSettlementTimeoutMs,
+              batchId: batch.batchId,
+              partitionId: partition.partitionId,
+              response: outcome.response,
+              validation: outcome.validation,
+              rawResponse,
+              rawResponseSha256: sha256(rawResponse),
+              attempts: attempts.map((batchAttempt) => ({
+                batchId: batch.batchId,
+                attempt: batchAttempt.attempt,
+                durationMs: batchAttempt.durationMs,
+                errorClass:
+                  batchAttempt.partitionOutcomes.find(
+                    ({ partitionId }) =>
+                      partitionId === partition.partitionId
+                  )?.errorClass || batchAttempt.errorClass,
+                promptTokens: batchAttempt.promptTokens || 0,
+                completionTokens: batchAttempt.completionTokens || 0,
+                totalTokens: batchAttempt.totalTokens || 0,
+              })),
+              semanticContractReviewNormalization:
+                outcome.semanticContractReviewNormalization,
+            };
+          }),
+        };
+    } catch (error) {
+      const partitionOutcomes = batch.entries.map(({ partition }) => ({
+        partitionId: partition.partitionId,
+        errorClass: errorClass(error),
+        response: null,
+        validation: null,
+        positiveCandidateSignals: positiveCandidateSignals({
+          rawResponse,
+          plan,
+          partition,
+        }),
+      }));
+      const attemptRecord = {
+        batchId: batch.batchId,
+        attempt,
+        durationMs: Math.round(performance.now() - started),
+        errorClass: errorClass(error),
+        timedOut: error?.telemetry?.timedOut === true,
+        timeoutMs: error?.telemetry?.timeoutMs || requestTimeoutMs,
+        abortTriggered: error?.telemetry?.abortTriggered === true,
+        requestSettledAfterAbort:
+          error?.telemetry?.requestSettledAfterAbort ?? null,
+        settlementDurationMs: error?.telemetry?.settlementDurationMs ?? null,
+        recovery: error?.telemetry?.recovery || null,
+        rawResponse,
+        rawResponseSha256: sha256(rawResponse),
+        partitionOutcomes,
+        error: error.message,
+      };
+      attempts.push(attemptRecord);
+      await onAttempt(attemptRecord);
+      if (error.retrySafe === false) break;
+    }
+  }
+  const error = new Error(
+    `LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_FAILED_CLOSED:${batch.batchId}`
+  );
+  error.attempts = attempts;
+  throw error;
+}
+
 function resultFile(output, partition, partitionIndex) {
   return path.join(
     output,
@@ -1037,6 +1463,37 @@ function attemptRecorder({ output, plan, partition, partitionIndex, args }) {
     );
 }
 
+function batchAttemptRecorder({ output, plan, batch, args }) {
+  const directory = path.join(output, "attempts", "batches", batch.batchId);
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  const cycle = fs.readdirSync(directory).length + 1;
+  return async (attempt) =>
+    writePrivateJson(
+      path.join(
+        directory,
+        `cycle-${String(cycle).padStart(3, "0")}-attempt-${String(
+          attempt.attempt
+        ).padStart(3, "0")}.private.json`
+      ),
+      {
+        schemaVersion: 1,
+        contractId: TRANSPORT_CONTRACT_ID,
+        absencePlanSha256: plan.planSha256,
+        promptContractId: PROMPT_CONTRACT_ID,
+        requestedModel: args.model,
+        modelContext: args.modelContext,
+        requestTimeoutMs: args.requestTimeoutMs,
+        abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+        modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
+        batchId: batch.batchId,
+        partitionIds: batch.entries.map(
+          ({ partition }) => partition.partitionId
+        ),
+        attempt,
+      }
+    );
+}
+
 async function run() {
   const args = argumentsFrom(process.argv.slice(2));
   const sourcePlan = readJson(
@@ -1102,59 +1559,71 @@ async function run() {
     qwenModelKey: args.qwenModelKey,
     modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
   });
-  const results = [];
+  const results = new Array(plan.partitions.length).fill(null);
   let newPartitions = 0;
   let seededPartitions = 0;
-  let nextPartitionIndex = null;
+  let newRequests = 0;
   const startedAt = new Date().toISOString();
   const started = performance.now();
   for (const [partitionIndex, partition] of plan.partitions.entries()) {
     const file = resultFile(args.output, partition, partitionIndex);
-    let result;
-    let reused = false;
     if (fs.existsSync(file)) {
-      result = existingResult(file, plan, partition, args);
-      reused = true;
+      results[partitionIndex] = existingResult(file, plan, partition, args);
     } else if (seedResponses.has(partition.partitionId)) {
-      result = seedResponses.get(partition.partitionId);
-      writePrivateJson(file, result);
-      reused = true;
+      results[partitionIndex] = seedResponses.get(partition.partitionId);
+      writePrivateJson(file, results[partitionIndex]);
       seededPartitions += 1;
-    } else {
-      if (
-        args.maximumNewPartitions !== null &&
-        newPartitions >= args.maximumNewPartitions
-      ) {
-        nextPartitionIndex = partitionIndex;
-        break;
-      }
-      result = await runPartition({
-        client,
-        model: args.model,
-        modelContext: args.modelContext,
+    }
+  }
+  const pending = plan.partitions.filter(
+    (_partition, partitionIndex) => !results[partitionIndex]
+  );
+  const allowedPending =
+    args.maximumNewPartitions === null
+      ? pending
+      : pending.slice(0, args.maximumNewPartitions);
+  const batches = allowedPending.length
+    ? buildPartitionRequestBatches({
         plan,
-        partition,
-        maximumAttempts: args.maximumAttempts,
-        requestTimeoutMs: args.requestTimeoutMs,
-        abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
-        recoverModelAfterAbort,
-        onAttempt: attemptRecorder({
-          output: args.output,
-          plan,
-          partition,
-          partitionIndex,
-          args,
-        }),
-      });
-      writePrivateJson(file, result);
+        partitions: allowedPending,
+        maximumRequirementsPerRequest: args.maximumRequirementsPerRequest,
+      })
+    : [];
+  for (const [batchIndex, batch] of batches.entries()) {
+    const batchResult = await runPartitionBatch({
+      client,
+      model: args.model,
+      modelContext: args.modelContext,
+      plan,
+      batch,
+      maximumAttempts: args.maximumAttempts,
+      requestTimeoutMs: args.requestTimeoutMs,
+      abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
+      recoverModelAfterAbort,
+      onAttempt: batchAttemptRecorder({
+        output: args.output,
+        plan,
+        batch,
+        args,
+      }),
+    });
+    for (const [resultOffset, result] of batchResult.results.entries()) {
+      const { partition, partitionIndex } = batch.entries[resultOffset];
+      results[partitionIndex] = result;
+      writePrivateJson(
+        resultFile(args.output, partition, partitionIndex),
+        result
+      );
       newPartitions += 1;
     }
-    results.push(result);
+    newRequests += 1;
     console.log(
-      `[lf-a-driven-requirement-absence] Partition ${partitionIndex + 1}/${plan.partitions.length}: PASS${reused ? " (wiederverwendet)" : ""}`
+      `[lf-a-driven-requirement-absence] Anfrage ${batchIndex + 1}/${batches.length}: PASS (${batch.entries.length} Partitionen)`
     );
   }
-  const complete = results.length === plan.partitions.length;
+  const completedPartitions = results.filter(Boolean).length;
+  const complete = completedPartitions === plan.partitions.length;
+  const nextPartitionIndex = results.findIndex((result) => !result);
   const checkpointBase = {
     schemaVersion: 1,
     contractId: RUN_CONTRACT_ID,
@@ -1162,9 +1631,10 @@ async function run() {
     promptContractId: PROMPT_CONTRACT_ID,
     requestedModel: args.model,
     modelContext: args.modelContext,
-    completedPartitions: results.length,
+    completedPartitions,
     totalPartitions: plan.partitions.length,
     newPartitions,
+    newRequests,
     seededPartitions,
     completedAt: new Date().toISOString(),
   };
@@ -1176,7 +1646,7 @@ async function run() {
       resumable: true,
     });
     console.log(
-      `[lf-a-driven-requirement-absence] KONTROLLIERTER STOP: ${results.length}/${plan.partitions.length}, Resume ab ${nextPartitionIndex + 1}`
+      `[lf-a-driven-requirement-absence] KONTROLLIERTER STOP: ${completedPartitions}/${plan.partitions.length}, Resume ab ${nextPartitionIndex + 1}`
     );
     return;
   }
@@ -1196,10 +1666,17 @@ async function run() {
     startedAt,
     completedAt: new Date().toISOString(),
     wallDurationMs: Math.round(performance.now() - started),
-    modelAttempts: results.reduce(
-      (sum, result) => sum + result.attempts.length,
-      0
-    ),
+    modelAttempts: new Set(
+      results.flatMap(({ attempts }) =>
+        attempts.map(({ batchId, attempt }) => `${batchId || "single"}:${attempt}`)
+      )
+    ).size,
+    modelRequests: new Set(
+      results
+        .map(({ batchId }) => batchId)
+        .filter(Boolean)
+    ).size,
+    maximumRequirementsPerRequest: args.maximumRequirementsPerRequest,
     seededPartitions: results.filter(
       ({ reuse }) =>
         reuse?.contractId ===
@@ -1230,16 +1707,22 @@ if (require.main === module)
   run().catch((error) => fail(error.stack || error.message));
 
 module.exports = {
+  batchRetryInstruction,
+  buildPartitionRequestBatches,
   compatibleSeedPartitionResponses,
   jsonObjectsFromText,
   negativeDecisionSemanticConflicts,
   normalizeSemanticContractConflictForReview,
+  parseDecisionBatch,
   parseSingleDecision,
   positiveCandidateSignals,
   preliminaryDecision,
   preliminaryDecisionArtifact,
   prompt,
+  promptBatch,
   retryInstruction,
   runPartition,
+  runPartitionBatch,
+  sharedPartitionKey,
   subsetDecisionPlan,
 };

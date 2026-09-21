@@ -146,15 +146,19 @@ const {
   presentReferenceCustomerResult,
 } = require("../../utils/policyComparison/referenceCustomerPresentation");
 const {
+  buildPartitionRequestBatches,
   compatibleSeedPartitionResponses,
   negativeDecisionSemanticConflicts,
   normalizeSemanticContractConflictForReview,
+  parseDecisionBatch: parseRequirementAbsenceDecisionBatch,
   parseSingleDecision: parseRequirementAbsenceDecision,
   positiveCandidateSignals: requirementAbsencePositiveCandidateSignals,
   preliminaryDecision: preliminaryRequirementAbsenceDecision,
   preliminaryDecisionArtifact,
   prompt: requirementAbsencePrompt,
+  promptBatch: requirementAbsencePromptBatch,
   runPartition: runRequirementAbsencePartition,
+  runPartitionBatch: runRequirementAbsencePartitionBatch,
 } = require("../../scripts/qa/runADrivenRequirementAbsenceDecisions.cjs");
 const crypto = require("crypto");
 const fs = require("fs");
@@ -21404,6 +21408,114 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       "Konstruiere keine ungeschriebene Ausnahme"
     );
     expect(JSON.stringify(partitionPrompt).toLowerCase()).not.toContain("gold");
+    const batchedPayload = JSON.parse(JSON.stringify(absencePlan));
+    delete batchedPayload.planSha256;
+    const secondRequirement = {
+      ...batchedPayload.requirements[0],
+      requirementId: `${batchedPayload.requirements[0].requirementId}-BATCH-2`,
+      displayLabel: `${batchedPayload.requirements[0].displayLabel} zweite Prüfung`,
+    };
+    const secondPartitions = batchedPayload.partitions.map((partition) => ({
+      ...partition,
+      partitionId: `${partition.partitionId}-BATCH-2`,
+      requirementId: secondRequirement.requirementId,
+    }));
+    batchedPayload.requirements.push(secondRequirement);
+    batchedPayload.partitions.push(...secondPartitions);
+    batchedPayload.coverage.push({
+      ...batchedPayload.coverage[0],
+      requirementId: secondRequirement.requirementId,
+    });
+    batchedPayload.summary.fallbackRequirements = 2;
+    batchedPayload.summary.partitions = batchedPayload.partitions.length;
+    batchedPayload.summary.plannedClauseReviews *= 2;
+    const batchedPlan = {
+      ...batchedPayload,
+      planSha256: digest(
+        A_DRIVEN_REQUIREMENT_ABSENCE_PLAN_CONTRACT_ID,
+        batchedPayload
+      ),
+    };
+    expect(validateADrivenRequirementAbsencePlan(batchedPlan)).toBe(true);
+    const requestBatches = buildPartitionRequestBatches({
+      plan: batchedPlan,
+      maximumRequirementsPerRequest: 8,
+    });
+    expect(requestBatches).toHaveLength(absencePlan.partitions.length);
+    expect(requestBatches.every(({ entries }) => entries.length === 2)).toBe(
+      true
+    );
+    const batchPrompt = requirementAbsencePromptBatch(
+      batchedPlan,
+      requestBatches[0].entries
+    );
+    expect(batchPrompt[0].content).toContain(
+      "genau ein JSON-Array mit genau einem Objekt"
+    );
+    expect(JSON.parse(batchPrompt[1].content).reviews).toHaveLength(2);
+    const batchNegativeResponses = requestBatches[0].entries.map(
+      ({ partition }) => ({
+        partitionId: partition.partitionId,
+        decision: "NO_COUNTERPART_IN_PARTITION",
+        candidateIds: [],
+        rationale: "Kein Gegenstück in dieser vollständigen Partition.",
+      })
+    );
+    expect(
+      parseRequirementAbsenceDecisionBatch(
+        JSON.stringify(batchNegativeResponses),
+        batchNegativeResponses.map(({ partitionId }) => partitionId)
+      )
+    ).toEqual(batchNegativeResponses);
+    expect(() =>
+      parseRequirementAbsenceDecisionBatch(
+        JSON.stringify(batchNegativeResponses.slice(0, 1)),
+        batchNegativeResponses.map(({ partitionId }) => partitionId)
+      )
+    ).toThrow(
+      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_RESPONSE_COUNT_INVALID"
+    );
+    expect(() =>
+      parseRequirementAbsenceDecisionBatch(
+        JSON.stringify([
+          batchNegativeResponses[0],
+          batchNegativeResponses[0],
+        ]),
+        batchNegativeResponses.map(({ partitionId }) => partitionId)
+      )
+    ).toThrow("LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_PARTITION_IDS_INVALID");
+    const batchRun = await runRequirementAbsencePartitionBatch({
+      client: {
+        chat: {
+          completions: {
+            create: jest.fn(async () => ({
+              model: "qwen/qwen3.6-35b-a3b",
+              choices: [
+                { message: { content: JSON.stringify(batchNegativeResponses) } },
+              ],
+              usage: { prompt_tokens: 100, completion_tokens: 40, total_tokens: 140 },
+            })),
+          },
+        },
+      },
+      model: "qwen/qwen3.6-35b-a3b",
+      modelContext: 42_496,
+      plan: batchedPlan,
+      batch: requestBatches[0],
+      maximumAttempts: 1,
+      requestTimeoutMs: 100,
+      abortSettlementTimeoutMs: 10,
+      recoverModelAfterAbort: jest.fn(),
+    });
+    expect(batchRun.results).toHaveLength(2);
+    expect(
+      batchRun.results.every(
+        ({ validation }) => validation.result.status === "TERMINAL"
+      )
+    ).toBe(true);
+    expect(new Set(batchRun.results.map(({ batchId }) => batchId)).size).toBe(
+      1
+    );
     const malformed = `${JSON.stringify(negativeResponses[0])}\n${JSON.stringify(
       {
         ...negativeResponses[0],
@@ -21675,7 +21787,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         id: "qwen/qwen3.6-35b-a3b",
         loadedContextLength: 42_496,
       },
-      promptContractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V4",
+      promptContractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V5",
       unresolved: 0,
       terminalPartitions: absencePlan.partitions.length,
       plannedPartitions: absencePlan.partitions.length,

@@ -301,6 +301,7 @@ if [ ! -f "$B_ABSENCE_ROOT/summary.private.json" ]; then
     --modelContext "$QWEN_CONTEXT" \
     --maximumAttempts "${LF_B_ABSENCE_MAXIMUM_ATTEMPTS:-3}" \
     --maximumPartitionCharacters "${LF_B_ABSENCE_MAXIMUM_PARTITION_CHARACTERS:-80000}" \
+    --maximumRequirementsPerRequest "${LF_B_ABSENCE_MAXIMUM_REQUIREMENTS_PER_REQUEST:-8}" \
     --requestTimeoutMs "${LF_B_QWEN_REQUEST_TIMEOUT_MS:-180000}" \
     --abortSettlementTimeoutMs "${LF_B_QWEN_ABORT_SETTLEMENT_TIMEOUT_MS:-15000}" \
     --modelRecoveryTimeoutMs "${LF_B_QWEN_MODEL_RECOVERY_TIMEOUT_MS:-180000}" \
