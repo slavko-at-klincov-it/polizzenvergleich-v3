@@ -21432,6 +21432,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       fastPlan.summary.selectedFactReviews
     );
 
+    const fallbackRequirementId = decisionPlan.rows[0].requirementId;
     const expandedPlan = buildADrivenFastFallbackPlan({
       decisionPlan,
       preliminaryDecisions,
@@ -21441,7 +21442,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       maximumBatchCharacters: 10_000,
       retrievalScope: "GLOBAL",
       queryExpansionsByRequirement: {
-        [fallbackRow.requirementId]: ["fachfremde Bestimmung"],
+        [fallbackRequirementId]: ["fachfremde Bestimmung"],
       },
     });
     expect(expandedPlan.summary).toMatchObject({
@@ -21458,7 +21459,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       validateExpansionResponse(
         [
           {
-            requirementId: fallbackRow.requirementId,
+            requirementId: fallbackRequirementId,
             searchPhrases: [
               "fachfremde Bestimmung",
               "andere Regelung",
@@ -21466,10 +21467,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
             ],
           },
         ],
-        { rows: [fallbackRow] }
+        { rows: [{ requirementId: fallbackRequirementId }] }
       )
     ).toEqual({
-      [fallbackRow.requirementId]: [
+      [fallbackRequirementId]: [
         "fachfremde Bestimmung",
         "andere Regelung",
         "abweichende Klausel",
@@ -21479,11 +21480,11 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       validateExpansionResponse(
         [
           {
-            requirementId: fallbackRow.requirementId,
+            requirementId: fallbackRequirementId,
             searchPhrases: ["doppelt", "doppelt", "doppelt"],
           },
         ],
-        { rows: [fallbackRow] }
+        { rows: [{ requirementId: fallbackRequirementId }] }
       )
     ).toThrow("LF_A_DRIVEN_B_QUERY_EXPANSION_ITEM_DUPLICATE");
 
