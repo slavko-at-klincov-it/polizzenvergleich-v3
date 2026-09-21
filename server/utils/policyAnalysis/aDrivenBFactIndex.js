@@ -22,6 +22,8 @@ const A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID =
   "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V2";
 const A_DRIVEN_FAST_FALLBACK_REPLAY_CONTRACT_ID =
   "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V2";
+const A_DRIVEN_B_RETRIEVAL_WINDOW_CONTRACT_ID =
+  "LF_A_DRIVEN_B_RETRIEVAL_WINDOW_V1";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -240,6 +242,90 @@ function clauseKey(item) {
   return [item.documentUuid, item.clauseBoundaryId].join(":");
 }
 
+// Long extracted clauses can contain several independent list or table rows.
+// These overlapping windows are navigation units only: every window retains
+// its immutable parent fact and exact source offsets, and semantic decisions
+// continue to bind to the complete parent clause.
+function buildADrivenBRetrievalWindows(
+  facts,
+  { maximumTokens = 48, overlapTokens = 12 } = {}
+) {
+  if (
+    !Array.isArray(facts) ||
+    facts.length === 0 ||
+    !Number.isInteger(maximumTokens) ||
+    maximumTokens < 8 ||
+    !Number.isInteger(overlapTokens) ||
+    overlapTokens < 0 ||
+    overlapTokens >= maximumTokens
+  )
+    throw indexError("LF_A_DRIVEN_B_RETRIEVAL_WINDOW_INPUT_INVALID");
+  const stride = maximumTokens - overlapTokens;
+  const windows = [];
+  for (const fact of facts) {
+    const text = String(fact.exactText || "");
+    const sourceTokens = [...text.matchAll(/\S+/gu)].map((match) => ({
+      start: match.index,
+      end: match.index + match[0].length,
+    }));
+    if (!sourceTokens.length)
+      throw indexError(
+        "LF_A_DRIVEN_B_RETRIEVAL_WINDOW_SOURCE_INVALID",
+        fact.factId
+      );
+    const starts = [];
+    if (sourceTokens.length <= maximumTokens) starts.push(0);
+    else {
+      for (let start = 0; start < sourceTokens.length; start += stride) {
+        starts.push(start);
+        if (start + maximumTokens >= sourceTokens.length) break;
+      }
+      const finalStart = Math.max(0, sourceTokens.length - maximumTokens);
+      if (starts.at(-1) !== finalStart) starts.push(finalStart);
+    }
+    for (const tokenStart of starts) {
+      const tokenEnd = Math.min(
+        sourceTokens.length,
+        tokenStart + maximumTokens
+      );
+      const localStart = sourceTokens[tokenStart].start;
+      const localEnd = sourceTokens[tokenEnd - 1].end;
+      const exactText = text.slice(localStart, localEnd);
+      const identity = {
+        parentFactId: fact.factId,
+        localStart,
+        localEnd,
+        maximumTokens,
+        overlapTokens,
+      };
+      windows.push({
+        contractId: A_DRIVEN_B_RETRIEVAL_WINDOW_CONTRACT_ID,
+        windowId: `BRW-${sha256(stableStringify(identity)).slice(0, 24)}`,
+        parentFactId: fact.factId,
+        documentUuid: fact.documentUuid,
+        documentPosition: fact.documentPosition,
+        documentRole: fact.documentRole,
+        physicalPageNumber: fact.physicalPageNumber,
+        clauseBoundaryId: fact.clauseBoundaryId,
+        parentDocumentStart: fact.documentStart,
+        parentDocumentEnd: fact.documentEnd,
+        parentExactTextSha256: fact.exactTextSha256,
+        localStart,
+        localEnd,
+        documentStart: fact.documentStart + localStart,
+        documentEnd: fact.documentStart + localEnd,
+        exactText,
+        exactTextSha256: sha256(exactText),
+        normalizedText: normalize(exactText),
+        tokenList: tokens(exactText),
+      });
+    }
+  }
+  if (new Set(windows.map(({ windowId }) => windowId)).size !== windows.length)
+    throw indexError("LF_A_DRIVEN_B_RETRIEVAL_WINDOW_ID_DUPLICATE");
+  return windows;
+}
+
 function contextualRetrievalFacts(facts, {
   maximumStandaloneTokens = 20,
   maximumContextDistance = 1_200,
@@ -336,6 +422,9 @@ function buildADrivenFastFallbackPlan({
   neighborRadius = 0,
   neighborAnchorLimit = 0,
   queryExpansionsByRequirement = {},
+  retrievalUnitStrategy = "PARENT_FACTS",
+  retrievalWindowMaximumTokens = 48,
+  retrievalWindowOverlapTokens = 12,
 } = {}) {
   validateADrivenRequirementDecisionPlan(decisionPlan);
   validateADrivenRequirementDecisionArtifact(
@@ -357,6 +446,7 @@ function buildADrivenFastFallbackPlan({
     !Number.isInteger(neighborAnchorLimit) ||
     neighborAnchorLimit < 0 ||
     neighborAnchorLimit > lexicalTopKPerDocument ||
+    !["PARENT_FACTS", "SOURCE_WINDOWS"].includes(retrievalUnitStrategy) ||
     !queryExpansionsByRequirement ||
     typeof queryExpansionsByRequirement !== "object" ||
     Array.isArray(queryExpansionsByRequirement)
@@ -413,6 +503,26 @@ function buildADrivenFastFallbackPlan({
   const canonicalFactById = new Map(
     factIndex.facts.map((fact) => [fact.factId, fact])
   );
+  const retrievalUnits =
+    retrievalUnitStrategy === "SOURCE_WINDOWS"
+      ? buildADrivenBRetrievalWindows(factIndex.facts, {
+          maximumTokens: retrievalWindowMaximumTokens,
+          overlapTokens: retrievalWindowOverlapTokens,
+        })
+      : factIndex.facts.map((fact) => ({ ...fact }));
+  const retrievalUnitsByDocument = new Map();
+  for (const unit of retrievalUnits) {
+    const list = retrievalUnitsByDocument.get(unit.documentUuid) || [];
+    list.push(unit);
+    retrievalUnitsByDocument.set(unit.documentUuid, list);
+  }
+  const retrievalIndexesByDocument = new Map(
+    [...retrievalUnitsByDocument].map(([documentUuid, units]) => [
+      documentUuid,
+      { units, index: bm25Index(units) },
+    ])
+  );
+  const globalRetrievalUnitIndex = bm25Index(retrievalUnits);
   const globalRawFacts = factIndex.facts.map((fact) => ({ ...fact }));
   const globalContextualFacts = [...indexesByDocument.values()].flatMap(
     ({ contextualFacts }) => contextualFacts
@@ -489,12 +599,35 @@ function buildADrivenFastFallbackPlan({
         }
       : null;
     const addRanked = (ranked, channel) => {
-      for (const fact of ranked)
-        add(canonicalFactById.get(fact.factId), channel);
-      for (const fact of ranked.slice(0, neighborAnchorLimit))
-        neighborAnchors.add(fact.factId);
+      for (const unit of ranked) {
+        const factId = unit.parentFactId || unit.factId;
+        add(canonicalFactById.get(factId), channel);
+      }
+      for (const unit of ranked.slice(0, neighborAnchorLimit))
+        neighborAnchors.add(unit.parentFactId || unit.factId);
     };
     if (retrievalScope === "GLOBAL") {
+      if (retrievalUnitStrategy === "SOURCE_WINDOWS") {
+        addRanked(
+          rankLexicalCandidates({
+            target: lexicalTarget,
+            candidates: retrievalUnits,
+            index: globalRetrievalUnitIndex,
+            topK: lexicalTopKPerDocument,
+          }),
+          "LEXICAL_BM25_SOURCE_WINDOW_GLOBAL"
+        );
+        if (expandedLexicalTarget)
+          addRanked(
+            rankLexicalCandidates({
+              target: expandedLexicalTarget,
+              candidates: retrievalUnits,
+              index: globalRetrievalUnitIndex,
+              topK: lexicalTopKPerDocument,
+            }),
+            "LEXICAL_EXPANSION_BM25_SOURCE_WINDOW_GLOBAL"
+          );
+      } else {
       const rawRanked = rankLexicalCandidates({
         target: lexicalTarget,
         candidates: globalRetrieval.rawFacts,
@@ -532,8 +665,34 @@ function buildADrivenFastFallbackPlan({
           "LEXICAL_EXPANSION_CONTEXT_BM25_GLOBAL"
         );
       }
+      }
     } else {
       for (const document of factIndex.documents) {
+        if (retrievalUnitStrategy === "SOURCE_WINDOWS") {
+          const retrieval = retrievalIndexesByDocument.get(
+            document.documentUuid
+          );
+          addRanked(
+            rankLexicalCandidates({
+              target: lexicalTarget,
+              candidates: retrieval.units,
+              index: retrieval.index,
+              topK: lexicalTopKPerDocument,
+            }),
+            "LEXICAL_BM25_SOURCE_WINDOW"
+          );
+          if (expandedLexicalTarget)
+            addRanked(
+              rankLexicalCandidates({
+                target: expandedLexicalTarget,
+                candidates: retrieval.units,
+                index: retrieval.index,
+                topK: lexicalTopKPerDocument,
+              }),
+              "LEXICAL_EXPANSION_BM25_SOURCE_WINDOW"
+            );
+          continue;
+        }
         const retrieval = indexesByDocument.get(document.documentUuid);
         const rawRanked = rankLexicalCandidates({
           target: lexicalTarget,
@@ -643,6 +802,15 @@ function buildADrivenFastFallbackPlan({
     queryExpansionSha256: Object.keys(normalizedQueryExpansions).length
       ? sha256(stableStringify(normalizedQueryExpansions))
       : null,
+    retrievalUnitStrategy,
+    retrievalWindowMaximumTokens:
+      retrievalUnitStrategy === "SOURCE_WINDOWS"
+        ? retrievalWindowMaximumTokens
+        : null,
+    retrievalWindowOverlapTokens:
+      retrievalUnitStrategy === "SOURCE_WINDOWS"
+        ? retrievalWindowOverlapTokens
+        : null,
     rows,
     batches,
     summary: {
@@ -663,6 +831,8 @@ function buildADrivenFastFallbackPlan({
       expandedRequirements: rows.filter(
         ({ query }) => query.expansionPhrases.length > 0
       ).length,
+      retrievalUnitStrategy,
+      retrievalUnits: retrievalUnits.length,
       customerNotFoundEligible: false,
     },
     proofLimit:
@@ -779,7 +949,9 @@ module.exports = {
   A_DRIVEN_B_FACT_INDEX_CONTRACT_ID,
   A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID,
   A_DRIVEN_FAST_FALLBACK_REPLAY_CONTRACT_ID,
+  A_DRIVEN_B_RETRIEVAL_WINDOW_CONTRACT_ID,
   buildADrivenBFactIndex,
+  buildADrivenBRetrievalWindows,
   buildADrivenFastFallbackPlan,
   buildADrivenFastFallbackReplay,
   contextualRetrievalFacts,

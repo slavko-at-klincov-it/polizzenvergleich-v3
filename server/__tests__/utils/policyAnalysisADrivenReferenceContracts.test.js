@@ -111,6 +111,7 @@ const {
 } = require("../../utils/policyAnalysis/aDrivenCompleteBCorpus");
 const {
   buildADrivenBFactIndex,
+  buildADrivenBRetrievalWindows,
   buildADrivenFastFallbackPlan,
   buildADrivenFastFallbackReplay,
   contextualRetrievalFacts,
@@ -21733,6 +21734,145 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       expect.arrayContaining(["solaranlage", "gebaudebestandteile"])
     );
     expect(sourceFact.tokenList).toEqual(["solaranlage"]);
+  });
+
+  test("builds overlapping source-bound retrieval windows without changing parent fact identity", () => {
+    const exactText = Array.from(
+      { length: 90 },
+      (_, index) => `Quelltoken${index + 1}`
+    ).join(" ");
+    const [fact] = [
+      {
+        factId: "parent-fact",
+        documentUuid: "b-doc",
+        documentPosition: 0,
+        documentRole: "POLICY",
+        physicalPageNumber: 3,
+        clauseBoundaryId: "clause-1",
+        documentStart: 1000,
+        documentEnd: 1000 + exactText.length,
+        exactText,
+        exactTextSha256: crypto
+          .createHash("sha256")
+          .update(exactText)
+          .digest("hex"),
+      },
+    ];
+    const windows = buildADrivenBRetrievalWindows([fact], {
+      maximumTokens: 32,
+      overlapTokens: 8,
+    });
+
+    expect(windows.length).toBeGreaterThan(1);
+    expect(new Set(windows.map(({ windowId }) => windowId)).size).toBe(
+      windows.length
+    );
+    expect(windows).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          parentFactId: fact.factId,
+          parentExactTextSha256: fact.exactTextSha256,
+          parentDocumentStart: fact.documentStart,
+          parentDocumentEnd: fact.documentEnd,
+        }),
+      ])
+    );
+    const sourceTokenOffsets = [...exactText.matchAll(/\S+/gu)].map(
+      (match) => match.index
+    );
+    for (const offset of sourceTokenOffsets)
+      expect(
+        windows.some(
+          ({ localStart, localEnd }) =>
+            localStart <= offset && offset < localEnd
+        )
+      ).toBe(true);
+    for (const window of windows) {
+      expect(window.exactText).toBe(
+        exactText.slice(window.localStart, window.localEnd)
+      );
+      expect(window.documentStart).toBe(
+        fact.documentStart + window.localStart
+      );
+      expect(window.documentEnd).toBe(fact.documentStart + window.localEnd);
+    }
+  });
+
+  test("uses source windows only for navigation and keeps unselected parent facts fail-closed", () => {
+    const { manifest, searchPlan, searchExecution } =
+      requirementDecisionFixture();
+    const completeCorpus = buildADrivenCompleteBCorpus({
+      documents: [
+        document(
+          "b-doc",
+          0,
+          artifact(
+            [
+              `Seite 1\n${Array.from(
+                { length: 70 },
+                (_, index) => `AllgemeinerText${index + 1}`
+              ).join(" ")} Gebäudeschäden durch Sturm sind versichert.`,
+              "Seite 2\nAndere fachfremde Bestimmung.",
+              "Seite 3\nWeitere fachfremde Bestimmung.",
+            ],
+            "b"
+          )
+        ),
+      ],
+    });
+    const decisionPlan = buildADrivenRequirementDecisionPlan({
+      manifest,
+      searchPlan,
+      searchExecution,
+      completeCorpus,
+      maximumCompleteCorpusCandidatesPerDocument: 1,
+    });
+    const preliminaryDecisions = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: decisionPlan.rows.map((row) => ({
+        requirementId: row.requirementId,
+        contextFinding: {
+          outcome: "RELATED_ONLY",
+          candidateIds: [row.candidates[0].candidateId],
+        },
+        componentFindings: row.components.map((component) => ({
+          componentId: component.componentId,
+          dimension: component.dimension,
+          outcome: "RELATED_ONLY",
+          candidateIds: [row.candidates[0].candidateId],
+        })),
+        unmodeledDifferences: [],
+        rationale: "Nur thematische Nähe.",
+      })),
+    });
+    const factIndex = buildADrivenBFactIndex({ completeCorpus });
+    const plan = buildADrivenFastFallbackPlan({
+      decisionPlan,
+      preliminaryDecisions,
+      completeCorpus,
+      factIndex,
+      lexicalTopKPerDocument: 1,
+      maximumBatchCharacters: 10_000,
+      retrievalScope: "GLOBAL",
+      retrievalUnitStrategy: "SOURCE_WINDOWS",
+      retrievalWindowMaximumTokens: 24,
+      retrievalWindowOverlapTokens: 8,
+    });
+
+    expect(plan.summary).toMatchObject({
+      retrievalUnitStrategy: "SOURCE_WINDOWS",
+      customerNotFoundEligible: false,
+    });
+    expect(plan.summary.retrievalUnits).toBeGreaterThan(
+      factIndex.facts.length
+    );
+    expect(
+      plan.rows[0].candidateSelections.some(({ channels }) =>
+        channels.includes("LEXICAL_BM25_SOURCE_WINDOW_GLOBAL")
+      )
+    ).toBe(true);
+    expect(plan.rows[0].customerNotFoundEligible).toBe(false);
+    expect(plan.rows[0].unassessedFactIds.length).toBeGreaterThan(0);
   });
 
   test("certifies NOT_FOUND only after every complete B clause partition is terminal", async () => {
