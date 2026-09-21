@@ -251,21 +251,15 @@ function sourceKey(item) {
   ].join(":");
 }
 
-function factForSourceCandidate(candidate, factIndex, factBySource) {
+function factsForSourceCandidate(candidate, factIndex, factBySource) {
   const exact = factBySource.get(sourceKey(candidate));
-  if (exact) return exact;
-  const enclosing = factIndex.facts.filter((fact) => {
-    if (
-      fact.documentUuid !== candidate.documentUuid ||
-      fact.documentStart > candidate.documentStart ||
-      fact.documentEnd < candidate.documentEnd
-    )
-      return false;
-    const localStart = candidate.documentStart - fact.documentStart;
-    const localEnd = candidate.documentEnd - fact.documentStart;
-    return fact.exactText.slice(localStart, localEnd) === candidate.exactText;
-  });
-  return enclosing.length === 1 ? enclosing[0] : null;
+  if (exact) return [exact];
+  return factIndex.facts.filter(
+    (fact) =>
+      fact.documentUuid === candidate.documentUuid &&
+      Math.max(fact.documentStart, candidate.documentStart) <
+        Math.min(fact.documentEnd, candidate.documentEnd)
+  );
 }
 
 function clauseKey(item) {
@@ -1014,24 +1008,24 @@ function buildADrivenTerminalEvidenceReplay({
         ])
       );
       const expectedFactIds = sortedUnique(
-        result.selectedCandidateIds.map((candidateId) => {
+        result.selectedCandidateIds.flatMap((candidateId) => {
           const candidate = rescueCandidatesById.get(candidateId);
           if (!candidate)
             throw indexError(
               "LF_A_DRIVEN_TERMINAL_EVIDENCE_CANDIDATE_UNKNOWN",
               candidateId
             );
-          const fact = factForSourceCandidate(
+          const facts = factsForSourceCandidate(
             candidate,
             factIndex,
             factBySource
           );
-          if (!fact)
+          if (!facts.length)
             throw indexError(
               "LF_A_DRIVEN_TERMINAL_EVIDENCE_SOURCE_UNKNOWN",
               candidateId
             );
-          return fact.factId;
+          return facts.map(({ factId }) => factId);
         })
       );
       const selected = new Set(
