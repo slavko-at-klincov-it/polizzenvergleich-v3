@@ -118,10 +118,7 @@ function argumentsFrom(argv) {
       80_000,
       10_000
     ),
-    maximumRequirementsPerRequest: integer(
-      "maximumRequirementsPerRequest",
-      8
-    ),
+    maximumRequirementsPerRequest: integer("maximumRequirementsPerRequest", 8),
     requestTimeoutMs: integer("requestTimeoutMs", DEFAULT_REQUEST_TIMEOUT_MS),
     abortSettlementTimeoutMs: integer(
       "abortSettlementTimeoutMs",
@@ -478,9 +475,7 @@ function parseDecisionBatch(value, expectedPartitionIds) {
   )
     parsed = [JSON.parse(normalized)];
   else
-    throw new Error(
-      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_JSON_VALUE_MISSING"
-    );
+    throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_JSON_VALUE_MISSING");
   if (!Array.isArray(parsed) || parsed.length !== expectedPartitionIds.length)
     throw new Error(
       "LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_RESPONSE_COUNT_INVALID"
@@ -564,8 +559,8 @@ function buildPartitionRequestBatches({
       const identity = {
         promptContractId: PROMPT_CONTRACT_ID,
         absencePlanSha256: plan.planSha256,
-        partitionIds: batchEntries.map(({ partition }) =>
-          partition.partitionId
+        partitionIds: batchEntries.map(
+          ({ partition }) => partition.partitionId
         ),
       };
       batches.push({
@@ -890,11 +885,7 @@ function promptBatch(plan, entries, repair = null) {
     throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_BATCH_INVALID");
   const [first] = entries;
   const sharedKey = sharedPartitionKey(first.partition);
-  if (
-    entries.some(
-      ({ partition }) => sharedPartitionKey(partition) !== sharedKey
-    )
-  )
+  if (entries.some(({ partition }) => sharedPartitionKey(partition) !== sharedKey))
     throw new Error(
       "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_BATCH_CONTEXT_MISMATCH"
     );
@@ -1240,8 +1231,7 @@ async function runPartitionBatch({
               attempts.flatMap(
                 ({ partitionOutcomes: priorOutcomes }) =>
                   priorOutcomes?.find(
-                    ({ partitionId }) =>
-                      partitionId === partition.partitionId
+                    ({ partitionId }) => partitionId === partition.partitionId
                   )?.positiveCandidateSignals || []
               )
             ),
@@ -1335,8 +1325,7 @@ async function runPartitionBatch({
                 durationMs: batchAttempt.durationMs,
                 errorClass:
                   batchAttempt.partitionOutcomes.find(
-                    ({ partitionId }) =>
-                      partitionId === partition.partitionId
+                    ({ partitionId }) => partitionId === partition.partitionId
                   )?.errorClass || batchAttempt.errorClass,
                 promptTokens: batchAttempt.promptTokens || 0,
                 completionTokens: batchAttempt.completionTokens || 0,
@@ -1429,38 +1418,6 @@ function existingResult(file, plan, partition, args) {
   )
     throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_RESULT_NOT_PASS");
   return result;
-}
-
-function attemptRecorder({ output, plan, partition, partitionIndex, args }) {
-  const directory = path.join(
-    output,
-    "attempts",
-    `${String(partitionIndex).padStart(5, "0")}-${partition.partitionId}`
-  );
-  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
-  const cycle = fs.readdirSync(directory).length + 1;
-  return async (attempt) =>
-    writePrivateJson(
-      path.join(
-        directory,
-        `cycle-${String(cycle).padStart(3, "0")}-attempt-${String(
-          attempt.attempt
-        ).padStart(3, "0")}.private.json`
-      ),
-      {
-        schemaVersion: 1,
-        contractId: TRANSPORT_CONTRACT_ID,
-        absencePlanSha256: plan.planSha256,
-        promptContractId: PROMPT_CONTRACT_ID,
-        requestedModel: args.model,
-        modelContext: args.modelContext,
-        requestTimeoutMs: args.requestTimeoutMs,
-        abortSettlementTimeoutMs: args.abortSettlementTimeoutMs,
-        modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
-        partitionId: partition.partitionId,
-        attempt,
-      }
-    );
 }
 
 function batchAttemptRecorder({ output, plan, batch, args }) {
@@ -1668,13 +1625,13 @@ async function run() {
     wallDurationMs: Math.round(performance.now() - started),
     modelAttempts: new Set(
       results.flatMap(({ attempts }) =>
-        attempts.map(({ batchId, attempt }) => `${batchId || "single"}:${attempt}`)
+        attempts.map(
+          ({ batchId, attempt }) => `${batchId || "single"}:${attempt}`
+        )
       )
     ).size,
     modelRequests: new Set(
-      results
-        .map(({ batchId }) => batchId)
-        .filter(Boolean)
+      results.map(({ batchId }) => batchId).filter(Boolean)
     ).size,
     maximumRequirementsPerRequest: args.maximumRequirementsPerRequest,
     seededPartitions: results.filter(
