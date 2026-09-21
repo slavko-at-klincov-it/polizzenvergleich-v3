@@ -21554,8 +21554,12 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     const fingerprintResponse = firstFingerprintPartition.facts.map(
       ({ factId }) => ({
         factId,
-        synopsis: "Versicherungsschutz für einen klar benannten Sachverhalt.",
-        semanticKeys: ["Versicherungsschutz", "Sachverhalt", "Deckung"],
+        semanticKeys: [
+          "Versicherungsschutz",
+          "Sachverhalt",
+          "Deckung",
+          "versicherte Gefahr",
+        ],
       })
     );
     expect(
@@ -21567,7 +21571,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(() =>
       validateFingerprintResponse(
         fingerprintResponse.map((item, index) =>
-          index === 0 ? { ...item, semanticKeys: ["zu wenig"] } : item
+          index === 0
+            ? { ...item, semanticKeys: ["zu wenig"] }
+            : item
         ),
         firstFingerprintPartition
       )

@@ -206,7 +206,7 @@ function indexPrompt(plan, partition, repair = null) {
     {
       role: "system",
       content:
-        "Verdichte jede vorgelegte Vertragsklausel unabhängig und verlustarm. Antworte ausschließlich als JSON-Array: [{factId,synopsis,semanticKeys:[...]}]. Jede factId muss mindestens einmal vorkommen. Eine factId darf bei mehreren eigenständigen Regelungen ausnahmsweise mehrere Einträge erhalten; jeder Eintrag beschreibt genau eine Facette. synopsis ist ein fachlich präziser deutscher Ein-Satz-Fingerabdruck mit höchstens 180 Zeichen und muss Objekt, Wirkung, Gefahr/Ursache, Bedingung, Limit oder Ausschluss enthalten, soweit im Text vorhanden. semanticKeys enthält 3 bis 10 kurze normalisierte deutsche Suchbegriffe oder Synonyme mit jeweils höchstens 60 Zeichen. Erfinde keine Vertragswirkung, Zahl, Partei oder Deckung. Keine weiteren Felder und keine Erläuterung.",
+        "Verdichte jede vorgelegte Vertragsklausel unabhängig und verlustarm. Antworte ausschließlich als JSON-Array: [{factId,semanticKeys:[...]}]. Jede factId muss mindestens einmal vorkommen. Eine factId darf bei mehreren eigenständigen Regelungen ausnahmsweise mehrere Einträge erhalten; jeder Eintrag beschreibt genau eine Facette. semanticKeys enthält 4 bis 12 kurze normalisierte deutsche Begriffe oder relationale Phrasen mit jeweils höchstens 80 Zeichen. Erfasse Objekt, Wirkung, Gefahr/Ursache, Bedingung, Limit, Partei oder Ausschluss, soweit vorhanden, und ergänze gebräuchliche fachliche Synonyme. Erfinde keine Vertragswirkung, Zahl, Partei oder Deckung. Keine weiteren Felder und keine Erläuterung.",
     },
     {
       role: "user",
@@ -233,18 +233,15 @@ function validateFingerprintResponse(response, partition) {
     const semanticKeys = item.semanticKeys;
     if (
       !factsById.has(item.factId) ||
-      keys !== "factId,semanticKeys,synopsis" ||
-      typeof item.synopsis !== "string" ||
-      !item.synopsis.trim() ||
-      item.synopsis.length > 180 ||
+      keys !== "factId,semanticKeys" ||
       !Array.isArray(semanticKeys) ||
-      semanticKeys.length < 3 ||
-      semanticKeys.length > 10 ||
+      semanticKeys.length < 4 ||
+      semanticKeys.length > 12 ||
       semanticKeys.some(
         (value) =>
           typeof value !== "string" ||
           !value.trim() ||
-          value.length > 60
+          value.length > 80
       ) ||
       new Set(semanticKeys).size !== semanticKeys.length
     )
@@ -253,7 +250,6 @@ function validateFingerprintResponse(response, partition) {
       );
     return {
       factId: item.factId,
-      synopsis: item.synopsis.trim(),
       semanticKeys: semanticKeys.map((value) => value.trim()),
     };
   });
@@ -269,16 +265,15 @@ function validateFingerprintResponse(response, partition) {
     );
   const fallback = missingFacts.map((fact) => ({
     factId: fact.factId,
-    synopsis: fact.exactText.slice(0, 180),
     semanticKeys: [
       ...new Set(
         fact.exactText
           .toLocaleLowerCase("de-AT")
           .match(/[\p{L}\p{N}]{4,}/gu) || []
       ),
-    ].slice(0, 10),
+    ].slice(0, 12),
   }));
-  if (fallback.some(({ semanticKeys }) => semanticKeys.length < 3))
+  if (fallback.some(({ semanticKeys }) => semanticKeys.length < 4))
     throw new Error("LF_B_SEMANTIC_FINGERPRINT_FALLBACK_INVALID");
   return [...normalized, ...fallback];
 }
