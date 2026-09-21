@@ -885,7 +885,9 @@ function promptBatch(plan, entries, repair = null) {
     throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_BATCH_INVALID");
   const [first] = entries;
   const sharedKey = sharedPartitionKey(first.partition);
-  if (entries.some(({ partition }) => sharedPartitionKey(partition) !== sharedKey))
+  if (
+    entries.some(({ partition }) => sharedPartitionKey(partition) !== sharedKey)
+  )
     throw new Error(
       "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_BATCH_CONTEXT_MISMATCH"
     );
