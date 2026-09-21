@@ -1,7 +1,8 @@
 # Polizzenvergleich – Tests, Messwerte und Entwicklungserkenntnisse
 
-Stand: 30. August 2026
-Letzte ausgewertete Version: V3-Entwicklungsstand `b761e3c4`
+Stand: 21. September 2026
+Letzte ausgewertete Version: V3-Entwicklungsstand
+`f99d21483e5854233cb30f90cb07e91a10c0ff1a`
 
 ## 1. Zweck
 
@@ -5314,6 +5315,79 @@ expertengelabelten Mehrversicherer-Holdout; ein explorativer unlabeled Smoke
 darf nicht als Generalisierungsnachweis ausgegeben werden.
 
 Change-Set: `LF-V381-COLD-E2E-CORRECTIONS-20260917-001`.
+
+## 106. Gebündelte Vollkorpusprüfung reduziert Transportkosten, ändert aber Outcomes
+
+Der V3.9.15-Produktlauf hatte 42 offene Anforderungen gegen jeweils elf
+identische B-Partitionen einzeln geprüft. Die 462 Modellaufrufe wiederholten
+7.265.028 Prompt-Tokens und benötigten 4 h 46 min 41,165 s allein für die
+Abwesenheitsstufe. Es gab keinen Retry- oder Timeout-Stillstand; die
+kartesische Wiederholung desselben Kontexts war die belegte Laufzeitursache.
+
+Der V5-Transport gruppiert ausschließlich identische B-Kontexte und sendet
+höchstens acht Anforderungen gemeinsam. Jede logische `partitionId` muss in
+der Modellantwort exakt einmal vorkommen. Fehlende, doppelte, unbekannte oder
+planfremde IDs, ungültige Kandidaten und unvollständige Teilantworten bleiben
+fail-closed. Persistenz und Resume erfolgen weiterhin pro logischer
+Partition. Ein durch eine unterbrochene SSH-Verbindung getrennter Resume
+übernahm 378 bereits terminale Partitionen ohne erneute Modellarbeit und
+schloss 462/462 ab.
+
+```text
+Anforderungen / logische Partitionen:  42 / 462
+Transportbatches / Modellrequests:      76 / 76
+Modellattempts:                         81
+Prompt- / Completion-Tokens:            1.742.959 / 87.666
+Gesamttokens:                           1.830.625
+Abwesenheits-Wandzeit:                  ca. 3 h 00 min 37 s
+Requests gegenüber V3.9.15:             -83,5 %
+Prompt-Tokens gegenüber V3.9.15:        ca. -76 %
+Wandzeit gegenüber V3.9.15:             ca. -37 %
+```
+
+Die 13 Rescue-Anforderungen wurden in 13 Batches terminal geprüft. Das neue
+private Ergebnis enthält 362/362 Zeilen, null ungelöste Anforderungen, 330
+`GEFUNDEN` und 32 `NICHT GEFUNDEN`; die Detailverteilung lautet 201 `FULL`,
+123 `PARTIAL`, sechs `CONTRADICTED` und 32 `NONE`. JSON, Markdown und XLSX
+wurden intern konsistent materialisiert. Das Workbook trägt SHA-256
+`4f00e062b9b3644d56efb526fcba898d2beb226e11b335230da05e04dd4bb41e`,
+das binäre Ergebnis
+`dde9860f381621f09283c62cfbb614d363f3734427ba9f037011f200c7250aa3`.
+
+Der Alt/Neu-Vergleich ist jedoch kein Äquivalenznachweis: Neun Zeilen
+änderten ihr Detail-Outcome, sieben davon den binären Status. Sechs alte
+Nullfunde wurden Funde, ein alter Fund wurde Nullfund. Mehrere neue
+Begründungen dehnen den fachlichen Identitätskern möglicherweise zu weit aus,
+etwa von konkreten Katastrophenlimits auf andere Katastrophenlimits, von
+kontaminiertem Erdreich auf radioaktive Entsorgung oder von Mieter-Hausrat
+auf allgemeine fremde Sachen. Ohne Expertengold darf daraus weder Verbesserung
+noch Regression endgültig abgeleitet werden.
+
+Das vollständige Mac-Studio-Gate auf exakt
+`f99d21483e5854233cb30f90cb07e91a10c0ff1a` bestand mit 212/212 Suites und
+3.134/3.134 Tests, allen drei Lints, Prisma validate/generate,
+Capability-Inventar, Prettier, Frontend-Build mit 6.170 Modulen und der
+macOS-Installer-Suite. Der Doctor der unveränderten V3.9.15-Installation auf
+`a9a91c766466ffaec90132dccdbe3fc59ac9c7a3` bestand ebenfalls. Der Patch
+wurde ausdrücklich nicht installiert.
+
+**Positive Erkenntnis:** Gemeinsamer Kontext kann bei vollständig
+partitionierter, fail-closed Antwortbindung Modellrequests und Prompt-Tokens
+stark reduzieren; ein partieller Resume bleibt ohne doppelte Modellarbeit
+möglich.
+
+**Negative Erkenntnis:** Weniger Requests garantieren weder das
+Ein-Stunden-Ziel noch fachliche Ergebnisgleichheit. Der Mehranforderungs-Prompt
+verändert die Modellselektion und kann einen zu breiten Identitätskern
+begünstigen.
+
+**Beweisgrenze:** Dies ist ein technischer Performance- und
+Regressionsnachweis auf dem bekannten LF-1+9-Fixture. Die für den
+V3.9.15-Produktlauf genau einmal ausgeführte Gold-283-V2-Auswertung wurde
+nicht erneut gestartet. Fachliche Freigabe der neun Verschiebungen und ein
+unabhängiger expertengelabelter Mehrversicherer-Holdout bleiben offen.
+
+Change-Set: `LF-V3916-BATCHED-ABSENCE-MATRIX-20260921-001`.
 
 ## 105. V3.9.15 schließt den bekannten 1+9-Produktlauf technisch ab
 

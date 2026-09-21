@@ -162,7 +162,7 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-056` | Nachlaufende Satzfortsetzung dem eindeutig letzten Komponentenanker zuordnen       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.9.2-Gate abschließen, installieren und den kalten Produktlauf ab Batch 30 fortsetzen                                    |
 | `INT-20260917-057` | Explizite Voraussetzung mit direkt folgender Begriffsdefinition atomisieren        | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.9.3-Gate abschließen, installieren und den kalten Produktlauf ab Batch 33 fortsetzen                                    |
 
-| `INT-20260921-075` | Vollkorpus-Abwesenheitsmatrix mit gemeinsamem B-Kontext gebündelt entscheiden | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG` | fail-closed Mehranforderungs-Prompt implementieren und auf dem Mac Studio gegen V3.9.15 messen |
+| `INT-20260921-075` | Vollkorpus-Abwesenheitsmatrix mit gemeinsamem B-Kontext gebündelt entscheiden | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG` | neun Alt/Neu-Outcomeverschiebungen fachlich freigeben oder verwerfen; keine zweite Gold-Auswertung ohne neuen Auftrag |
 
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
@@ -4463,4 +4463,29 @@ Vollständigkeitsbehauptung erzeugen.
 - Beweisgrenze: Performance- und Transportverbesserung auf dem bekannten
   LF-1+9-Korpus. Gold-283 bleibt getrennte QA-Regression; die Bündelung ist
   weder ein fachlicher Gold-Fix noch ein Holdout- oder 99-Prozent-Nachweis.
+- Ergebnis vom 21. September 2026: Der fail-closed Mehranforderungsvertrag
+  ist auf Commit `f99d21483e5854233cb30f90cb07e91a10c0ff1a` implementiert und
+  technisch vollständig validiert. 42 Anforderungen und 462 logische
+  Partitionen wurden über 76 Modellrequests beziehungsweise 81 Attempts
+  bearbeitet; null Partitionen blieben offen. Die Attempt-Artefakte weisen
+  1.742.959 Prompt-, 87.666 Completion- und 1.830.625 Gesamttokens aus. Die
+  beobachtete Abwesenheits-Wandzeit vom ersten Artefakt bis zur finalen
+  Summary betrug ungefähr 3 h 00 min 37 s statt 4 h 46 min 41,165 s. Damit
+  sanken Requests um rund 83,5 Prozent, Prompt-Tokens um rund 76 Prozent und
+  die Wandzeit um rund 37 Prozent; das ungefähr einstündige Produktziel ist
+  dennoch verfehlt.
+- Fachlicher Gate-Befund: Das neue private Ergebnis umfasst 330 `GEFUNDEN`
+  und 32 `NICHT GEFUNDEN` statt 325/37. Neun Zeilen änderten ihr
+  Detail-Outcome, davon sieben den binären Status (sechs
+  `NICHT GEFUNDEN` -> `GEFUNDEN`, eine in Gegenrichtung). Mehrere neue
+  Begründungen zeigen eine potenziell zu breite Identitätskern-Auslegung,
+  etwa Katastrophenlimits, kontaminiertes Erdreich oder Mietereigentum.
+  Deshalb bleibt der Intake `IN_PRÜFUNG`; der technisch grüne Patch ist
+  nicht zur Installation freigegeben. Die bereits genau einmal ausgeführte
+  Gold-283-V2-Auswertung des V3.9.15-Produktlaufs wurde nicht wiederholt.
+- Gate: 212/212 Jest-Suites und 3.134/3.134 Tests, alle drei Lints, Prisma
+  validate/generate, Capability-Inventar, Prettier,
+  Frontend-Produktionsbuild mit 6.170 Modulen und macOS-Installer-Suite
+  bestanden auf dem exakten Patch-SHA. Der operative Doctor der bewusst
+  unveränderten V3.9.15-Installation bestand ebenfalls.
 - Change-Set: `LF-V3916-BATCHED-ABSENCE-MATRIX-20260921-001`.
