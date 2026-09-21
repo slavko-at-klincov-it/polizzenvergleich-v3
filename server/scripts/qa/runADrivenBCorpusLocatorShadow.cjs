@@ -64,6 +64,7 @@ function argumentsFrom(argv) {
   return {
     runRoot: path.resolve(values.runRoot),
     output: path.resolve(values.output),
+    seedOutput: values.seedOutput ? path.resolve(values.seedOutput) : null,
     lmStudioSdk: values.lmStudioSdk ? path.resolve(values.lmStudioSdk) : null,
     qwenModelKey: values.qwenModelKey || null,
     model: values.model || DEFAULT_MODEL,
@@ -371,6 +372,34 @@ function replayPlan(plan, factIndex, results) {
   };
 }
 
+function reusablePartitionResult({ seedOutput, plan, partition }) {
+  if (!seedOutput) return null;
+  const resultPath = path.join(
+    seedOutput,
+    `partition-${String(partition.partitionIndex).padStart(3, "0")}.private.json`
+  );
+  if (!fs.existsSync(resultPath)) return null;
+  const result = readJson(
+    resultPath,
+    "LF_B_CORPUS_LOCATOR_SEED_PARTITION"
+  );
+  if (
+    result.contractId !== RUN_CONTRACT_ID ||
+    result.planSha256 !== plan.planSha256 ||
+    result.partitionId !== partition.partitionId ||
+    !Array.isArray(result.attempts) ||
+    !result.attempts.some(({ status }) => status === "PASS")
+  )
+    throw new Error(
+      `LF_A_DRIVEN_B_CORPUS_LOCATOR_SEED_INVALID:${partition.partitionId}`
+    );
+  return {
+    ...result,
+    responses: validateLocatorResponse(result.responses, plan, partition),
+    reusedFrom: resultPath,
+  };
+}
+
 async function run() {
   const args = argumentsFrom(process.argv.slice(2));
   if (fs.existsSync(args.output))
@@ -433,14 +462,35 @@ async function run() {
     qwenModelKey: args.qwenModelKey,
     modelRecoveryTimeoutMs: args.modelRecoveryTimeoutMs,
   });
-  const allowed =
-    args.maximumNewPartitions === null
-      ? plan.partitions
-      : plan.partitions.slice(0, args.maximumNewPartitions);
   const startedAt = new Date().toISOString();
   const started = performance.now();
   const results = [];
-  for (const partition of allowed) {
+  let newPartitions = 0;
+  for (const partition of plan.partitions) {
+    const reusable = reusablePartitionResult({
+      seedOutput: args.seedOutput,
+      plan,
+      partition,
+    });
+    if (reusable) {
+      writePrivateJson(
+        path.join(
+          args.output,
+          `partition-${String(partition.partitionIndex).padStart(3, "0")}.private.json`
+        ),
+        reusable
+      );
+      results.push(reusable);
+      console.log(
+        `[lf-b-corpus-locator-shadow] Partition ${partition.partitionIndex + 1}/${plan.partitions.length}: PASS (wiederverwendet)`
+      );
+      continue;
+    }
+    if (
+      args.maximumNewPartitions !== null &&
+      newPartitions >= args.maximumNewPartitions
+    )
+      break;
     const result = await locatePartition({
       args,
       plan,
@@ -464,6 +514,7 @@ async function run() {
       artifactResult
     );
     results.push(artifactResult);
+    newPartitions += 1;
     console.log(
       `[lf-b-corpus-locator-shadow] Partition ${partition.partitionIndex + 1}/${plan.partitions.length}: PASS`
     );
@@ -489,9 +540,11 @@ async function run() {
     startedAt,
     completedAt: new Date().toISOString(),
     wallDurationMs: Math.round(performance.now() - started),
-    modelRequests: results.length,
+    modelRequests: newPartitions,
+    reusedPartitions: results.length - newPartitions,
     modelAttempts: results.reduce(
-      (sum, result) => sum + result.attempts.length,
+      (sum, result) =>
+        sum + (result.reusedFrom ? 0 : result.attempts.length),
       0
     ),
     ...replay.summary,
@@ -518,5 +571,6 @@ module.exports = {
   compactRequirement,
   partitionFacts,
   prompt,
+  reusablePartitionResult,
   validateLocatorResponse,
 };
