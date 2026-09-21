@@ -141,6 +141,7 @@ const {
 } = require("../../scripts/qa/buildADrivenRoutedWindowDecisionPlan.cjs");
 const {
   compactDecisionPromptView,
+  partitionCompactDecisionWork,
   validateAliasDecisionResponse,
 } = require("../../scripts/qa/runADrivenCompactWindowDecisions.cjs");
 const {
@@ -21579,6 +21580,20 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       routedWindowLocatorPlan,
       routedWindowLocatorPlan.partitions[0]
     );
+    expect(
+      partitionCompactDecisionWork(
+        decisionPlan,
+        routedWindowLocatorPlan,
+        1
+      )
+    ).toEqual([
+      expect.objectContaining({
+        partitionIndex: 0,
+        sourcePartitionIndex: 0,
+        sourcePartitionPart: 0,
+        requirementIds: [decisionPlan.rows[0].requirementId],
+      }),
+    ]);
     const compactDecisionResponse = [
       {
         r: 1,

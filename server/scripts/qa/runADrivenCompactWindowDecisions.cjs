@@ -27,8 +27,8 @@ const {
   requirementsForPartition,
 } = require("./runADrivenBCorpusLocatorShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V2";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V2";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V3";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V3";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const OUTCOMES = new Set([
@@ -87,10 +87,61 @@ function argumentsFrom(argv) {
     modelContext: integer("modelContext", DEFAULT_CONTEXT, 1_000),
     maximumAttempts: integer("maximumAttempts", 2),
     maximumEvidencePerRequirement: integer("maximumEvidencePerRequirement", 12),
+    maximumComponentsPerRequest: integer("maximumComponentsPerRequest", 8),
     requestTimeoutMs: integer("requestTimeoutMs", 300_000),
     abortSettlementTimeoutMs: integer("abortSettlementTimeoutMs", 15_000),
     modelRecoveryTimeoutMs: integer("modelRecoveryTimeoutMs", 180_000),
   };
+}
+
+function partitionCompactDecisionWork(
+  decisionPlan,
+  locatorPlan,
+  maximumComponentsPerRequest = 8
+) {
+  const sourceRowsById = new Map(
+    decisionPlan.rows.map((row) => [row.requirementId, row])
+  );
+  const work = [];
+  for (const sourcePartition of locatorPlan.partitions) {
+    let currentRequirementIds = [];
+    let currentComponents = 0;
+    const flush = () => {
+      if (!currentRequirementIds.length) return;
+      const sourcePartitionPart = work.filter(
+        ({ sourcePartitionIndex }) =>
+          sourcePartitionIndex === sourcePartition.partitionIndex
+      ).length;
+      work.push({
+        ...sourcePartition,
+        partitionId: `${sourcePartition.partitionId}-D${sourcePartitionPart + 1}`,
+        partitionIndex: work.length,
+        sourcePartitionIndex: sourcePartition.partitionIndex,
+        sourcePartitionPart,
+        requirementIds: currentRequirementIds,
+      });
+      currentRequirementIds = [];
+      currentComponents = 0;
+    };
+    for (const requirementId of sourcePartition.requirementIds) {
+      const row = sourceRowsById.get(requirementId);
+      if (!row)
+        throw new Error(
+          `LF_A_DRIVEN_COMPACT_WINDOW_REQUIREMENT_MISSING:${requirementId}`
+        );
+      const components = row.components.length;
+      if (
+        currentRequirementIds.length &&
+        currentComponents + components > maximumComponentsPerRequest
+      )
+        flush();
+      currentRequirementIds.push(requirementId);
+      currentComponents += components;
+      if (currentComponents >= maximumComponentsPerRequest) flush();
+    }
+    flush();
+  }
+  return work;
 }
 
 function compactComponent(component, index) {
@@ -375,6 +426,11 @@ async function run() {
     args.rescueDecisions,
     "LF_A_DRIVEN_COMPACT_WINDOW_RESCUE_DECISIONS"
   );
+  const decisionPartitions = partitionCompactDecisionWork(
+    decisionPlan,
+    locatorPlan,
+    args.maximumComponentsPerRequest
+  );
   fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });
   const baseUrl = process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
   const loadedModel = await verifyModel({
@@ -398,7 +454,7 @@ async function run() {
   const startedAt = new Date().toISOString();
   const started = performance.now();
   const results = [];
-  for (const partition of locatorPlan.partitions) {
+  for (const partition of decisionPartitions) {
     let result;
     try {
       result = await decidePartition({
@@ -441,7 +497,7 @@ async function run() {
     );
     results.push(artifact);
     console.log(
-      `[lf-compact-window-decisions] Partition ${partition.partitionIndex + 1}/${locatorPlan.partitions.length}: PASS`
+      `[lf-compact-window-decisions] Partition ${partition.partitionIndex + 1}/${decisionPartitions.length}: PASS`
     );
   }
   const fastPlan = replayPlan(locatorPlan, factIndex, results);
@@ -465,7 +521,7 @@ async function run() {
     startedAt,
     completedAt: new Date().toISOString(),
     wallDurationMs: Math.round(performance.now() - started),
-    modelRequests: locatorPlan.partitions.length,
+    modelRequests: decisionPartitions.length,
     modelAttempts: results.reduce(
       (sum, result) => sum + result.attempts.length,
       0
@@ -495,6 +551,7 @@ if (require.main === module)
 module.exports = {
   OUTCOMES,
   compactDecisionPromptView,
+  partitionCompactDecisionWork,
   prompt,
   validateAliasDecisionResponse,
 };
