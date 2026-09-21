@@ -4489,3 +4489,58 @@ Vollständigkeitsbehauptung erzeugen.
   bestanden auf dem exakten Patch-SHA. Der operative Doctor der bewusst
   unveränderten V3.9.15-Installation bestand ebenfalls.
 - Change-Set: `LF-V3916-BATCHED-ABSENCE-MATRIX-20260921-001`.
+
+## INT-20260921-076 — B-Korpus einmal quellgebunden indexieren statt pro offener A-Anforderung neu prompten
+
+- Erfasst: 2026-09-21
+- Typ: `ENTSCHEIDUNGSKANDIDAT`
+- Status: `IN_PRÜFUNG`
+- Aussage: Die vollständigen B-Dokumente sollen pro Dokumenthash genau einmal
+  als source-bound Fakten-/Klausel-Ledger materialisiert und über bestehende
+  exakte, BM25-, Struktur-, Werte-/Rollen- und Dinghy-Kanäle adressierbar
+  werden. Qwen soll danach nur noch kompakte semantisch offene
+  Kandidatengruppen prüfen. Der B-Rohtext darf nicht erneut als kartesische
+  Matrix `offene A-Anforderungen × vollständige B-Partitionen` interpretiert
+  werden.
+- Historische Grundlage: Der 27-Minuten-Core-5-Lauf verarbeitete 733.084
+  Prompt-Tokens mit kleinen Kandidatenpayloads, verfehlte jedoch vorhandene
+  Gegenstellen. V3.7.4 benötigte für 1,227 Mio. Prompt-Tokens 44 min 30 s,
+  besaß aber keine heutige Vollkorpus-Nullzertifizierung. Der
+  V3.9.15-Abwesenheitspfad benötigte trotz nur 462 Requests 7,265 Mio.
+  Prompt-Tokens und 4 h 46 min 41 s, weil derselbe B-Kontext 42-mal übertragen
+  wurde. Die V5-Transportbündelung senkte Requests auf 76, benötigte weiterhin
+  rund drei Stunden und veränderte neun Detailoutcomes. Reines freies RAG war
+  in 6 bis 16 Minuten schnell, verlor aber Inhalte, Rollen oder Quellen.
+- Wiederverwendungsklasse: `EXTRACT_SHARED_CORE` für die vollständige
+  Source-/Klausel-Ledger aus `CAP-PROV-001`, `CAP-B-002` und `CAP-B-005`;
+  `DIRECT_REUSE` beziehungsweise `ADAPT_EXISTING` für `CAP-B-001` bis
+  `CAP-B-004` und den semantischen Richter `CAP-B-006`; grundlegendes
+  `ADAPT_EXISTING` für `CAP-B-007`. Die content-addressed B-Fakten-Ledger und
+  ihr Coverage-/Dispositionszertifikat sind `NEW_REQUIRED`, weil keine
+  bestehende Capability die einmalige B-Semantik mit terminaler
+  Vollständigkeit für mehrere A-Anforderungen wiederverwendbar macht.
+- Scope und Hard-Gates: Jede extrahierte B-Klausel bleibt mit Dokumenthash,
+  Seite, Offset und Text-Hash in der Ledger. Deterministische Signale und
+  Retrieval dürfen ausschließlich Kandidaten navigieren, nie allein
+  Abwesenheit behaupten. Nicht ausgewählte Fakten bleiben explizit
+  `UNASSESSED` und sperren `NICHT GEFUNDEN`. Ausschlüsse desselben Elements
+  sind Gegenstücke; abweichende Werte, Limits, Bedingungen oder
+  Scope-Modifier beweisen keinen anderen Identitätskern. Kein globales Top-N,
+  keine B-only-Kundenzeilen und keine modellgenerierten Quellen oder IDs.
+- Messplan: Zuerst unveröffentlichter Replay auf dem unveränderten
+  V3.9.15-Run mit 362 Anforderungen, 322 B-Klauseln, 42 Fallbacks und den elf
+  source-bound Kandidaten der fünf echten Rescue-Fälle. Gemessen werden
+  bekannte Positiv-Recall, Kandidatenpaare, Review-Batches, ungeprüfte
+  Faktpaare und Nullfund-Sperren für mehrere Top-K-Profile. Erst nach 100 %
+  Wiederfund der bekannten Rescue-Anforderungen folgt ein Modell-Shadow;
+  danach vollständiges Outcome-/Gold-Differential, kalter Mac-Studio-Lauf,
+  selektive Hash-Invalidierung und unbekannter Holdout.
+- Ziel: Der kalte Kundenpfad soll auf eine wirtschaftliche Größenordnung von
+  ungefähr 10 bis 15 Minuten zielen. Das ist ein Produktziel, keine bereits
+  belegte Prognose. Eine Freigabe erfolgt nur bei nicht schlechterer
+  source-bound Qualität; bei Zielkonflikt bleibt der Kundenpfad unverändert.
+- Beweisgrenze: Ein Replay gegen bekannte Rescue-Treffer beweist weder
+  unbekannten Recall noch Nullfundrichtigkeit, Holdout-Qualität oder
+  99 Prozent. Die derzeit installierte V3.9.15 bleibt bis zum bestandenen
+  Qualitäts- und Laufzeitgate unverändert.
+- Change-Set: `LF-V3917-SOURCE-BOUND-B-FACT-INDEX-20260921-001`.
