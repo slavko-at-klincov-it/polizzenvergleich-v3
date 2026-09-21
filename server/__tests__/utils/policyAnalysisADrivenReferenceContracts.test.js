@@ -117,6 +117,7 @@ const {
   validateADrivenBFactIndex,
 } = require("../../utils/policyAnalysis/aDrivenBFactIndex");
 const {
+  parseExpansionResponse,
   validateExpansionResponse,
 } = require("../../scripts/qa/runADrivenBQueryExpansionShadow.cjs");
 const {
@@ -21487,6 +21488,22 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         { rows: [{ requirementId: fallbackRequirementId }] }
       )
     ).toThrow("LF_A_DRIVEN_B_QUERY_EXPANSION_ITEM_DUPLICATE");
+    expect(
+      parseExpansionResponse(
+        JSON.stringify([
+          {
+            requirementId: fallbackRequirementId,
+            searchPhrases: ["eins", "zwei", "drei"],
+          },
+        ]),
+        { rows: [{ requirementId: fallbackRequirementId }] }
+      )
+    ).toMatchObject({
+      expansions: {
+        [fallbackRequirementId]: ["eins", "zwei", "drei"],
+      },
+      syntaxRepair: null,
+    });
 
     const absencePlan = buildADrivenRequirementAbsencePlan({
       decisionPlan,

@@ -185,6 +185,14 @@ function validateExpansionResponse(response, plan) {
   return expansions;
 }
 
+function parseExpansionResponse(rawResponse, plan) {
+  const parsed = parseJsonArray(rawResponse);
+  return {
+    expansions: validateExpansionResponse(parsed.responses, plan),
+    syntaxRepair: parsed.syntaxRepair,
+  };
+}
+
 async function verifyModel({ baseUrl, model, modelContext }) {
   const apiRoot = baseUrl.replace(/\/v1\/?$/u, "");
   const response = await fetch(`${apiRoot}/api/v0/models`, {
@@ -231,8 +239,7 @@ async function requestExpansions({ args, plan, client, recoverModelAfterAbort })
         recoverModelAfterAbort,
       });
       rawResponse = completion.choices?.[0]?.message?.content || "";
-      const response = parseJsonArray(rawResponse);
-      const expansions = validateExpansionResponse(response, plan);
+      const parsed = parseExpansionResponse(rawResponse, plan);
       attempts.push({
         attempt,
         status: "PASS",
@@ -240,9 +247,10 @@ async function requestExpansions({ args, plan, client, recoverModelAfterAbort })
         promptSha256: sha256(JSON.stringify(messages)),
         rawResponse,
         rawResponseSha256: sha256(rawResponse),
+        syntaxRepair: parsed.syntaxRepair,
         usage: completion.usage || null,
       });
-      return { attempts, expansions };
+      return { attempts, expansions: parsed.expansions };
     } catch (error) {
       attempts.push({
         attempt,
@@ -427,6 +435,7 @@ if (require.main === module)
 
 module.exports = {
   argumentsFrom,
+  parseExpansionResponse,
   prompt,
   validateExpansionResponse,
 };
