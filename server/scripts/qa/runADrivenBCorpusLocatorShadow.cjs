@@ -10,6 +10,7 @@ const { OpenAI } = require("openai");
 const {
   A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID,
   buildADrivenBFactIndex,
+  buildADrivenBRetrievalWindows,
   buildADrivenFastFallbackPlan,
   buildADrivenTerminalEvidenceReplay,
 } = require("../../utils/policyAnalysis/aDrivenBFactIndex");
@@ -30,9 +31,9 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V3";
-const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V3";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V3";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V4";
+const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V4";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V4";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -121,6 +122,7 @@ function compactRequirement(row) {
 function compactFact(fact) {
   return {
     factId: fact.factId,
+    ...(fact.parentFactId ? { parentFactId: fact.parentFactId } : {}),
     documentUuid: fact.documentUuid,
     documentRole: fact.documentRole,
     physicalPageNumber: fact.physicalPageNumber,
@@ -207,6 +209,8 @@ function buildPlan({
   decisionPlan,
   preliminaryDecisions,
   factIndex,
+  candidateCorpus = factIndex.facts,
+  candidateUnitType = "PARENT_FACT",
   maximumPartitionCharacters,
   partitionMode = "CHARACTER",
   candidateFactIdsByRequirement = null,
@@ -238,8 +242,8 @@ function buildPlan({
     ? new Set(Object.values(candidateFactIdsByRequirement).flat())
     : null;
   const routedFacts = routedFactIds
-    ? factIndex.facts.filter(({ factId }) => routedFactIds.has(factId))
-    : factIndex.facts;
+    ? candidateCorpus.filter(({ factId }) => routedFactIds.has(factId))
+    : candidateCorpus;
   if (routedFactIds && routedFacts.length !== routedFactIds.size)
     throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_ROUTED_FACT_UNKNOWN");
   const partitions =
@@ -252,6 +256,7 @@ function buildPlan({
     decisionPlanSha256: decisionPlan.planSha256,
     preliminaryDecisionSha256: preliminaryDecisions.decisionSha256,
     factIndexSha256: factIndex.indexSha256,
+    candidateUnitType,
     partitionMode,
     maximumPartitionCharacters,
     requirements,
@@ -259,6 +264,7 @@ function buildPlan({
     summary: {
       requirements: requirements.length,
       sourceFacts: factIndex.facts.length,
+      sourceCandidates: candidateCorpus.length,
       routedFacts: routedFacts.length,
       partitions: partitions.length,
       modelRequests: partitions.length,
@@ -271,7 +277,9 @@ function buildPlan({
       customerNotFoundEligible: false,
     },
     proofLimit:
-      "Der Locator nominiert nur Kandidaten aus vollständigen B-Korpuspartitionen. Leere Nominierungen sind kein Abwesenheitsbeweis.",
+      candidateUnitType === "SOURCE_WINDOW"
+        ? "Der Locator nominiert nur kurze, quellgebundene Navigationsfenster und bindet Treffer anschließend an vollständige B-Fakten zurück. Leere Nominierungen sind kein Abwesenheitsbeweis."
+        : "Der Locator nominiert nur Kandidaten aus vollständigen B-Korpuspartitionen. Leere Nominierungen sind kein Abwesenheitsbeweis.",
   };
   return {
     ...payload,
@@ -280,13 +288,12 @@ function buildPlan({
 }
 
 function prompt(plan, partition, repair = null) {
-  const partitionFactIds = new Set(partition.factIds);
   const requirements = requirementsForPartition(plan, partition);
   const messages = [
     {
       role: "system",
       content:
-        "Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede requirementId unabhängig gegen alle vorgelegten B-Klauseln und nenne jede factId, die möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthält. Falls eine Anforderung candidateFactIds enthält, sind ausschließlich diese factIds für genau diese Anforderung zulässig; andere vorgelegte Klauseln dienen nur den anderen Anforderungen. Im Zweifel aufnehmen; bloße Themenähnlichkeit nicht aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein JSON-Array in der vorgegebenen Anforderungsreihenfolge: [{requirementId,candidateFactIds:[...]}]. Jede requirementId genau einmal. Verwende nur vorgelegte und für die Anforderung zugelassene factIds, maximal 12 pro requirementId, keine Erläuterung und keine weiteren Felder.",
+        "Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede requirementId unabhängig gegen alle vorgelegten B-Quelltexte und nenne jede factId, die möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthält. Kurze Quellfenster sind reine Navigation und werden nach deiner Auswahl wieder an ihre vollständige Elternklausel gebunden. Falls eine Anforderung candidateFactIds enthält, sind ausschließlich diese factIds für genau diese Anforderung zulässig; andere vorgelegte Quelltexte dienen nur den anderen Anforderungen. Im Zweifel aufnehmen; bloße Themenähnlichkeit nicht aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein JSON-Array in der vorgegebenen Anforderungsreihenfolge: [{requirementId,candidateFactIds:[...]}]. Jede requirementId genau einmal. Verwende nur vorgelegte und für die Anforderung zugelassene factIds, maximal 12 pro requirementId, keine Erläuterung und keine weiteren Felder.",
     },
     {
       role: "user",
@@ -451,13 +458,28 @@ async function locatePartition({
 }
 
 function replayPlan(plan, factIndex, results) {
+  const parentFactIdByCandidateId = new Map(
+    plan.partitions.flatMap(({ candidates }) =>
+      candidates.map(({ factId, parentFactId }) => [
+        factId,
+        parentFactId || factId,
+      ])
+    )
+  );
   const selectedByRequirement = new Map(
     plan.requirements.map(({ requirementId }) => [requirementId, new Set()])
   );
   for (const result of results)
     for (const response of result.responses)
       for (const factId of response.candidateFactIds)
-        selectedByRequirement.get(response.requirementId).add(factId);
+        {
+          const parentFactId = parentFactIdByCandidateId.get(factId);
+          if (!parentFactId)
+            throw new Error(
+              `LF_A_DRIVEN_B_CORPUS_LOCATOR_REPLAY_CANDIDATE_UNKNOWN:${factId}`
+            );
+          selectedByRequirement.get(response.requirementId).add(parentFactId);
+        }
   const rows = plan.requirements.map(({ requirementId }) => ({
     requirementId,
     candidateFactIds: [...selectedByRequirement.get(requirementId)].sort(),
@@ -535,6 +557,8 @@ async function run() {
   );
   const factIndex = buildADrivenBFactIndex({ completeCorpus });
   let candidateFactIdsByRequirement = null;
+  let candidateCorpus = factIndex.facts;
+  let candidateUnitType = "PARENT_FACT";
   if (args.queryExpansionArtifact) {
     const expansionArtifact = readJson(
       args.queryExpansionArtifact,
@@ -572,16 +596,27 @@ async function run() {
       retrievalWindowOverlapTokens: args.routeWindowOverlapTokens,
     });
     candidateFactIdsByRequirement = Object.fromEntries(
-      routePlan.rows.map(({ requirementId, candidateFactIds }) => [
-        requirementId,
-        candidateFactIds,
+      routePlan.rows.map((row) => [
+        row.requirementId,
+        args.routeRetrievalUnitStrategy === "SOURCE_WINDOWS"
+          ? row.candidateRetrievalUnitIds
+          : row.candidateFactIds,
       ])
     );
+    if (args.routeRetrievalUnitStrategy === "SOURCE_WINDOWS") {
+      candidateCorpus = buildADrivenBRetrievalWindows(factIndex.facts, {
+        maximumTokens: args.routeWindowMaximumTokens,
+        overlapTokens: args.routeWindowOverlapTokens,
+      }).map((window) => ({ ...window, factId: window.windowId }));
+      candidateUnitType = "SOURCE_WINDOW";
+    }
   }
   const plan = buildPlan({
     decisionPlan,
     preliminaryDecisions,
     factIndex,
+    candidateCorpus,
+    candidateUnitType,
     maximumPartitionCharacters: args.maximumPartitionCharacters,
     partitionMode: args.partitionMode,
     candidateFactIdsByRequirement,
@@ -590,7 +625,7 @@ async function run() {
   writePrivateJson(path.join(args.output, "locator-plan.private.json"), plan);
   if (args.maximumNewPartitions === 0) {
     console.log(
-      `[lf-b-corpus-locator-shadow] PLAN: ${plan.summary.requirements} Anforderungen, ${plan.summary.routedFacts}/${plan.summary.sourceFacts} geroutete Fakten, ${plan.summary.partitions} Modellrequests; NICHT GEFUNDEN gesperrt`
+      `[lf-b-corpus-locator-shadow] PLAN: ${plan.summary.requirements} Anforderungen, ${plan.summary.routedFacts}/${plan.summary.sourceCandidates} geroutete ${plan.candidateUnitType}, ${plan.summary.partitions} Modellrequests; NICHT GEFUNDEN gesperrt`
     );
     return;
   }
@@ -743,6 +778,7 @@ module.exports = {
   partitionFacts,
   partitionFactsByDocument,
   prompt,
+  replayPlan,
   requirementsForPartition,
   reusablePartitionResult,
   validateLocatorResponse,

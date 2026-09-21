@@ -127,6 +127,7 @@ const {
   compactRequirement: compactBCorpusLocatorRequirement,
   partitionFacts: partitionBCorpusLocatorFacts,
   partitionFactsByDocument,
+  replayPlan: replayBCorpusLocatorPlan,
   requirementsForPartition,
   validateLocatorResponse,
 } = require("../../scripts/qa/runADrivenBCorpusLocatorShadow.cjs");
@@ -21447,6 +21448,37 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       routedLocatorPlan.partitions.flatMap(({ factIds }) => factIds)
     ).toEqual([factIndex.facts[0].factId]);
 
+    const [firstSourceWindow] = buildADrivenBRetrievalWindows(
+      factIndex.facts,
+      { maximumTokens: 24, overlapTokens: 8 }
+    );
+    const routedWindowLocatorPlan = buildBCorpusLocatorPlan({
+      decisionPlan,
+      preliminaryDecisions,
+      factIndex,
+      candidateCorpus: [
+        { ...firstSourceWindow, factId: firstSourceWindow.windowId },
+      ],
+      candidateUnitType: "SOURCE_WINDOW",
+      maximumPartitionCharacters: 20_000,
+      candidateFactIdsByRequirement: {
+        [decisionPlan.rows[0].requirementId]: [firstSourceWindow.windowId],
+      },
+    });
+    expect(routedWindowLocatorPlan).toMatchObject({
+      candidateUnitType: "SOURCE_WINDOW",
+      summary: {
+        sourceFacts: factIndex.facts.length,
+        sourceCandidates: 1,
+        routedFacts: 1,
+        routedPairReviews: 1,
+      },
+    });
+    expect(routedWindowLocatorPlan.partitions[0].candidates[0]).toMatchObject({
+      factId: firstSourceWindow.windowId,
+      parentFactId: firstSourceWindow.parentFactId,
+    });
+
     const globalNeighborPlan = buildADrivenFastFallbackPlan({
       decisionPlan,
       preliminaryDecisions,
@@ -21922,6 +21954,17 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       customerNotFoundEligible: false,
     });
     expect(plan.summary.retrievalUnits).toBeGreaterThan(factIndex.facts.length);
+    expect(plan.rows[0].candidateRetrievalUnitIds.length).toBeGreaterThan(0);
+    expect(
+      plan.rows[0].candidateRetrievalUnitIds.every((unitId) =>
+        unitId.startsWith("BRW-")
+      )
+    ).toBe(true);
+    expect(
+      plan.rows[0].candidateRetrievalUnitIds.some((unitId) =>
+        plan.rows[0].candidateFactIds.includes(unitId)
+      )
+    ).toBe(false);
     expect(
       plan.rows[0].candidateSelections.some(({ channels }) =>
         channels.includes("LEXICAL_BM25_SOURCE_WINDOW_GLOBAL")
@@ -21929,6 +21972,47 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ).toBe(true);
     expect(plan.rows[0].customerNotFoundEligible).toBe(false);
     expect(plan.rows[0].unassessedFactIds.length).toBeGreaterThan(0);
+  });
+
+  test("maps locator source-window nominations back to complete parent facts", () => {
+    const factIndex = {
+      indexSha256: "fact-index-sha",
+      facts: [{ factId: "parent-fact" }, { factId: "other-parent" }],
+    };
+    const plan = {
+      requirements: [{ requirementId: "requirement-1" }],
+      partitions: [
+        {
+          candidates: [
+            {
+              factId: "BRW-window-1",
+              parentFactId: "parent-fact",
+            },
+          ],
+        },
+      ],
+    };
+    const replay = replayBCorpusLocatorPlan(plan, factIndex, [
+      {
+        responses: [
+          {
+            requirementId: "requirement-1",
+            candidateFactIds: ["BRW-window-1"],
+          },
+        ],
+      },
+    ]);
+
+    expect(replay.rows).toEqual([
+      {
+        requirementId: "requirement-1",
+        candidateFactIds: ["parent-fact"],
+      },
+    ]);
+    expect(replay.summary).toMatchObject({
+      selectedFactReviews: 1,
+      customerNotFoundEligible: false,
+    });
   });
 
   test("ranks embedded source windows deterministically while retaining parent fact identities", () => {

@@ -547,6 +547,13 @@ function buildADrivenFastFallbackPlan({
     ])
   );
   const globalRetrievalUnitIndex = bm25Index(retrievalUnits);
+  const retrievalUnitsByParentFactId = new Map();
+  for (const unit of retrievalUnits) {
+    const parentFactId = unit.parentFactId || unit.factId;
+    const list = retrievalUnitsByParentFactId.get(parentFactId) || [];
+    list.push(unit);
+    retrievalUnitsByParentFactId.set(parentFactId, list);
+  }
   const globalRawFacts = factIndex.facts.map((fact) => ({ ...fact }));
   const globalContextualFacts = [...indexesByDocument.values()].flatMap(
     ({ contextualFacts }) => contextualFacts
@@ -584,6 +591,7 @@ function buildADrivenFastFallbackPlan({
       normalizedQueryExpansions[row.requirementId] || []
     );
     const selected = new Map();
+    const selectedRetrievalUnitIds = new Set();
     const neighborAnchors = new Set();
     const add = (fact, channel) => {
       const existing = selected.get(fact.factId);
@@ -625,6 +633,7 @@ function buildADrivenFastFallbackPlan({
       for (const unit of ranked) {
         const factId = unit.parentFactId || unit.factId;
         add(canonicalFactById.get(factId), channel);
+        selectedRetrievalUnitIds.add(unit.windowId || unit.factId);
       }
       for (const unit of ranked.slice(0, neighborAnchorLimit))
         neighborAnchors.add(unit.parentFactId || unit.factId);
@@ -787,6 +796,18 @@ function buildADrivenFastFallbackPlan({
         left.documentStart - right.documentStart ||
         left.factId.localeCompare(right.factId)
     );
+    for (const fact of candidates) {
+      const units = retrievalUnitsByParentFactId.get(fact.factId) || [];
+      if (
+        !units.some((unit) =>
+          selectedRetrievalUnitIds.has(unit.windowId || unit.factId)
+        )
+      ) {
+        const [firstUnit] = units;
+        if (firstUnit)
+          selectedRetrievalUnitIds.add(firstUnit.windowId || firstUnit.factId);
+      }
+    }
     const reviewBatches = batchCandidates(
       row.requirementId,
       candidates,
@@ -797,6 +818,7 @@ function buildADrivenFastFallbackPlan({
       requirementId: row.requirementId,
       query,
       candidateFactIds: candidates.map(({ factId }) => factId),
+      candidateRetrievalUnitIds: [...selectedRetrievalUnitIds].sort(),
       candidateSelections: candidates.map(({ factId, channels }) => ({
         factId,
         channels,
