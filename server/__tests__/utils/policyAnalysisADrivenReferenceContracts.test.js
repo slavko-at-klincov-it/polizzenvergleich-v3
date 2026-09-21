@@ -110,6 +110,12 @@ const {
   buildADrivenCompleteBCorpus,
 } = require("../../utils/policyAnalysis/aDrivenCompleteBCorpus");
 const {
+  buildADrivenBFactIndex,
+  buildADrivenFastFallbackPlan,
+  buildADrivenFastFallbackReplay,
+  validateADrivenBFactIndex,
+} = require("../../utils/policyAnalysis/aDrivenBFactIndex");
+const {
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID_V2,
   buildADrivenRequirementSegmentedPlan,
 } = require("../../utils/policyAnalysis/aDrivenRequirementSegmentedPlan");
@@ -21160,6 +21166,132 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       fallbackRequiredRequirements: 1,
       unresolvedRequirements: 0,
     });
+  });
+
+  test("builds a complete B fact index and keeps fast fallback null findings blocked", () => {
+    const { manifest, searchPlan, searchExecution } =
+      requirementDecisionFixture();
+    const completeCorpus = buildADrivenCompleteBCorpus({
+      documents: [
+        document(
+          "b-doc",
+          0,
+          artifact(
+            [
+              "Seite 1\nGebäudeschäden durch Sturm sind versichert.",
+              "Seite 2\nDie Entschädigung ist mit EUR 10.000 begrenzt.",
+              "Seite 3\nAndere fachfremde Bestimmung.",
+            ],
+            "b"
+          )
+        ),
+      ],
+    });
+    const decisionPlan = buildADrivenRequirementDecisionPlan({
+      manifest,
+      searchPlan,
+      searchExecution,
+      completeCorpus,
+      maximumCompleteCorpusCandidatesPerDocument: 1,
+    });
+    const preliminaryResponses = decisionPlan.rows.map((row) => {
+      const candidateId = row.candidates[0].candidateId;
+      return {
+        requirementId: row.requirementId,
+        contextFinding: {
+          outcome: "RELATED_ONLY",
+          candidateIds: [candidateId],
+        },
+        componentFindings: row.components.map((component) => ({
+          componentId: component.componentId,
+          dimension: component.dimension,
+          outcome: "RELATED_ONLY",
+          candidateIds: [candidateId],
+        })),
+        unmodeledDifferences: [],
+        rationale: "Nur thematische Nähe im Primärpfad.",
+      };
+    });
+    const preliminaryDecisions = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: preliminaryResponses,
+    });
+    const factIndex = buildADrivenBFactIndex({ completeCorpus });
+
+    expect(validateADrivenBFactIndex(factIndex, { completeCorpus })).toBe(true);
+    expect(factIndex.summary).toMatchObject({
+      sourceClauses: completeCorpus.clauses.length,
+      facts: completeCorpus.clauses.length,
+      sourceCoverage: "ALL_EXTRACTED_B_CLAUSE_BOUNDARIES",
+      customerNotFoundEligible: false,
+    });
+    expect(factIndex.facts.some(({ deterministicSignals }) =>
+      deterministicSignals.roles.includes("INCLUSION")
+    )).toBe(true);
+    expect(factIndex.facts.some(({ deterministicSignals }) =>
+      deterministicSignals.roles.includes("LIMIT")
+    )).toBe(true);
+
+    const fastPlan = buildADrivenFastFallbackPlan({
+      decisionPlan,
+      preliminaryDecisions,
+      completeCorpus,
+      factIndex,
+      lexicalTopKPerDocument: completeCorpus.clauses.length,
+      maximumBatchCharacters: 10_000,
+    });
+    expect(fastPlan.summary).toMatchObject({
+      fallbackRequirements: 1,
+      corpusFacts: completeCorpus.clauses.length,
+      selectedFactReviews: completeCorpus.clauses.length,
+      unassessedFactPairs: 0,
+      customerNotFoundEligible: false,
+    });
+    expect(fastPlan.rows[0].customerNotFoundEligible).toBe(false);
+
+    const absencePlan = buildADrivenRequirementAbsencePlan({
+      decisionPlan,
+      preliminaryDecisions,
+      completeCorpus,
+      maximumPartitionCharacters: 10_000,
+    });
+    const responses = absencePlan.partitions.map((partition, index) => ({
+      partitionId: partition.partitionId,
+      decision:
+        index === 0
+          ? "COUNTERPART_PRESENT"
+          : "NO_COUNTERPART_IN_PARTITION",
+      candidateIds: index === 0 ? [partition.candidateIds[0]] : [],
+      rationale:
+        index === 0
+          ? "Source-bound Gegenstückkandidat vorhanden."
+          : "Kein Gegenstück in dieser Partition.",
+    }));
+    const absenceDecisions = validateADrivenRequirementAbsenceResponses({
+      plan: absencePlan,
+      responses,
+    });
+    const replay = buildADrivenFastFallbackReplay({
+      fastPlan,
+      factIndex,
+      absencePlan,
+      absenceDecisions,
+    });
+    expect(replay.summary).toMatchObject({
+      knownPositiveRequirements: 1,
+      recoveredAnyPositiveRequirements: 1,
+      recoveredAllPositiveRequirements: 1,
+      knownPositiveFacts: 1,
+      recoveredPositiveFacts: 1,
+      positiveFactRecall: 1,
+      customerNotFoundEligible: false,
+    });
+
+    const tampered = JSON.parse(JSON.stringify(factIndex));
+    tampered.facts.pop();
+    expect(() => validateADrivenBFactIndex(tampered, { completeCorpus })).toThrow(
+      "LF_A_DRIVEN_B_FACT_INDEX_INVALID"
+    );
   });
 
   test("certifies NOT_FOUND only after every complete B clause partition is terminal", async () => {

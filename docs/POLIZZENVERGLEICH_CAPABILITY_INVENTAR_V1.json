@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V3916-BATCHED-ABSENCE-MATRIX-20260921-001",
+  "changeSetId": "LF-V3917-SOURCE-BOUND-B-FACT-INDEX-20260921-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -107,6 +107,18 @@
     {
       "id": "LF_A_DRIVEN_REQUIREMENT_FINAL_DECISION_V1",
       "path": "server/utils/policyAnalysis/aDrivenRequirementAbsenceCertification.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_B_FACT_INDEX_V1",
+      "path": "server/utils/policyAnalysis/aDrivenBFactIndex.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V1",
+      "path": "server/utils/policyAnalysis/aDrivenBFactIndex.js"
+    },
+    {
+      "id": "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V1",
+      "path": "server/utils/policyAnalysis/aDrivenBFactIndex.js"
     },
     {
       "id": "LF_A_DRIVEN_BINARY_REFERENCE_RESULT_V6",
@@ -1497,6 +1509,79 @@
       "relations": [{ "type": "REFINES", "target": "CAP-B-006" }],
       "activationReason": "Wired immediately after primary B in the V2 runner, but not yet reached by the fresh run.",
       "reactivationCriteria": "Not applicable while active."
+    },
+    {
+      "id": "CAP-B-008",
+      "name": "Source-bound B-Faktenindex und Fast-Fallback-Replay",
+      "purpose": "Indexiert jede vollständige B-Klausel einmal unter stabiler Quellenidentität und misst einen kandidatengrenzten Ersatz für die kartesische Vollkorpus-Abwesenheitsmatrix.",
+      "pipelinePhase": "B_FACT_INDEX_SHADOW",
+      "productModes": ["LF"],
+      "maturityStatus": "HYPOTHESIS",
+      "activationStatus": "QA_ONLY",
+      "activationByMode": { "LF": "QA_ONLY", "AB": "INACTIVE" },
+      "implementationFiles": [
+        "server/utils/policyAnalysis/aDrivenBFactIndex.js",
+        "server/scripts/qa/buildADrivenBFastPathShadow.cjs"
+      ],
+      "publicEntrypoints": [
+        {
+          "path": "server/utils/policyAnalysis/aDrivenBFactIndex.js",
+          "symbol": "buildADrivenBFactIndex"
+        },
+        {
+          "path": "server/utils/policyAnalysis/aDrivenBFactIndex.js",
+          "symbol": "buildADrivenFastFallbackPlan"
+        }
+      ],
+      "callers": [
+        {
+          "path": "server/scripts/qa/buildADrivenBFastPathShadow.cjs",
+          "contains": "buildADrivenFastFallbackReplay"
+        }
+      ],
+      "inputs": [
+        "complete source-bound B corpus",
+        "preliminary fallback requirements",
+        "historical absence decisions for replay only"
+      ],
+      "outputs": [
+        "LF_A_DRIVEN_B_FACT_INDEX_V1",
+        "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V1",
+        "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V1"
+      ],
+      "sideEffects": ["writes new private QA shadow artifacts only"],
+      "dependencies": ["CAP-B-001", "CAP-B-002", "CAP-B-005", "CAP-B-006"],
+      "qualityImpact": {
+        "recall": "SHADOW_MEASUREMENT_ONLY",
+        "precision": "NO_PRODUCT_AUTHORITY",
+        "sourceBinding": "COMPLETE_SOURCE_LEDGER",
+        "generalization": "UNPROVEN"
+      },
+      "resourceImpact": {
+        "runtime": "Expected low for index/replay; model runtime not yet measured",
+        "ram": "LOW",
+        "gpu": "NONE until a later model shadow"
+      },
+      "knownLimitsRisks": [
+        "Deterministic signals and retrieval cannot certify absence.",
+        "Every unassessed fact pair explicitly blocks NOT_FOUND.",
+        "Known-fixture replay recall does not prove unseen recall or holdout quality."
+      ],
+      "evidence": {
+        "tests": [
+          "server/__tests__/utils/policyAnalysisADrivenReferenceContracts.test.js"
+        ],
+        "runs": ["Pending Mac Studio replay against V3.9.15 artifacts"],
+        "adrs": ["ADR-003", "ADR-005", "ADR-031"],
+        "failures": ["INT-20260921-075", "INT-20260921-076"]
+      },
+      "lastVerifiedCommit": null,
+      "relations": [
+        { "type": "REUSES", "target": "CAP-B-005" },
+        { "type": "REFINES", "target": "CAP-B-007" }
+      ],
+      "activationReason": "Unpublished QA shadow only; the active customer runner does not call it.",
+      "reactivationCriteria": "Wire only after 100 percent known rescue recall, full source-bound differential, cold runtime gate and unseen holdout evidence."
     },
     {
       "id": "CAP-MODEL-001",
