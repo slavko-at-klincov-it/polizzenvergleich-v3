@@ -1521,7 +1521,8 @@
       "activationByMode": { "LF": "QA_ONLY", "AB": "INACTIVE" },
       "implementationFiles": [
         "server/utils/policyAnalysis/aDrivenBFactIndex.js",
-        "server/scripts/qa/buildADrivenBFastPathShadow.cjs"
+        "server/scripts/qa/buildADrivenBFastPathShadow.cjs",
+        "server/scripts/qa/buildADrivenBSemanticInventoryShadow.cjs"
       ],
       "publicEntrypoints": [
         {
@@ -1547,7 +1548,8 @@
       "outputs": [
         "LF_A_DRIVEN_B_FACT_INDEX_V1",
         "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V1",
-        "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V1"
+        "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V1",
+        "LF_A_DRIVEN_B_SEMANTIC_INVENTORY_SHADOW_V1"
       ],
       "sideEffects": ["writes new private QA shadow artifacts only"],
       "dependencies": ["CAP-B-001", "CAP-B-002", "CAP-B-005", "CAP-B-006"],
@@ -1558,14 +1560,15 @@
         "generalization": "UNPROVEN"
       },
       "resourceImpact": {
-        "runtime": "Expected low for index/replay; model runtime not yet measured",
+        "runtime": "Index/replay is code-only; bounded B semantic-inventory model runtime is being measured on Mac Studio",
         "ram": "LOW",
         "gpu": "NONE until a later model shadow"
       },
       "knownLimitsRisks": [
         "Deterministic signals and retrieval cannot certify absence.",
         "Every unassessed fact pair explicitly blocks NOT_FOUND.",
-        "Known-fixture replay recall does not prove unseen recall or holdout quality."
+        "Known-fixture replay recall does not prove unseen recall or holdout quality.",
+        "The source-bound B semantic inventory reuses the validated A unit/classification core only as an unpublished QA shadow; it is not wired to the customer runner."
       ],
       "evidence": {
         "tests": [

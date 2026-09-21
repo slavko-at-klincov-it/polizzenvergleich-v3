@@ -211,6 +211,7 @@ function argumentsFrom(argv) {
     "seedShadowRoot",
     "resumePlanRoot",
     "resumeOutputRoot",
+    "maximumNewBatches",
   ]);
   const unknown = Object.keys(values).filter((key) => !allowed.has(key));
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
@@ -227,6 +228,10 @@ function argumentsFrom(argv) {
   const modelRecoveryTimeoutMs = Number(
     values.modelRecoveryTimeoutMs || DEFAULT_MODEL_RECOVERY_TIMEOUT_MS
   );
+  const maximumNewBatches =
+    values.maximumNewBatches === undefined
+      ? null
+      : Number(values.maximumNewBatches);
   if (
     !Number.isInteger(modelContext) ||
     modelContext < 1_000 ||
@@ -238,7 +243,9 @@ function argumentsFrom(argv) {
     !Number.isInteger(abortSettlementTimeoutMs) ||
     abortSettlementTimeoutMs < 1 ||
     !Number.isInteger(modelRecoveryTimeoutMs) ||
-    modelRecoveryTimeoutMs < 1
+    modelRecoveryTimeoutMs < 1 ||
+    (maximumNewBatches !== null &&
+      (!Number.isInteger(maximumNewBatches) || maximumNewBatches < 1))
   )
     fail("Numerische Laufparameter sind ungültig");
   if (!values.lmStudioSdk || !values.qwenModelKey)
@@ -269,6 +276,7 @@ function argumentsFrom(argv) {
     resumeOutputRoot: values.resumeOutputRoot
       ? path.resolve(values.resumeOutputRoot)
       : null,
+    maximumNewBatches,
   };
 }
 
@@ -7702,6 +7710,7 @@ async function processClassificationBatches({
   partialResume = null,
 }) {
   const batchResults = [];
+  let newBatches = 0;
   for (const batch of batches.batches) {
     const file = batchResultFile(args.output, batch);
     let result;
@@ -7732,6 +7741,12 @@ async function processClassificationBatches({
       }
     }
     if (!reused) {
+      if (
+        args.maximumNewBatches !== null &&
+        args.maximumNewBatches !== undefined &&
+        newBatches >= args.maximumNewBatches
+      )
+        break;
       const contextualBatch = classificationBatch(plan, batch);
       const journalResponses = acceptedResponsesFromAttemptJournal({
         output: args.output,
@@ -7828,12 +7843,18 @@ async function processClassificationBatches({
         throw failure;
       }
       writePrivateJson(file, result);
+      newBatches += 1;
     }
     batchResults.push(result);
     console.log(
       `[lf-a-driven-classification] Batch ${batch.batchIndex + 1}/${batches.batches.length}: PASS${reused ? " (wiederverwendet)" : ""}`
     );
   }
+  batchResults.newBatches = newBatches;
+  batchResults.complete = batchResults.length === batches.batches.length;
+  batchResults.nextBatchIndex = batchResults.complete
+    ? null
+    : batches.batches[batchResults.length].batchIndex;
   return batchResults;
 }
 
@@ -7913,6 +7934,12 @@ async function run() {
     seed,
     partialResume,
   });
+  if (!batchResults.complete) {
+    console.log(
+      `[lf-a-driven-classification] kontrollierter Zwischenstand: ${batchResults.length}/${batches.batches.length} Batches, ${batchResults.newBatches} neu, nächster Batch ${batchResults.nextBatchIndex + 1}`
+    );
+    return;
+  }
   const responses = batchResults.flatMap(({ responses: items }) => items);
   const manifest = buildADrivenSemanticManifest({
     plan,

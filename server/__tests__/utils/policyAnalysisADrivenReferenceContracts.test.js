@@ -153,6 +153,10 @@ const {
   presentReferenceCustomerResult,
 } = require("../../utils/policyComparison/referenceCustomerPresentation");
 const {
+  B_SEMANTIC_INVENTORY_SHADOW_CONTRACT_ID,
+  buildBSemanticInventoryShadow,
+} = require("../../scripts/qa/buildADrivenBSemanticInventoryShadow.cjs");
+const {
   buildPartitionRequestBatches,
   compatibleSeedPartitionResponses,
   negativeDecisionSemanticConflicts,
@@ -3274,6 +3278,63 @@ describe("requirement-local semantic evidence completeness", () => {
 });
 
 describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
+  test("plans every B document once as a source-bound semantic inventory shadow", () => {
+    const runRoot = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-b-semantic-inventory-")
+    );
+    try {
+      const bArtifact = artifact(
+        ["Seite 1\nVersichert sind Gebäude.\n\nSelbstbehalt EUR 500.\n"],
+        "b"
+      );
+      const bDocument = {
+        uuid: "b-source",
+        side: "B",
+        position: 0,
+        sha256: bArtifact.fingerprint,
+        role: "MAIN_POLICY",
+        documentStatus: "ACTIVE",
+      };
+      fs.writeFileSync(
+        path.join(runRoot, "input-manifest.private.json"),
+        `${JSON.stringify({ documents: [bDocument] })}\n`
+      );
+      const documentRoot = path.join(runRoot, "documents", "B-01-b-source");
+      fs.mkdirSync(documentRoot, { recursive: true });
+      fs.writeFileSync(
+        path.join(documentRoot, "document.private.json"),
+        `${JSON.stringify(bArtifact)}\n`
+      );
+
+      const built = buildBSemanticInventoryShadow({
+        runRoot,
+        maximumUnits: 1,
+        maximumCharacters: 12_000,
+      });
+
+      expect(built.summary).toMatchObject({
+        contractId: B_SEMANTIC_INVENTORY_SHADOW_CONTRACT_ID,
+        documents: 1,
+        sourcePackageSide: "B",
+        customerNotFoundEligible: false,
+        maximumUnits: 1,
+        maximumCharacters: 12_000,
+      });
+      expect(built.summary.sourceBlocks).toBeGreaterThan(0);
+      expect(built.summary.pendingUnits).toBeGreaterThan(0);
+      expect(built.summary.classificationBatches).toBe(
+        built.classificationBatches.batches.length
+      );
+      expect(
+        built.plan.documents.every(({ documentUuid }) =>
+          documentUuid.startsWith("b-")
+        )
+      ).toBe(true);
+    } finally {
+      fs.rmSync(runRoot, { recursive: true, force: true });
+    }
+  });
+
   test("attaches only unambiguous top-level requirement fragments to one unit", () => {
     const owner = {
       unitId: "unit-one",
@@ -9638,6 +9699,94 @@ describe("LF_REFERENCE_A_DRIVEN_V2 source and semantic contracts", () => {
       });
       expect(secondClient.chat.completions.create).not.toHaveBeenCalled();
       expect(fs.readdirSync(path.join(temporary, "batches"))).toHaveLength(3);
+    } finally {
+      fs.rmSync(temporary, { recursive: true, force: true });
+    }
+  });
+
+  test("stops after the configured number of new classification batches and resumes without replay", async () => {
+    const temporary = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-a-classification-bounded-progress-")
+    );
+    try {
+      const source = artifact(
+        [
+          "Seite 1\nVersichert sind Gebäude.\n\nVersichert sind Nebengebäude.\n\nSelbstbehalt EUR 500.\n",
+        ],
+        "7"
+      );
+      const plan = buildADrivenSourceUnitPlan({
+        documents: [document("bounded-progress", 0, source)],
+      });
+      const built = buildADrivenClassificationBatches(plan, {
+        maximumUnits: 1,
+        maximumCharacters: 12_000,
+      });
+      const batches = { ...built, batches: built.batches.slice(0, 3) };
+      expect(batches.batches).toHaveLength(3);
+      const args = {
+        output: temporary,
+        model: "qwen/qwen3.6-35b-a3b",
+        modelContext: 42_496,
+        maximumAttempts: 1,
+        maximumNewBatches: 1,
+        requestTimeoutMs: 1_000,
+        abortSettlementTimeoutMs: 10,
+      };
+      const completion = async ({ messages }) => {
+        const input = JSON.parse(
+          messages.find(({ role }) => role === "user").content
+        );
+        return {
+          model: args.model,
+          choices: [
+            {
+              message: {
+                content: JSON.stringify(
+                  input.expectedUnitIds.map((unitId) =>
+                    validResponse(
+                      plan.units.find((unit) => unit.unitId === unitId)
+                    )
+                  )
+                ),
+              },
+            },
+          ],
+          usage: {},
+        };
+      };
+      const firstClient = {
+        chat: { completions: { create: jest.fn(completion) } },
+      };
+      const first = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client: firstClient,
+        recoverModelAfterAbort: jest.fn(),
+      });
+      expect(first).toHaveLength(1);
+      expect(first.newBatches).toBe(1);
+      expect(first.complete).toBe(false);
+      expect(first.nextBatchIndex).toBe(1);
+      expect(firstClient.chat.completions.create).toHaveBeenCalledTimes(1);
+
+      const secondClient = {
+        chat: { completions: { create: jest.fn(completion) } },
+      };
+      const second = await processClassificationBatches({
+        args,
+        plan,
+        batches,
+        client: secondClient,
+        recoverModelAfterAbort: jest.fn(),
+      });
+      expect(second).toHaveLength(2);
+      expect(second.newBatches).toBe(1);
+      expect(second.complete).toBe(false);
+      expect(second.nextBatchIndex).toBe(2);
+      expect(secondClient.chat.completions.create).toHaveBeenCalledTimes(1);
+      expect(fs.readdirSync(path.join(temporary, "batches"))).toHaveLength(2);
     } finally {
       fs.rmSync(temporary, { recursive: true, force: true });
     }
