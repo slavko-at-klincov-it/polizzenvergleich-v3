@@ -21448,10 +21448,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       routedLocatorPlan.partitions.flatMap(({ factIds }) => factIds)
     ).toEqual([factIndex.facts[0].factId]);
 
-    const [firstSourceWindow] = buildADrivenBRetrievalWindows(
-      factIndex.facts,
-      { maximumTokens: 24, overlapTokens: 8 }
-    );
+    const [firstSourceWindow] = buildADrivenBRetrievalWindows(factIndex.facts, {
+      maximumTokens: 24,
+      overlapTokens: 8,
+    });
     const routedWindowLocatorPlan = buildBCorpusLocatorPlan({
       decisionPlan,
       preliminaryDecisions,

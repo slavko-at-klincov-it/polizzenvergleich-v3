@@ -471,15 +471,14 @@ function replayPlan(plan, factIndex, results) {
   );
   for (const result of results)
     for (const response of result.responses)
-      for (const factId of response.candidateFactIds)
-        {
-          const parentFactId = parentFactIdByCandidateId.get(factId);
-          if (!parentFactId)
-            throw new Error(
-              `LF_A_DRIVEN_B_CORPUS_LOCATOR_REPLAY_CANDIDATE_UNKNOWN:${factId}`
-            );
-          selectedByRequirement.get(response.requirementId).add(parentFactId);
-        }
+      for (const factId of response.candidateFactIds) {
+        const parentFactId = parentFactIdByCandidateId.get(factId);
+        if (!parentFactId)
+          throw new Error(
+            `LF_A_DRIVEN_B_CORPUS_LOCATOR_REPLAY_CANDIDATE_UNKNOWN:${factId}`
+          );
+        selectedByRequirement.get(response.requirementId).add(parentFactId);
+      }
   const rows = plan.requirements.map(({ requirementId }) => ({
     requirementId,
     candidateFactIds: [...selectedByRequirement.get(requirementId)].sort(),
