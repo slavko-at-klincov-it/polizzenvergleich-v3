@@ -127,6 +127,7 @@ const {
   compactRequirement: compactBCorpusLocatorRequirement,
   partitionFacts: partitionBCorpusLocatorFacts,
   partitionFactsByDocument,
+  requirementsForPartition,
   validateLocatorResponse,
 } = require("../../scripts/qa/runADrivenBCorpusLocatorShadow.cjs");
 const {
@@ -21563,6 +21564,17 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(locatorPartitions.flatMap(({ factIds }) => factIds)).toEqual(
       factIndex.facts.map(({ factId }) => factId)
     );
+    expect(
+      requirementsForPartition(
+        {
+          requirements: [
+            { requirementId: "first", candidateFactIds: ["fact-a"] },
+            { requirementId: "second", candidateFactIds: ["fact-b"] },
+          ],
+        },
+        { factIds: ["fact-b"] }
+      ).map(({ requirementId }) => requirementId)
+    ).toEqual(["second"]);
     const documentLocatorPartitions = partitionFactsByDocument(
       factIndex.facts,
       20_000

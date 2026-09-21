@@ -30,9 +30,9 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V2";
-const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V2";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V2";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V3";
+const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V3";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V3";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -281,16 +281,7 @@ function buildPlan({
 
 function prompt(plan, partition, repair = null) {
   const partitionFactIds = new Set(partition.factIds);
-  const requirements = plan.requirements.map((requirement) => ({
-    ...requirement,
-    ...(requirement.candidateFactIds
-      ? {
-          candidateFactIds: requirement.candidateFactIds.filter((factId) =>
-            partitionFactIds.has(factId)
-          ),
-        }
-      : {}),
-  }));
+  const requirements = requirementsForPartition(plan, partition);
   const messages = [
     {
       role: "system",
@@ -312,12 +303,30 @@ function prompt(plan, partition, repair = null) {
   return messages;
 }
 
+function requirementsForPartition(plan, partition) {
+  const partitionFactIds = new Set(partition.factIds);
+  return plan.requirements
+    .map((requirement) => ({
+      ...requirement,
+      ...(requirement.candidateFactIds
+        ? {
+            candidateFactIds: requirement.candidateFactIds.filter((factId) =>
+              partitionFactIds.has(factId)
+            ),
+          }
+        : {}),
+    }))
+    .filter(
+      (requirement) =>
+        !requirement.candidateFactIds || requirement.candidateFactIds.length > 0
+    );
+}
+
 function validateLocatorResponse(response, plan, partition) {
-  if (!Array.isArray(response) || response.length !== plan.requirements.length)
+  const requirements = requirementsForPartition(plan, partition);
+  if (!Array.isArray(response) || response.length !== requirements.length)
     throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_LENGTH_INVALID");
-  const expectedIds = plan.requirements.map(
-    ({ requirementId }) => requirementId
-  );
+  const expectedIds = requirements.map(({ requirementId }) => requirementId);
   if (
     JSON.stringify(response.map(({ requirementId }) => requirementId)) !==
     JSON.stringify(expectedIds)
@@ -325,7 +334,7 @@ function validateLocatorResponse(response, plan, partition) {
     throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_IDS_INVALID");
   const partitionFactIds = new Set(partition.factIds);
   const allowedByRequirement = new Map(
-    plan.requirements.map((requirement) => [
+    requirements.map((requirement) => [
       requirement.requirementId,
       new Set(
         (requirement.candidateFactIds || partition.factIds).filter((factId) =>
@@ -635,13 +644,32 @@ async function run() {
       newPartitions >= args.maximumNewPartitions
     )
       break;
-    const result = await locatePartition({
-      args,
-      plan,
-      partition,
-      client,
-      recoverModelAfterAbort,
-    });
+    let result;
+    try {
+      result = await locatePartition({
+        args,
+        plan,
+        partition,
+        client,
+        recoverModelAfterAbort,
+      });
+    } catch (error) {
+      writePrivateJson(
+        path.join(
+          args.output,
+          `partition-${String(partition.partitionIndex).padStart(3, "0")}-failed.private.json`
+        ),
+        {
+          schemaVersion: 1,
+          contractId: RUN_CONTRACT_ID,
+          planSha256: plan.planSha256,
+          partitionId: partition.partitionId,
+          attempts: error.attempts || [],
+          errorMessage: error.message,
+        }
+      );
+      throw error;
+    }
     const artifactResult = {
       schemaVersion: 1,
       contractId: RUN_CONTRACT_ID,
@@ -715,6 +743,7 @@ module.exports = {
   partitionFacts,
   partitionFactsByDocument,
   prompt,
+  requirementsForPartition,
   reusablePartitionResult,
   validateLocatorResponse,
 };
