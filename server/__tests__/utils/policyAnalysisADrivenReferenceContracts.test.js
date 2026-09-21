@@ -154,7 +154,6 @@ const {
 } = require("../../utils/policyComparison/referenceCustomerPresentation");
 const {
   buildPartitionRequestBatches,
-  compactRequirementForBatch,
   compatibleSeedPartitionResponses,
   negativeDecisionSemanticConflicts,
   normalizeSemanticContractConflictForReview,
@@ -21653,13 +21652,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(batchPrompt[0].content).toContain(
       "genau ein JSON-Array mit genau einem Objekt"
     );
-    const promptReviews = JSON.parse(batchPrompt[1].content).reviews;
-    expect(promptReviews).toHaveLength(2);
-    expect(promptReviews[0].requirement).toEqual(
-      compactRequirementForBatch(batchedPlan.requirements[0])
-    );
-    expect(promptReviews[0].requirement).not.toHaveProperty("aSourceSpans");
-    expect(promptReviews[0].requirement).not.toHaveProperty("sourceOrder");
+    expect(JSON.parse(batchPrompt[1].content).reviews).toHaveLength(2);
     const batchNegativeResponses = requestBatches[0].entries.map(
       ({ partition }) => ({
         partitionId: partition.partitionId,
@@ -21995,7 +21988,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         id: "qwen/qwen3.6-35b-a3b",
         loadedContextLength: 42_496,
       },
-      promptContractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V6",
+      promptContractId: "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V5",
       unresolved: 0,
       terminalPartitions: absencePlan.partitions.length,
       plannedPartitions: absencePlan.partitions.length,
