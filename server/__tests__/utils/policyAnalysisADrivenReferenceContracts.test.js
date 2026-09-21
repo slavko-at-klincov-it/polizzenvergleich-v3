@@ -136,6 +136,10 @@ const {
   validateLocatorResponse,
 } = require("../../scripts/qa/runADrivenBCorpusLocatorShadow.cjs");
 const {
+  ROUTED_WINDOW_SELECTION_CONTRACT_ID,
+  buildRoutedWindowDecisionPlan,
+} = require("../../scripts/qa/buildADrivenRoutedWindowDecisionPlan.cjs");
+const {
   partitionFacts: partitionSemanticFingerprintFacts,
   validateFingerprintResponse,
 } = require("../../scripts/qa/runADrivenBSemanticFingerprintShadow.cjs");
@@ -21535,6 +21539,37 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         strictLocatorPlan.partitions[0]
       )[0].content
     ).toEqual(expect.stringContaining("höchstens 1 Kandidaten"));
+    const routedWindowDecisionPlan = buildRoutedWindowDecisionPlan({
+      sourceDecisionPlan: decisionPlan,
+      locatorPlan: routedWindowLocatorPlan,
+      factIndex,
+      maximumRequirementsPerBatch: 8,
+      maximumBatchCharacters: 70_000,
+    });
+    expect(routedWindowDecisionPlan).toMatchObject({
+      contractId: A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID,
+      selection: {
+        contractId: ROUTED_WINDOW_SELECTION_CONTRACT_ID,
+        customerNotFoundEligible: false,
+      },
+      summary: {
+        requirements: 1,
+        selectedCandidates: 1,
+        batches: 1,
+        absenceCertifiedRequirements: 0,
+      },
+    });
+    expect(routedWindowDecisionPlan.rows[0].candidates[0]).toMatchObject({
+      exactText: firstSourceWindow.exactText,
+      routedWindowId: firstSourceWindow.windowId,
+      parentFactId: firstSourceWindow.parentFactId,
+      channels: ["A_DRIVEN_QUERY_EXPANDED_SOURCE_WINDOW"],
+    });
+    expect(
+      routedWindowDecisionPlan.rows[0].components.every(
+        ({ navigationCandidateIds }) => navigationCandidateIds.length === 1
+      )
+    ).toBe(true);
 
     const globalNeighborPlan = buildADrivenFastFallbackPlan({
       decisionPlan,
