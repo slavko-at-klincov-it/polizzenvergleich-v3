@@ -126,6 +126,7 @@ const {
   buildPlan: buildBCorpusLocatorPlan,
   compactRequirement: compactBCorpusLocatorRequirement,
   locatorPromptView,
+  prompt: bCorpusLocatorPrompt,
   partitionFacts: partitionBCorpusLocatorFacts,
   partitionFactsByDocument,
   partitionFactsByRequirements,
@@ -21510,6 +21511,28 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(routedWindowLocatorPlan.partitions[0].requirementIds).toEqual([
       decisionPlan.rows[0].requirementId,
     ]);
+    const strictLocatorPlan = buildBCorpusLocatorPlan({
+      decisionPlan,
+      preliminaryDecisions,
+      factIndex,
+      candidateCorpus: [
+        { ...firstSourceWindow, factId: firstSourceWindow.windowId },
+      ],
+      candidateUnitType: "SOURCE_WINDOW",
+      maximumPartitionCharacters: 20_000,
+      partitionMode: "REQUIREMENT",
+      selectionMode: "STRICT_COUNTERPART",
+      candidateFactIdsByRequirement: {
+        [decisionPlan.rows[0].requirementId]: [firstSourceWindow.windowId],
+      },
+    });
+    expect(strictLocatorPlan.selectionMode).toBe("STRICT_COUNTERPART");
+    expect(
+      bCorpusLocatorPrompt(
+        strictLocatorPlan,
+        strictLocatorPlan.partitions[0]
+      )[0].content
+    ).toContain("Bloße Keyword-Nennung");
 
     const globalNeighborPlan = buildADrivenFastFallbackPlan({
       decisionPlan,
