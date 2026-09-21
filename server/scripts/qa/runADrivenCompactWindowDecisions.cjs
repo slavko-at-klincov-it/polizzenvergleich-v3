@@ -27,8 +27,8 @@ const {
   requirementsForPartition,
 } = require("./runADrivenBCorpusLocatorShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V1";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V1";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V2";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V2";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const OUTCOMES = new Set([
@@ -192,14 +192,36 @@ function validateAliasDecisionResponse(
       item.r !== expected.r ||
       !validateEvidence(item.o, item.c) ||
       !Array.isArray(item.f) ||
-      item.f.length !== expected.components.length
+      new Set(item.f.map(({ k }) => k)).size !== item.f.length ||
+      item.f.some(
+        ({ k }) => !expected.components.some((component) => component.k === k)
+      )
     )
       throw new Error(
         `LF_A_DRIVEN_COMPACT_WINDOW_RESPONSE_ITEM_INVALID:${expected.r}`
       );
     const allEvidence = [...item.c];
-    const components = item.f.map((finding, componentIndex) => {
-      const expectedComponent = expected.components[componentIndex];
+    const findingsByComponentNumber = new Map(
+      item.f.map((finding) => [finding?.k, finding])
+    );
+    const deterministicNormalizations = [];
+    const components = expected.components.map((expectedComponent) => {
+      let finding = findingsByComponentNumber.get(expectedComponent.k);
+      if (
+        !finding &&
+        POSITIVE_OUTCOMES.has(item.o) &&
+        (expectedComponent.core || expectedComponent.d === "COVERAGE_EFFECT")
+      ) {
+        finding = {
+          k: expectedComponent.k,
+          o: item.o,
+          c: [...item.c],
+        };
+        deterministicNormalizations.push({
+          componentNumber: expectedComponent.k,
+          reason: "POSITIVE_CONTEXT_BINDS_IDENTITY_OR_COVERAGE_COMPONENT",
+        });
+      }
       if (
         !finding ||
         Object.keys(finding).sort().join(",") !== "c,k,o" ||
@@ -225,6 +247,7 @@ function validateAliasDecisionResponse(
         (candidateNumber) => partition.factIds[candidateNumber - 1]
       ),
       componentFindings: components,
+      deterministicNormalizations,
     };
   });
 }
