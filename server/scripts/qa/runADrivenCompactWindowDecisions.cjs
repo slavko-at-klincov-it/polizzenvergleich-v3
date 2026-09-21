@@ -27,8 +27,8 @@ const {
   requirementsForPartition,
 } = require("./runADrivenBCorpusLocatorShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V5";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V5";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V6";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V6";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const OUTCOMES = new Set([
@@ -263,7 +263,74 @@ function validateAliasDecisionResponse(
   maximumEvidencePerRequirement
 ) {
   const view = compactDecisionPromptView(decisionPlan, locatorPlan, partition);
-  if (!Array.isArray(response) || response.length !== view.requirements.length)
+  const mergedRequirementNumbers = new Set();
+  let responseItems = response;
+  if (
+    Array.isArray(responseItems) &&
+    responseItems.length > view.requirements.length
+  ) {
+    const groups = new Map();
+    let mergeable = true;
+    for (const item of responseItems) {
+      if (
+        !item ||
+        Object.keys(item).sort().join(",") !== "c,f,o,r" ||
+        !Number.isSafeInteger(item.r) ||
+        item.r < 1 ||
+        item.r > view.requirements.length ||
+        !Array.isArray(item.c) ||
+        !Array.isArray(item.f)
+      ) {
+        mergeable = false;
+        break;
+      }
+      const group = groups.get(item.r) || {
+        r: item.r,
+        o: item.o,
+        c: [],
+        findingsByComponent: new Map(),
+        fragments: 0,
+      };
+      if (group.o !== item.o) {
+        mergeable = false;
+        break;
+      }
+      group.c.push(...item.c);
+      group.fragments += 1;
+      for (const finding of item.f) {
+        const existing = group.findingsByComponent.get(finding?.k);
+        if (existing && JSON.stringify(existing) !== JSON.stringify(finding)) {
+          mergeable = false;
+          break;
+        }
+        group.findingsByComponent.set(finding?.k, finding);
+      }
+      if (!mergeable) break;
+      groups.set(item.r, group);
+    }
+    if (
+      mergeable &&
+      groups.size === view.requirements.length &&
+      view.requirements.every(({ r }) => groups.has(r))
+    ) {
+      responseItems = view.requirements.map(({ r }) => {
+        const group = groups.get(r);
+        if (group.fragments > 1) mergedRequirementNumbers.add(r);
+        return {
+          r,
+          o: group.o,
+          c: [...new Set(group.c)],
+          f: [...group.findingsByComponent.values()].sort(
+            (left, right) => left.k - right.k
+          ),
+        };
+      });
+    }
+  }
+  if (
+    !Array.isArray(responseItems) ||
+    responseItems.length !== view.requirements.length
+  )
     throw new Error("LF_A_DRIVEN_COMPACT_WINDOW_RESPONSE_LENGTH_INVALID");
   const displayed = new Set(view.candidates.map(({ c }) => c));
   const validateEvidence = (outcome, evidence) =>
@@ -277,7 +344,7 @@ function validateAliasDecisionResponse(
     (outcome === "NOT_ESTABLISHED"
       ? evidence.length === 0
       : evidence.length > 0);
-  return response.map((item, index) => {
+  return responseItems.map((item, index) => {
     const expected = view.requirements[index];
     if (
       !item ||
@@ -298,6 +365,10 @@ function validateAliasDecisionResponse(
       item.f.map((finding) => [finding?.k, finding])
     );
     const deterministicNormalizations = [];
+    if (mergedRequirementNumbers.has(expected.r))
+      deterministicNormalizations.push({
+        reason: "SPLIT_REQUIREMENT_ITEMS_MERGED",
+      });
     const components = expected.components.map((expectedComponent) => {
       let finding = findingsByComponentNumber.get(expectedComponent.k);
       if (

@@ -21768,6 +21768,57 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         { k: 2, o: "NOT_ESTABLISHED", c: [] },
       ],
     });
+    const splitCompactDecision = validateAliasDecisionResponse(
+      [
+        {
+          r: 1,
+          o: "MATCH",
+          c: [1],
+          f: [{ k: 1, o: "MATCH", c: [1] }],
+        },
+        {
+          r: 1,
+          o: "MATCH",
+          c: [1],
+          f: [{ k: 2, o: "MATCH", c: [1] }],
+        },
+      ],
+      {
+        rows: [
+          {
+            requirementId: decisionPlan.rows[0].requirementId,
+            displayLabel: "Sprengstoffexplosion",
+            structurePath: [],
+            components: [
+              {
+                componentId: "coverage",
+                dimension: "COVERAGE_EFFECT",
+                label: "Versichert sind",
+                identityCore: false,
+              },
+              {
+                componentId: "peril",
+                dimension: "PERIL_OR_CAUSE",
+                label: "Sprengstoffexplosion",
+                identityCore: true,
+              },
+            ],
+          },
+        ],
+      },
+      routedWindowLocatorPlan,
+      routedWindowLocatorPlan.partitions[0],
+      12
+    );
+    expect(splitCompactDecision[0]).toMatchObject({
+      deterministicNormalizations: [
+        { reason: "SPLIT_REQUIREMENT_ITEMS_MERGED" },
+      ],
+      componentFindings: [
+        { k: 1, o: "MATCH", c: [1] },
+        { k: 2, o: "MATCH", c: [1] },
+      ],
+    });
 
     const globalNeighborPlan = buildADrivenFastFallbackPlan({
       decisionPlan,
