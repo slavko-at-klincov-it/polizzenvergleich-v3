@@ -125,10 +125,12 @@ const {
 const {
   buildPlan: buildBCorpusLocatorPlan,
   compactRequirement: compactBCorpusLocatorRequirement,
+  locatorPromptView,
   partitionFacts: partitionBCorpusLocatorFacts,
   partitionFactsByDocument,
   replayPlan: replayBCorpusLocatorPlan,
   requirementsForPartition,
+  validateLocatorAliasResponse,
   validateLocatorResponse,
 } = require("../../scripts/qa/runADrivenBCorpusLocatorShadow.cjs");
 const {
@@ -21676,6 +21678,54 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         ],
         { requirements: [{ requirementId: fallbackRequirementId }] },
         locatorPartitions[0]
+      )
+    ).toThrow("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_ITEM_INVALID");
+
+    const locatorPromptProjection = locatorPromptView(
+      routedWindowLocatorPlan,
+      routedWindowLocatorPlan.partitions[0]
+    );
+    expect(locatorPromptProjection).toEqual({
+      requirements: [
+        expect.objectContaining({
+          r: 1,
+          c: [1],
+        }),
+      ],
+      candidates: [
+        expect.objectContaining({
+          c: 1,
+          text: firstSourceWindow.exactText,
+        }),
+      ],
+    });
+    expect(JSON.stringify(locatorPromptProjection)).not.toContain(
+      firstSourceWindow.windowId
+    );
+    expect(
+      validateLocatorAliasResponse(
+        [{ r: 1, c: [1] }],
+        routedWindowLocatorPlan,
+        routedWindowLocatorPlan.partitions[0]
+      )
+    ).toEqual([
+      {
+        requirementId: fallbackRequirementId,
+        candidateFactIds: [firstSourceWindow.windowId],
+      },
+    ]);
+    expect(() =>
+      validateLocatorAliasResponse(
+        [{ r: 1, c: [2] }],
+        routedWindowLocatorPlan,
+        routedWindowLocatorPlan.partitions[0]
+      )
+    ).toThrow("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_ITEM_INVALID");
+    expect(() =>
+      validateLocatorAliasResponse(
+        [{ r: 1, c: [1, 1] }],
+        routedWindowLocatorPlan,
+        routedWindowLocatorPlan.partitions[0]
       )
     ).toThrow("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_ITEM_INVALID");
     expect(() =>
