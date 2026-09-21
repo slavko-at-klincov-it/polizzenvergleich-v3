@@ -112,9 +112,7 @@ function compactRequirement(row) {
     structurePath: row.structurePath,
     identityCores: [
       ...new Set(
-        row.components
-          .map(({ identityCore }) => identityCore)
-          .filter(Boolean)
+        row.components.map(({ identityCore }) => identityCore).filter(Boolean)
       ),
     ],
   };
@@ -163,8 +161,7 @@ function partitionFacts(facts, maximumPartitionCharacters) {
     )
       flush();
     if (
-      JSON.stringify({ candidates: [fact] }).length >
-      maximumPartitionCharacters
+      JSON.stringify({ candidates: [fact] }).length > maximumPartitionCharacters
     )
       throw new Error(
         `LF_A_DRIVEN_B_CORPUS_LOCATOR_FACT_TOO_LARGE:${fact.factId}`
@@ -189,9 +186,7 @@ function partitionFactsByDocument(facts, maximumPartitionCharacters) {
     groups.get(fact.documentUuid).push(fact);
   }
   return [...groups.entries()].map(([documentUuid, candidates], index) => {
-    if (
-      JSON.stringify({ candidates }).length > maximumPartitionCharacters
-    )
+    if (JSON.stringify({ candidates }).length > maximumPartitionCharacters)
       throw new Error(
         `LF_A_DRIVEN_B_CORPUS_LOCATOR_DOCUMENT_TOO_LARGE:${documentUuid}`
       );
@@ -217,7 +212,10 @@ function buildPlan({
   candidateFactIdsByRequirement = null,
 }) {
   validateADrivenRequirementDecisionPlan(decisionPlan);
-  validateADrivenRequirementDecisionArtifact(preliminaryDecisions, decisionPlan);
+  validateADrivenRequirementDecisionArtifact(
+    preliminaryDecisions,
+    decisionPlan
+  );
   const fallbackIds = new Set(
     preliminaryDecisions.results
       .filter(({ customerStatus }) => customerStatus === "FALLBACK_REQUIRED")
@@ -246,10 +244,7 @@ function buildPlan({
     throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_ROUTED_FACT_UNKNOWN");
   const partitions =
     partitionMode === "DOCUMENT"
-      ? partitionFactsByDocument(
-          routedFacts,
-          maximumPartitionCharacters
-        )
+      ? partitionFactsByDocument(routedFacts, maximumPartitionCharacters)
       : partitionFacts(routedFacts, maximumPartitionCharacters);
   const payload = {
     schemaVersion: 1,
@@ -269,8 +264,7 @@ function buildPlan({
       modelRequests: partitions.length,
       routedPairReviews: candidateFactIdsByRequirement
         ? requirements.reduce(
-            (sum, requirement) =>
-              sum + requirement.candidateFactIds.length,
+            (sum, requirement) => sum + requirement.candidateFactIds.length,
             0
           )
         : null,
@@ -321,7 +315,9 @@ function prompt(plan, partition, repair = null) {
 function validateLocatorResponse(response, plan, partition) {
   if (!Array.isArray(response) || response.length !== plan.requirements.length)
     throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_LENGTH_INVALID");
-  const expectedIds = plan.requirements.map(({ requirementId }) => requirementId);
+  const expectedIds = plan.requirements.map(
+    ({ requirementId }) => requirementId
+  );
   if (
     JSON.stringify(response.map(({ requirementId }) => requirementId)) !==
     JSON.stringify(expectedIds)
@@ -341,8 +337,7 @@ function validateLocatorResponse(response, plan, partition) {
   return response.map((item) => {
     const allowed = allowedByRequirement.get(item.requirementId);
     if (
-      Object.keys(item).sort().join(",") !==
-        "candidateFactIds,requirementId" ||
+      Object.keys(item).sort().join(",") !== "candidateFactIds,requirementId" ||
       !Array.isArray(item.candidateFactIds) ||
       item.candidateFactIds.length > 12 ||
       item.candidateFactIds.some((factId) => !allowed.has(factId))
@@ -485,10 +480,7 @@ function reusablePartitionResult({ seedOutput, plan, partition }) {
     `partition-${String(partition.partitionIndex).padStart(3, "0")}.private.json`
   );
   if (!fs.existsSync(resultPath)) return null;
-  const result = readJson(
-    resultPath,
-    "LF_B_CORPUS_LOCATOR_SEED_PARTITION"
-  );
+  const result = readJson(resultPath, "LF_B_CORPUS_LOCATOR_SEED_PARTITION");
   if (
     result.contractId !== RUN_CONTRACT_ID ||
     result.planSha256 !== plan.planSha256 ||
@@ -548,13 +540,12 @@ async function run() {
         expansionArtifact.expansions.map(({ requirementId }) => requirementId)
       ) !== JSON.stringify(fallbackRequirementIds)
     )
-      throw new Error(
-        "LF_A_DRIVEN_B_CORPUS_LOCATOR_QUERY_EXPANSIONS_INVALID"
-      );
+      throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_QUERY_EXPANSIONS_INVALID");
     const queryExpansionsByRequirement = Object.fromEntries(
-      expansionArtifact.expansions.map(
-        ({ requirementId, searchPhrases }) => [requirementId, searchPhrases]
-      )
+      expansionArtifact.expansions.map(({ requirementId, searchPhrases }) => [
+        requirementId,
+        searchPhrases,
+      ])
     );
     const routePlan = buildADrivenFastFallbackPlan({
       decisionPlan,
@@ -696,8 +687,7 @@ async function run() {
     modelRequests: newPartitions,
     reusedPartitions: results.length - newPartitions,
     modelAttempts: results.reduce(
-      (sum, result) =>
-        sum + (result.reusedFrom ? 0 : result.attempts.length),
+      (sum, result) => sum + (result.reusedFrom ? 0 : result.attempts.length),
       0
     ),
     ...replay.summary,
