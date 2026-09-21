@@ -133,9 +133,7 @@ function partitionCompactDecisionWork(
       }
       const factIds = keepCompletePartition
         ? [...sourcePartition.factIds]
-        : sourcePartition.factIds.filter((factId) =>
-            routedFactIds.has(factId)
-          );
+        : sourcePartition.factIds.filter((factId) => routedFactIds.has(factId));
       if (!factIds.length)
         throw new Error(
           `LF_A_DRIVEN_COMPACT_WINDOW_ROUTED_CANDIDATES_MISSING:${currentRequirementIds.join(",")}`
