@@ -31,9 +31,9 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V11";
-const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V11";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V11";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V12";
+const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V12";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V12";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -644,8 +644,11 @@ async function locatePartition({
 }) {
   const attempts = [];
   for (let attempt = 1; attempt <= args.maximumAttempts; attempt += 1) {
+    const allowedCandidateHint = locatorPromptView(plan, partition).requirements
+      .map(({ r, c }) => `r${r}=[${c.join(",")}]`)
+      .join("; ");
     const repair = attempts.length
-      ? `Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}], verwende ausschließlich die bei r erlaubten lokalen c und bewerte jede Anforderung unabhängig.${plan.maximumSelectionsPerRequirement ? ` Nenne je r höchstens ${plan.maximumSelectionsPerRequirement} Kandidaten.` : ""}`
+      ? `Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}] und bewerte jede Anforderung unabhängig. Erlaubte lokale Kandidaten sind verbindlich: ${allowedCandidateHint}.${plan.maximumSelectionsPerRequirement ? ` Nenne je r höchstens ${plan.maximumSelectionsPerRequirement} Kandidaten.` : ""}`
       : null;
     const messages = prompt(plan, partition, repair);
     const started = performance.now();
