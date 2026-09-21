@@ -31,9 +31,9 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V7";
-const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V7";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V7";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V8";
+const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V8";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V8";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -205,6 +205,80 @@ function partitionFactsByDocument(facts, maximumPartitionCharacters) {
   });
 }
 
+function partitionFactsByRequirements(
+  requirements,
+  candidateCorpus,
+  maximumPartitionCharacters
+) {
+  if (
+    !Array.isArray(requirements) ||
+    requirements.length === 0 ||
+    !Array.isArray(candidateCorpus) ||
+    candidateCorpus.length === 0
+  )
+    throw new Error(
+      "LF_A_DRIVEN_B_CORPUS_LOCATOR_REQUIREMENT_PARTITION_INPUT_INVALID"
+    );
+  const candidateById = new Map(
+    candidateCorpus.map((candidate) => [candidate.factId, candidate])
+  );
+  const partitions = [];
+  let currentRequirements = [];
+  let currentFactIds = new Set();
+  const characters = (requirementIds, factIds) =>
+    JSON.stringify({
+      requirementIds,
+      candidates: [...factIds].map((factId) =>
+        compactFact(candidateById.get(factId))
+      ),
+    }).length;
+  const flush = () => {
+    if (!currentRequirements.length) return;
+    const partitionIndex = partitions.length;
+    const requirementIds = currentRequirements.map(
+      ({ requirementId }) => requirementId
+    );
+    const factIds = [...currentFactIds];
+    partitions.push({
+      partitionId: `BCLR-${sha256(
+        stableStringify({ partitionIndex, requirementIds, factIds })
+      ).slice(0, 24)}`,
+      partitionIndex,
+      requirementIds,
+      factIds,
+      candidates: factIds.map((factId) =>
+        compactFact(candidateById.get(factId))
+      ),
+    });
+    currentRequirements = [];
+    currentFactIds = new Set();
+  };
+  for (const requirement of requirements) {
+    const ownFactIds = new Set(requirement.candidateFactIds || []);
+    const proposedRequirements = [...currentRequirements, requirement];
+    const proposedFactIds = new Set([...currentFactIds, ...ownFactIds]);
+    if (
+      currentRequirements.length &&
+      characters(
+        proposedRequirements.map(({ requirementId }) => requirementId),
+        proposedFactIds
+      ) > maximumPartitionCharacters
+    )
+      flush();
+    if (
+      characters([requirement.requirementId], ownFactIds) >
+      maximumPartitionCharacters
+    )
+      throw new Error(
+        `LF_A_DRIVEN_B_CORPUS_LOCATOR_REQUIREMENT_TOO_LARGE:${requirement.requirementId}`
+      );
+    currentRequirements.push(requirement);
+    for (const factId of ownFactIds) currentFactIds.add(factId);
+  }
+  flush();
+  return partitions;
+}
+
 function buildPlan({
   decisionPlan,
   preliminaryDecisions,
@@ -236,7 +310,7 @@ function buildPlan({
           }
         : {}),
     }));
-  if (!["CHARACTER", "DOCUMENT"].includes(partitionMode))
+  if (!["CHARACTER", "DOCUMENT", "REQUIREMENT"].includes(partitionMode))
     throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_PARTITION_MODE_INVALID");
   const routedFactIds = candidateFactIdsByRequirement
     ? new Set(Object.values(candidateFactIdsByRequirement).flat())
@@ -249,7 +323,13 @@ function buildPlan({
   const partitions =
     partitionMode === "DOCUMENT"
       ? partitionFactsByDocument(routedFacts, maximumPartitionCharacters)
-      : partitionFacts(routedFacts, maximumPartitionCharacters);
+      : partitionMode === "REQUIREMENT"
+        ? partitionFactsByRequirements(
+            requirements,
+            candidateCorpus,
+            maximumPartitionCharacters
+          )
+        : partitionFacts(routedFacts, maximumPartitionCharacters);
   const payload = {
     schemaVersion: 1,
     contractId: PLAN_CONTRACT_ID,
@@ -274,13 +354,20 @@ function buildPlan({
             0
           )
         : null,
-      promptedPairReviews: partitions.reduce(
-        (sum, partition) =>
+      promptedPairReviews: partitions.reduce((sum, partition) => {
+        const partitionFactIds = new Set(partition.factIds);
+        return (
           sum +
-          requirementsForPartition({ requirements }, partition).length *
-            partition.factIds.length,
-        0
-      ),
+          requirementsForPartition({ requirements }, partition).reduce(
+            (partitionSum, requirement) =>
+              partitionSum +
+              (requirement.candidateFactIds || partition.factIds).filter(
+                (factId) => partitionFactIds.has(factId)
+              ).length,
+            0
+          )
+        );
+      }, 0),
       customerNotFoundEligible: false,
     },
     proofLimit:
@@ -300,7 +387,7 @@ function prompt(plan, partition, repair = null) {
     {
       role: "system",
       content:
-        'Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede Anforderung r unabhängig gegen alle vorgelegten B-Quelltexte. Nenne alle lokalen Kandidatennummern c, die möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthalten. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Im Zweifel aufnehmen; bloße Themenähnlichkeit nicht aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige vorgelegte c, keine Erläuterung und keine weiteren Felder. Kopiere nicht dieselbe Kandidatenliste pauschal auf fachlich verschiedene Anforderungen.',
+        'Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede Anforderung r unabhängig gegen ihre erlaubten B-Quelltexte c. Nenne jeden erlaubten Kandidaten, der möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthält. Ein übereinstimmender fachlicher Kern muss auch bei abweichenden Bedingungen, Werten oder engerem/weiterem Scope aufgenommen werden. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Im Zweifel aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige und für r erlaubte c, keine Erläuterung und keine weiteren Felder. Kopiere nicht dieselbe Kandidatenliste pauschal auf fachlich verschiedene Anforderungen.',
     },
     {
       role: "user",
@@ -320,6 +407,11 @@ function prompt(plan, partition, repair = null) {
 function requirementsForPartition(plan, partition) {
   const partitionFactIds = new Set(partition.factIds);
   return plan.requirements
+    .filter(
+      ({ requirementId }) =>
+        !partition.requirementIds ||
+        partition.requirementIds.includes(requirementId)
+    )
     .map((requirement) => ({
       ...requirement,
       ...(requirement.candidateFactIds
@@ -338,12 +430,18 @@ function requirementsForPartition(plan, partition) {
 
 function locatorPromptView(plan, partition) {
   const requirements = requirementsForPartition(plan, partition);
+  const candidateNumberByFactId = new Map(
+    partition.factIds.map((factId, index) => [factId, index + 1])
+  );
   return {
     requirements: requirements.map((requirement, index) => ({
       r: index + 1,
       label: requirement.displayLabel,
       path: requirement.structurePath,
       cores: requirement.identityCores,
+      c: (requirement.candidateFactIds || partition.factIds)
+        .filter((factId) => candidateNumberByFactId.has(factId))
+        .map((factId) => candidateNumberByFactId.get(factId)),
     })),
     candidates: partition.candidates.map((candidate, index) => ({
       c: index + 1,
@@ -361,7 +459,19 @@ function validateLocatorAliasResponse(response, plan, partition) {
   const factIdByCandidateNumber = new Map(
     partition.factIds.map((factId, index) => [index + 1, factId])
   );
-  const validCandidateNumbers = new Set(factIdByCandidateNumber.keys());
+  const candidateNumberByFactId = new Map(
+    partition.factIds.map((factId, index) => [factId, index + 1])
+  );
+  const allowedByRequirementNumber = new Map(
+    requirements.map((requirement, index) => [
+      index + 1,
+      new Set(
+        (requirement.candidateFactIds || partition.factIds)
+          .filter((factId) => candidateNumberByFactId.has(factId))
+          .map((factId) => candidateNumberByFactId.get(factId))
+      ),
+    ])
+  );
   const signatures = response.map((item) =>
     Array.isArray(item?.c)
       ? [...item.c].sort((left, right) => left - right).join(",")
@@ -378,6 +488,7 @@ function validateLocatorAliasResponse(response, plan, partition) {
   }
   return response.map((item, index) => {
     const expectedRequirementNumber = index + 1;
+    const allowed = allowedByRequirementNumber.get(expectedRequirementNumber);
     if (
       !item ||
       Object.keys(item).sort().join(",") !== "c,r" ||
@@ -387,7 +498,7 @@ function validateLocatorAliasResponse(response, plan, partition) {
       item.c.some(
         (candidateNumber) =>
           !Number.isSafeInteger(candidateNumber) ||
-          !validCandidateNumbers.has(candidateNumber)
+          !allowed.has(candidateNumber)
       )
     )
       throw new Error(
@@ -476,7 +587,7 @@ async function locatePartition({
   const attempts = [];
   for (let attempt = 1; attempt <= args.maximumAttempts; attempt += 1) {
     const repair = attempts.length
-      ? 'Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}], verwende ausschließlich vorgelegte lokale c und bewerte jede Anforderung unabhängig.'
+      ? 'Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}], verwende ausschließlich die bei r erlaubten lokalen c und bewerte jede Anforderung unabhängig.'
       : null;
     const messages = prompt(plan, partition, repair);
     const started = performance.now();
@@ -849,6 +960,7 @@ module.exports = {
   compactRequirement,
   partitionFacts,
   partitionFactsByDocument,
+  partitionFactsByRequirements,
   prompt,
   locatorPromptView,
   replayPlan,

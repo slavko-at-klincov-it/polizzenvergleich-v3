@@ -128,6 +128,7 @@ const {
   locatorPromptView,
   partitionFacts: partitionBCorpusLocatorFacts,
   partitionFactsByDocument,
+  partitionFactsByRequirements,
   replayPlan: replayBCorpusLocatorPlan,
   requirementsForPartition,
   validateLocatorAliasResponse,
@@ -21463,6 +21464,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       ],
       candidateUnitType: "SOURCE_WINDOW",
       maximumPartitionCharacters: 20_000,
+      partitionMode: "REQUIREMENT",
       candidateFactIdsByRequirement: {
         [decisionPlan.rows[0].requirementId]: [firstSourceWindow.windowId],
       },
@@ -21480,6 +21482,9 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       factId: firstSourceWindow.windowId,
       parentFactId: firstSourceWindow.parentFactId,
     });
+    expect(routedWindowLocatorPlan.partitions[0].requirementIds).toEqual([
+      fallbackRequirementId,
+    ]);
 
     const globalNeighborPlan = buildADrivenFastFallbackPlan({
       decisionPlan,
@@ -21689,6 +21694,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       requirements: [
         expect.objectContaining({
           r: 1,
+          c: [1],
         }),
       ],
       candidates: [
@@ -22014,6 +22020,16 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         plan.rows[0].candidateFactIds.includes(unitId)
       )
     ).toBe(false);
+    const expectedWindowIds = buildADrivenBRetrievalWindows(factIndex.facts, {
+      maximumTokens: 24,
+      overlapTokens: 8,
+    })
+      .filter(({ parentFactId }) =>
+        plan.rows[0].candidateFactIds.includes(parentFactId)
+      )
+      .map(({ windowId }) => windowId)
+      .sort();
+    expect(plan.rows[0].candidateRetrievalUnitIds).toEqual(expectedWindowIds);
     expect(
       plan.rows[0].candidateSelections.some(({ channels }) =>
         channels.includes("LEXICAL_BM25_SOURCE_WINDOW_GLOBAL")
@@ -22086,6 +22102,44 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         partition
       )[0].candidateFactIds
     ).toEqual(factIds);
+  });
+
+  test("partitions locator candidates by small requirement groups", () => {
+    const candidates = [
+      {
+        factId: "fact-a",
+        documentUuid: "doc-a",
+        documentRole: "POLICY",
+        physicalPageNumber: 1,
+        exactText: "A".repeat(12_000),
+      },
+      {
+        factId: "fact-b",
+        documentUuid: "doc-b",
+        documentRole: "POLICY",
+        physicalPageNumber: 2,
+        exactText: "B".repeat(12_000),
+      },
+    ];
+    const requirements = [
+      { requirementId: "requirement-a", candidateFactIds: ["fact-a"] },
+      { requirementId: "requirement-b", candidateFactIds: ["fact-b"] },
+    ];
+    const partitions = partitionFactsByRequirements(
+      requirements,
+      candidates,
+      20_000
+    );
+
+    expect(partitions.map(({ requirementIds }) => requirementIds)).toEqual([
+      ["requirement-a"],
+      ["requirement-b"],
+    ]);
+    expect(
+      requirementsForPartition({ requirements }, partitions[1]).map(
+        ({ requirementId }) => requirementId
+      )
+    ).toEqual(["requirement-b"]);
   });
 
   test("rejects a degenerate locator response copied across unrelated requirements", () => {
