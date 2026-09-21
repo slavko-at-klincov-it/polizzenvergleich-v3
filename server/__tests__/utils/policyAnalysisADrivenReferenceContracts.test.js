@@ -142,6 +142,7 @@ const {
 const {
   compactDecisionPromptView,
   partitionCompactDecisionWork,
+  prompt: compactDecisionPrompt,
   reusableCompactDecisionPartition,
   validateAliasDecisionResponse,
 } = require("../../scripts/qa/runADrivenCompactWindowDecisions.cjs");
@@ -21591,6 +21592,33 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         requirementIds: [decisionPlan.rows[0].requirementId],
       }),
     ]);
+    const [completeParentDecisionPartition] = partitionCompactDecisionWork(
+      decisionPlan,
+      routedWindowLocatorPlan,
+      1,
+      factIndex
+    );
+    expect(completeParentDecisionPartition).toMatchObject({
+      partitionId: expect.stringMatching(/-PF$/u),
+      factIds: [firstSourceWindow.windowId],
+      candidateContext: "COMPLETE_PARENT_FACT",
+      candidates: [
+        expect.objectContaining({
+          factId: firstSourceWindow.windowId,
+          parentFactId: firstSourceWindow.parentFactId,
+          exactText: factIndex.facts[0].exactText,
+          decisionContext: "COMPLETE_PARENT_FACT",
+        }),
+      ],
+    });
+    expect(
+      compactDecisionPrompt(
+        decisionPlan,
+        routedWindowLocatorPlan,
+        completeParentDecisionPartition,
+        12
+      )[0].content
+    ).toEqual(expect.stringContaining("dieselbe Kosten-, Leistungs-"));
     expect(
       partitionCompactDecisionWork(
         {

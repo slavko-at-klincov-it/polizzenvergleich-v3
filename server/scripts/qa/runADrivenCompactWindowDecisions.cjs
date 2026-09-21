@@ -27,13 +27,9 @@ const {
   requirementsForPartition,
 } = require("./runADrivenBCorpusLocatorShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V8";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V8";
-const REUSABLE_RUN_CONTRACT_IDS = new Set([
-  "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V6",
-  "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V7",
-  RUN_CONTRACT_ID,
-]);
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V9";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V9";
+const REUSABLE_RUN_CONTRACT_IDS = new Set([RUN_CONTRACT_ID]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const OUTCOMES = new Set([
@@ -103,7 +99,8 @@ function argumentsFrom(argv) {
 function partitionCompactDecisionWork(
   decisionPlan,
   locatorPlan,
-  maximumComponentsPerRequest = 1
+  maximumComponentsPerRequest = 1,
+  factIndex = null
 ) {
   const sourceRowsById = new Map(
     decisionPlan.rows.map((row) => [row.requirementId, row])
@@ -150,7 +147,7 @@ function partitionCompactDecisionWork(
           candidate,
         ])
       );
-      const candidates = factIds.map((factId) => {
+      let candidates = factIds.map((factId) => {
         const candidate = candidateByFactId.get(factId);
         if (!candidate)
           throw new Error(
@@ -158,15 +155,47 @@ function partitionCompactDecisionWork(
           );
         return candidate;
       });
+      let decisionFactIds = factIds;
+      let candidateContext = "ROUTED_SOURCE_WINDOW";
+      if (factIndex) {
+        const parentById = new Map(
+          factIndex.facts.map((fact) => [fact.factId, fact])
+        );
+        const seenParentIds = new Set();
+        const completeParentCandidates = [];
+        const representativeWindowIds = [];
+        for (const candidate of candidates) {
+          const parentFactId = candidate.parentFactId || candidate.factId;
+          if (seenParentIds.has(parentFactId)) continue;
+          const parent = parentById.get(parentFactId);
+          if (!parent)
+            throw new Error(
+              `LF_A_DRIVEN_COMPACT_WINDOW_PARENT_FACT_MISSING:${parentFactId}`
+            );
+          seenParentIds.add(parentFactId);
+          representativeWindowIds.push(candidate.factId);
+          completeParentCandidates.push({
+            ...candidate,
+            exactText: parent.exactText,
+            exactTextSha256: parent.exactTextSha256,
+            parentFactId,
+            decisionContext: "COMPLETE_PARENT_FACT",
+          });
+        }
+        decisionFactIds = representativeWindowIds;
+        candidates = completeParentCandidates;
+        candidateContext = "COMPLETE_PARENT_FACT";
+      }
       work.push({
         ...sourcePartition,
-        partitionId: `${sourcePartition.partitionId}-D${sourcePartitionPart + 1}`,
+        partitionId: `${sourcePartition.partitionId}-D${sourcePartitionPart + 1}${factIndex ? "-PF" : ""}`,
         partitionIndex: work.length,
         sourcePartitionIndex: sourcePartition.partitionIndex,
         sourcePartitionPart,
         requirementIds: currentRequirementIds,
-        factIds,
+        factIds: decisionFactIds,
         candidates,
+        candidateContext,
       });
       currentRequirementIds = [];
       currentComponents = 0;
@@ -244,7 +273,7 @@ function prompt(
   const messages = [
     {
       role: "system",
-      content: `Du entscheidest mehrere fachliche Anforderungen aus Referenzpaket A direkt gegen die einmalig angezeigten, servergebundenen B-Quellfenster. Prüfe jedes r und jede Komponente k unabhängig. MATCH bedeutet derselbe fachliche Kern im passenden Objekt-, Gefahren-, Schaden- oder Rollenkontext. OPPOSITE bedeutet derselbe Kern mit ausdrücklich gegenteiliger Vertragswirkung oder Ausschluss. RELATED_ONLY bedeutet bloß verwandt ohne Gegenstück. NOT_ESTABLISHED bedeutet im vorgelegten Kandidatensatz nicht belegt und ist ausdrücklich kein Abwesenheitsnachweis für das gesamte B-Paket. Abweichende Werte, Limits, Bedingungen, Umfänge oder Zeiträume bleiben MATCH auf Kontextebene; die betroffene Komponente kann MATCH oder OPPOSITE sein. Eine bloße Keyword-Nennung, Überschrift, Nachbarklausel oder Branchenüblichkeit genügt nicht. Nutze nur angezeigte c und höchstens ${maximumEvidencePerRequirement} eindeutige c je r insgesamt. Antworte ausschließlich als kompaktes JSON-Array in exakt der r-Reihenfolge: [{"r":1,"o":"MATCH","c":[2],"f":[{"k":1,"o":"MATCH","c":[2]}]}]. Jedes r und jedes k exakt einmal. o ist nur MATCH, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED. NOT_ESTABLISHED hat c []; alle anderen Outcomes benötigen mindestens ein c. Keine Erläuterung und keine weiteren Felder.`,
+      content: `Du entscheidest mehrere fachliche Anforderungen aus Referenzpaket A direkt gegen die einmalig angezeigten, vollständigen und servergebundenen B-Klauselkontexte. Prüfe jedes r und jede Komponente k unabhängig. MATCH bedeutet derselbe fachliche Kern im passenden Objekt-, Gefahren-, Schaden- oder Rollenkontext. OPPOSITE bedeutet derselbe Kern mit ausdrücklich gegenteiliger Vertragswirkung oder Ausschluss. RELATED_ONLY bedeutet bloß verwandt ohne Gegenstück. NOT_ESTABLISHED bedeutet im vorgelegten Kandidatensatz nicht belegt und ist ausdrücklich kein Abwesenheitsnachweis für das gesamte B-Paket. Abweichende Werte, Limits, Bedingungen, Umfänge oder Zeiträume bleiben MATCH auf Kontextebene; die betroffene Komponente kann MATCH oder OPPOSITE sein. Bei FACT_ROLE muss B dieselbe Kosten-, Leistungs-, Definitions- oder sonstige Faktrolle ausdrücken: Ein Objekt, Raum, Gerät oder eine Tätigkeit mit demselben Stichwort ist kein Gegenstück zu einer Kosten- oder Leistungsanforderung. Eine bloße Keyword-Nennung, Überschrift, Nachbarklausel, irgendeine andere Kostenposition oder Branchenüblichkeit genügt nicht. Nutze nur angezeigte c und höchstens ${maximumEvidencePerRequirement} eindeutige c je r insgesamt. Antworte ausschließlich als kompaktes JSON-Array in exakt der r-Reihenfolge: [{"r":1,"o":"MATCH","c":[2],"f":[{"k":1,"o":"MATCH","c":[2]}]}]. Jedes r und jedes k exakt einmal. o ist nur MATCH, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED. NOT_ESTABLISHED hat c []; alle anderen Outcomes benötigen mindestens ein c. Keine Erläuterung und keine weiteren Felder.`,
     },
     {
       role: "user",
@@ -625,7 +654,8 @@ async function run() {
   const decisionPartitions = partitionCompactDecisionWork(
     decisionPlan,
     locatorPlan,
-    args.maximumComponentsPerRequest
+    args.maximumComponentsPerRequest,
+    factIndex
   );
   fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });
   const baseUrl = process.env.LMSTUDIO_BASE_PATH || "http://127.0.0.1:1234/v1";
@@ -731,6 +761,7 @@ async function run() {
     ),
     reusedPartitions: results.filter(({ reusedFrom }) => reusedFrom).length,
     totalDecisionPartitions: decisionPartitions.length,
+    candidateContext: "COMPLETE_PARENT_FACT",
     contextOutcomes,
     positiveContextDecisions: Object.entries(contextOutcomes).reduce(
       (sum, [outcome, count]) =>
@@ -740,7 +771,7 @@ async function run() {
     ...replay.summary,
     acceptanceReady: false,
     proofLimit:
-      "Direkte kompakte Entscheidungen gegen geroutete Quellfenster. NOT_ESTABLISHED ist kein Vollkorpus-Abwesenheitsnachweis.",
+      "Direkte kompakte Entscheidungen gegen vollständige Elternklauseln gerouteter Quellfenster. NOT_ESTABLISHED ist kein Vollkorpus-Abwesenheitsnachweis.",
   };
   writePrivateJson(path.join(args.output, "fast-plan.private.json"), fastPlan);
   writePrivateJson(path.join(args.output, "replay.private.json"), replay);
