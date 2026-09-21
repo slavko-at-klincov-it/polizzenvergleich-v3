@@ -20,6 +20,8 @@ const A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID =
   "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V2";
 const A_DRIVEN_FAST_FALLBACK_REPLAY_CONTRACT_ID =
   "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V2";
+const A_DRIVEN_TERMINAL_EVIDENCE_REPLAY_CONTRACT_ID =
+  "LF_A_DRIVEN_TERMINAL_EVIDENCE_REPLAY_V1";
 const A_DRIVEN_B_RETRIEVAL_WINDOW_CONTRACT_ID =
   "LF_A_DRIVEN_B_RETRIEVAL_WINDOW_V1";
 
@@ -958,15 +960,131 @@ function buildADrivenFastFallbackReplay({
   };
 }
 
+function buildADrivenTerminalEvidenceReplay({
+  fastPlan,
+  factIndex,
+  rescuePlan,
+  rescueDecisions,
+} = {}) {
+  if (
+    fastPlan?.contractId !== A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID ||
+    factIndex?.contractId !== A_DRIVEN_B_FACT_INDEX_CONTRACT_ID
+  )
+    throw indexError("LF_A_DRIVEN_TERMINAL_EVIDENCE_REPLAY_INPUT_INVALID");
+  validateADrivenRequirementDecisionArtifact(rescueDecisions, rescuePlan);
+  const factBySource = new Map(
+    factIndex.facts.map((fact) => [sourceKey(fact), fact])
+  );
+  const rowByRequirement = new Map(
+    fastPlan.rows.map((row) => [row.requirementId, row])
+  );
+  const rescueRowByRequirement = new Map(
+    rescuePlan.rows.map((row) => [row.requirementId, row])
+  );
+  const cases = rescueDecisions.results
+    .filter(
+      ({ status, customerStatus, selectedCandidateIds }) =>
+        status === "TERMINAL" &&
+        customerStatus === "FOUND" &&
+        selectedCandidateIds.length > 0
+    )
+    .map((result) => {
+      const rescueRow = rescueRowByRequirement.get(result.requirementId);
+      const rescueCandidatesById = new Map(
+        rescueRow.candidates.map((candidate) => [
+          candidate.candidateId,
+          candidate,
+        ])
+      );
+      const expectedFactIds = sortedUnique(
+        result.selectedCandidateIds.map((candidateId) => {
+          const candidate = rescueCandidatesById.get(candidateId);
+          if (!candidate)
+            throw indexError(
+              "LF_A_DRIVEN_TERMINAL_EVIDENCE_CANDIDATE_UNKNOWN",
+              candidateId
+            );
+          const fact = factBySource.get(sourceKey(candidate));
+          if (!fact)
+            throw indexError(
+              "LF_A_DRIVEN_TERMINAL_EVIDENCE_SOURCE_UNKNOWN",
+              candidateId
+            );
+          return fact.factId;
+        })
+      );
+      const selected = new Set(
+        rowByRequirement.get(result.requirementId)?.candidateFactIds || []
+      );
+      const recoveredFactIds = expectedFactIds.filter((factId) =>
+        selected.has(factId)
+      );
+      return {
+        requirementId: result.requirementId,
+        expectedTerminalEvidenceFactIds: expectedFactIds,
+        recoveredTerminalEvidenceFactIds: recoveredFactIds,
+        recoveredAnyTerminalEvidence: recoveredFactIds.length > 0,
+        recoveredAllTerminalEvidence:
+          recoveredFactIds.length === expectedFactIds.length,
+      };
+    });
+  const expectedTerminalEvidenceFacts = cases.reduce(
+    (sum, item) => sum + item.expectedTerminalEvidenceFactIds.length,
+    0
+  );
+  const recoveredTerminalEvidenceFacts = cases.reduce(
+    (sum, item) => sum + item.recoveredTerminalEvidenceFactIds.length,
+    0
+  );
+  const payload = {
+    schemaVersion: 1,
+    contractId: A_DRIVEN_TERMINAL_EVIDENCE_REPLAY_CONTRACT_ID,
+    fastPlanSha256: fastPlan.planSha256 || null,
+    factIndexSha256: factIndex.indexSha256,
+    rescueDecisionSha256: rescueDecisions.decisionSha256,
+    cases,
+    summary: {
+      terminalPositiveRequirements: cases.length,
+      recoveredAnyTerminalPositiveRequirements: cases.filter(
+        ({ recoveredAnyTerminalEvidence }) => recoveredAnyTerminalEvidence
+      ).length,
+      recoveredAllTerminalPositiveRequirements: cases.filter(
+        ({ recoveredAllTerminalEvidence }) => recoveredAllTerminalEvidence
+      ).length,
+      expectedTerminalEvidenceFacts,
+      recoveredTerminalEvidenceFacts,
+      terminalEvidenceRecall:
+        expectedTerminalEvidenceFacts === 0
+          ? null
+          : recoveredTerminalEvidenceFacts / expectedTerminalEvidenceFacts,
+      shadowFactReviews: fastPlan.summary.selectedFactReviews,
+      shadowReviewBatches: fastPlan.summary.reviewBatches,
+      customerNotFoundEligible: false,
+    },
+    proofLimit:
+      "Replay gegen die vom finalen V3.9.15-Rescue-Urteil tatsächlich referenzierte Evidenz. Kein Beweis für unbekannte positive Stellen, echte Nullfunde, Holdout-Qualität oder Produktfreigabe.",
+  };
+  return {
+    ...payload,
+    replaySha256: sha256(
+      `${A_DRIVEN_TERMINAL_EVIDENCE_REPLAY_CONTRACT_ID}\u0000${stableStringify(
+        payload
+      )}`
+    ),
+  };
+}
+
 module.exports = {
   A_DRIVEN_B_FACT_INDEX_CONTRACT_ID,
   A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID,
   A_DRIVEN_FAST_FALLBACK_REPLAY_CONTRACT_ID,
+  A_DRIVEN_TERMINAL_EVIDENCE_REPLAY_CONTRACT_ID,
   A_DRIVEN_B_RETRIEVAL_WINDOW_CONTRACT_ID,
   buildADrivenBFactIndex,
   buildADrivenBRetrievalWindows,
   buildADrivenFastFallbackPlan,
   buildADrivenFastFallbackReplay,
+  buildADrivenTerminalEvidenceReplay,
   contextualRetrievalFacts,
   validateADrivenBFactIndex,
 };

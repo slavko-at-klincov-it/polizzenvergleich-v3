@@ -114,6 +114,7 @@ const {
   buildADrivenBRetrievalWindows,
   buildADrivenFastFallbackPlan,
   buildADrivenFastFallbackReplay,
+  buildADrivenTerminalEvidenceReplay,
   contextualRetrievalFacts,
   validateADrivenBFactIndex,
 } = require("../../utils/policyAnalysis/aDrivenBFactIndex");
@@ -21668,6 +21669,32 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       positiveFactRecall: 1,
       customerNotFoundEligible: false,
     });
+
+    const rescueDecisions = validateADrivenRequirementDecisionResponses({
+      plan: decisionPlan,
+      responses: decisionPlan.rows.map(validRequirementResponse),
+    });
+    const terminalEvidenceReplay = buildADrivenTerminalEvidenceReplay({
+      fastPlan,
+      factIndex,
+      rescuePlan: decisionPlan,
+      rescueDecisions,
+    });
+    expect(terminalEvidenceReplay.summary).toMatchObject({
+      terminalPositiveRequirements: 1,
+      recoveredAnyTerminalPositiveRequirements: 1,
+      recoveredAllTerminalPositiveRequirements: 1,
+      terminalEvidenceRecall: 1,
+      customerNotFoundEligible: false,
+    });
+    expect(
+      terminalEvidenceReplay.summary.expectedTerminalEvidenceFacts
+    ).toBeGreaterThan(0);
+    expect(
+      terminalEvidenceReplay.summary.recoveredTerminalEvidenceFacts
+    ).toBe(
+      terminalEvidenceReplay.summary.expectedTerminalEvidenceFacts
+    );
 
     const tampered = JSON.parse(JSON.stringify(factIndex));
     tampered.facts.pop();

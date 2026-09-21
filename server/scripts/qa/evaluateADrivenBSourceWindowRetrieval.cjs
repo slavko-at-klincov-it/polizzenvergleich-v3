@@ -7,14 +7,14 @@ const path = require("path");
 const {
   buildADrivenBFactIndex,
   buildADrivenFastFallbackPlan,
-  buildADrivenFastFallbackReplay,
+  buildADrivenTerminalEvidenceReplay,
 } = require("../../utils/policyAnalysis/aDrivenBFactIndex");
 const {
   readJson,
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const CONTRACT_ID = "LF_A_DRIVEN_B_SOURCE_WINDOW_RETRIEVAL_EVALUATION_V1";
+const CONTRACT_ID = "LF_A_DRIVEN_B_SOURCE_WINDOW_RETRIEVAL_EVALUATION_V2";
 
 function fail(message) {
   console.error(`[lf-b-source-window-evaluation] ${message}`);
@@ -69,8 +69,8 @@ function evaluateProfile({
   preliminaryDecisions,
   completeCorpus,
   factIndex,
-  absencePlan,
-  absenceDecisions,
+  rescuePlan,
+  rescueDecisions,
   queryExpansionsByRequirement,
 }) {
   const fastPlan = buildADrivenFastFallbackPlan({
@@ -88,33 +88,38 @@ function evaluateProfile({
     retrievalWindowMaximumTokens: profile.maximumTokens,
     retrievalWindowOverlapTokens: profile.overlapTokens,
   });
-  const replay = buildADrivenFastFallbackReplay({
+  const replay = buildADrivenTerminalEvidenceReplay({
     fastPlan,
     factIndex,
-    absencePlan,
-    absenceDecisions,
+    rescuePlan,
+    rescueDecisions,
   });
   return {
     ...profile,
     retrievalUnits: fastPlan.summary.retrievalUnits,
     selectedParentFactReviews: fastPlan.summary.selectedFactReviews,
     reviewBatches: fastPlan.summary.reviewBatches,
-    knownPositiveRequirements: replay.summary.knownPositiveRequirements,
+    knownPositiveRequirements: replay.summary.terminalPositiveRequirements,
     recoveredAnyPositiveRequirements:
-      replay.summary.recoveredAnyPositiveRequirements,
-    knownPositiveFacts: replay.summary.knownPositiveFacts,
-    recoveredPositiveFacts: replay.summary.recoveredPositiveFacts,
-    positiveFactRecall: replay.summary.positiveFactRecall,
+      replay.summary.recoveredAnyTerminalPositiveRequirements,
+    knownPositiveFacts: replay.summary.expectedTerminalEvidenceFacts,
+    recoveredPositiveFacts: replay.summary.recoveredTerminalEvidenceFacts,
+    positiveFactRecall: replay.summary.terminalEvidenceRecall,
     missedPositiveFactIds: replay.cases.flatMap(
-      ({ expectedPositiveFactIds, recoveredPositiveFactIds }) => {
-        const recovered = new Set(recoveredPositiveFactIds);
-        return expectedPositiveFactIds.filter(
+      ({
+        expectedTerminalEvidenceFactIds,
+        recoveredTerminalEvidenceFactIds,
+      }) => {
+        const recovered = new Set(recoveredTerminalEvidenceFactIds);
+        return expectedTerminalEvidenceFactIds.filter(
           (factId) => !recovered.has(factId)
         );
       }
     ),
     missedRequirementIds: replay.cases
-      .filter(({ recoveredAnyPositive }) => !recoveredAnyPositive)
+      .filter(
+        ({ recoveredAnyTerminalEvidence }) => !recoveredAnyTerminalEvidence
+      )
       .map(({ requirementId }) => requirementId),
     customerNotFoundEligible: false,
   };
@@ -149,10 +154,15 @@ function run() {
     "a-driven-v2/b-absence/absence-plan.private.json",
     "LF_B_SOURCE_WINDOW_ABSENCE_PLAN"
   );
-  const absenceDecisions = artifact(
+  const rescuePlan = artifact(
     args.runRoot,
-    "a-driven-v2/b-absence/absence-decisions.private.json",
-    "LF_B_SOURCE_WINDOW_ABSENCE_DECISIONS"
+    "a-driven-v2/b-rescue/decision-plan.private.json",
+    "LF_B_SOURCE_WINDOW_RESCUE_PLAN"
+  );
+  const rescueDecisions = artifact(
+    args.runRoot,
+    "a-driven-v2/b-rescue/decisions/requirement-decisions.private.json",
+    "LF_B_SOURCE_WINDOW_RESCUE_DECISIONS"
   );
   const factIndex = buildADrivenBFactIndex({ completeCorpus });
   const expansions = queryExpansions(args.queryExpansionFile);
@@ -207,8 +217,8 @@ function run() {
       preliminaryDecisions,
       completeCorpus,
       factIndex,
-      absencePlan,
-      absenceDecisions,
+      rescuePlan,
+      rescueDecisions,
       queryExpansionsByRequirement: expansions,
     })
   );
@@ -236,7 +246,7 @@ function run() {
     bestKnownPositiveRecallProfile: passing[0] || null,
     acceptanceReady: false,
     proofLimit:
-      "Modellfreier Replay gegen elf bekannte V3.9.15-Rescue-Fakten. Source-Windows sind nur Navigation, keine semantischen Fakten und kein Nullfundbeweis. Unbekannter Recall, echte Nullfunde, Gold und Holdout bleiben offen.",
+      "Modellfreier Replay gegen acht vom finalen V3.9.15-Rescue-Urteil tatsächlich referenzierte Evidenzfakten. Source-Windows sind nur Navigation, keine semantischen Fakten und kein Nullfundbeweis. Unbekannter Recall, echte Nullfunde, Gold und Holdout bleiben offen.",
   };
   fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });
   writePrivateJson(

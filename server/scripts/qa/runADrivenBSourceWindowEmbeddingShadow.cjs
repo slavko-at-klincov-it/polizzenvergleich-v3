@@ -10,7 +10,7 @@ const {
   buildADrivenBFactIndex,
   buildADrivenBRetrievalWindows,
   buildADrivenFastFallbackPlan,
-  buildADrivenFastFallbackReplay,
+  buildADrivenTerminalEvidenceReplay,
 } = require("../../utils/policyAnalysis/aDrivenBFactIndex");
 const {
   createEmbeddingClient,
@@ -30,7 +30,7 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const CONTRACT_ID = "LF_A_DRIVEN_B_SOURCE_WINDOW_EMBEDDING_SHADOW_V1";
+const CONTRACT_ID = "LF_A_DRIVEN_B_SOURCE_WINDOW_EMBEDDING_SHADOW_V2";
 
 function fail(message) {
   console.error(`[lf-b-source-window-embedding] ${message}`);
@@ -129,8 +129,8 @@ function candidateProfile({
   semanticParentsByRequirement,
   lexicalParentsByRequirement = null,
   factIndex,
-  absencePlan,
-  absenceDecisions,
+  rescuePlan,
+  rescueDecisions,
 }) {
   const rows = queryRows.map(({ requirementId }) => {
     const ids = new Set(lexicalParentsByRequirement?.get(requirementId) || []);
@@ -145,29 +145,32 @@ function candidateProfile({
     (sum, row) => sum + row.candidateFactIds.length,
     0
   );
-  const replay = buildADrivenFastFallbackReplay({
+  const replay = buildADrivenTerminalEvidenceReplay({
     fastPlan: {
       contractId: A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID,
       rows,
       summary: { selectedFactReviews, reviewBatches: 0 },
     },
     factIndex,
-    absencePlan,
-    absenceDecisions,
+    rescuePlan,
+    rescueDecisions,
   });
   return {
     profileId,
     selectedParentFactReviews: selectedFactReviews,
-    knownPositiveRequirements: replay.summary.knownPositiveRequirements,
+    knownPositiveRequirements: replay.summary.terminalPositiveRequirements,
     recoveredAnyPositiveRequirements:
-      replay.summary.recoveredAnyPositiveRequirements,
-    knownPositiveFacts: replay.summary.knownPositiveFacts,
-    recoveredPositiveFacts: replay.summary.recoveredPositiveFacts,
-    positiveFactRecall: replay.summary.positiveFactRecall,
+      replay.summary.recoveredAnyTerminalPositiveRequirements,
+    knownPositiveFacts: replay.summary.expectedTerminalEvidenceFacts,
+    recoveredPositiveFacts: replay.summary.recoveredTerminalEvidenceFacts,
+    positiveFactRecall: replay.summary.terminalEvidenceRecall,
     missedPositiveFactIds: replay.cases.flatMap(
-      ({ expectedPositiveFactIds, recoveredPositiveFactIds }) => {
-        const recovered = new Set(recoveredPositiveFactIds);
-        return expectedPositiveFactIds.filter(
+      ({
+        expectedTerminalEvidenceFactIds,
+        recoveredTerminalEvidenceFactIds,
+      }) => {
+        const recovered = new Set(recoveredTerminalEvidenceFactIds);
+        return expectedTerminalEvidenceFactIds.filter(
           (factId) => !recovered.has(factId)
         );
       }
@@ -200,10 +203,15 @@ async function run() {
     "a-driven-v2/b-absence/absence-plan.private.json",
     "LF_B_WINDOW_EMBEDDING_ABSENCE_PLAN"
   );
-  const absenceDecisions = artifact(
+  const rescuePlan = artifact(
     args.runRoot,
-    "a-driven-v2/b-absence/absence-decisions.private.json",
-    "LF_B_WINDOW_EMBEDDING_ABSENCE_DECISIONS"
+    "a-driven-v2/b-rescue/decision-plan.private.json",
+    "LF_B_WINDOW_EMBEDDING_RESCUE_PLAN"
+  );
+  const rescueDecisions = artifact(
+    args.runRoot,
+    "a-driven-v2/b-rescue/decisions/requirement-decisions.private.json",
+    "LF_B_WINDOW_EMBEDDING_RESCUE_DECISIONS"
   );
   const expansions = queryExpansions(args.queryExpansionFile);
   const factIndex = buildADrivenBFactIndex({ completeCorpus });
@@ -291,8 +299,8 @@ async function run() {
         queryRows,
         semanticParentsByRequirement,
         factIndex,
-        absencePlan,
-        absenceDecisions,
+        rescuePlan,
+        rescueDecisions,
       })
     );
     results.push(
@@ -302,8 +310,8 @@ async function run() {
         semanticParentsByRequirement,
         lexicalParentsByRequirement,
         factIndex,
-        absencePlan,
-        absenceDecisions,
+        rescuePlan,
+        rescueDecisions,
       })
     );
   }
@@ -346,7 +354,7 @@ async function run() {
     acceptanceReady: false,
     customerNotFoundEligible: false,
     proofLimit:
-      "Dinghy-Shadow-Replay gegen elf bekannte V3.9.15-Rescue-Fakten. Embeddingrankings sind nur Navigation. Sie entscheiden keine semantische Gleichheit und zertifizieren keinen Nullfund; Gold, echte Negative und Holdout bleiben offen.",
+      "Dinghy-Shadow-Replay gegen acht vom finalen V3.9.15-Rescue-Urteil tatsächlich referenzierte Evidenzfakten. Embeddingrankings sind nur Navigation. Sie entscheiden keine semantische Gleichheit und zertifizieren keinen Nullfund; Gold, echte Negative und Holdout bleiben offen.",
   };
   fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });
   writePrivateJson(
@@ -357,7 +365,7 @@ async function run() {
   console.log(
     best
       ? `[lf-b-source-window-embedding] PASS ${best.profileId}: ${best.recoveredPositiveFacts}/${best.knownPositiveFacts} bekannte Fakten, ${best.selectedParentFactReviews}/${absencePlan.summary.plannedClauseReviews} Elternprüfungen, ${output.wallDurationMs} ms; NICHT GEFUNDEN gesperrt`
-      : `[lf-b-source-window-embedding] FAIL: kein Profil erreicht 11/11; ${output.wallDurationMs} ms; NICHT GEFUNDEN gesperrt`
+      : `[lf-b-source-window-embedding] FAIL: kein Profil erreicht die vollständige finale Evidenz; ${output.wallDurationMs} ms; NICHT GEFUNDEN gesperrt`
   );
 }
 
