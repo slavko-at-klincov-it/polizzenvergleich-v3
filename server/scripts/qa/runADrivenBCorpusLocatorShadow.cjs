@@ -31,9 +31,9 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V10";
-const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V10";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V10";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V11";
+const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V11";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V11";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -76,6 +76,10 @@ function argumentsFrom(argv) {
     modelContext: number("modelContext", DEFAULT_CONTEXT, 1_000),
     partitionMode: values.partitionMode || "CHARACTER",
     selectionMode: values.selectionMode || "BROAD_RECALL",
+    maximumSelectionsPerRequirement:
+      values.maximumSelectionsPerRequirement === undefined
+        ? null
+        : number("maximumSelectionsPerRequirement", 8),
     maximumAttempts: number("maximumAttempts", 2),
     routeLexicalTopK: number("routeLexicalTopK", 20),
     routeNeighborRadius: number("routeNeighborRadius", 0, 0),
@@ -321,6 +325,7 @@ function buildPlan({
   maximumPartitionCharacters,
   partitionMode = "CHARACTER",
   selectionMode = "BROAD_RECALL",
+  maximumSelectionsPerRequirement = null,
   candidateFactIdsByRequirement = null,
 }) {
   validateADrivenRequirementDecisionPlan(decisionPlan);
@@ -346,7 +351,10 @@ function buildPlan({
     }));
   if (
     !["CHARACTER", "DOCUMENT", "REQUIREMENT"].includes(partitionMode) ||
-    !["BROAD_RECALL", "STRICT_COUNTERPART"].includes(selectionMode)
+    !["BROAD_RECALL", "STRICT_COUNTERPART"].includes(selectionMode) ||
+    (maximumSelectionsPerRequirement !== null &&
+      (!Number.isInteger(maximumSelectionsPerRequirement) ||
+        maximumSelectionsPerRequirement < 1))
   )
     throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_PARTITION_MODE_INVALID");
   const routedFactIds = candidateFactIdsByRequirement
@@ -376,6 +384,7 @@ function buildPlan({
     candidateUnitType,
     partitionMode,
     selectionMode,
+    maximumSelectionsPerRequirement,
     maximumPartitionCharacters,
     requirements,
     partitions,
@@ -421,14 +430,18 @@ function buildPlan({
 
 function prompt(plan, partition, repair = null) {
   const view = locatorPromptView(plan, partition);
+  const selectionLimit = plan.maximumSelectionsPerRequirement
+    ? ` Ordne die Kandidaten gedanklich nach Belegstärke und nenne je r höchstens ${plan.maximumSelectionsPerRequirement} Kandidaten.`
+    : "";
   const systemPrompt =
     plan.selectionMode === "STRICT_COUNTERPART"
       ? 'Du bist ein präziser Gegenstück-Shortlister. Prüfe jede Anforderung r unabhängig gegen ihre erlaubten B-Quelltexte c. Nenne nur Kandidaten, die tatsächlich denselben fachlichen Identitätskern im passenden Gegenstands-, Gefahren-, Schaden- oder Rollenkontext ausdrücken können. Abweichende Werte, Limits, Bedingungen, Umfänge, Zeiträume, ein ausdrückliches Gegenteil oder ein ausdrücklicher Ausschluss desselben Kerns bleiben Kandidaten. Ein Ober- oder Unterfall bleibt nur dann Kandidat, wenn der gemeinsame fachliche Kern aus dem Quellfenster direkt hervorgeht. Bloße Keyword-Nennung, Überschrift, Branchenbezug, benachbarte Klausel oder nur verwandte Deckung ist kein Kandidat. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige und für r erlaubte c, keine Erläuterung und keine weiteren Felder.'
       : 'Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede Anforderung r unabhängig gegen ihre erlaubten B-Quelltexte c. Nenne jeden erlaubten Kandidaten, der möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthält. Ein übereinstimmender fachlicher Kern muss auch bei abweichenden Bedingungen, Werten oder engerem/weiterem Scope aufgenommen werden. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Im Zweifel aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige und für r erlaubte c, keine Erläuterung und keine weiteren Felder. Kopiere nicht dieselbe Kandidatenliste pauschal auf fachlich verschiedene Anforderungen.';
+  const boundedSystemPrompt = `${systemPrompt}${selectionLimit}`;
   const messages = [
     {
       role: "system",
-      content: systemPrompt,
+      content: boundedSystemPrompt,
     },
     {
       role: "user",
@@ -536,6 +549,8 @@ function validateLocatorAliasResponse(response, plan, partition) {
       item.r !== expectedRequirementNumber ||
       !Array.isArray(item.c) ||
       new Set(item.c).size !== item.c.length ||
+      (plan.maximumSelectionsPerRequirement !== null &&
+        item.c.length > plan.maximumSelectionsPerRequirement) ||
       item.c.some(
         (candidateNumber) =>
           !Number.isSafeInteger(candidateNumber) ||
@@ -581,6 +596,9 @@ function validateLocatorResponse(response, plan, partition) {
       Object.keys(item).sort().join(",") !== "candidateFactIds,requirementId" ||
       !Array.isArray(item.candidateFactIds) ||
       new Set(item.candidateFactIds).size !== item.candidateFactIds.length ||
+      (plan.maximumSelectionsPerRequirement !== null &&
+        item.candidateFactIds.length >
+          plan.maximumSelectionsPerRequirement) ||
       item.candidateFactIds.some((factId) => !allowed.has(factId))
     )
       throw new Error(
@@ -628,7 +646,7 @@ async function locatePartition({
   const attempts = [];
   for (let attempt = 1; attempt <= args.maximumAttempts; attempt += 1) {
     const repair = attempts.length
-      ? 'Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}], verwende ausschließlich die bei r erlaubten lokalen c und bewerte jede Anforderung unabhängig.'
+      ? `Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}], verwende ausschließlich die bei r erlaubten lokalen c und bewerte jede Anforderung unabhängig.${plan.maximumSelectionsPerRequirement ? ` Nenne je r höchstens ${plan.maximumSelectionsPerRequirement} Kandidaten.` : ""}`
       : null;
     const messages = prompt(plan, partition, repair);
     const started = performance.now();
@@ -846,6 +864,7 @@ async function run() {
     maximumPartitionCharacters: args.maximumPartitionCharacters,
     partitionMode: args.partitionMode,
     selectionMode: args.selectionMode,
+    maximumSelectionsPerRequirement: args.maximumSelectionsPerRequirement,
     candidateFactIdsByRequirement,
   });
   fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });

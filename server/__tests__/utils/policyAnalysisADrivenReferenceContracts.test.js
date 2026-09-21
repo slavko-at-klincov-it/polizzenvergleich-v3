@@ -21522,17 +21522,19 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       maximumPartitionCharacters: 20_000,
       partitionMode: "REQUIREMENT",
       selectionMode: "STRICT_COUNTERPART",
+      maximumSelectionsPerRequirement: 1,
       candidateFactIdsByRequirement: {
         [decisionPlan.rows[0].requirementId]: [firstSourceWindow.windowId],
       },
     });
     expect(strictLocatorPlan.selectionMode).toBe("STRICT_COUNTERPART");
+    expect(strictLocatorPlan.maximumSelectionsPerRequirement).toBe(1);
     expect(
       bCorpusLocatorPrompt(
         strictLocatorPlan,
         strictLocatorPlan.partitions[0]
       )[0].content
-    ).toContain("Bloße Keyword-Nennung");
+    ).toEqual(expect.stringContaining("höchstens 1 Kandidaten"));
 
     const globalNeighborPlan = buildADrivenFastFallbackPlan({
       decisionPlan,
