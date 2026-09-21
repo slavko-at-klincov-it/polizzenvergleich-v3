@@ -140,6 +140,10 @@ const {
   buildRoutedWindowDecisionPlan,
 } = require("../../scripts/qa/buildADrivenRoutedWindowDecisionPlan.cjs");
 const {
+  compactDecisionPromptView,
+  validateAliasDecisionResponse,
+} = require("../../scripts/qa/runADrivenCompactWindowDecisions.cjs");
+const {
   partitionFacts: partitionSemanticFingerprintFacts,
   validateFingerprintResponse,
 } = require("../../scripts/qa/runADrivenBSemanticFingerprintShadow.cjs");
@@ -21570,6 +21574,38 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         ({ navigationCandidateIds }) => navigationCandidateIds.length === 1
       )
     ).toBe(true);
+    const compactDecisionView = compactDecisionPromptView(
+      decisionPlan,
+      routedWindowLocatorPlan,
+      routedWindowLocatorPlan.partitions[0]
+    );
+    const compactDecisionResponse = [
+      {
+        r: 1,
+        o: "MATCH",
+        c: [1],
+        f: compactDecisionView.requirements[0].components.map(({ k }) => ({
+          k,
+          o: "MATCH",
+          c: [1],
+        })),
+      },
+    ];
+    expect(
+      validateAliasDecisionResponse(
+        compactDecisionResponse,
+        decisionPlan,
+        routedWindowLocatorPlan,
+        routedWindowLocatorPlan.partitions[0],
+        12
+      )
+    ).toEqual([
+      expect.objectContaining({
+        requirementId: fallbackRequirementId,
+        contextOutcome: "MATCH",
+        candidateFactIds: [firstSourceWindow.windowId],
+      }),
+    ]);
 
     const globalNeighborPlan = buildADrivenFastFallbackPlan({
       decisionPlan,
