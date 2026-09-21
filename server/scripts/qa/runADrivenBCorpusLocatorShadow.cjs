@@ -69,6 +69,7 @@ function argumentsFrom(argv) {
     qwenModelKey: values.qwenModelKey || null,
     model: values.model || DEFAULT_MODEL,
     modelContext: number("modelContext", DEFAULT_CONTEXT, 1_000),
+    partitionMode: values.partitionMode || "CHARACTER",
     maximumAttempts: number("maximumAttempts", 2),
     maximumPartitionCharacters: number(
       "maximumPartitionCharacters",
@@ -156,11 +157,45 @@ function partitionFacts(facts, maximumPartitionCharacters) {
   return partitions;
 }
 
+function partitionFactsByDocument(facts, maximumPartitionCharacters) {
+  if (
+    !Array.isArray(facts) ||
+    facts.length === 0 ||
+    !Number.isSafeInteger(maximumPartitionCharacters) ||
+    maximumPartitionCharacters < 20_000
+  )
+    throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_PARTITION_INPUT_INVALID");
+  const groups = new Map();
+  for (const fact of facts.map(compactFact)) {
+    if (!groups.has(fact.documentUuid)) groups.set(fact.documentUuid, []);
+    groups.get(fact.documentUuid).push(fact);
+  }
+  return [...groups.entries()].map(([documentUuid, candidates], index) => {
+    if (
+      JSON.stringify({ candidates }).length > maximumPartitionCharacters
+    )
+      throw new Error(
+        `LF_A_DRIVEN_B_CORPUS_LOCATOR_DOCUMENT_TOO_LARGE:${documentUuid}`
+      );
+    const factIds = candidates.map(({ factId }) => factId);
+    return {
+      partitionId: `BCLD-${sha256(
+        stableStringify({ documentUuid, factIds })
+      ).slice(0, 24)}`,
+      partitionIndex: index,
+      documentUuid,
+      factIds,
+      candidates,
+    };
+  });
+}
+
 function buildPlan({
   decisionPlan,
   preliminaryDecisions,
   factIndex,
   maximumPartitionCharacters,
+  partitionMode = "CHARACTER",
 }) {
   validateADrivenRequirementDecisionPlan(decisionPlan);
   validateADrivenRequirementDecisionArtifact(preliminaryDecisions, decisionPlan);
@@ -172,16 +207,22 @@ function buildPlan({
   const requirements = decisionPlan.rows
     .filter(({ requirementId }) => fallbackIds.has(requirementId))
     .map(compactRequirement);
-  const partitions = partitionFacts(
-    factIndex.facts,
-    maximumPartitionCharacters
-  );
+  if (!["CHARACTER", "DOCUMENT"].includes(partitionMode))
+    throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_PARTITION_MODE_INVALID");
+  const partitions =
+    partitionMode === "DOCUMENT"
+      ? partitionFactsByDocument(
+          factIndex.facts,
+          maximumPartitionCharacters
+        )
+      : partitionFacts(factIndex.facts, maximumPartitionCharacters);
   const payload = {
     schemaVersion: 1,
     contractId: PLAN_CONTRACT_ID,
     decisionPlanSha256: decisionPlan.planSha256,
     preliminaryDecisionSha256: preliminaryDecisions.decisionSha256,
     factIndexSha256: factIndex.indexSha256,
+    partitionMode,
     maximumPartitionCharacters,
     requirements,
     partitions,
@@ -432,6 +473,7 @@ async function run() {
     preliminaryDecisions,
     factIndex,
     maximumPartitionCharacters: args.maximumPartitionCharacters,
+    partitionMode: args.partitionMode,
   });
   fs.mkdirSync(args.output, { recursive: true, mode: 0o700 });
   writePrivateJson(path.join(args.output, "locator-plan.private.json"), plan);
@@ -570,6 +612,7 @@ module.exports = {
   buildPlan,
   compactRequirement,
   partitionFacts,
+  partitionFactsByDocument,
   prompt,
   reusablePartitionResult,
   validateLocatorResponse,

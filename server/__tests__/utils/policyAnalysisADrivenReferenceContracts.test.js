@@ -122,6 +122,7 @@ const {
 } = require("../../scripts/qa/runADrivenBQueryExpansionShadow.cjs");
 const {
   partitionFacts: partitionBCorpusLocatorFacts,
+  partitionFactsByDocument,
   validateLocatorResponse,
 } = require("../../scripts/qa/runADrivenBCorpusLocatorShadow.cjs");
 const {
@@ -21514,6 +21515,14 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       20_000
     );
     expect(locatorPartitions.flatMap(({ factIds }) => factIds)).toEqual(
+      factIndex.facts.map(({ factId }) => factId)
+    );
+    const documentLocatorPartitions = partitionFactsByDocument(
+      factIndex.facts,
+      20_000
+    );
+    expect(documentLocatorPartitions).toHaveLength(1);
+    expect(documentLocatorPartitions[0].factIds).toEqual(
       factIndex.facts.map(({ factId }) => factId)
     );
     expect(
