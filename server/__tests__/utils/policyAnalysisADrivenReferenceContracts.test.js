@@ -21581,11 +21581,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       routedWindowLocatorPlan.partitions[0]
     );
     expect(
-      partitionCompactDecisionWork(
-        decisionPlan,
-        routedWindowLocatorPlan,
-        1
-      )
+      partitionCompactDecisionWork(decisionPlan, routedWindowLocatorPlan, 1)
     ).toEqual([
       expect.objectContaining({
         partitionIndex: 0,
