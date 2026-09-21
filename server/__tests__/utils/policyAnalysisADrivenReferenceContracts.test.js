@@ -21698,102 +21698,82 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         candidateFactIds: [firstSourceWindow.windowId],
       }),
     ]);
-    const normalizedCompactDecision = validateAliasDecisionResponse(
-      [
-        {
-          r: 1,
-          o: "MATCH",
-          c: [1],
-          f: [{ k: 1, o: "MATCH", c: [1] }],
-        },
-      ],
-      {
-        rows: [
+    expect(() =>
+      validateAliasDecisionResponse(
+        [
           {
-            requirementId: decisionPlan.rows[0].requirementId,
-            displayLabel: "Sprengstoffexplosion",
-            structurePath: [],
-            components: [
-              {
-                componentId: "coverage",
-                dimension: "COVERAGE_EFFECT",
-                label: "Versichert sind",
-                identityCore: false,
-              },
-              {
-                componentId: "peril",
-                dimension: "PERIL_OR_CAUSE",
-                label: "Sprengstoffexplosion",
-                identityCore: true,
-              },
-            ],
+            r: 1,
+            o: "MATCH",
+            c: [1],
+            f: [{ k: 1, o: "MATCH", c: [1] }],
           },
         ],
-      },
-      routedWindowLocatorPlan,
-      routedWindowLocatorPlan.partitions[0],
-      12
-    );
-    expect(normalizedCompactDecision[0]).toMatchObject({
-      deterministicNormalizations: [
         {
-          componentNumber: 2,
-          reason: "POSITIVE_CONTEXT_BINDS_IDENTITY_OR_COVERAGE_COMPONENT",
+          rows: [
+            {
+              requirementId: decisionPlan.rows[0].requirementId,
+              displayLabel: "Sprengstoffexplosion",
+              structurePath: [],
+              components: [
+                {
+                  componentId: "coverage",
+                  dimension: "COVERAGE_EFFECT",
+                  label: "Versichert sind",
+                  identityCore: false,
+                },
+                {
+                  componentId: "peril",
+                  dimension: "PERIL_OR_CAUSE",
+                  label: "Sprengstoffexplosion",
+                  identityCore: true,
+                },
+              ],
+            },
+          ],
         },
-      ],
-      componentFindings: [
-        { k: 1, o: "MATCH", c: [1] },
-        { k: 2, o: "MATCH", c: [1] },
-      ],
-    });
-    const missingConditionCompactDecision = validateAliasDecisionResponse(
-      [
-        {
-          r: 1,
-          o: "MATCH",
-          c: [1],
-          f: [{ k: 1, o: "MATCH", c: [1] }],
-        },
-      ],
-      {
-        rows: [
+        routedWindowLocatorPlan,
+        routedWindowLocatorPlan.partitions[0],
+        12
+      )
+    ).toThrow("LF_A_DRIVEN_COMPACT_WINDOW_COMPONENT_MISSING:1:2");
+    expect(() =>
+      validateAliasDecisionResponse(
+        [
           {
-            requirementId: decisionPlan.rows[0].requirementId,
-            displayLabel: "Ersatz nur wenn keine Sturmdeckung besteht",
-            structurePath: [],
-            components: [
-              {
-                componentId: "object",
-                dimension: "OBJECT",
-                label: "Ersatz aus der Haftpflichtversicherung",
-                identityCore: true,
-              },
-              {
-                componentId: "condition",
-                dimension: "CONDITION",
-                label: "wenn keine Sturmdeckung besteht",
-                identityCore: false,
-              },
-            ],
+            r: 1,
+            o: "MATCH",
+            c: [1],
+            f: [{ k: 1, o: "MATCH", c: [1] }],
           },
         ],
-      },
-      routedWindowLocatorPlan,
-      routedWindowLocatorPlan.partitions[0],
-      12
-    );
-    expect(missingConditionCompactDecision[0]).toMatchObject({
-      deterministicNormalizations: [
         {
-          componentNumber: 2,
-          reason: "MISSING_COMPONENT_DOWNGRADED_TO_NOT_ESTABLISHED",
+          rows: [
+            {
+              requirementId: decisionPlan.rows[0].requirementId,
+              displayLabel: "Ersatz nur wenn keine Sturmdeckung besteht",
+              structurePath: [],
+              components: [
+                {
+                  componentId: "object",
+                  dimension: "OBJECT",
+                  label: "Ersatz aus der Haftpflichtversicherung",
+                  identityCore: true,
+                },
+                {
+                  componentId: "condition",
+                  dimension: "CONDITION",
+                  label: "wenn keine Sturmdeckung besteht",
+                  identityCore: false,
+                },
+              ],
+            },
+          ],
         },
-      ],
-      componentFindings: [
-        { k: 1, o: "MATCH", c: [1] },
-        { k: 2, o: "NOT_ESTABLISHED", c: [] },
-      ],
-    });
+        routedWindowLocatorPlan,
+        routedWindowLocatorPlan.partitions[0],
+        12
+      )
+    ).toThrow("LF_A_DRIVEN_COMPACT_WINDOW_COMPONENT_MISSING:1:2");
     const emptyNotEstablishedCompactDecision = validateAliasDecisionResponse(
       [{ r: 1, o: "NOT_ESTABLISHED", c: [] }],
       {

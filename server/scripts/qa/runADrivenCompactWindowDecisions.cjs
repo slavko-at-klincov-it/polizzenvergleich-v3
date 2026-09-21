@@ -27,8 +27,8 @@ const {
   requirementsForPartition,
 } = require("./runADrivenBCorpusLocatorShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V10";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V9";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V11";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V10";
 const REUSABLE_RUN_CONTRACT_IDS = new Set([RUN_CONTRACT_ID]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
@@ -273,7 +273,7 @@ function prompt(
   const messages = [
     {
       role: "system",
-      content: `Du entscheidest mehrere fachliche Anforderungen aus Referenzpaket A direkt gegen die einmalig angezeigten, vollständigen und servergebundenen B-Klauselkontexte. Prüfe jedes r und jede Komponente k unabhängig. MATCH bedeutet derselbe fachliche Kern im passenden Objekt-, Gefahren-, Schaden- oder Rollenkontext. OPPOSITE bedeutet derselbe Kern mit ausdrücklich gegenteiliger Vertragswirkung oder Ausschluss. RELATED_ONLY bedeutet bloß verwandt ohne Gegenstück. NOT_ESTABLISHED bedeutet im vorgelegten Kandidatensatz nicht belegt und ist ausdrücklich kein Abwesenheitsnachweis für das gesamte B-Paket. Abweichende Werte, Limits, Bedingungen, Umfänge oder Zeiträume bleiben MATCH auf Kontextebene; die betroffene Komponente kann MATCH oder OPPOSITE sein. Bei FACT_ROLE muss B dieselbe Kosten-, Leistungs-, Definitions- oder sonstige Faktrolle ausdrücken: Ein Objekt, Raum, Gerät oder eine Tätigkeit mit demselben Stichwort ist kein Gegenstück zu einer Kosten- oder Leistungsanforderung. Eine bloße Keyword-Nennung, Überschrift, Nachbarklausel, irgendeine andere Kostenposition oder Branchenüblichkeit genügt nicht. Nutze nur angezeigte c und höchstens ${maximumEvidencePerRequirement} eindeutige c je r insgesamt. Antworte ausschließlich als kompaktes JSON-Array in exakt der r-Reihenfolge: [{"r":1,"o":"MATCH","c":[2],"f":[{"k":1,"o":"MATCH","c":[2]}]}]. Jedes r und jedes k exakt einmal. o ist nur MATCH, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED. NOT_ESTABLISHED hat c []; alle anderen Outcomes benötigen mindestens ein c. Keine Erläuterung und keine weiteren Felder.`,
+      content: `Du entscheidest mehrere fachliche Anforderungen aus Referenzpaket A direkt gegen die einmalig angezeigten, vollständigen und servergebundenen B-Klauselkontexte. Prüfe jedes r und jede Komponente k unabhängig. MATCH bedeutet derselbe fachliche Kern im passenden Objekt-, Gefahren-, Schaden- oder Rollenkontext. OPPOSITE bedeutet derselbe Kern mit ausdrücklich gegenteiliger Vertragswirkung oder Ausschluss. RELATED_ONLY bedeutet bloß verwandt ohne Gegenstück. NOT_ESTABLISHED bedeutet im vorgelegten Kandidatensatz nicht belegt und ist ausdrücklich kein Abwesenheitsnachweis für das gesamte B-Paket. Abweichende Werte, Limits, Bedingungen, Umfänge oder Zeiträume bleiben MATCH auf Kontextebene; die betroffene Komponente kann MATCH oder OPPOSITE sein. Bei FACT_ROLE muss B dieselbe Kosten-, Leistungs-, Definitions- oder sonstige Faktrolle ausdrücken: Ein Objekt, Raum, Gerät oder eine Tätigkeit mit demselben Stichwort ist kein Gegenstück zu einer Kosten- oder Leistungsanforderung. Eine bloße Keyword-Nennung, Überschrift, Nachbarklausel, irgendeine andere Kostenposition oder Branchenüblichkeit genügt nicht. Nutze nur angezeigte c und höchstens ${maximumEvidencePerRequirement} eindeutige c je r insgesamt. Antworte ausschließlich als kompaktes JSON-Array in exakt der r-Reihenfolge: [{"r":1,"o":"MATCH","c":[2],"f":[{"k":1,"o":"MATCH","c":[2]}]}]. Jedes r und jedes k exakt einmal. f MUSS für jede angezeigte k genau einen eigenen Eintrag enthalten, auch wenn dessen o NOT_ESTABLISHED ist; ein Kontext-o gilt niemals automatisch für eine ausgelassene Komponente. o ist nur MATCH, OPPOSITE, RELATED_ONLY oder NOT_ESTABLISHED. NOT_ESTABLISHED hat c []; alle anderen Outcomes benötigen mindestens ein c. Keine Erläuterung und keine weiteren Felder.`,
     },
     {
       role: "user",
@@ -426,21 +426,10 @@ function validateAliasDecisionResponse(
       });
     const components = expected.components.map((expectedComponent) => {
       let finding = findingsByComponentNumber.get(expectedComponent.k);
-      if (
-        !finding &&
-        POSITIVE_OUTCOMES.has(item.o) &&
-        (expectedComponent.core || expectedComponent.d === "COVERAGE_EFFECT")
-      ) {
-        finding = {
-          k: expectedComponent.k,
-          o: item.o,
-          c: [...item.c],
-        };
-        deterministicNormalizations.push({
-          componentNumber: expectedComponent.k,
-          reason: "POSITIVE_CONTEXT_BINDS_IDENTITY_OR_COVERAGE_COMPONENT",
-        });
-      }
+      if (!finding && POSITIVE_OUTCOMES.has(item.o))
+        throw new Error(
+          `LF_A_DRIVEN_COMPACT_WINDOW_COMPONENT_MISSING:${expected.r}:${expectedComponent.k}`
+        );
       if (!finding) {
         finding = {
           k: expectedComponent.k,
@@ -583,8 +572,17 @@ async function decidePartition({
 }) {
   const attempts = [];
   for (let attempt = 1; attempt <= args.maximumAttempts; attempt += 1) {
+    const missingComponent = attempts
+      .at(-1)
+      ?.errorMessage?.match(
+        /LF_A_DRIVEN_COMPACT_WINDOW_COMPONENT_MISSING:(\d+):(\d+)/u
+      );
     const repair = attempts.length
-      ? `Die vorige Antwort war nicht vertragsgültig. Wiederhole alle r und k exakt in der vorgegebenen Reihenfolge. Gültige Kandidaten sind c=1..${partition.factIds.length}; je r insgesamt höchstens ${args.maximumEvidencePerRequirement}. Verwende exakt die Felder r,o,c,f beziehungsweise k,o,c.`
+      ? `Die vorige Antwort war nicht vertragsgültig. Wiederhole alle r und k exakt in der vorgegebenen Reihenfolge.${
+          missingComponent
+            ? ` Insbesondere fehlte für r=${missingComponent[1]} die Komponente k=${missingComponent[2]}; bewerte sie semantisch selbstständig und gib sie in f an.`
+            : ""
+        } Gültige Kandidaten sind c=1..${partition.factIds.length}; je r insgesamt höchstens ${args.maximumEvidencePerRequirement}. Verwende exakt die Felder r,o,c,f beziehungsweise k,o,c.`
       : null;
     const messages = prompt(
       decisionPlan,
