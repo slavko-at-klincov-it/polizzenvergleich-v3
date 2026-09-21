@@ -162,6 +162,8 @@ Zusätzlich wird die Evidenzqualität getrennt markiert:
 | `INT-20260917-056` | Nachlaufende Satzfortsetzung dem eindeutig letzten Komponentenanker zuordnen       | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.9.2-Gate abschließen, installieren und den kalten Produktlauf ab Batch 30 fortsetzen                                    |
 | `INT-20260917-057` | Explizite Voraussetzung mit direkt folgender Begriffsdefinition atomisieren        | `BEOBACHTUNG`           | `BESTÄTIGT_UMGESETZT` | V3.9.3-Gate abschließen, installieren und den kalten Produktlauf ab Batch 33 fortsetzen                                    |
 
+| `INT-20260921-075` | Vollkorpus-Abwesenheitsmatrix mit gemeinsamem B-Kontext gebündelt entscheiden | `ENTSCHEIDUNGSKANDIDAT` | `IN_PRÜFUNG` | fail-closed Mehranforderungs-Prompt implementieren und auf dem Mac Studio gegen V3.9.15 messen |
+
 ## INT-20260824-001 — Bestmögliche lokale KI-Strategie aus verbundenem Wissen ableiten
 
 - Erfasst: 2026-08-24
@@ -4417,3 +4419,48 @@ Vollständigkeitsbehauptung erzeugen.
   weiterhin kein Holdout- oder 99-Prozent-Nachweis. Vollständige Evidenz:
   `POLIZZENVERGLEICH_TESTS_UND_ERKENNTNISSE.md`, Abschnitt 105.
 - Change-Set: `LF-V3915-EMPTY-OPTIONAL-ARGUMENTS-20260920-001`.
+
+## INT-20260921-075 — Vollkorpus-Abwesenheitsmatrix mit gemeinsamem B-Kontext gebündelt entscheiden
+
+- Erfasst: 2026-09-21
+- Typ: `ENTSCHEIDUNGSKANDIDAT`
+- Status: `IN_PRÜFUNG`
+- Aussage: Der vollständige B-Korpus darf nicht für jede offene
+  A-Anforderung erneut wortgleich an das Modell gesendet werden. Mehrere
+  Anforderungen, die dieselbe servergebundene B-Partition prüfen, können in
+  einem Modellaufruf gebündelt werden, wenn für jede logische
+  `partitionId` weiterhin exakt eine unabhängige, vollständig validierte
+  Antwort verlangt und persistiert wird.
+- Ist-Wahrheit: `JA` als belegte Laufzeitursache des V3.9.15-Produktlaufs.
+  42 offene Anforderungen wurden gegen elf vollständige B-Partitionen
+  geprüft. Dadurch entstanden 462 Modellaufrufe, 13.524 wiederholte
+  Kandidatenreferenzen, 7.265.028 Prompt-Tokens und 17.201.165 ms
+  Abwesenheitslaufzeit. Es gab keinen Timeout-Stillstand; die Zeit entstand
+  aus der kartesischen Wiederholung desselben B-Kontexts.
+- Wiederverwendungsklasse: `ADAPT_EXISTING` für `CAP-B-007` und
+  `CAP-ORCH-001`. Der bestehende Plan-, Kandidaten-, Quellen-, Resume- und
+  Ergebnisvertrag bleibt maßgeblich; neu ist nur der gebündelte
+  Transport-/Promptvertrag über mehrere bestehende logische Partitionen.
+- Scope und Hard-Gates: Gemeinsame B-Kandidaten dürfen nur dann einmalig
+  übertragen werden, wenn Dokument, Partitionsindex und vollständige
+  Kandidaten-ID-Liste identisch sind. Jede erwartete `partitionId` muss in
+  der Modellantwort exakt einmal vorkommen. Fehlende, doppelte, unbekannte
+  oder planfremde Antworten, ungültige Kandidaten-IDs sowie unvollständige
+  Teilantworten bleiben fail-closed. Persistenz und Resume erfolgen weiter je
+  logischer Partition; ein Batch darf keine positive oder negative Aussage
+  auf eine andere Anforderung übertragen.
+- Messziel: Bei höchstens acht Anforderungen pro gemeinsamem B-Kontext sinkt
+  der bekannte 42-x-11-Lauf von 462 auf höchstens 66 Modellaufrufe. Der
+  Produktlauf soll damit das ungefähr einstündige Gesamtziel erreichen,
+  ohne weniger Klausel-/Anforderungspaare zu prüfen und ohne ein
+  `NOT_FOUND` aus einer fehlenden Teilantwort abzuleiten.
+- Prüfplan: synthetische positive/negative Mischbatches, fehlende,
+  doppelte und unbekannte `partitionId`, fremde Kandidaten-ID,
+  schemafester Retry, partieller Resume und exakte Einzelergebnis-
+  Rematerialisierung. Danach Mac-Studio-Ziellauf mit demselben vollständigen
+  V3.9.15-Korpus; Verteilung, Rescue-Menge, Modellaufrufe, Tokens und Laufzeit
+  werden gegen den unveränderten Ausgangslauf verglichen.
+- Beweisgrenze: Performance- und Transportverbesserung auf dem bekannten
+  LF-1+9-Korpus. Gold-283 bleibt getrennte QA-Regression; die Bündelung ist
+  weder ein fachlicher Gold-Fix noch ein Holdout- oder 99-Prozent-Nachweis.
+- Change-Set: `LF-V3916-BATCHED-ABSENCE-MATRIX-20260921-001`.
