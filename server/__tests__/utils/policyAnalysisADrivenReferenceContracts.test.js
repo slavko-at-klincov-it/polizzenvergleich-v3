@@ -117,6 +117,9 @@ const {
   validateADrivenBFactIndex,
 } = require("../../utils/policyAnalysis/aDrivenBFactIndex");
 const {
+  validateExpansionResponse,
+} = require("../../scripts/qa/runADrivenBQueryExpansionShadow.cjs");
+const {
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID_V2,
   buildADrivenRequirementSegmentedPlan,
 } = require("../../utils/policyAnalysis/aDrivenRequirementSegmentedPlan");
@@ -21428,6 +21431,61 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(globalNeighborPlan.summary.selectedFactReviews).toBeGreaterThan(
       fastPlan.summary.selectedFactReviews
     );
+
+    const expandedPlan = buildADrivenFastFallbackPlan({
+      decisionPlan,
+      preliminaryDecisions,
+      completeCorpus,
+      factIndex,
+      lexicalTopKPerDocument: 1,
+      maximumBatchCharacters: 10_000,
+      retrievalScope: "GLOBAL",
+      queryExpansionsByRequirement: {
+        [fallbackRow.requirementId]: ["fachfremde Bestimmung"],
+      },
+    });
+    expect(expandedPlan.summary).toMatchObject({
+      expandedRequirements: 1,
+      customerNotFoundEligible: false,
+    });
+    expect(expandedPlan.queryExpansionSha256).toMatch(/^[a-f0-9]{64}$/u);
+    expect(
+      expandedPlan.rows[0].candidateSelections.some(({ channels }) =>
+        channels.includes("LEXICAL_EXPANSION_BM25_GLOBAL")
+      )
+    ).toBe(true);
+    expect(
+      validateExpansionResponse(
+        [
+          {
+            requirementId: fallbackRow.requirementId,
+            searchPhrases: [
+              "fachfremde Bestimmung",
+              "andere Regelung",
+              "abweichende Klausel",
+            ],
+          },
+        ],
+        { rows: [fallbackRow] }
+      )
+    ).toEqual({
+      [fallbackRow.requirementId]: [
+        "fachfremde Bestimmung",
+        "andere Regelung",
+        "abweichende Klausel",
+      ],
+    });
+    expect(() =>
+      validateExpansionResponse(
+        [
+          {
+            requirementId: fallbackRow.requirementId,
+            searchPhrases: ["doppelt", "doppelt", "doppelt"],
+          },
+        ],
+        { rows: [fallbackRow] }
+      )
+    ).toThrow("LF_A_DRIVEN_B_QUERY_EXPANSION_ITEM_DUPLICATE");
 
     const absencePlan = buildADrivenRequirementAbsencePlan({
       decisionPlan,

@@ -183,7 +183,7 @@ function validateADrivenBFactIndex(index, { completeCorpus } = {}) {
   return true;
 }
 
-function requirementQuery(row) {
+function requirementQuery(row, expansionPhrases = []) {
   const componentLabels = row.components.flatMap((component) => [
     component.dimension,
     component.label,
@@ -207,6 +207,7 @@ function requirementQuery(row) {
     text: parts.join("\n"),
     tokens: sortedUnique(parts.flatMap(tokens)),
     phrases,
+    expansionPhrases: sortedUnique(expansionPhrases.map(normalize)),
     numericValues: numericSignals(parts.join("\n")),
     desiredRoles: sortedUnique(
       row.components.flatMap(({ dimension }) => {
@@ -334,6 +335,7 @@ function buildADrivenFastFallbackPlan({
   retrievalScope = "PER_DOCUMENT",
   neighborRadius = 0,
   neighborAnchorLimit = 0,
+  queryExpansionsByRequirement = {},
 } = {}) {
   validateADrivenRequirementDecisionPlan(decisionPlan);
   validateADrivenRequirementDecisionArtifact(
@@ -354,9 +356,35 @@ function buildADrivenFastFallbackPlan({
     neighborRadius > 10 ||
     !Number.isInteger(neighborAnchorLimit) ||
     neighborAnchorLimit < 0 ||
-    neighborAnchorLimit > lexicalTopKPerDocument
+    neighborAnchorLimit > lexicalTopKPerDocument ||
+    !queryExpansionsByRequirement ||
+    typeof queryExpansionsByRequirement !== "object" ||
+    Array.isArray(queryExpansionsByRequirement)
   )
     throw indexError("LF_A_DRIVEN_FAST_FALLBACK_INPUT_INVALID");
+
+  const normalizedQueryExpansions = {};
+  for (const [requirementId, phrases] of Object.entries(
+    queryExpansionsByRequirement
+  )) {
+    if (
+      !Array.isArray(phrases) ||
+      phrases.length > 12 ||
+      phrases.some(
+        (phrase) =>
+          typeof phrase !== "string" ||
+          normalize(phrase).length < 3 ||
+          normalize(phrase).length > 120
+      )
+    )
+      throw indexError(
+        "LF_A_DRIVEN_FAST_FALLBACK_QUERY_EXPANSION_INVALID",
+        requirementId
+      );
+    normalizedQueryExpansions[requirementId] = sortedUnique(
+      phrases.map(normalize)
+    );
+  }
 
   const preliminaryById = new Map(
     preliminaryDecisions.results.map((result) => [result.requirementId, result])
@@ -418,7 +446,10 @@ function buildADrivenFastFallbackPlan({
       preliminaryById.get(requirementId)?.customerStatus ===
       "FALLBACK_REQUIRED"
   )) {
-    const query = requirementQuery(row);
+    const query = requirementQuery(
+      row,
+      normalizedQueryExpansions[row.requirementId] || []
+    );
     const selected = new Map();
     const neighborAnchors = new Set();
     const add = (fact, channel) => {
@@ -447,6 +478,16 @@ function buildADrivenFastFallbackPlan({
       queryTokens: query.tokens,
       phrases: query.phrases,
     };
+    const expandedLexicalTarget = query.expansionPhrases.length
+      ? {
+          query: [query.text, ...query.expansionPhrases].join("\n"),
+          queryTokens: sortedUnique([
+            ...query.tokens,
+            ...query.expansionPhrases.flatMap(tokens),
+          ]),
+          phrases: query.phrases,
+        }
+      : null;
     const addRanked = (ranked, channel) => {
       for (const fact of ranked)
         add(canonicalFactById.get(fact.factId), channel);
@@ -471,6 +512,26 @@ function buildADrivenFastFallbackPlan({
         contextualRanked.filter((fact) => fact.retrievalContext),
         "LEXICAL_CONTEXT_BM25_GLOBAL"
       );
+      if (expandedLexicalTarget) {
+        addRanked(
+          rankLexicalCandidates({
+            target: expandedLexicalTarget,
+            candidates: globalRetrieval.rawFacts,
+            index: globalRetrieval.rawIndex,
+            topK: lexicalTopKPerDocument,
+          }),
+          "LEXICAL_EXPANSION_BM25_GLOBAL"
+        );
+        addRanked(
+          rankLexicalCandidates({
+            target: expandedLexicalTarget,
+            candidates: globalRetrieval.contextualFacts,
+            index: globalRetrieval.contextualIndex,
+            topK: lexicalTopKPerDocument,
+          }).filter((fact) => fact.retrievalContext),
+          "LEXICAL_EXPANSION_CONTEXT_BM25_GLOBAL"
+        );
+      }
     } else {
       for (const document of factIndex.documents) {
         const retrieval = indexesByDocument.get(document.documentUuid);
@@ -491,6 +552,26 @@ function buildADrivenFastFallbackPlan({
           contextualRanked.filter((fact) => fact.retrievalContext),
           "LEXICAL_CONTEXT_BM25"
         );
+        if (expandedLexicalTarget) {
+          addRanked(
+            rankLexicalCandidates({
+              target: expandedLexicalTarget,
+              candidates: retrieval.rawFacts,
+              index: retrieval.rawIndex,
+              topK: lexicalTopKPerDocument,
+            }),
+            "LEXICAL_EXPANSION_BM25"
+          );
+          addRanked(
+            rankLexicalCandidates({
+              target: expandedLexicalTarget,
+              candidates: retrieval.contextualFacts,
+              index: retrieval.contextualIndex,
+              topK: lexicalTopKPerDocument,
+            }).filter((fact) => fact.retrievalContext),
+            "LEXICAL_EXPANSION_CONTEXT_BM25"
+          );
+        }
       }
     }
     for (const fact of factIndex.facts) {
@@ -559,6 +640,9 @@ function buildADrivenFastFallbackPlan({
     retrievalScope,
     neighborRadius,
     neighborAnchorLimit,
+    queryExpansionSha256: Object.keys(normalizedQueryExpansions).length
+      ? sha256(stableStringify(normalizedQueryExpansions))
+      : null,
     rows,
     batches,
     summary: {
@@ -576,6 +660,9 @@ function buildADrivenFastFallbackPlan({
       retrievalScope,
       neighborRadius,
       neighborAnchorLimit,
+      expandedRequirements: rows.filter(
+        ({ query }) => query.expansionPhrases.length > 0
+      ).length,
       customerNotFoundEligible: false,
     },
     proofLimit:
