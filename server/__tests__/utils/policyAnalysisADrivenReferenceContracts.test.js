@@ -21689,7 +21689,6 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       requirements: [
         expect.objectContaining({
           r: 1,
-          c: [1],
         }),
       ],
       candidates: [
@@ -22087,6 +22086,26 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         partition
       )[0].candidateFactIds
     ).toEqual(factIds);
+  });
+
+  test("rejects a degenerate locator response copied across unrelated requirements", () => {
+    const requirements = Array.from({ length: 8 }, (_, index) => ({
+      requirementId: `requirement-${index}`,
+      candidateFactIds: ["fact-1"],
+    }));
+    const plan = { requirements };
+    const partition = {
+      factIds: ["fact-1", "fact-2"],
+      candidates: [{ factId: "fact-1" }, { factId: "fact-2" }],
+    };
+
+    expect(() =>
+      validateLocatorAliasResponse(
+        requirements.map((_, index) => ({ r: index + 1, c: [1, 2] })),
+        plan,
+        partition
+      )
+    ).toThrow("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_DEGENERATE");
   });
 
   test("ranks embedded source windows deterministically while retaining parent fact identities", () => {

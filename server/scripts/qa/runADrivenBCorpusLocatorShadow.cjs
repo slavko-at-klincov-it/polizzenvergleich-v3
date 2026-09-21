@@ -31,9 +31,9 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V6";
-const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V6";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V6";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V7";
+const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V7";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V7";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -274,6 +274,13 @@ function buildPlan({
             0
           )
         : null,
+      promptedPairReviews: partitions.reduce(
+        (sum, partition) =>
+          sum +
+          requirementsForPartition({ requirements }, partition).length *
+            partition.factIds.length,
+        0
+      ),
       customerNotFoundEligible: false,
     },
     proofLimit:
@@ -293,7 +300,7 @@ function prompt(plan, partition, repair = null) {
     {
       role: "system",
       content:
-        'Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede Anforderung r unabhängig gegen die vorgelegten B-Quelltexte. Nenne alle lokalen Kandidatennummern c, die möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthalten. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Pro Anforderung sind ausschließlich ihre erlaubten Kandidatennummern c zulässig. Im Zweifel aufnehmen; bloße Themenähnlichkeit nicht aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige c, keine Erläuterung und keine weiteren Felder.',
+        'Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede Anforderung r unabhängig gegen alle vorgelegten B-Quelltexte. Nenne alle lokalen Kandidatennummern c, die möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthalten. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Im Zweifel aufnehmen; bloße Themenähnlichkeit nicht aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige vorgelegte c, keine Erläuterung und keine weiteren Felder. Kopiere nicht dieselbe Kandidatenliste pauschal auf fachlich verschiedene Anforderungen.',
     },
     {
       role: "user",
@@ -331,18 +338,12 @@ function requirementsForPartition(plan, partition) {
 
 function locatorPromptView(plan, partition) {
   const requirements = requirementsForPartition(plan, partition);
-  const candidateNumberByFactId = new Map(
-    partition.factIds.map((factId, index) => [factId, index + 1])
-  );
   return {
     requirements: requirements.map((requirement, index) => ({
       r: index + 1,
       label: requirement.displayLabel,
       path: requirement.structurePath,
       cores: requirement.identityCores,
-      c: (requirement.candidateFactIds || partition.factIds).map((factId) =>
-        candidateNumberByFactId.get(factId)
-      ),
     })),
     candidates: partition.candidates.map((candidate, index) => ({
       c: index + 1,
@@ -360,22 +361,23 @@ function validateLocatorAliasResponse(response, plan, partition) {
   const factIdByCandidateNumber = new Map(
     partition.factIds.map((factId, index) => [index + 1, factId])
   );
-  const candidateNumberByFactId = new Map(
-    partition.factIds.map((factId, index) => [factId, index + 1])
+  const validCandidateNumbers = new Set(factIdByCandidateNumber.keys());
+  const signatures = response.map((item) =>
+    Array.isArray(item?.c)
+      ? [...item.c].sort((left, right) => left - right).join(",")
+      : ""
   );
-  const allowedByRequirementNumber = new Map(
-    requirements.map((requirement, index) => [
-      index + 1,
-      new Set(
-        (requirement.candidateFactIds || partition.factIds).map((factId) =>
-          candidateNumberByFactId.get(factId)
-        )
-      ),
-    ])
-  );
+  if (requirements.length >= 8) {
+    const counts = new Map();
+    for (const signature of signatures)
+      if (signature) counts.set(signature, (counts.get(signature) || 0) + 1);
+    if (
+      Math.max(0, ...counts.values()) >= Math.ceil(requirements.length * 0.75)
+    )
+      throw new Error("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_DEGENERATE");
+  }
   return response.map((item, index) => {
     const expectedRequirementNumber = index + 1;
-    const allowed = allowedByRequirementNumber.get(expectedRequirementNumber);
     if (
       !item ||
       Object.keys(item).sort().join(",") !== "c,r" ||
@@ -385,7 +387,7 @@ function validateLocatorAliasResponse(response, plan, partition) {
       item.c.some(
         (candidateNumber) =>
           !Number.isSafeInteger(candidateNumber) ||
-          !allowed.has(candidateNumber)
+          !validCandidateNumbers.has(candidateNumber)
       )
     )
       throw new Error(
@@ -474,7 +476,7 @@ async function locatePartition({
   const attempts = [];
   for (let attempt = 1; attempt <= args.maximumAttempts; attempt += 1) {
     const repair = attempts.length
-      ? 'Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}] und verwende ausschließlich die je Anforderung erlaubten lokalen c.'
+      ? 'Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}], verwende ausschließlich vorgelegte lokale c und bewerte jede Anforderung unabhängig.'
       : null;
     const messages = prompt(plan, partition, repair);
     const started = performance.now();
