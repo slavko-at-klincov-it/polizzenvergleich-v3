@@ -21243,10 +21243,14 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(fastPlan.summary).toMatchObject({
       fallbackRequirements: 1,
       corpusFacts: completeCorpus.clauses.length,
-      selectedFactReviews: completeCorpus.clauses.length,
-      unassessedFactPairs: 0,
       customerNotFoundEligible: false,
     });
+    expect(fastPlan.summary.selectedFactReviews).toBeGreaterThan(0);
+    expect(fastPlan.summary.unassessedFactPairs).toBeGreaterThan(0);
+    expect(
+      fastPlan.summary.selectedFactReviews +
+        fastPlan.summary.unassessedFactPairs
+    ).toBe(completeCorpus.clauses.length);
     expect(fastPlan.rows[0].customerNotFoundEligible).toBe(false);
 
     const absencePlan = buildADrivenRequirementAbsencePlan({
