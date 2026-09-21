@@ -251,6 +251,23 @@ function sourceKey(item) {
   ].join(":");
 }
 
+function factForSourceCandidate(candidate, factIndex, factBySource) {
+  const exact = factBySource.get(sourceKey(candidate));
+  if (exact) return exact;
+  const enclosing = factIndex.facts.filter((fact) => {
+    if (
+      fact.documentUuid !== candidate.documentUuid ||
+      fact.documentStart > candidate.documentStart ||
+      fact.documentEnd < candidate.documentEnd
+    )
+      return false;
+    const localStart = candidate.documentStart - fact.documentStart;
+    const localEnd = candidate.documentEnd - fact.documentStart;
+    return fact.exactText.slice(localStart, localEnd) === candidate.exactText;
+  });
+  return enclosing.length === 1 ? enclosing[0] : null;
+}
+
 function clauseKey(item) {
   return [item.documentUuid, item.clauseBoundaryId].join(":");
 }
@@ -1004,7 +1021,11 @@ function buildADrivenTerminalEvidenceReplay({
               "LF_A_DRIVEN_TERMINAL_EVIDENCE_CANDIDATE_UNKNOWN",
               candidateId
             );
-          const fact = factBySource.get(sourceKey(candidate));
+          const fact = factForSourceCandidate(
+            candidate,
+            factIndex,
+            factBySource
+          );
           if (!fact)
             throw indexError(
               "LF_A_DRIVEN_TERMINAL_EVIDENCE_SOURCE_UNKNOWN",
