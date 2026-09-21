@@ -21590,6 +21590,58 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         requirementIds: [decisionPlan.rows[0].requirementId],
       }),
     ]);
+    expect(
+      partitionCompactDecisionWork(
+        {
+          rows: [
+            {
+              requirementId: "requirement-1",
+              components: [{ componentId: "component-1" }],
+            },
+            {
+              requirementId: "requirement-2",
+              components: [{ componentId: "component-2" }],
+            },
+          ],
+        },
+        {
+          requirements: [
+            {
+              requirementId: "requirement-1",
+              candidateFactIds: ["window-1"],
+            },
+            {
+              requirementId: "requirement-2",
+              candidateFactIds: ["window-2"],
+            },
+          ],
+          partitions: [
+            {
+              partitionId: "partition-1",
+              partitionIndex: 0,
+              requirementIds: ["requirement-1", "requirement-2"],
+              factIds: ["window-1", "window-2"],
+              candidates: [
+                { factId: "window-1", exactText: "first" },
+                { factId: "window-2", exactText: "second" },
+              ],
+            },
+          ],
+        },
+        1
+      )
+    ).toEqual([
+      expect.objectContaining({
+        requirementIds: ["requirement-1"],
+        factIds: ["window-1"],
+        candidates: [{ factId: "window-1", exactText: "first" }],
+      }),
+      expect.objectContaining({
+        requirementIds: ["requirement-2"],
+        factIds: ["window-2"],
+        candidates: [{ factId: "window-2", exactText: "second" }],
+      }),
+    ]);
     const compactDecisionResponse = [
       {
         r: 1,

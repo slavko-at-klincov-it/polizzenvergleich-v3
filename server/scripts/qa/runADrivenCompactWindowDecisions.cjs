@@ -27,8 +27,8 @@ const {
   requirementsForPartition,
 } = require("./runADrivenBCorpusLocatorShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V3";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V3";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V4";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V4";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const OUTCOMES = new Set([
@@ -102,6 +102,9 @@ function partitionCompactDecisionWork(
   const sourceRowsById = new Map(
     decisionPlan.rows.map((row) => [row.requirementId, row])
   );
+  const locatorRequirementsById = new Map(
+    locatorPlan.requirements.map((row) => [row.requirementId, row])
+  );
   const work = [];
   for (const sourcePartition of locatorPlan.partitions) {
     let currentRequirementIds = [];
@@ -112,6 +115,45 @@ function partitionCompactDecisionWork(
         ({ sourcePartitionIndex }) =>
           sourcePartitionIndex === sourcePartition.partitionIndex
       ).length;
+      const sourceFactIds = new Set(sourcePartition.factIds);
+      const routedFactIds = new Set();
+      let keepCompletePartition = false;
+      for (const requirementId of currentRequirementIds) {
+        const locatorRequirement = locatorRequirementsById.get(requirementId);
+        if (!locatorRequirement)
+          throw new Error(
+            `LF_A_DRIVEN_COMPACT_WINDOW_LOCATOR_REQUIREMENT_MISSING:${requirementId}`
+          );
+        if (!Array.isArray(locatorRequirement.candidateFactIds)) {
+          keepCompletePartition = true;
+          break;
+        }
+        for (const factId of locatorRequirement.candidateFactIds)
+          if (sourceFactIds.has(factId)) routedFactIds.add(factId);
+      }
+      const factIds = keepCompletePartition
+        ? [...sourcePartition.factIds]
+        : sourcePartition.factIds.filter((factId) =>
+            routedFactIds.has(factId)
+          );
+      if (!factIds.length)
+        throw new Error(
+          `LF_A_DRIVEN_COMPACT_WINDOW_ROUTED_CANDIDATES_MISSING:${currentRequirementIds.join(",")}`
+        );
+      const candidateByFactId = new Map(
+        sourcePartition.candidates.map((candidate) => [
+          candidate.factId,
+          candidate,
+        ])
+      );
+      const candidates = factIds.map((factId) => {
+        const candidate = candidateByFactId.get(factId);
+        if (!candidate)
+          throw new Error(
+            `LF_A_DRIVEN_COMPACT_WINDOW_CANDIDATE_MISSING:${factId}`
+          );
+        return candidate;
+      });
       work.push({
         ...sourcePartition,
         partitionId: `${sourcePartition.partitionId}-D${sourcePartitionPart + 1}`,
@@ -119,6 +161,8 @@ function partitionCompactDecisionWork(
         sourcePartitionIndex: sourcePartition.partitionIndex,
         sourcePartitionPart,
         requirementIds: currentRequirementIds,
+        factIds,
+        candidates,
       });
       currentRequirementIds = [];
       currentComponents = 0;
