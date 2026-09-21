@@ -22020,16 +22020,30 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         plan.rows[0].candidateFactIds.includes(unitId)
       )
     ).toBe(false);
-    const expectedWindowIds = buildADrivenBRetrievalWindows(factIndex.facts, {
+    const allWindows = buildADrivenBRetrievalWindows(factIndex.facts, {
       maximumTokens: 24,
       overlapTokens: 8,
-    })
-      .filter(({ parentFactId }) =>
-        plan.rows[0].candidateFactIds.includes(parentFactId)
+    });
+    const selectedWindowIds = new Set(plan.rows[0].candidateRetrievalUnitIds);
+    const candidateWindows = allWindows.filter(({ parentFactId }) =>
+      plan.rows[0].candidateFactIds.includes(parentFactId)
+    );
+    expect(selectedWindowIds.size).toBeLessThan(candidateWindows.length);
+    for (const parentFactId of plan.rows[0].candidateFactIds)
+      expect(
+        candidateWindows.some(
+          ({ windowId, parentFactId: windowParentFactId }) =>
+            windowParentFactId === parentFactId &&
+            selectedWindowIds.has(windowId)
+        )
+      ).toBe(true);
+    expect(
+      candidateWindows.some(
+        ({ windowId, exactText }) =>
+          selectedWindowIds.has(windowId) &&
+          exactText.includes("Gebäudeschäden durch Sturm sind versichert")
       )
-      .map(({ windowId }) => windowId)
-      .sort();
-    expect(plan.rows[0].candidateRetrievalUnitIds).toEqual(expectedWindowIds);
+    ).toBe(true);
     expect(
       plan.rows[0].candidateSelections.some(({ channels }) =>
         channels.includes("LEXICAL_BM25_SOURCE_WINDOW_GLOBAL")

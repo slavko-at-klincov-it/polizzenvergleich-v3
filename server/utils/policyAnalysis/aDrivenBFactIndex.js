@@ -591,6 +591,7 @@ function buildADrivenFastFallbackPlan({
       normalizedQueryExpansions[row.requirementId] || []
     );
     const selected = new Map();
+    const selectedRetrievalUnitIds = new Set();
     const neighborAnchors = new Set();
     const add = (fact, channel) => {
       const existing = selected.get(fact.factId);
@@ -632,6 +633,7 @@ function buildADrivenFastFallbackPlan({
       for (const unit of ranked) {
         const factId = unit.parentFactId || unit.factId;
         add(canonicalFactById.get(factId), channel);
+        selectedRetrievalUnitIds.add(unit.windowId || unit.factId);
       }
       for (const unit of ranked.slice(0, neighborAnchorLimit))
         neighborAnchors.add(unit.parentFactId || unit.factId);
@@ -794,11 +796,23 @@ function buildADrivenFastFallbackPlan({
         left.documentStart - right.documentStart ||
         left.factId.localeCompare(right.factId)
     );
-    const candidateRetrievalUnitIds = candidates.flatMap((fact) =>
-      (retrievalUnitsByParentFactId.get(fact.factId) || []).map(
-        (unit) => unit.windowId || unit.factId
+    for (const fact of candidates) {
+      const units = retrievalUnitsByParentFactId.get(fact.factId) || [];
+      if (
+        units.some((unit) =>
+          selectedRetrievalUnitIds.has(unit.windowId || unit.factId)
+        )
       )
-    );
+        continue;
+      const [bestUnit] = rankLexicalCandidates({
+        target: expandedLexicalTarget || lexicalTarget,
+        candidates: units,
+        index: bm25Index(units),
+        topK: 1,
+      });
+      if (bestUnit)
+        selectedRetrievalUnitIds.add(bestUnit.windowId || bestUnit.factId);
+    }
     const reviewBatches = batchCandidates(
       row.requirementId,
       candidates,
@@ -809,7 +823,7 @@ function buildADrivenFastFallbackPlan({
       requirementId: row.requirementId,
       query,
       candidateFactIds: candidates.map(({ factId }) => factId),
-      candidateRetrievalUnitIds: [...new Set(candidateRetrievalUnitIds)].sort(),
+      candidateRetrievalUnitIds: [...selectedRetrievalUnitIds].sort(),
       candidateSelections: candidates.map(({ factId, channels }) => ({
         factId,
         channels,
