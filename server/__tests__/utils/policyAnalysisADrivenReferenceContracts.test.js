@@ -121,6 +121,10 @@ const {
   validateExpansionResponse,
 } = require("../../scripts/qa/runADrivenBQueryExpansionShadow.cjs");
 const {
+  partitionFacts: partitionBCorpusLocatorFacts,
+  validateLocatorResponse,
+} = require("../../scripts/qa/runADrivenBCorpusLocatorShadow.cjs");
+const {
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID_V2,
   buildADrivenRequirementSegmentedPlan,
 } = require("../../utils/policyAnalysis/aDrivenRequirementSegmentedPlan");
@@ -21504,6 +21508,43 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       },
       syntaxRepair: null,
     });
+
+    const locatorPartitions = partitionBCorpusLocatorFacts(
+      factIndex.facts,
+      20_000
+    );
+    expect(locatorPartitions.flatMap(({ factIds }) => factIds)).toEqual(
+      factIndex.facts.map(({ factId }) => factId)
+    );
+    expect(
+      validateLocatorResponse(
+        [
+          {
+            requirementId: fallbackRequirementId,
+            candidateFactIds: [factIndex.facts[0].factId],
+          },
+        ],
+        { requirements: [{ requirementId: fallbackRequirementId }] },
+        locatorPartitions[0]
+      )
+    ).toEqual([
+      {
+        requirementId: fallbackRequirementId,
+        candidateFactIds: [factIndex.facts[0].factId],
+      },
+    ]);
+    expect(() =>
+      validateLocatorResponse(
+        [
+          {
+            requirementId: fallbackRequirementId,
+            candidateFactIds: ["nicht-erlaubter-fakt"],
+          },
+        ],
+        { requirements: [{ requirementId: fallbackRequirementId }] },
+        locatorPartitions[0]
+      )
+    ).toThrow("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_ITEM_INVALID");
 
     const absencePlan = buildADrivenRequirementAbsencePlan({
       decisionPlan,
