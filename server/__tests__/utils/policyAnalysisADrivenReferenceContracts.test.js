@@ -21483,7 +21483,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       parentFactId: firstSourceWindow.parentFactId,
     });
     expect(routedWindowLocatorPlan.partitions[0].requirementIds).toEqual([
-      fallbackRequirementId,
+      decisionPlan.rows[0].requirementId,
     ]);
 
     const globalNeighborPlan = buildADrivenFastFallbackPlan({
