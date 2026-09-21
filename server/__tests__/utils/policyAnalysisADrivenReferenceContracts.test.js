@@ -127,6 +127,10 @@ const {
   validateLocatorResponse,
 } = require("../../scripts/qa/runADrivenBCorpusLocatorShadow.cjs");
 const {
+  partitionFacts: partitionSemanticFingerprintFacts,
+  validateFingerprintResponse,
+} = require("../../scripts/qa/runADrivenBSemanticFingerprintShadow.cjs");
+const {
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID_V2,
   buildADrivenRequirementSegmentedPlan,
 } = require("../../utils/policyAnalysis/aDrivenRequirementSegmentedPlan");
@@ -21538,6 +21542,36 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(documentLocatorPartitions[0].factIds).toEqual(
       factIndex.facts.map(({ factId }) => factId)
     );
+    const fingerprintPartitions = partitionSemanticFingerprintFacts({
+      facts: factIndex.facts,
+      maximumPartitionCharacters: 20_000,
+      maximumFactsPerPartition: 2,
+    });
+    expect(fingerprintPartitions.flatMap(({ factIds }) => factIds)).toEqual(
+      factIndex.facts.map(({ factId }) => factId)
+    );
+    const firstFingerprintPartition = fingerprintPartitions[0];
+    const fingerprintResponse = firstFingerprintPartition.facts.map(
+      ({ factId }) => ({
+        factId,
+        synopsis: "Versicherungsschutz für einen klar benannten Sachverhalt.",
+        semanticKeys: ["Versicherungsschutz", "Sachverhalt", "Deckung"],
+      })
+    );
+    expect(
+      validateFingerprintResponse(
+        fingerprintResponse,
+        firstFingerprintPartition
+      )
+    ).toEqual(fingerprintResponse);
+    expect(() =>
+      validateFingerprintResponse(
+        fingerprintResponse.map((item, index) =>
+          index === 0 ? { ...item, semanticKeys: ["zu wenig"] } : item
+        ),
+        firstFingerprintPartition
+      )
+    ).toThrow("LF_B_SEMANTIC_FINGERPRINT_RESPONSE_ITEM_INVALID");
     expect(
       validateLocatorResponse(
         [
