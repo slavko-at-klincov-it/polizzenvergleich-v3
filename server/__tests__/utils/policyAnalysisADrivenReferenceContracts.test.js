@@ -21451,8 +21451,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       cappedPlan.rows[0].candidateSelections.every(({ channels }) =>
         channels.every(
           (channel) =>
-            channel !== "PRIMARY_REUSE" &&
-            channel !== "EXACT_COMPONENT_PHRASE"
+            channel !== "PRIMARY_REUSE" && channel !== "EXACT_COMPONENT_PHRASE"
         )
       )
     ).toBe(true);

@@ -808,8 +808,7 @@ async function run() {
       retrievalUnitStrategy: args.routeRetrievalUnitStrategy,
       retrievalWindowMaximumTokens: args.routeWindowMaximumTokens,
       retrievalWindowOverlapTokens: args.routeWindowOverlapTokens,
-      maximumPrimaryReuseCandidates:
-        args.routeMaximumPrimaryReuseCandidates,
+      maximumPrimaryReuseCandidates: args.routeMaximumPrimaryReuseCandidates,
       maximumExactPhraseCandidates: args.routeMaximumExactPhraseCandidates,
     });
     candidateFactIdsByRequirement = Object.fromEntries(
