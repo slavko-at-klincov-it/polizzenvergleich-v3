@@ -21472,15 +21472,10 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         JSON.stringify(batchNegativeResponses.slice(0, 1)),
         batchNegativeResponses.map(({ partitionId }) => partitionId)
       )
-    ).toThrow(
-      "LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_RESPONSE_COUNT_INVALID"
-    );
+    ).toThrow("LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_RESPONSE_COUNT_INVALID");
     expect(() =>
       parseRequirementAbsenceDecisionBatch(
-        JSON.stringify([
-          batchNegativeResponses[0],
-          batchNegativeResponses[0],
-        ]),
+        JSON.stringify([batchNegativeResponses[0], batchNegativeResponses[0]]),
         batchNegativeResponses.map(({ partitionId }) => partitionId)
       )
     ).toThrow("LF_A_DRIVEN_REQUIREMENT_ABSENCE_BATCH_PARTITION_IDS_INVALID");
@@ -21491,9 +21486,15 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
             create: jest.fn(async () => ({
               model: "qwen/qwen3.6-35b-a3b",
               choices: [
-                { message: { content: JSON.stringify(batchNegativeResponses) } },
+                {
+                  message: { content: JSON.stringify(batchNegativeResponses) },
+                },
               ],
-              usage: { prompt_tokens: 100, completion_tokens: 40, total_tokens: 140 },
+              usage: {
+                prompt_tokens: 100,
+                completion_tokens: 40,
+                total_tokens: 140,
+              },
             })),
           },
         },
