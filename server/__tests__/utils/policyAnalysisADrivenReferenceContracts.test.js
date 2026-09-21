@@ -21692,9 +21692,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ).toBeGreaterThan(0);
     expect(
       terminalEvidenceReplay.summary.recoveredTerminalEvidenceFacts
-    ).toBe(
-      terminalEvidenceReplay.summary.expectedTerminalEvidenceFacts
-    );
+    ).toBe(terminalEvidenceReplay.summary.expectedTerminalEvidenceFacts);
 
     const tampered = JSON.parse(JSON.stringify(factIndex));
     tampered.facts.pop();
