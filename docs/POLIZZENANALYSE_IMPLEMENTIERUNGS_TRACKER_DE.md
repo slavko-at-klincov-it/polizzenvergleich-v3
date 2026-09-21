@@ -10691,6 +10691,88 @@ AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
 
 Change-Set: `LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001`.
 
+### 133.86 Gebündelte Vollkorpusprüfung: technisch schneller, fachlich noch nicht freigegeben
+
+Die Laufzeitursache des abgeschlossenen V3.9.15-Produktlaufs war kein
+Timeout- oder Retry-Stillstand. 42 offene Anforderungen wurden gegen dieselben
+elf vollständigen B-Partitionen einzeln geprüft. Dadurch entstanden 462
+Modellrequests, 7.265.028 Prompt-Tokens und 17.201.165 ms
+Abwesenheitslaufzeit. Der identische B-Kontext wurde für jede Anforderung
+erneut übertragen.
+
+Der allgemeine V5-Transport adaptiert `CAP-B-007` und `CAP-ORCH-001`. Nur
+Anforderungen mit identischer Dokument-, Partitions- und Kandidatenbindung
+werden gruppiert; höchstens acht Anforderungen teilen einen Request. Jede
+logische `partitionId` bleibt unabhängig und muss in der Modellantwort exakt
+einmal vorkommen. Fehlende, doppelte, unbekannte oder planfremde IDs,
+ungültige Kandidaten sowie unvollständige Teilantworten bleiben fail-closed.
+Persistenz und Resume erfolgen weiterhin je logischer Partition. Der
+Produkt-Runner setzt den neuen Grenzwert ausschließlich über
+`LF_B_ABSENCE_MAXIMUM_REQUIREMENTS_PER_REQUEST`, Standardwert acht.
+
+Der echte Mac-Studio-Lauf verwendete denselben vollständigen V3.9.15-Korpus
+und dieselben 42 offenen Anforderungen. Eine getrennte SSH-Verbindung endete
+nach 378 terminalen Partitionsartefakten; der anschließende Resume übernahm
+alle 378 ohne erneute Modellarbeit und schloss 462/462 Partitionen ab.
+
+```text
+42 Anforderungen / 462 logische Partitionen
+76 Transportbatches / 76 Modellrequests / 81 Attempts
+1.742.959 Prompt-Tokens / 87.666 Completion-Tokens
+1.830.625 Gesamttokens
+29 direkt zertifizierte Nullfunde / 13 Rescue-Fälle / 0 unresolved
+Abwesenheits-Wandzeit: ca. 3 h 00 min 37 s
+V3.9.15-Vergleich: Requests -83,5 %, Prompt-Tokens ca. -76 %, Wandzeit ca. -37 %
+```
+
+Rescue prüfte ausschließlich die 13 markierten Anforderungen in 13 Batches.
+Das finale private Ergebnis besitzt 362/362 terminale Zeilen, 330
+`GEFUNDEN`, 32 `NICHT GEFUNDEN` und null unresolved. Die Detailverteilung
+lautet 201 `FULL`, 123 `PARTIAL`, sechs `CONTRADICTED` und 32 `NONE`.
+Private JSON-, Markdown- und XLSX-Materialisierung bestanden ihre
+Konsistenzprüfung, ohne Deployment. Das binäre Ergebnis trägt SHA-256
+`dde9860f381621f09283c62cfbb614d363f3734427ba9f037011f200c7250aa3`,
+das Workbook
+`4f00e062b9b3644d56efb526fcba898d2beb226e11b335230da05e04dd4bb41e`.
+
+Der Alt/Neu-Vergleich verhindert jedoch eine fachliche Freigabe: Neun Zeilen
+änderten ihr Detail-Outcome, davon sieben den binären Status. Sechs alte
+Nullfunde wurden Funde, ein alter Fund wurde Nullfund. Mehrere neue
+Begründungen sind fachlich potenziell zu breit, etwa beim Vergleich konkreter
+Katastrophenlimits, kontaminierten Erdreichs oder Mieter-Hausrats. Dieser
+private V5-Lauf ist deshalb kein freigegebenes Produktergebnis. Die für den
+V3.9.15-Produktlauf genau einmal ausgeführte Gold-283-V2-Regression wurde
+nicht erneut gestartet; beide Frozen-Gold-Identitäten wurden read-only
+unverändert bestätigt.
+
+Der exakte Patch-Stand
+`f99d21483e5854233cb30f90cb07e91a10c0ff1a` bestand im isolierten
+Mac-Studio-Worktree:
+
+```text
+Vollständiger Jest-Gate:                  212/212 Suites, 3.134/3.134 Tests
+Server-/Frontend-/Collector-Lint:         PASS / PASS / PASS
+Prisma validate / generate:               PASS / PASS
+Capability-Inventar / Prettier:           PASS / PASS
+Frontend-Produktionsbuild:                PASS, 6.170 Module
+macOS-Installer-Vertragssuite:            PASS
+```
+
+Die installierte Kundenfassung blieb auf
+`a9a91c766466ffaec90132dccdbe3fc59ac9c7a3` (`v3.9.15`). Ihr operativer
+Doctor bestand anschließend vollständig. Der Patch wurde nicht installiert.
+Das ungefähr einstündige Laufzeitziel bleibt ebenso offen wie die fachliche
+Freigabe der neun Verschiebungen und der unabhängige expertengelabelte
+Mehrversicherer-Holdout.
+
+Status: `TECHNISCHER PATCH UND MAC-STUDIO-GATE PASS; REQUESTS UND TOKENS
+DEUTLICH REDUZIERT; EIN-STUNDEN-ZIEL VERFEHLT; NEUN OUTCOMEVERSCHIEBUNGEN
+NICHT FACHLICH FREIGEGEBEN; KEIN DEPLOYMENT; KEIN HOLDOUT- ODER
+99-PROZENT-NACHWEIS`.
+
+Change-Set: `LF-V3916-BATCHED-ABSENCE-MATRIX-20260921-001`.
+Paired Knowledge-Commit: `2849bb9dc`.
+
 ### 133.85 V3.9.15-Produktabschluss mit Vollkorpus, Rescue, Publikation und Gold
 
 Der V3.9.15-Produktresume der Session

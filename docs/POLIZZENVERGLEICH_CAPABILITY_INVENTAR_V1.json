@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "inventoryId": "POLIZZENVERGLEICH_CAPABILITY_INVENTAR_V1",
-  "changeSetId": "LF-V3915-EMPTY-OPTIONAL-ARGUMENTS-20260920-001",
+  "changeSetId": "LF-V3916-BATCHED-ABSENCE-MATRIX-20260921-001",
   "scope": "polizzenvergleich-v3",
   "truthContract": {
     "technicalTruth": "Current source, callers and tests in polizzenvergleich-v3",
@@ -229,7 +229,7 @@
         "generalization": "POSITIVE"
       },
       "resourceImpact": {
-        "runtime": "MEASURED: completed known LF 1+9 V3.9.15 product resume in 17,819,852 ms with serial local-model execution",
+        "runtime": "MEASURED: completed known LF 1+9 V3.9.15 product resume in 17,819,852 ms; batched V5 absence validation reduced 462 logical partitions to 76 model requests but still required about 3 h 00 min 37 s for the absence stage",
         "ram": "INDIRECT",
         "gpu": "INDIRECT"
       },
@@ -242,7 +242,8 @@
         "Every run-contract bump must retain the immediately preceding contract in the explicit predecessor allowlist; omission fails closed before model work.",
         "Multi-hop partial resume follows only explicit plan-identical LF_A_PARTIAL_RESUME_SOURCE_V1 links; invalid markers, symlinks, cycles and chains beyond 64 predecessors fail closed.",
         "Optional runner argument arrays must use the macOS-Bash-3.2-safe nounset expansion so an absent resume or seed contributes exactly zero arguments instead of aborting the product run.",
-        "The completed known LF 1+9 run took 4 h 56 min 59.852 s and therefore missed the approximately one-hour product runtime target."
+        "The completed known LF 1+9 run took 4 h 56 min 59.852 s and therefore missed the approximately one-hour product runtime target.",
+        "Shared-context absence batching retains per-partition persistence and fail-closed validation, but the known-fixture V5 run changed nine detail outcomes; it is not deployable without semantic review."
       ],
       "evidence": {
         "tests": [
@@ -262,7 +263,8 @@
           "Tracker 133.81; Batches 1-35 rematerialized, Batch 35 PASS, zero model calls",
           "Tracker 133.83; independent B selection chose the 70-batch predecessor and rematerialized Batches 1-71 with zero model calls",
           "Tracker 133.84; macOS Bash 3.2 empty optional A/B/absence arguments covered by executable nounset regression tests and complete Mac Studio release gate",
-          "Tracker 133.85; V3.9.15 product resume completed in 17,819,852 ms, published 362 terminal rows and passed Doctor/API/XLSX integrity"
+          "Tracker 133.85; V3.9.15 product resume completed in 17,819,852 ms, published 362 terminal rows and passed Doctor/API/XLSX integrity",
+          "Tracker 133.86; shared-context absence validation completed 462 logical partitions through 76 requests and resumed 378 terminal partitions without duplicate model work"
         ],
         "adrs": ["ADR-009", "ADR-027", "ADR-031"],
         "failures": [
@@ -270,10 +272,11 @@
           "INT-20260917-060",
           "INT-20260917-068",
           "INT-20260920-073",
-          "INT-20260920-074"
+          "INT-20260920-074",
+          "INT-20260921-075"
         ]
       },
-      "lastVerifiedCommit": "a9a91c766466ffaec90132dccdbe3fc59ac9c7a3",
+      "lastVerifiedCommit": "f99d21483e5854233cb30f90cb07e91a10c0ff1a",
       "relations": [{ "type": "REFINES", "target": "CAP-LEGACY-001" }],
       "activationReason": "Endpoint and worker route both persisted product modes; V3.8.0 activates LF V2 for controlled customer production.",
       "reactivationCriteria": "Not applicable while active."
@@ -1466,13 +1469,14 @@
         "generalization": "KNOWN_FIXTURE_VALIDATED_NOT_HOLDOUT_PROVEN"
       },
       "resourceImpact": {
-        "runtime": "MEASURED: V3.9.15 checked 42 requirements across 462/462 absence partitions in 17,201,165 ms and rescued 5/5 flagged requirements in 209,009 ms",
+        "runtime": "MEASURED: V3.9.15 checked 42 requirements through 462 separate requests in 17,201,165 ms; V5 checked the same 462 logical partitions through 76 requests in about 3 h 00 min 37 s and sent 13 requirements to rescue",
         "ram": "Qwen model footprint",
         "gpu": "Qwen bursts during non-seeded rescue only"
       },
       "knownLimitsRisks": [
         "An explicit exclusion of the same source-bound element is a contradicted counterpart, while a true null finding remains separate and requires complete-corpus certification.",
-        "The completed 1+9 run validates this known fixture only; unseen insurer and cold-run runtime gates remain open."
+        "The completed 1+9 run validates this known fixture only; unseen insurer and cold-run runtime gates remain open.",
+        "The V5 shared-context transport changed nine detail outcomes versus the released V3.9.15 result, including seven binary statuses; the branch remains blocked from deployment pending semantic review."
       ],
       "evidence": {
         "tests": [
@@ -1483,12 +1487,13 @@
           "Tracker 133.55; 561/561 absence partitions, 8/8 rescue batches and 363 binary final decisions",
           "Tracker 133.56; 322 FOUND, 41 NOT_FOUND, 0 unresolved; 199 FULL, 118 PARTIAL, 5 CONTRADICTED",
           "Tracker 133.84; empty absence seed passes as zero arguments under macOS Bash 3.2 nounset instead of aborting before full-corpus certification",
-          "Tracker 133.85; 42 absence candidates, 37 certified null findings, 5/5 rescue findings and zero unresolved requirements"
+          "Tracker 133.85; 42 absence candidates, 37 certified null findings, 5/5 rescue findings and zero unresolved requirements",
+          "Tracker 133.86; 76 model requests covered 462 logical partitions, 29 direct null findings and 13 rescue cases, but nine detail outcomes shifted against V3.9.15"
         ],
         "adrs": ["ADR-022", "ADR-026", "ADR-031"],
-        "failures": ["INT-20260920-074"]
+        "failures": ["INT-20260920-074", "INT-20260921-075"]
       },
-      "lastVerifiedCommit": "a9a91c766466ffaec90132dccdbe3fc59ac9c7a3",
+      "lastVerifiedCommit": "f99d21483e5854233cb30f90cb07e91a10c0ff1a",
       "relations": [{ "type": "REFINES", "target": "CAP-B-006" }],
       "activationReason": "Wired immediately after primary B in the V2 runner, but not yet reached by the fresh run.",
       "reactivationCriteria": "Not applicable while active."
