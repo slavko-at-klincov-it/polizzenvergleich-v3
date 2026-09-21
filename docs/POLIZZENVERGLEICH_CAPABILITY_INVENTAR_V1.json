@@ -229,7 +229,7 @@
         "generalization": "POSITIVE"
       },
       "resourceImpact": {
-        "runtime": "MEASURED: serial worker execution",
+        "runtime": "MEASURED: completed known LF 1+9 V3.9.15 product resume in 17,819,852 ms with serial local-model execution",
         "ram": "INDIRECT",
         "gpu": "INDIRECT"
       },
@@ -241,7 +241,8 @@
         "B-decision cross-release resume accepts only a real non-symlink predecessor directory with a byte-equivalent decision plan and revalidates every predecessor response under the current strict contract before rematerialization.",
         "Every run-contract bump must retain the immediately preceding contract in the explicit predecessor allowlist; omission fails closed before model work.",
         "Multi-hop partial resume follows only explicit plan-identical LF_A_PARTIAL_RESUME_SOURCE_V1 links; invalid markers, symlinks, cycles and chains beyond 64 predecessors fail closed.",
-        "Optional runner argument arrays must use the macOS-Bash-3.2-safe nounset expansion so an absent resume or seed contributes exactly zero arguments instead of aborting the product run."
+        "Optional runner argument arrays must use the macOS-Bash-3.2-safe nounset expansion so an absent resume or seed contributes exactly zero arguments instead of aborting the product run.",
+        "The completed known LF 1+9 run took 4 h 56 min 59.852 s and therefore missed the approximately one-hour product runtime target."
       ],
       "evidence": {
         "tests": [
@@ -260,7 +261,8 @@
           "Tracker 133.78",
           "Tracker 133.81; Batches 1-35 rematerialized, Batch 35 PASS, zero model calls",
           "Tracker 133.83; independent B selection chose the 70-batch predecessor and rematerialized Batches 1-71 with zero model calls",
-          "Tracker 133.84; macOS Bash 3.2 empty optional A/B/absence arguments covered by executable nounset regression tests and complete Mac Studio release gate"
+          "Tracker 133.84; macOS Bash 3.2 empty optional A/B/absence arguments covered by executable nounset regression tests and complete Mac Studio release gate",
+          "Tracker 133.85; V3.9.15 product resume completed in 17,819,852 ms, published 362 terminal rows and passed Doctor/API/XLSX integrity"
         ],
         "adrs": ["ADR-009", "ADR-027", "ADR-031"],
         "failures": [
@@ -271,7 +273,7 @@
           "INT-20260920-074"
         ]
       },
-      "lastVerifiedCommit": "26c723da6dfa4da538eba05490f03da340f33b73",
+      "lastVerifiedCommit": "a9a91c766466ffaec90132dccdbe3fc59ac9c7a3",
       "relations": [{ "type": "REFINES", "target": "CAP-LEGACY-001" }],
       "activationReason": "Endpoint and worker route both persisted product modes; V3.8.0 activates LF V2 for controlled customer production.",
       "reactivationCriteria": "Not applicable while active."
@@ -1370,7 +1372,7 @@
         "generalization": "NOT_YET_END_TO_END_PROVEN"
       },
       "resourceImpact": {
-        "runtime": "HIGH for a cold run; measured seeded rematerialization of 204 batches took 87,781 ms with 361/363 requirements reused; 15/15 rescue rows rematerialized in 24 ms with zero model calls",
+        "runtime": "MEASURED: V3.9.15 rematerialized 210/210 B batches for 362 requirements in 677 ms with exactly zero new B model attempts",
         "ram": "Qwen model footprint",
         "gpu": "Qwen bursts only for non-seeded requirements"
       },
@@ -1399,7 +1401,8 @@
           "Tracker 133.81; exact batch 35 predecessor journal revalidated without a model call",
           "Tracker 133.82; exact batch 71 predecessor journal revalidated with one anchored RELATED_ONLY normalization and zero model calls",
           "Tracker 133.83; Batches 1-71 selected independently from A resume and rematerialized with zero model calls",
-          "Tracker 133.84; completed 210-batch B phase remains reusable because an empty downstream absence seed no longer aborts the macOS runner"
+          "Tracker 133.84; completed 210-batch B phase remains reusable because an empty downstream absence seed no longer aborts the macOS runner",
+          "Tracker 133.85; 210/210 B batches rematerialized, 362/362 requirements terminal, 320 preliminary finds, 42 absence candidates and exactly zero new B model attempts"
         ],
         "adrs": ["ADR-031"],
         "failures": [
@@ -1416,7 +1419,7 @@
           "INT-20260920-074"
         ]
       },
-      "lastVerifiedCommit": "26c723da6dfa4da538eba05490f03da340f33b73",
+      "lastVerifiedCommit": "a9a91c766466ffaec90132dccdbe3fc59ac9c7a3",
       "relations": [{ "type": "REUSES", "target": "CAP-MODEL-001" }],
       "activationReason": "Reachable from the V2 product runner and activated for controlled customer production in V3.8.0.",
       "reactivationCriteria": "Not applicable while active."
@@ -1463,7 +1466,7 @@
         "generalization": "KNOWN_FIXTURE_VALIDATED_NOT_HOLDOUT_PROVEN"
       },
       "resourceImpact": {
-        "runtime": "Measured seeded absence: 112 ms for 561/561 reused partitions; latest 15-row rescue rematerialization: 24 ms and zero model calls",
+        "runtime": "MEASURED: V3.9.15 checked 42 requirements across 462/462 absence partitions in 17,201,165 ms and rescued 5/5 flagged requirements in 209,009 ms",
         "ram": "Qwen model footprint",
         "gpu": "Qwen bursts during non-seeded rescue only"
       },
@@ -1479,12 +1482,13 @@
         "runs": [
           "Tracker 133.55; 561/561 absence partitions, 8/8 rescue batches and 363 binary final decisions",
           "Tracker 133.56; 322 FOUND, 41 NOT_FOUND, 0 unresolved; 199 FULL, 118 PARTIAL, 5 CONTRADICTED",
-          "Tracker 133.84; empty absence seed passes as zero arguments under macOS Bash 3.2 nounset instead of aborting before full-corpus certification"
+          "Tracker 133.84; empty absence seed passes as zero arguments under macOS Bash 3.2 nounset instead of aborting before full-corpus certification",
+          "Tracker 133.85; 42 absence candidates, 37 certified null findings, 5/5 rescue findings and zero unresolved requirements"
         ],
         "adrs": ["ADR-022", "ADR-026", "ADR-031"],
         "failures": ["INT-20260920-074"]
       },
-      "lastVerifiedCommit": "26c723da6dfa4da538eba05490f03da340f33b73",
+      "lastVerifiedCommit": "a9a91c766466ffaec90132dccdbe3fc59ac9c7a3",
       "relations": [{ "type": "REFINES", "target": "CAP-B-006" }],
       "activationReason": "Wired immediately after primary B in the V2 runner, but not yet reached by the fresh run.",
       "reactivationCriteria": "Not applicable while active."
@@ -1695,12 +1699,13 @@
         ],
         "runs": [
           "Tracker 133.44 and 133.45",
-          "Tracker 133.55; 363 rows, 318 found, 45 not found and 0 unresolved"
+          "Tracker 133.55; 363 rows, 318 found, 45 not found and 0 unresolved",
+          "Tracker 133.85; 362 rows, 325 found, 37 not found, 0 unresolved, including 197 full, 121 partial and 7 contradicted counterparts"
         ],
         "adrs": ["ADR-031"],
         "failures": []
       },
-      "lastVerifiedCommit": "fbdfdb7ee411ac801e2cd09b93c9f323d39f1b33",
+      "lastVerifiedCommit": "a9a91c766466ffaec90132dccdbe3fc59ac9c7a3",
       "relations": [{ "type": "SUPERSEDES", "target": "CAP-LEGACY-001" }],
       "activationReason": "Wired after final B decisions; previously validated through hash-bound product materialization.",
       "reactivationCriteria": "Not applicable while active."
@@ -1785,11 +1790,14 @@
           "server/__tests__/utils/policyComparisonResultBuilder.test.js",
           "server/__tests__/frontend/policyComparisonLfUiTruthContract.test.js"
         ],
-        "runs": ["Tracker 133.44 and 133.45"],
+        "runs": [
+          "Tracker 133.44 and 133.45",
+          "Tracker 133.85; private JSON/Markdown/XLSX publication, customer-result API and archived download agreed on 362 rows and 325/37 distribution; XLSX SHA-256 0e89e2bf64107de2d540cc8fddc96f0e59574779c34de054754f69c5f2a4ff5d"
+        ],
         "adrs": ["ADR-008", "ADR-012", "ADR-023"],
         "failures": []
       },
-      "lastVerifiedCommit": "c87aadf9d483d72ddce0bc67aacd529c19b54788",
+      "lastVerifiedCommit": "a9a91c766466ffaec90132dccdbe3fc59ac9c7a3",
       "relations": [{ "type": "REUSES", "target": "CAP-ORCH-001" }],
       "activationReason": "Common publication boundary is reachable from both worker paths.",
       "reactivationCriteria": "Not applicable while active."
@@ -1861,12 +1869,13 @@
           "Tests sections 82-84",
           "Tracker 133.43",
           "Tracker 133.55",
-          "Tracker 133.56; Gold 283/283 source-covered, 141/144 measurable binary matches, 0 false positives, 3 false negatives and 563/631 role-covered"
+          "Tracker 133.56; Gold 283/283 source-covered, 141/144 measurable binary matches, 0 false positives, 3 false negatives and 563/631 role-covered",
+          "Tracker 133.85; frozen Gold hashes verified before the single V3.9.15 evaluation; 139 eligible and resolved rows, 128 binary matches, 3 false positives, 8 false negatives, 144 ambiguous by design and 282/283 crosswalk coverage"
         ],
         "adrs": ["ADR-031"],
         "failures": []
       },
-      "lastVerifiedCommit": "ac3ce5631cd062143f70188c33f5c28baa25f8cb",
+      "lastVerifiedCommit": "a9a91c766466ffaec90132dccdbe3fc59ac9c7a3",
       "relations": [{ "type": "CONTRADICTS", "target": "CAP-LEGACY-001" }],
       "activationReason": "Explicitly QA-only and excluded from production row generation.",
       "reactivationCriteria": "Use only for the same frozen document set and exact Gold contract."

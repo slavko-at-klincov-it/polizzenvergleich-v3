@@ -10691,6 +10691,85 @@ AUSSTEHEND; KEIN HOLDOUT- ODER 99-PROZENT-NACHWEIS`.
 
 Change-Set: `LF-V3913-ANCHORED-IDENTITY-DIFFERENCE-20260920-001`.
 
+### 133.85 V3.9.15-Produktabschluss mit Vollkorpus, Rescue, Publikation und Gold
+
+Der V3.9.15-Produktresume der Session
+`79211e03-d5ce-44b6-9042-199e83f589a0` ist unter dem Run-Root
+`resume-d8a73a30e2cf361b5e1b9f10` vollständig abgeschlossen. Der installierte
+Kundenstand, der annotierte Tag `v3.9.15` und `origin/main` zeigen auf
+`a9a91c766466ffaec90132dccdbe3fc59ac9c7a3`; der offizielle Updater und der
+anschließende Doctor bestanden. Node lief in Version `v22.23.2`, Qwen 3.6 mit
+42.496 Kontext und Parallelität 1.
+
+Der Resume übernahm alle 210 vorhandenen B-Batches ohne neuen
+B-Modellversuch. Die 362 terminalen Anforderungen teilten sich danach in 320
+vorläufige Gegenstücke und exakt 42 Vollkorpus-Abwesenheitsfälle. Die
+Abwesenheitsprüfung bearbeitete 462/462 Partitionen mit 464 Modellversuchen:
+zwei erste Antworten fehlten die vorgeschriebene Begründung und bestanden
+erst im schemafesten Retry. Es gab weder Timeout noch Abort. 37 Anforderungen
+wurden vollständig als nicht gefunden zertifiziert; fünf gingen in Rescue.
+Rescue prüfte ausschließlich diese fünf Anforderungen in fünf Batches. Sechs
+Modellversuche waren nötig, weil Qwen einmal eine servergebundene ID um ein
+Zeichen verkürzte; der zweite Versuch bestand exakt. Alle fünf Rescue-Fälle
+wurden gefunden, null Anforderungen blieben ungeklärt.
+
+```text
+A:                         58/58 Batches, 362 Requirements, 0 unresolved
+B:                         210/210 Batches, 0 neue Modellversuche
+Vollkorpus-Abwesenheit:    42 Requirements, 462/462 Partitionen
+Abwesenheitsergebnis:      37 zertifizierte Nullfunde, 5 Rescue-Fälle
+Rescue:                    5/5 gefunden, 0 unresolved
+Binäres Endergebnis:       325 GEFUNDEN, 37 NICHT GEFUNDEN, 0 unresolved
+Private Detailverteilung:  197 FULL, 121 PARTIAL, 7 CONTRADICTED, 37 NONE
+Gesamtlaufzeit:            17.819.852 ms = 4 h 56 min 59,852 s
+Abwesenheitslaufzeit:      17.201.165 ms = 4 h 46 min 41,165 s
+Rescue-Laufzeit:           209.009 ms = 3 min 29,009 s
+```
+
+Die private Artefaktpublikation bestand technisch und inhaltlich gegen das
+binäre Ergebnis. Das XLSX ist ein gültiges ExcelJS-/ZIP-Artefakt mit einem
+Blatt, 362 Datenzeilen, 13 Spalten, 325 `FOUND`, 37 `NOT_FOUND`, null
+Fehlerzellen und null Formeln. API und Download lieferten den Vertrag
+`LF_REFERENCE_CUSTOMER_PRESENTATION_V1`, 15 Kategorien, zehn Dokumente und
+dieselben Summen. Das archivierte Workbook unter
+`Downloads/Projekt Lokale KI/Vergleiche/` ist bytegleich mit dem privaten
+Laufartefakt und trägt SHA-256
+`0e89e2bf64107de2d540cc8fddc96f0e59574779c34de054754f69c5f2a4ff5d`.
+Der binäre Ergebnisbaum trägt den internen SHA-256
+`a38337aa87792747c4dcf77f9cfa128ff84493a79f8705bcc8127eeb441cf477`;
+die publizierte Comparison-Datei trägt
+`c921186d95bdc97330121d6480ae1e51808d74b87c15483bf2ad0a55885e593f`.
+
+Vor der genau einmal ausgeführten Gold-283-V2-Regression wurden beide
+unveränderten Gold-Identitäten bestätigt: Datei-SHA-256
+`f43f6216010dfc01db53fcb8c3b04b5bc5a49f657c2232ab9f2a2999021551d4`
+und interner Gold-SHA-256
+`44300754f9bad315410f7805ecb1b8c4f4e65551e2dc8a5349ba41c8697edf37`.
+Von 283 Goldzeilen waren 139 messbar und vollständig aufgelöst. 128 stimmten
+binär überein; elf wichen ab, davon drei False Positives und acht False
+Negatives. 144 Zeilen bleiben konstruktionsgemäß ambig. Der Crosswalk deckt
+282/283 Legacy-Anforderungen ab; eine Quelle fehlt. Die messbare binäre
+Übereinstimmung beträgt damit 128/139 beziehungsweise rund 92,09 Prozent.
+Das private Regressionsartefakt trägt Datei-SHA-256
+`f1a44ace42d0877d7fca303150a9636986c562b3cab1f43e14d553932b0a5042`
+und internen Regression-SHA-256
+`1ae564e0e55aa912e8e3f3d14bf6527f72111b6c8a0f03b8f7d14799d2c6a92f`.
+
+Die technische End-to-End- und Publikationsprüfung ist damit `PASS`. Das
+Produktziel von ungefähr einer Stunde ist mit fast fünf Stunden klar
+verfehlt; die elf messbaren Goldabweichungen, die fehlende Crosswalk-Quelle
+und der weiterhin fehlende unabhängige expertengelabelte Mehrversicherer-
+Holdout verhindern eine fachliche Qualitäts-, Generalisierungs- oder
+99-Prozent-Freigabe.
+
+Status: `V3.9.15 PRODUKTIV AKTIV; DOCTOR PASS; PRODUKTLAUF VOLLSTÄNDIG;
+210/210 B-BATCHES OHNE NEUEN MODELLVERSUCH; 325 GEFUNDEN, 37 NICHT
+GEFUNDEN; XLSX/API PASS; GOLD GENAU EINMAL AUSGEWERTET; TECHNISCHER E2E PASS;
+LAUFZEIT- UND FACHLICHE ABNAHME OFFEN`.
+
+Change-Set: `LF-V3915-EMPTY-OPTIONAL-ARGUMENTS-20260920-001`.
+Paired Knowledge-Commit: `6e4cb247c`.
+
 ### 133.84 Leere optionale Runner-Argumente unter macOS Bash 3.2
 
 Der auf V3.9.14 gestartete Produktlauf
