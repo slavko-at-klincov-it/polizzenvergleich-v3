@@ -597,8 +597,7 @@ function validateLocatorResponse(response, plan, partition) {
       !Array.isArray(item.candidateFactIds) ||
       new Set(item.candidateFactIds).size !== item.candidateFactIds.length ||
       (plan.maximumSelectionsPerRequirement !== null &&
-        item.candidateFactIds.length >
-          plan.maximumSelectionsPerRequirement) ||
+        item.candidateFactIds.length > plan.maximumSelectionsPerRequirement) ||
       item.candidateFactIds.some((factId) => !allowed.has(factId))
     )
       throw new Error(
