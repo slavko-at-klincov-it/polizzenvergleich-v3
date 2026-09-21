@@ -29,7 +29,7 @@ const {
 } = require("./runADrivenReferenceClassification.cjs");
 
 const RUN_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_RUN_V1";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V5";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_V6";
 const TRANSPORT_CONTRACT_ID = "LF_A_DRIVEN_REQUIREMENT_ABSENCE_TRANSPORT_V2";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
@@ -880,6 +880,22 @@ function prompt(plan, partition, repair = null) {
   return messages;
 }
 
+function compactRequirementForBatch(requirement) {
+  return {
+    requirementId: requirement.requirementId,
+    displayLabel: requirement.displayLabel,
+    structurePath: requirement.structurePath,
+    components: requirement.components.map(
+      ({ componentId, dimension, identityCore, label }) => ({
+        componentId,
+        dimension,
+        identityCore,
+        label,
+      })
+    ),
+  };
+}
+
 function promptBatch(plan, entries, repair = null) {
   if (!Array.isArray(entries) || entries.length === 0)
     throw new Error("LF_A_DRIVEN_REQUIREMENT_ABSENCE_PROMPT_BATCH_INVALID");
@@ -897,8 +913,10 @@ function promptBatch(plan, entries, repair = null) {
   );
   const reviews = entries.map(({ partition }) => ({
     partitionId: partition.partitionId,
-    requirement: plan.requirements.find(
-      ({ requirementId }) => requirementId === partition.requirementId
+    requirement: compactRequirementForBatch(
+      plan.requirements.find(
+        ({ requirementId }) => requirementId === partition.requirementId
+      )
     ),
   }));
   const messages = [
@@ -1668,6 +1686,7 @@ if (require.main === module)
 module.exports = {
   batchRetryInstruction,
   buildPartitionRequestBatches,
+  compactRequirementForBatch,
   compatibleSeedPartitionResponses,
   jsonObjectsFromText,
   negativeDecisionSemanticConflicts,
