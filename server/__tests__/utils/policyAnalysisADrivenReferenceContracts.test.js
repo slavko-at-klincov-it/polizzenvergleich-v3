@@ -21783,6 +21783,26 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         routedWindowLocatorPlan.partitions[0]
       )
     ).toThrow("LF_A_DRIVEN_B_CORPUS_LOCATOR_RESPONSE_ITEM_INVALID");
+    expect(
+      validateLocatorAliasResponse(
+        [{ r: 1, c: [2] }],
+        {
+          maximumSelectionsPerRequirement: 1,
+          requirements: [
+            {
+              requirementId: fallbackRequirementId,
+              candidateFactIds: ["fact-a"],
+            },
+          ],
+        },
+        { factIds: ["fact-a", "fact-b"] }
+      )
+    ).toEqual([
+      {
+        requirementId: fallbackRequirementId,
+        candidateFactIds: ["fact-b"],
+      },
+    ]);
     expect(() =>
       validateLocatorResponse(
         [

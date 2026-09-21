@@ -31,9 +31,9 @@ const {
   writePrivateJson,
 } = require("./buildADrivenBFastPathShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V12";
-const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V12";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V12";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_SHADOW_RUN_V13";
+const PLAN_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PLAN_V13";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_B_CORPUS_LOCATOR_PROMPT_V13";
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 
@@ -435,8 +435,8 @@ function prompt(plan, partition, repair = null) {
     : "";
   const systemPrompt =
     plan.selectionMode === "STRICT_COUNTERPART"
-      ? 'Du bist ein präziser Gegenstück-Shortlister. Prüfe jede Anforderung r unabhängig gegen ihre erlaubten B-Quelltexte c. Nenne nur Kandidaten, die tatsächlich denselben fachlichen Identitätskern im passenden Gegenstands-, Gefahren-, Schaden- oder Rollenkontext ausdrücken können. Abweichende Werte, Limits, Bedingungen, Umfänge, Zeiträume, ein ausdrückliches Gegenteil oder ein ausdrücklicher Ausschluss desselben Kerns bleiben Kandidaten. Ein Ober- oder Unterfall bleibt nur dann Kandidat, wenn der gemeinsame fachliche Kern aus dem Quellfenster direkt hervorgeht. Bloße Keyword-Nennung, Überschrift, Branchenbezug, benachbarte Klausel oder nur verwandte Deckung ist kein Kandidat. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige und für r erlaubte c, keine Erläuterung und keine weiteren Felder.'
-      : 'Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede Anforderung r unabhängig gegen ihre erlaubten B-Quelltexte c. Nenne jeden erlaubten Kandidaten, der möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthält. Ein übereinstimmender fachlicher Kern muss auch bei abweichenden Bedingungen, Werten oder engerem/weiterem Scope aufgenommen werden. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Im Zweifel aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige und für r erlaubte c, keine Erläuterung und keine weiteren Felder. Kopiere nicht dieselbe Kandidatenliste pauschal auf fachlich verschiedene Anforderungen.';
+      ? 'Du bist ein präziser Gegenstück-Shortlister. Prüfe jede Anforderung r unabhängig gegen alle in dieser Partition angezeigten B-Quelltexte c. Das Feld r.c ist eine rein technische Vorauswahl besonders wahrscheinlicher Kandidaten; du darfst auch jedes andere angezeigte c derselben Partition nennen, wenn dessen Text fachlich passt. Nenne nur Kandidaten, die tatsächlich denselben fachlichen Identitätskern im passenden Gegenstands-, Gefahren-, Schaden- oder Rollenkontext ausdrücken können. Abweichende Werte, Limits, Bedingungen, Umfänge, Zeiträume, ein ausdrückliches Gegenteil oder ein ausdrücklicher Ausschluss desselben Kerns bleiben Kandidaten. Ein Ober- oder Unterfall bleibt nur dann Kandidat, wenn der gemeinsame fachliche Kern aus dem Quellfenster direkt hervorgeht. Bloße Keyword-Nennung, Überschrift, Branchenbezug, benachbarte Klausel oder nur verwandte Deckung ist kein Kandidat. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige angezeigte c, keine Erläuterung und keine weiteren Felder.'
+      : 'Du bist ausschließlich ein verlustarmer Kandidaten-Locator. Prüfe jede Anforderung r unabhängig gegen alle in dieser Partition angezeigten B-Quelltexte c. Das Feld r.c ist eine rein technische Vorauswahl besonders wahrscheinlicher Kandidaten; du darfst auch jedes andere angezeigte c derselben Partition nennen, wenn dessen Text fachlich passt. Nenne jeden Kandidaten, der möglicherweise denselben fachlichen Kern, einen Ober-/Unterfall, eine funktional gleiche Vertragswirkung, einen ausdrücklichen Ausschluss oder denselben Kern mit abweichendem Wert, Limit, Umfang, Bedingung oder Zeitraum enthält. Ein übereinstimmender fachlicher Kern muss auch bei abweichenden Bedingungen, Werten oder engerem/weiterem Scope aufgenommen werden. Kurze Quellfenster sind reine Navigation und werden serverseitig an vollständige Elternklauseln zurückgebunden. Im Zweifel aufnehmen. Triff keine Endentscheidung und zertifiziere keine Abwesenheit. Antworte ausschließlich als genau ein kompaktes JSON-Array in der vorgegebenen Reihenfolge: [{"r":1,"c":[2,5]}]. Jedes r genau einmal, nur eindeutige angezeigte c, keine Erläuterung und keine weiteren Felder. Kopiere nicht dieselbe Kandidatenliste pauschal auf fachlich verschiedene Anforderungen.';
   const boundedSystemPrompt = `${systemPrompt}${selectionLimit}`;
   const messages = [
     {
@@ -513,19 +513,7 @@ function validateLocatorAliasResponse(response, plan, partition) {
   const factIdByCandidateNumber = new Map(
     partition.factIds.map((factId, index) => [index + 1, factId])
   );
-  const candidateNumberByFactId = new Map(
-    partition.factIds.map((factId, index) => [factId, index + 1])
-  );
-  const allowedByRequirementNumber = new Map(
-    requirements.map((requirement, index) => [
-      index + 1,
-      new Set(
-        (requirement.candidateFactIds || partition.factIds)
-          .filter((factId) => candidateNumberByFactId.has(factId))
-          .map((factId) => candidateNumberByFactId.get(factId))
-      ),
-    ])
-  );
+  const displayedCandidateNumbers = new Set(factIdByCandidateNumber.keys());
   const signatures = response.map((item) =>
     Array.isArray(item?.c)
       ? [...item.c].sort((left, right) => left - right).join(",")
@@ -542,7 +530,6 @@ function validateLocatorAliasResponse(response, plan, partition) {
   }
   return response.map((item, index) => {
     const expectedRequirementNumber = index + 1;
-    const allowed = allowedByRequirementNumber.get(expectedRequirementNumber);
     if (
       !item ||
       Object.keys(item).sort().join(",") !== "c,r" ||
@@ -554,7 +541,7 @@ function validateLocatorAliasResponse(response, plan, partition) {
       item.c.some(
         (candidateNumber) =>
           !Number.isSafeInteger(candidateNumber) ||
-          !allowed.has(candidateNumber)
+          !displayedCandidateNumbers.has(candidateNumber)
       )
     )
       throw new Error(
@@ -644,11 +631,9 @@ async function locatePartition({
 }) {
   const attempts = [];
   for (let attempt = 1; attempt <= args.maximumAttempts; attempt += 1) {
-    const allowedCandidateHint = locatorPromptView(plan, partition)
-      .requirements.map(({ r, c }) => `r${r}=[${c.join(",")}]`)
-      .join("; ");
+    const displayedCandidateHint = `c=1..${partition.factIds.length}`;
     const repair = attempts.length
-      ? `Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}] und bewerte jede Anforderung unabhängig. Erlaubte lokale Kandidaten sind verbindlich: ${allowedCandidateHint}.${plan.maximumSelectionsPerRequirement ? ` Nenne je r höchstens ${plan.maximumSelectionsPerRequirement} Kandidaten.` : ""}`
+      ? `Die vorige Antwort war nicht vertragsgültig. Wiederhole exakt alle r in der vorgegebenen Reihenfolge als [{"r":1,"c":[...]}] und bewerte jede Anforderung unabhängig. Gültige lokale Kandidaten sind ${displayedCandidateHint}.${plan.maximumSelectionsPerRequirement ? ` Nenne je r höchstens ${plan.maximumSelectionsPerRequirement} Kandidaten.` : ""}`
       : null;
     const messages = prompt(plan, partition, repair);
     const started = performance.now();
