@@ -714,8 +714,7 @@ async function run() {
     wallDurationMs: Math.round(performance.now() - started),
     modelRequests: results.filter(({ reusedFrom }) => !reusedFrom).length,
     modelAttempts: results.reduce(
-      (sum, result) =>
-        sum + (result.reusedFrom ? 0 : result.attempts.length),
+      (sum, result) => sum + (result.reusedFrom ? 0 : result.attempts.length),
       0
     ),
     reusedPartitions: results.filter(({ reusedFrom }) => reusedFrom).length,

@@ -21874,10 +21874,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         partition: routedWindowLocatorPlan.partitions[0],
       })
     ).toMatchObject({
-      reusedFrom: path.join(
-        compactSeedOutput,
-        "partition-000.private.json"
-      ),
+      reusedFrom: path.join(compactSeedOutput, "partition-000.private.json"),
       responses: [
         expect.objectContaining({
           requirementId: decisionPlan.rows[0].requirementId,
