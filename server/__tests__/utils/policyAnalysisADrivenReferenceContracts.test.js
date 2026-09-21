@@ -21425,7 +21425,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
         channels.includes("SOURCE_NEIGHBOR")
       )
     ).toBe(true);
-    expect(globalNeighborPlan.summary.selectedFactReviews).toBeLessThanOrEqual(
+    expect(globalNeighborPlan.summary.selectedFactReviews).toBeGreaterThan(
       fastPlan.summary.selectedFactReviews
     );
 
