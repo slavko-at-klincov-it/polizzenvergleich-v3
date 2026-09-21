@@ -142,6 +142,7 @@ const {
 const {
   compactDecisionPromptView,
   partitionCompactDecisionWork,
+  reusableCompactDecisionPartition,
   validateAliasDecisionResponse,
 } = require("../../scripts/qa/runADrivenCompactWindowDecisions.cjs");
 const {
@@ -21817,6 +21818,71 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       componentFindings: [
         { k: 1, o: "MATCH", c: [1] },
         { k: 2, o: "MATCH", c: [1] },
+      ],
+    });
+    expect(
+      validateAliasDecisionResponse(
+        [
+          {
+            r: 1,
+            o: "MATCH",
+            c: [1],
+            f: compactDecisionView.requirements[0].components.map(({ k }) => ({
+              k,
+              o: "MATCH",
+              c: [1],
+              f: [],
+            })),
+          },
+        ],
+        decisionPlan,
+        routedWindowLocatorPlan,
+        routedWindowLocatorPlan.partitions[0],
+        12
+      )[0].deterministicNormalizations
+    ).toEqual(
+      compactDecisionView.requirements[0].components.map(({ k }) => ({
+        componentNumber: k,
+        reason: "EMPTY_NESTED_FINDINGS_REMOVED",
+      }))
+    );
+    const compactSeedOutput = fs.mkdtempSync(
+      path.join(os.tmpdir(), "lf-compact-window-seed-")
+    );
+    fs.writeFileSync(
+      path.join(compactSeedOutput, "partition-000.private.json"),
+      JSON.stringify({
+        contractId: "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V6",
+        locatorPlanSha256: routedWindowLocatorPlan.planSha256,
+        partitionId: routedWindowLocatorPlan.partitions[0].partitionId,
+        attempts: [
+          {
+            status: "PASS",
+            rawResponse: JSON.stringify(compactDecisionResponse),
+          },
+        ],
+      })
+    );
+    expect(
+      reusableCompactDecisionPartition({
+        args: {
+          seedOutput: compactSeedOutput,
+          maximumEvidencePerRequirement: 12,
+        },
+        decisionPlan,
+        locatorPlan: routedWindowLocatorPlan,
+        partition: routedWindowLocatorPlan.partitions[0],
+      })
+    ).toMatchObject({
+      reusedFrom: path.join(
+        compactSeedOutput,
+        "partition-000.private.json"
+      ),
+      responses: [
+        expect.objectContaining({
+          requirementId: decisionPlan.rows[0].requirementId,
+          contextOutcome: "MATCH",
+        }),
       ],
     });
 

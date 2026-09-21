@@ -27,8 +27,12 @@ const {
   requirementsForPartition,
 } = require("./runADrivenBCorpusLocatorShadow.cjs");
 
-const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V6";
-const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V6";
+const RUN_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V7";
+const PROMPT_CONTRACT_ID = "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_PROMPT_V7";
+const REUSABLE_RUN_CONTRACT_IDS = new Set([
+  "LF_A_DRIVEN_COMPACT_WINDOW_DECISION_RUN_V6",
+  RUN_CONTRACT_ID,
+]);
 const DEFAULT_MODEL = "qwen/qwen3.6-35b-a3b";
 const DEFAULT_CONTEXT = 42_496;
 const OUTCOMES = new Set([
@@ -81,6 +85,7 @@ function argumentsFrom(argv) {
     rescuePlan: path.resolve(values.rescuePlan),
     rescueDecisions: path.resolve(values.rescueDecisions),
     output: path.resolve(values.output),
+    seedOutput: values.seedOutput ? path.resolve(values.seedOutput) : null,
     lmStudioSdk: path.resolve(values.lmStudioSdk),
     qwenModelKey: values.qwenModelKey,
     model: values.model || DEFAULT_MODEL,
@@ -387,6 +392,19 @@ function validateAliasDecisionResponse(
         });
       }
       if (
+        finding &&
+        Object.keys(finding).sort().join(",") === "c,f,k,o" &&
+        Array.isArray(finding.f) &&
+        finding.f.length === 0
+      ) {
+        const { f: _emptyNestedFindings, ...flatFinding } = finding;
+        finding = flatFinding;
+        deterministicNormalizations.push({
+          componentNumber: expectedComponent.k,
+          reason: "EMPTY_NESTED_FINDINGS_REMOVED",
+        });
+      }
+      if (
         finding?.o === "RELATED_ONLY" &&
         Array.isArray(finding.c) &&
         finding.c.length === 0
@@ -425,6 +443,48 @@ function validateAliasDecisionResponse(
       deterministicNormalizations,
     };
   });
+}
+
+function reusableCompactDecisionPartition({
+  args,
+  decisionPlan,
+  locatorPlan,
+  partition,
+}) {
+  if (!args.seedOutput) return null;
+  const resultPath = path.join(
+    args.seedOutput,
+    `partition-${String(partition.partitionIndex).padStart(3, "0")}.private.json`
+  );
+  if (!fs.existsSync(resultPath)) return null;
+  const result = readJson(
+    resultPath,
+    "LF_A_DRIVEN_COMPACT_WINDOW_SEED_PARTITION"
+  );
+  const passAttempt = [...(result.attempts || [])]
+    .reverse()
+    .find(({ status, rawResponse }) => status === "PASS" && rawResponse);
+  if (
+    !REUSABLE_RUN_CONTRACT_IDS.has(result.contractId) ||
+    result.locatorPlanSha256 !== locatorPlan.planSha256 ||
+    result.partitionId !== partition.partitionId ||
+    !passAttempt
+  )
+    throw new Error(
+      `LF_A_DRIVEN_COMPACT_WINDOW_SEED_INVALID:${partition.partitionId}`
+    );
+  const parsed = parseJsonArray(passAttempt.rawResponse);
+  return {
+    responses: validateAliasDecisionResponse(
+      parsed.responses,
+      decisionPlan,
+      locatorPlan,
+      partition,
+      args.maximumEvidencePerRequirement
+    ),
+    attempts: result.attempts,
+    reusedFrom: resultPath,
+  };
 }
 
 async function verifyModel({ baseUrl, model, modelContext }) {
@@ -579,16 +639,22 @@ async function run() {
   const started = performance.now();
   const results = [];
   for (const partition of decisionPartitions) {
-    let result;
+    let result = reusableCompactDecisionPartition({
+      args,
+      decisionPlan,
+      locatorPlan,
+      partition,
+    });
     try {
-      result = await decidePartition({
-        args,
-        decisionPlan,
-        locatorPlan,
-        partition,
-        client,
-        recoverModelAfterAbort,
-      });
+      if (!result)
+        result = await decidePartition({
+          args,
+          decisionPlan,
+          locatorPlan,
+          partition,
+          client,
+          recoverModelAfterAbort,
+        });
     } catch (error) {
       writePrivateJson(
         path.join(
@@ -611,6 +677,7 @@ async function run() {
       partitionId: partition.partitionId,
       responses: result.responses,
       attempts: result.attempts,
+      ...(result.reusedFrom ? { reusedFrom: result.reusedFrom } : {}),
     };
     writePrivateJson(
       path.join(
@@ -621,7 +688,7 @@ async function run() {
     );
     results.push(artifact);
     console.log(
-      `[lf-compact-window-decisions] Partition ${partition.partitionIndex + 1}/${decisionPartitions.length}: PASS`
+      `[lf-compact-window-decisions] Partition ${partition.partitionIndex + 1}/${decisionPartitions.length}: PASS${result.reusedFrom ? " (wiederverwendet)" : ""}`
     );
   }
   const fastPlan = replayPlan(locatorPlan, factIndex, results);
@@ -645,11 +712,14 @@ async function run() {
     startedAt,
     completedAt: new Date().toISOString(),
     wallDurationMs: Math.round(performance.now() - started),
-    modelRequests: decisionPartitions.length,
+    modelRequests: results.filter(({ reusedFrom }) => !reusedFrom).length,
     modelAttempts: results.reduce(
-      (sum, result) => sum + result.attempts.length,
+      (sum, result) =>
+        sum + (result.reusedFrom ? 0 : result.attempts.length),
       0
     ),
+    reusedPartitions: results.filter(({ reusedFrom }) => reusedFrom).length,
+    totalDecisionPartitions: decisionPartitions.length,
     contextOutcomes,
     positiveContextDecisions: Object.entries(contextOutcomes).reduce(
       (sum, [outcome, count]) =>
@@ -677,5 +747,6 @@ module.exports = {
   compactDecisionPromptView,
   partitionCompactDecisionWork,
   prompt,
+  reusableCompactDecisionPartition,
   validateAliasDecisionResponse,
 };
