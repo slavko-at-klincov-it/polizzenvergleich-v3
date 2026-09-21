@@ -235,6 +235,52 @@ function sourceKey(item) {
   ].join(":");
 }
 
+function contextualRetrievalFacts(facts, {
+  maximumStandaloneTokens = 20,
+  maximumContextDistance = 1_200,
+} = {}) {
+  const ordered = [...facts].sort(
+    (left, right) =>
+      left.documentStart - right.documentStart ||
+      left.documentEnd - right.documentEnd ||
+      left.factId.localeCompare(right.factId)
+  );
+  return ordered.map((fact, factIndex) => {
+    if (fact.tokenList.length > maximumStandaloneTokens) return { ...fact };
+    const context = [];
+    for (const direction of [-1, 1]) {
+      for (
+        let neighborIndex = factIndex + direction;
+        neighborIndex >= 0 && neighborIndex < ordered.length;
+        neighborIndex += direction
+      ) {
+        const neighbor = ordered[neighborIndex];
+        const distance = Math.max(
+          0,
+          Math.max(fact.documentStart, neighbor.documentStart) -
+            Math.min(fact.documentEnd, neighbor.documentEnd)
+        );
+        if (distance > maximumContextDistance) break;
+        if (neighbor.tokenList.length <= maximumStandaloneTokens) continue;
+        context.push(neighbor.exactText);
+        break;
+      }
+    }
+    if (!context.length) return { ...fact };
+    const retrievalText = [fact.exactText, ...context].join("\n");
+    return {
+      ...fact,
+      normalizedText: normalize(retrievalText),
+      tokenList: tokens(retrievalText),
+      retrievalContext: {
+        source: "NEAREST_COMPLETE_CLAUSE",
+        contextClauses: context.length,
+        maximumContextDistance,
+      },
+    };
+  });
+}
+
 function batchCandidates(requirementId, candidates, maximumBatchCharacters) {
   const batches = [];
   let current = [];
@@ -308,10 +354,19 @@ function buildADrivenFastFallbackPlan({
     factsByDocument.set(fact.documentUuid, list);
   }
   const indexesByDocument = new Map(
-    [...factsByDocument].map(([documentUuid, facts]) => [
-      documentUuid,
-      bm25Index(facts),
-    ])
+    [...factsByDocument].map(([documentUuid, facts]) => {
+      const retrievalFacts = contextualRetrievalFacts(facts);
+      return [
+        documentUuid,
+        {
+          facts: retrievalFacts,
+          index: bm25Index(retrievalFacts),
+        },
+      ];
+    })
+  );
+  const canonicalFactById = new Map(
+    factIndex.facts.map((fact) => [fact.factId, fact])
   );
   const rows = [];
   const batches = [];
@@ -336,17 +391,24 @@ function buildADrivenFastFallbackPlan({
     }
     for (const document of factIndex.documents) {
       const documentFacts = factsByDocument.get(document.documentUuid) || [];
+      const retrieval = indexesByDocument.get(document.documentUuid);
       const ranked = rankLexicalCandidates({
         target: {
           query: query.text,
           queryTokens: query.tokens,
           phrases: query.phrases,
         },
-        candidates: documentFacts,
-        index: indexesByDocument.get(document.documentUuid),
+        candidates: retrieval.facts,
+        index: retrieval.index,
         topK: lexicalTopKPerDocument,
       });
-      for (const fact of ranked) add(fact, "LEXICAL_BM25");
+      for (const fact of ranked)
+        add(
+          canonicalFactById.get(fact.factId),
+          fact.retrievalContext
+            ? "LEXICAL_CONTEXT_BM25"
+            : "LEXICAL_BM25"
+        );
       for (const fact of documentFacts) {
         if (
           query.phrases.some((phrase) =>
@@ -383,6 +445,10 @@ function buildADrivenFastFallbackPlan({
       requirementId: row.requirementId,
       query,
       candidateFactIds: candidates.map(({ factId }) => factId),
+      candidateSelections: candidates.map(({ factId, channels }) => ({
+        factId,
+        channels,
+      })),
       unassessedFactIds: factIndex.facts
         .filter(({ factId }) => !selected.has(factId))
         .map(({ factId }) => factId),
@@ -532,5 +598,6 @@ module.exports = {
   buildADrivenBFactIndex,
   buildADrivenFastFallbackPlan,
   buildADrivenFastFallbackReplay,
+  contextualRetrievalFacts,
   validateADrivenBFactIndex,
 };

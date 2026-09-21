@@ -113,6 +113,7 @@ const {
   buildADrivenBFactIndex,
   buildADrivenFastFallbackPlan,
   buildADrivenFastFallbackReplay,
+  contextualRetrievalFacts,
   validateADrivenBFactIndex,
 } = require("../../utils/policyAnalysis/aDrivenBFactIndex");
 const {
@@ -21296,6 +21297,69 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     expect(() => validateADrivenBFactIndex(tampered, { completeCorpus })).toThrow(
       "LF_A_DRIVEN_B_FACT_INDEX_INVALID"
     );
+  });
+
+  test("indexes short B fragments with nearby complete-clause context without changing their source identity", () => {
+    const facts = [
+      {
+        factId: "governor",
+        documentStart: 0,
+        documentEnd: 120,
+        exactText:
+          "Versichert sind die nachstehend vollständig aufgezählten Gebäudebestandteile, sofern sie dauerhaft mit dem Gebäude verbunden, fachgerecht errichtet und im Versicherungsvertrag ausdrücklich dokumentiert sind.",
+        tokenList: [
+          "versichert",
+          "nachstehend",
+          "vollstandig",
+          "aufgezahlten",
+          "gebaudebestandteile",
+          "sofern",
+          "dauerhaft",
+          "gebaude",
+          "verbunden",
+          "fachgerecht",
+          "errichtet",
+          "versicherungsvertrag",
+          "ausdrucklich",
+          "dokumentiert",
+          "zusatz",
+          "eins",
+          "zwei",
+          "drei",
+          "vier",
+          "funf",
+          "sechs",
+        ],
+        normalizedText: "governor",
+      },
+      {
+        factId: "short-item",
+        documentStart: 121,
+        documentEnd: 132,
+        exactText: "Solaranlage",
+        tokenList: ["solaranlage"],
+        normalizedText: "solaranlage",
+      },
+    ];
+
+    const contextual = contextualRetrievalFacts(facts);
+    const sourceFact = facts[1];
+    const retrievalFact = contextual[1];
+
+    expect(retrievalFact).toMatchObject({
+      factId: sourceFact.factId,
+      documentStart: sourceFact.documentStart,
+      documentEnd: sourceFact.documentEnd,
+      exactText: sourceFact.exactText,
+      retrievalContext: {
+        source: "NEAREST_COMPLETE_CLAUSE",
+        contextClauses: 1,
+      },
+    });
+    expect(retrievalFact.tokenList).toEqual(
+      expect.arrayContaining(["solaranlage", "gebaudebestandteile"])
+    );
+    expect(sourceFact.tokenList).toEqual(["solaranlage"]);
   });
 
   test("certifies NOT_FOUND only after every complete B clause partition is terminal", async () => {
