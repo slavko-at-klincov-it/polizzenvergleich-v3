@@ -86,10 +86,7 @@ function argumentsFrom(argv) {
     model: values.model || DEFAULT_MODEL,
     modelContext: integer("modelContext", DEFAULT_CONTEXT, 1_000),
     maximumAttempts: integer("maximumAttempts", 2),
-    maximumEvidencePerRequirement: integer(
-      "maximumEvidencePerRequirement",
-      12
-    ),
+    maximumEvidencePerRequirement: integer("maximumEvidencePerRequirement", 12),
     requestTimeoutMs: integer("requestTimeoutMs", 300_000),
     abortSettlementTimeoutMs: integer("abortSettlementTimeoutMs", 15_000),
     modelRecoveryTimeoutMs: integer("modelRecoveryTimeoutMs", 180_000),
@@ -105,9 +102,7 @@ function compactComponent(component, index) {
     ...(component.rawValue ? { value: component.rawValue } : {}),
     ...(component.unit ? { unit: component.unit } : {}),
     ...(component.qualifier ? { qualifier: component.qualifier } : {}),
-    ...(component.coverageEffect
-      ? { effect: component.coverageEffect }
-      : {}),
+    ...(component.coverageEffect ? { effect: component.coverageEffect } : {}),
   };
 }
 
@@ -146,11 +141,7 @@ function prompt(
   maximumEvidencePerRequirement,
   repair = null
 ) {
-  const view = compactDecisionPromptView(
-    decisionPlan,
-    locatorPlan,
-    partition
-  );
+  const view = compactDecisionPromptView(decisionPlan, locatorPlan, partition);
   const messages = [
     {
       role: "system",
@@ -178,11 +169,7 @@ function validateAliasDecisionResponse(
   partition,
   maximumEvidencePerRequirement
 ) {
-  const view = compactDecisionPromptView(
-    decisionPlan,
-    locatorPlan,
-    partition
-  );
+  const view = compactDecisionPromptView(decisionPlan, locatorPlan, partition);
   if (!Array.isArray(response) || response.length !== view.requirements.length)
     throw new Error("LF_A_DRIVEN_COMPACT_WINDOW_RESPONSE_LENGTH_INVALID");
   const displayed = new Set(view.candidates.map(({ c }) => c));

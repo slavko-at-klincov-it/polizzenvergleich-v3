@@ -21601,7 +21601,7 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       )
     ).toEqual([
       expect.objectContaining({
-        requirementId: fallbackRequirementId,
+        requirementId: decisionPlan.rows[0].requirementId,
         contextOutcome: "MATCH",
         candidateFactIds: [firstSourceWindow.windowId],
       }),
