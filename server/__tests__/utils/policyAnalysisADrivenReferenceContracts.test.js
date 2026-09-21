@@ -132,6 +132,9 @@ const {
   validateFingerprintResponse,
 } = require("../../scripts/qa/runADrivenBSemanticFingerprintShadow.cjs");
 const {
+  rankEmbeddedWindows,
+} = require("../../scripts/qa/runADrivenBSourceWindowEmbeddingShadow.cjs");
+const {
   A_DRIVEN_REQUIREMENT_DECISION_PLAN_CONTRACT_ID_V2,
   buildADrivenRequirementSegmentedPlan,
 } = require("../../utils/policyAnalysis/aDrivenRequirementSegmentedPlan");
@@ -21869,6 +21872,45 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ).toBe(true);
     expect(plan.rows[0].customerNotFoundEligible).toBe(false);
     expect(plan.rows[0].unassessedFactIds.length).toBeGreaterThan(0);
+  });
+
+  test("ranks embedded source windows deterministically while retaining parent fact identities", () => {
+    const windows = [
+      {
+        windowId: "window-a-1",
+        parentFactId: "fact-a",
+        documentStart: 10,
+      },
+      {
+        windowId: "window-b-1",
+        parentFactId: "fact-b",
+        documentStart: 20,
+      },
+      {
+        windowId: "window-a-2",
+        parentFactId: "fact-a",
+        documentStart: 30,
+      },
+    ];
+    const ranked = rankEmbeddedWindows({
+      windows,
+      windowVectors: [
+        [1, 0],
+        [0, 1],
+        [0.8, 0.2],
+      ],
+      queryVector: [1, 0],
+      topK: 2,
+    });
+
+    expect(ranked.map(({ windowId }) => windowId)).toEqual([
+      "window-a-1",
+      "window-a-2",
+    ]);
+    expect(ranked.map(({ parentFactId }) => parentFactId)).toEqual([
+      "fact-a",
+      "fact-a",
+    ]);
   });
 
   test("certifies NOT_FOUND only after every complete B clause partition is terminal", async () => {
