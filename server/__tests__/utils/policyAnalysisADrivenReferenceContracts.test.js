@@ -121,6 +121,7 @@ const {
   validateExpansionResponse,
 } = require("../../scripts/qa/runADrivenBQueryExpansionShadow.cjs");
 const {
+  compactRequirement: compactBCorpusLocatorRequirement,
   partitionFacts: partitionBCorpusLocatorFacts,
   partitionFactsByDocument,
   validateLocatorResponse,
@@ -21514,6 +21515,18 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
       factIndex.facts,
       20_000
     );
+    expect(compactBCorpusLocatorRequirement(decisionPlan.rows[0])).toEqual({
+      requirementId: decisionPlan.rows[0].requirementId,
+      displayLabel: decisionPlan.rows[0].displayLabel,
+      structurePath: decisionPlan.rows[0].structurePath,
+      identityCores: [
+        ...new Set(
+          decisionPlan.rows[0].components
+            .map(({ identityCore }) => identityCore)
+            .filter(Boolean)
+        ),
+      ],
+    });
     expect(locatorPartitions.flatMap(({ factIds }) => factIds)).toEqual(
       factIndex.facts.map(({ factId }) => factId)
     );

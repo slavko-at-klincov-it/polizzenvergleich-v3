@@ -91,14 +91,13 @@ function compactRequirement(row) {
     requirementId: row.requirementId,
     displayLabel: row.displayLabel,
     structurePath: row.structurePath,
-    components: row.components.map(
-      ({ componentId, dimension, identityCore, label }) => ({
-        componentId,
-        dimension,
-        identityCore,
-        label,
-      })
-    ),
+    identityCores: [
+      ...new Set(
+        row.components
+          .map(({ identityCore }) => identityCore)
+          .filter(Boolean)
+      ),
+    ],
   };
 }
 
