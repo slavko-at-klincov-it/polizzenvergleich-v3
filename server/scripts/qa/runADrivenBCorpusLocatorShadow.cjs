@@ -223,7 +223,7 @@ function partitionFactsByRequirements(
     candidateCorpus.map((candidate) => [candidate.factId, candidate])
   );
   const partitions = [];
-  let currentRequirements = [];
+  let currentRequirementIds = new Set();
   let currentFactIds = new Set();
   const characters = (requirementIds, factIds) =>
     JSON.stringify({
@@ -233,11 +233,9 @@ function partitionFactsByRequirements(
       ),
     }).length;
   const flush = () => {
-    if (!currentRequirements.length) return;
+    if (!currentRequirementIds.size) return;
     const partitionIndex = partitions.length;
-    const requirementIds = currentRequirements.map(
-      ({ requirementId }) => requirementId
-    );
+    const requirementIds = [...currentRequirementIds];
     const factIds = [...currentFactIds];
     partitions.push({
       partitionId: `BCLR-${sha256(
@@ -250,30 +248,53 @@ function partitionFactsByRequirements(
         compactFact(candidateById.get(factId))
       ),
     });
-    currentRequirements = [];
+    currentRequirementIds = new Set();
     currentFactIds = new Set();
   };
+  const chunks = [];
   for (const requirement of requirements) {
-    const ownFactIds = new Set(requirement.candidateFactIds || []);
-    const proposedRequirements = [...currentRequirements, requirement];
-    const proposedFactIds = new Set([...currentFactIds, ...ownFactIds]);
+    let chunkFactIds = new Set();
+    const flushChunk = () => {
+      if (!chunkFactIds.size) return;
+      chunks.push({
+        requirementId: requirement.requirementId,
+        factIds: [...chunkFactIds],
+      });
+      chunkFactIds = new Set();
+    };
+    for (const factId of requirement.candidateFactIds || []) {
+      const proposedFactIds = new Set([...chunkFactIds, factId]);
+      if (
+        chunkFactIds.size &&
+        characters([requirement.requirementId], proposedFactIds) >
+          maximumPartitionCharacters
+      )
+        flushChunk();
+      if (
+        characters([requirement.requirementId], new Set([factId])) >
+        maximumPartitionCharacters
+      )
+        throw new Error(
+          `LF_A_DRIVEN_B_CORPUS_LOCATOR_CANDIDATE_TOO_LARGE:${factId}`
+        );
+      chunkFactIds.add(factId);
+    }
+    flushChunk();
+  }
+  for (const chunk of chunks) {
+    const proposedRequirementIds = new Set([
+      ...currentRequirementIds,
+      chunk.requirementId,
+    ]);
+    const proposedFactIds = new Set([...currentFactIds, ...chunk.factIds]);
     if (
-      currentRequirements.length &&
-      characters(
-        proposedRequirements.map(({ requirementId }) => requirementId),
-        proposedFactIds
-      ) > maximumPartitionCharacters
+      currentRequirementIds.size &&
+      characters([...proposedRequirementIds], proposedFactIds) >
+        maximumPartitionCharacters
     )
       flush();
-    if (
-      characters([requirement.requirementId], ownFactIds) >
-      maximumPartitionCharacters
-    )
-      throw new Error(
-        `LF_A_DRIVEN_B_CORPUS_LOCATOR_REQUIREMENT_TOO_LARGE:${requirement.requirementId}`
-      );
-    currentRequirements.push(requirement);
-    for (const factId of ownFactIds) currentFactIds.add(factId);
+    currentRequirementIds.add(chunk.requirementId);
+    for (const factId of chunk.factIds) currentFactIds.add(factId);
   }
   flush();
   return partitions;

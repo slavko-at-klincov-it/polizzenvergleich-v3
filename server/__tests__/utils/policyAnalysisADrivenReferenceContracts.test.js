@@ -22142,6 +22142,44 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ).toEqual(["requirement-b"]);
   });
 
+  test("splits one broad locator requirement across bounded partitions", () => {
+    const candidates = [
+      {
+        factId: "fact-a",
+        documentUuid: "doc-a",
+        documentRole: "POLICY",
+        physicalPageNumber: 1,
+        exactText: "A".repeat(12_000),
+      },
+      {
+        factId: "fact-b",
+        documentUuid: "doc-b",
+        documentRole: "POLICY",
+        physicalPageNumber: 2,
+        exactText: "B".repeat(12_000),
+      },
+    ];
+    const partitions = partitionFactsByRequirements(
+      [
+        {
+          requirementId: "broad-requirement",
+          candidateFactIds: ["fact-a", "fact-b"],
+        },
+      ],
+      candidates,
+      20_000
+    );
+
+    expect(partitions.map(({ requirementIds }) => requirementIds)).toEqual([
+      ["broad-requirement"],
+      ["broad-requirement"],
+    ]);
+    expect(partitions.map(({ factIds }) => factIds)).toEqual([
+      ["fact-a"],
+      ["fact-b"],
+    ]);
+  });
+
   test("rejects a degenerate locator response copied across unrelated requirements", () => {
     const requirements = Array.from({ length: 8 }, (_, index) => ({
       requirementId: `requirement-${index}`,
