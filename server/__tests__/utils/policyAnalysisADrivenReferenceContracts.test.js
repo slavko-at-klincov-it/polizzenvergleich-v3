@@ -21403,6 +21403,32 @@ describe("LF_REFERENCE_A_DRIVEN_V2 requirement-level decisions", () => {
     ).toBe(completeCorpus.clauses.length);
     expect(fastPlan.rows[0].customerNotFoundEligible).toBe(false);
 
+    const globalNeighborPlan = buildADrivenFastFallbackPlan({
+      decisionPlan,
+      preliminaryDecisions,
+      completeCorpus,
+      factIndex,
+      lexicalTopKPerDocument: 1,
+      maximumBatchCharacters: 10_000,
+      retrievalScope: "GLOBAL",
+      neighborRadius: 1,
+      neighborAnchorLimit: 1,
+    });
+    expect(globalNeighborPlan.summary).toMatchObject({
+      retrievalScope: "GLOBAL",
+      neighborRadius: 1,
+      neighborAnchorLimit: 1,
+      customerNotFoundEligible: false,
+    });
+    expect(
+      globalNeighborPlan.rows[0].candidateSelections.some(({ channels }) =>
+        channels.includes("SOURCE_NEIGHBOR")
+      )
+    ).toBe(true);
+    expect(globalNeighborPlan.summary.selectedFactReviews).toBeLessThanOrEqual(
+      fastPlan.summary.selectedFactReviews
+    );
+
     const absencePlan = buildADrivenRequirementAbsencePlan({
       decisionPlan,
       preliminaryDecisions,

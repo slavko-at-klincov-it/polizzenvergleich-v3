@@ -113,11 +113,11 @@
       "path": "server/utils/policyAnalysis/aDrivenBFactIndex.js"
     },
     {
-      "id": "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V1",
+      "id": "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V2",
       "path": "server/utils/policyAnalysis/aDrivenBFactIndex.js"
     },
     {
-      "id": "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V1",
+      "id": "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V2",
       "path": "server/utils/policyAnalysis/aDrivenBFactIndex.js"
     },
     {
@@ -1547,8 +1547,8 @@
       ],
       "outputs": [
         "LF_A_DRIVEN_B_FACT_INDEX_V1",
-        "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V1",
-        "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V1",
+        "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V2",
+        "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V2",
         "LF_A_DRIVEN_B_SEMANTIC_INVENTORY_SHADOW_V1"
       ],
       "sideEffects": ["writes new private QA shadow artifacts only"],

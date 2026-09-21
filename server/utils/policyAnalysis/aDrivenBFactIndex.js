@@ -19,9 +19,9 @@ const { stableStringify } = require("./aDrivenSourceUnitPlan");
 // Unselected facts stay visible as UNASSESSED and can never become NOT_FOUND.
 const A_DRIVEN_B_FACT_INDEX_CONTRACT_ID = "LF_A_DRIVEN_B_FACT_INDEX_V1";
 const A_DRIVEN_FAST_FALLBACK_PLAN_CONTRACT_ID =
-  "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V1";
+  "LF_A_DRIVEN_FAST_FALLBACK_PLAN_V2";
 const A_DRIVEN_FAST_FALLBACK_REPLAY_CONTRACT_ID =
-  "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V1";
+  "LF_A_DRIVEN_FAST_FALLBACK_REPLAY_V2";
 
 function sha256(value) {
   return crypto.createHash("sha256").update(String(value)).digest("hex");
@@ -235,6 +235,10 @@ function sourceKey(item) {
   ].join(":");
 }
 
+function clauseKey(item) {
+  return [item.documentUuid, item.clauseBoundaryId].join(":");
+}
+
 function contextualRetrievalFacts(facts, {
   maximumStandaloneTokens = 20,
   maximumContextDistance = 1_200,
@@ -327,6 +331,9 @@ function buildADrivenFastFallbackPlan({
   factIndex,
   lexicalTopKPerDocument = 12,
   maximumBatchCharacters = 70_000,
+  retrievalScope = "PER_DOCUMENT",
+  neighborRadius = 0,
+  neighborAnchorLimit = 0,
 } = {}) {
   validateADrivenRequirementDecisionPlan(decisionPlan);
   validateADrivenRequirementDecisionArtifact(
@@ -340,7 +347,14 @@ function buildADrivenFastFallbackPlan({
     !Number.isInteger(lexicalTopKPerDocument) ||
     lexicalTopKPerDocument < 1 ||
     !Number.isInteger(maximumBatchCharacters) ||
-    maximumBatchCharacters < 10_000
+    maximumBatchCharacters < 10_000 ||
+    !["PER_DOCUMENT", "GLOBAL"].includes(retrievalScope) ||
+    !Number.isInteger(neighborRadius) ||
+    neighborRadius < 0 ||
+    neighborRadius > 10 ||
+    !Number.isInteger(neighborAnchorLimit) ||
+    neighborAnchorLimit < 0 ||
+    neighborAnchorLimit > lexicalTopKPerDocument
   )
     throw indexError("LF_A_DRIVEN_FAST_FALLBACK_INPUT_INVALID");
 
@@ -371,6 +385,32 @@ function buildADrivenFastFallbackPlan({
   const canonicalFactById = new Map(
     factIndex.facts.map((fact) => [fact.factId, fact])
   );
+  const globalRawFacts = factIndex.facts.map((fact) => ({ ...fact }));
+  const globalContextualFacts = [...indexesByDocument.values()].flatMap(
+    ({ contextualFacts }) => contextualFacts
+  );
+  const globalRetrieval = {
+    rawFacts: globalRawFacts,
+    rawIndex: bm25Index(globalRawFacts),
+    contextualFacts: globalContextualFacts,
+    contextualIndex: bm25Index(globalContextualFacts),
+  };
+  const orderedFactsByDocument = new Map(
+    [...factsByDocument].map(([documentUuid, facts]) => [
+      documentUuid,
+      [...facts].sort(
+        (left, right) =>
+          left.documentStart - right.documentStart ||
+          left.documentEnd - right.documentEnd ||
+          left.factId.localeCompare(right.factId)
+      ),
+    ])
+  );
+  const factPositionById = new Map();
+  for (const [documentUuid, facts] of orderedFactsByDocument)
+    facts.forEach((fact, index) =>
+      factPositionById.set(fact.factId, { documentUuid, index })
+    );
   const rows = [];
   const batches = [];
   for (const row of decisionPlan.rows.filter(
@@ -380,62 +420,105 @@ function buildADrivenFastFallbackPlan({
   )) {
     const query = requirementQuery(row);
     const selected = new Map();
+    const neighborAnchors = new Set();
     const add = (fact, channel) => {
       const existing = selected.get(fact.factId);
-      if (existing) existing.channels = sortedUnique([...existing.channels, channel]);
+      if (existing)
+        existing.channels = sortedUnique([...existing.channels, channel]);
       else selected.set(fact.factId, { ...fact, channels: [channel] });
     };
     const factBySource = new Map(
       factIndex.facts.map((fact) => [sourceKey(fact), fact])
     );
+    const factByClause = new Map(
+      factIndex.facts.map((fact) => [clauseKey(fact), fact])
+    );
     for (const candidate of row.candidates || []) {
-      const fact = factBySource.get(sourceKey(candidate));
-      if (fact) add(fact, "PRIMARY_REUSE");
-    }
-    for (const document of factIndex.documents) {
-      const documentFacts = factsByDocument.get(document.documentUuid) || [];
-      const retrieval = indexesByDocument.get(document.documentUuid);
-      const lexicalTarget = {
-        query: query.text,
-        queryTokens: query.tokens,
-        phrases: query.phrases,
-      };
-      const rawRanked = rankLexicalCandidates({
-        target: lexicalTarget,
-        candidates: retrieval.rawFacts,
-        index: retrieval.rawIndex,
-        topK: lexicalTopKPerDocument,
-      });
-      for (const fact of rawRanked)
-        add(canonicalFactById.get(fact.factId), "LEXICAL_BM25");
-      const contextualRanked = rankLexicalCandidates({
-        target: lexicalTarget,
-        candidates: retrieval.contextualFacts,
-        index: retrieval.contextualIndex,
-        topK: lexicalTopKPerDocument,
-      });
-      for (const fact of contextualRanked)
-        if (fact.retrievalContext)
-          add(canonicalFactById.get(fact.factId), "LEXICAL_CONTEXT_BM25");
-      for (const fact of documentFacts) {
-        if (
-          query.phrases.some((phrase) =>
-            fact.normalizedText.includes(phrase)
-          )
-        )
-          add(fact, "EXACT_COMPONENT_PHRASE");
-        if (
-          query.numericValues.length &&
-          query.numericValues.some((value) =>
-            fact.deterministicSignals.numericValues.includes(value)
-          ) &&
-          query.desiredRoles.some((role) =>
-            fact.deterministicSignals.roles.includes(role)
-          )
-        )
-          add(fact, "VALUE_ROLE");
+      const fact =
+        factBySource.get(sourceKey(candidate)) ||
+        factByClause.get(clauseKey(candidate));
+      if (fact) {
+        add(fact, "PRIMARY_REUSE");
+        if (neighborAnchorLimit > 0) neighborAnchors.add(fact.factId);
       }
     }
+    const lexicalTarget = {
+      query: query.text,
+      queryTokens: query.tokens,
+      phrases: query.phrases,
+    };
+    const addRanked = (ranked, channel) => {
+      for (const fact of ranked)
+        add(canonicalFactById.get(fact.factId), channel);
+      for (const fact of ranked.slice(0, neighborAnchorLimit))
+        neighborAnchors.add(fact.factId);
+    };
+    if (retrievalScope === "GLOBAL") {
+      const rawRanked = rankLexicalCandidates({
+        target: lexicalTarget,
+        candidates: globalRetrieval.rawFacts,
+        index: globalRetrieval.rawIndex,
+        topK: lexicalTopKPerDocument,
+      });
+      addRanked(rawRanked, "LEXICAL_BM25_GLOBAL");
+      const contextualRanked = rankLexicalCandidates({
+        target: lexicalTarget,
+        candidates: globalRetrieval.contextualFacts,
+        index: globalRetrieval.contextualIndex,
+        topK: lexicalTopKPerDocument,
+      });
+      addRanked(
+        contextualRanked.filter((fact) => fact.retrievalContext),
+        "LEXICAL_CONTEXT_BM25_GLOBAL"
+      );
+    } else {
+      for (const document of factIndex.documents) {
+        const retrieval = indexesByDocument.get(document.documentUuid);
+        const rawRanked = rankLexicalCandidates({
+          target: lexicalTarget,
+          candidates: retrieval.rawFacts,
+          index: retrieval.rawIndex,
+          topK: lexicalTopKPerDocument,
+        });
+        addRanked(rawRanked, "LEXICAL_BM25");
+        const contextualRanked = rankLexicalCandidates({
+          target: lexicalTarget,
+          candidates: retrieval.contextualFacts,
+          index: retrieval.contextualIndex,
+          topK: lexicalTopKPerDocument,
+        });
+        addRanked(
+          contextualRanked.filter((fact) => fact.retrievalContext),
+          "LEXICAL_CONTEXT_BM25"
+        );
+      }
+    }
+    for (const fact of factIndex.facts) {
+      if (
+        query.phrases.some((phrase) => fact.normalizedText.includes(phrase))
+      )
+        add(fact, "EXACT_COMPONENT_PHRASE");
+      if (
+        query.numericValues.length &&
+        query.numericValues.some((value) =>
+          fact.deterministicSignals.numericValues.includes(value)
+        ) &&
+        query.desiredRoles.some((role) =>
+          fact.deterministicSignals.roles.includes(role)
+        )
+      )
+        add(fact, "VALUE_ROLE");
+    }
+    if (neighborRadius > 0)
+      for (const anchorFactId of neighborAnchors) {
+        const position = factPositionById.get(anchorFactId);
+        if (!position) continue;
+        const facts = orderedFactsByDocument.get(position.documentUuid);
+        const start = Math.max(0, position.index - neighborRadius);
+        const end = Math.min(facts.length - 1, position.index + neighborRadius);
+        for (let index = start; index <= end; index += 1)
+          add(facts[index], "SOURCE_NEIGHBOR");
+      }
     const candidates = [...selected.values()].sort(
       (left, right) =>
         left.documentPosition - right.documentPosition ||
@@ -473,6 +556,9 @@ function buildADrivenFastFallbackPlan({
     factIndexSha256: factIndex.indexSha256,
     lexicalTopKPerDocument,
     maximumBatchCharacters,
+    retrievalScope,
+    neighborRadius,
+    neighborAnchorLimit,
     rows,
     batches,
     summary: {
@@ -487,6 +573,9 @@ function buildADrivenFastFallbackPlan({
         0
       ),
       reviewBatches: batches.length,
+      retrievalScope,
+      neighborRadius,
+      neighborAnchorLimit,
       customerNotFoundEligible: false,
     },
     proofLimit:

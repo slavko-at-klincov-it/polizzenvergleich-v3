@@ -31,6 +31,9 @@ function argumentsFrom(argv) {
     "output",
     "lexicalTopKPerDocument",
     "maximumBatchCharacters",
+    "retrievalScope",
+    "neighborRadius",
+    "neighborAnchorLimit",
   ]);
   const unknown = Object.keys(values).filter((key) => !allowed.has(key));
   if (unknown.length) fail(`Unbekannte Argumente: ${unknown.join(",")}`);
@@ -40,11 +43,21 @@ function argumentsFrom(argv) {
     values.lexicalTopKPerDocument || 12
   );
   const maximumBatchCharacters = Number(values.maximumBatchCharacters || 70_000);
+  const retrievalScope = values.retrievalScope || "PER_DOCUMENT";
+  const neighborRadius = Number(values.neighborRadius || 0);
+  const neighborAnchorLimit = Number(values.neighborAnchorLimit || 0);
   if (
     !Number.isInteger(lexicalTopKPerDocument) ||
     lexicalTopKPerDocument < 1 ||
     !Number.isInteger(maximumBatchCharacters) ||
-    maximumBatchCharacters < 10_000
+    maximumBatchCharacters < 10_000 ||
+    !["PER_DOCUMENT", "GLOBAL"].includes(retrievalScope) ||
+    !Number.isInteger(neighborRadius) ||
+    neighborRadius < 0 ||
+    neighborRadius > 10 ||
+    !Number.isInteger(neighborAnchorLimit) ||
+    neighborAnchorLimit < 0 ||
+    neighborAnchorLimit > lexicalTopKPerDocument
   )
     fail("Numerische Laufparameter sind ungültig");
   return {
@@ -52,6 +65,9 @@ function argumentsFrom(argv) {
     output: path.resolve(values.output),
     lexicalTopKPerDocument,
     maximumBatchCharacters,
+    retrievalScope,
+    neighborRadius,
+    neighborAnchorLimit,
   };
 }
 
@@ -126,6 +142,9 @@ function run() {
     factIndex,
     lexicalTopKPerDocument: args.lexicalTopKPerDocument,
     maximumBatchCharacters: args.maximumBatchCharacters,
+    retrievalScope: args.retrievalScope,
+    neighborRadius: args.neighborRadius,
+    neighborAnchorLimit: args.neighborAnchorLimit,
   });
   const replay = buildADrivenFastFallbackReplay({
     fastPlan,
@@ -148,6 +167,9 @@ function run() {
     ...replay.summary,
     unassessedFactPairs: fastPlan.summary.unassessedFactPairs,
     lexicalTopKPerDocument: fastPlan.lexicalTopKPerDocument,
+    retrievalScope: fastPlan.retrievalScope,
+    neighborRadius: fastPlan.neighborRadius,
+    neighborAnchorLimit: fastPlan.neighborAnchorLimit,
     acceptanceReady: false,
     proofLimit: replay.proofLimit,
   };
